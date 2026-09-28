@@ -15,3 +15,6 @@ packages/ui-kit/vrt/__diff__/
 
 # the handed-off design system, kept locally as the porting reference
 eden-design-system/
+
+# npm pack output (publint)
+*.tgz

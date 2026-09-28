@@ -32,9 +32,11 @@
 	],
 	"files": [
 		"dist",
-		"src/lib/styles",
-		"src/lib/fonts",
-		"!src/lib/fonts/alternates"
+		"src/lib",
+		"!src/lib/**/*.stories.svelte",
+		"!src/lib/**/*.test.ts",
+		"!src/lib/fonts/alternates",
+		"!src/lib/styles/faces.css"
 	],
 	"scripts": {
 		"tokens": "node scripts/build-tokens.mjs",
