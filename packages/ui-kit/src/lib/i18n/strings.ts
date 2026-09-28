@@ -107,6 +107,17 @@ export interface UiStrings {
 	}
 	sparkline: (count: number, latest: string) => string
 	reference: (value: string) => string
+	iconButton: {
+		/** The accessible name of a bell with a badge: the label and its unread count. */
+		withCount: (label: string, count: number) => string
+	}
+	chip: {
+		/** The status dot, in words. */
+		status: { healthy: string; stale: string; failed: string; off: string }
+		/** The budget meter's accessible name and its value. */
+		budgetUsed: string
+		percent: (value: number) => string
+	}
 }
 
 export const defaultStrings: UiStrings = {
@@ -214,6 +225,14 @@ export const defaultStrings: UiStrings = {
 	},
 	sparkline: (count, latest) => `${count} values, latest ${latest}`,
 	reference: (value) => `reference ${value}`,
+	iconButton: {
+		withCount: (label, count) => `${label}, ${count} unread`,
+	},
+	chip: {
+		status: { healthy: 'Healthy', stale: 'Stale', failed: 'Failed', off: 'Not connected' },
+		budgetUsed: 'Budget used',
+		percent: (value) => `${value} %`,
+	},
 }
 
 type DeepPartial<T> = {

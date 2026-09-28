@@ -194,20 +194,20 @@
 			{
 				"fg": "honey",
 				"bg": "honey-muted",
-				"fgHex": "#8a6a1e",
+				"fgHex": "#7a5d1c",
 				"bgHex": "#f1e6c4",
 				"size": "text",
-				"ratio": 4.05,
-				"grade": "AA-large",
-				"ok": false
+				"ratio": 4.94,
+				"grade": "AA",
+				"ok": true
 			},
 			{
 				"fg": "honey",
 				"bg": "surface-0",
-				"fgHex": "#8a6a1e",
+				"fgHex": "#7a5d1c",
 				"bgHex": "#f6f4ec",
 				"size": "text",
-				"ratio": 4.58,
+				"ratio": 5.59,
 				"grade": "AA",
 				"ok": true
 			},
@@ -215,9 +215,9 @@
 				"fg": "on-honey",
 				"bg": "honey",
 				"fgHex": "#ffffff",
-				"bgHex": "#8a6a1e",
+				"bgHex": "#7a5d1c",
 				"size": "text",
-				"ratio": 5.05,
+				"ratio": 6.16,
 				"grade": "AA",
 				"ok": true
 			},

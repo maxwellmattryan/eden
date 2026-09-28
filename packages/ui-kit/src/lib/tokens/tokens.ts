@@ -56,7 +56,7 @@ export const colors = {
 		"on-brand": "#ffffff",
 		"ai": "#1e6e5c",
 		"ai-muted": "#d9efe6",
-		"honey": "#8a6a1e",
+		"honey": "#7a5d1c",
 		"honey-muted": "#f1e6c4",
 		"on-honey": "#ffffff",
 		"on-ai": "#ffffff",

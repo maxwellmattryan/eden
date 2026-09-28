@@ -1,6 +1,7 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
 	import { expect, fn } from 'storybook/test'
+	import { canvasOf } from '../../../storybook/play.js'
 	import Field from './Field.svelte'
 	import { projects, quickLogs, stock, weightSeries } from '../../../stories/sample-data.js'
 
@@ -26,7 +27,8 @@
 
 <Story
 	name="Default"
-	play={async ({ canvas, userEvent, args }) => {
+	play={async ({ canvasElement, userEvent, args }) => {
+		const canvas = canvasOf(canvasElement)
 		const input = canvas.getByRole('textbox', { name: 'Name' })
 		await userEvent.type(input, 'Miso')
 		await expect(input).toHaveValue('Miso')
@@ -49,7 +51,8 @@
 <Story
 	name="Error"
 	args={{ label: 'Repository', value: repo.slice(0, -1), mono: true, error: repoError }}
-	play={async ({ canvas }) => {
+	play={async ({ canvasElement }) => {
+		const canvas = canvasOf(canvasElement)
 		const input = canvas.getByRole('textbox', { name: 'Repository' })
 		await expect(input).toHaveAttribute('aria-invalid', 'true')
 		const message = canvas.getByText(repoError)

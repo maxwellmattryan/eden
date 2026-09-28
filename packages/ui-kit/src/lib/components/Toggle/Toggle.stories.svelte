@@ -1,6 +1,7 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
 	import { expect, fn } from 'storybook/test'
+	import { canvasOf } from '../../../storybook/play.js'
 	import Toggle from './Toggle.svelte'
 
 	const subtitles = 'Show subtitles in the sidebar'
@@ -17,7 +18,8 @@
 
 <Story
 	name="On and off"
-	play={async ({ canvas, userEvent, args }) => {
+	play={async ({ canvasElement, userEvent, args }) => {
+		const canvas = canvasOf(canvasElement)
 		const off = canvas.getByRole('switch', { name: subtitles })
 		const on = canvas.getByRole('switch', { name: compact })
 		await expect(off).toHaveAttribute('aria-checked', 'false')
@@ -42,7 +44,8 @@
 <Story
 	name="Disabled"
 	args={{ label: grain, description: 'Only at the lush brand level.', disabled: true, checked: true }}
-	play={async ({ canvas, userEvent, args }) => {
+	play={async ({ canvasElement, userEvent, args }) => {
+		const canvas = canvasOf(canvasElement)
 		const sw = canvas.getByRole('switch', { name: grain })
 		await expect(sw).toBeDisabled()
 		await userEvent.click(canvas.getByText(grain))
@@ -54,7 +57,8 @@
 <Story
 	name="In a settings row"
 	args={{ label: subtitles, description: 'What each domain holds, under its name.', checked: true }}
-	play={async ({ canvas, userEvent, args }) => {
+	play={async ({ canvasElement, userEvent, args }) => {
+		const canvas = canvasOf(canvasElement)
 		const sw = canvas.getByRole('switch', { name: subtitles })
 		await expect(sw).toHaveAccessibleDescription('What each domain holds, under its name.')
 		await userEvent.click(canvas.getByText(subtitles))

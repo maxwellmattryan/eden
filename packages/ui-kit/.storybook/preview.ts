@@ -12,7 +12,12 @@ const preview: Preview = {
 			test: 'error',
 			// text-tertiary at 12–13 px is 3.3:1 in light. The brand book allows it for metadata a reader can do without;
 			// such text carries data-tertiary and is the only exemption from the contrast rule.
-			config: { rules: [{ id: 'color-contrast', selector: ':not([data-tertiary])' }] },
+			// The paper grain is a full-size pseudo-element; without ignorePseudo axe marks every contrast check
+			// "incomplete" instead of failing it, and the gate is inert.
+			config: {
+				rules: [{ id: 'color-contrast', selector: ':not([data-tertiary])' }],
+				checks: [{ id: 'color-contrast', options: { ignorePseudo: true } }],
+			},
 		},
 		/** Which platforms a story is designed for; the frame renders one canvas per platform. */
 		platforms: [...platforms],

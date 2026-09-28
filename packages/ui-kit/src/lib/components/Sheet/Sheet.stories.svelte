@@ -1,6 +1,7 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
-	import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
+	import { expect, fn, userEvent, waitFor } from 'storybook/test'
+	import { canvasOf } from '../../../storybook/play.js'
 	import Sheet from './Sheet.svelte'
 
 	const { Story } = defineMeta({
@@ -48,7 +49,7 @@
 	args={{ placement: 'center' }}
 	{template}
 	play={async ({ canvasElement, args }) => {
-		const canvas = within(canvasElement)
+		const canvas = canvasOf(canvasElement)
 		const trigger = canvas.getByRole('button', { name: 'Open the sheet' })
 		await userEvent.click(trigger)
 		const dialog = await canvas.findByRole('dialog', { name: 'A sheet' })

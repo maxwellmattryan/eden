@@ -31,7 +31,7 @@ Warm paper, not white. Moss for the brand, ink-green for text, clay as the warm 
 | `--brand-hover` | `#43684D` |
 | `--brand-muted` | `#DCE8DD` |
 | `--ai` | `#1E6E5C` on `--ai-muted` `#D9EFE6` spruce; the Gardener when it speaks |
-| `--honey` | `#8A6A1E` on `--honey-muted` `#F1E6C4` honey; the Gardener when it acts |
+| `--honey` | `#7A5D1C` on `--honey-muted` `#F1E6C4` honey; the Gardener when it acts |
 
 ## Dark: night forest
 

@@ -29,9 +29,9 @@ WCAG 2 ratios measured on the token values. "text" needs 4.5:1, "large" and "non
 | ai on ai-muted | `#1e6e5c` on `#d9efe6` | 5.07:1 | AA |
 | ai on surface-0 | `#1e6e5c` on `#f6f4ec` | 5.54:1 | AA |
 | on-ai on ai | `#ffffff` on `#1e6e5c` | 6.10:1 | AA |
-| honey on honey-muted | `#8a6a1e` on `#f1e6c4` | 4.05:1 | AA-large ⚠ |
-| honey on surface-0 | `#8a6a1e` on `#f6f4ec` | 4.58:1 | AA |
-| on-honey on honey | `#ffffff` on `#8a6a1e` | 5.05:1 | AA |
+| honey on honey-muted | `#7a5d1c` on `#f1e6c4` | 4.94:1 | AA |
+| honey on surface-0 | `#7a5d1c` on `#f6f4ec` | 5.59:1 | AA |
+| on-honey on honey | `#ffffff` on `#7a5d1c` | 6.16:1 | AA |
 | danger on surface-0 | `#b0413e` on `#f6f4ec` | 5.19:1 | AA |
 | on-danger on danger | `#ffffff` on `#b0413e` | 5.72:1 | AA |
 | warning on surface-0 (large) | `#b8821f` on `#f6f4ec` | 3.05:1 | AA-large |

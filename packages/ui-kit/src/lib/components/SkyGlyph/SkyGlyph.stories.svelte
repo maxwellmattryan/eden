@@ -1,6 +1,7 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
 	import { expect, waitFor } from 'storybook/test'
+	import { canvasOf } from '../../../storybook/play.js'
 	import SkyGlyph, { CONDITIONS } from './SkyGlyph.svelte'
 	import { skyWeek } from '../../../stories/sample-data.js'
 
@@ -39,7 +40,8 @@
 <!-- The glyph follows the week from the sample forecast; the swap crossfades through Icon. -->
 <Story
 	name="Live"
-	play={async ({ canvas, userEvent }) => {
+	play={async ({ canvasElement, userEvent }) => {
+		const canvas = canvasOf(canvasElement)
 		const [button] = canvas.getAllByRole('button')
 		await userEvent.click(button!)
 		await waitFor(() => expect(canvas.getAllByRole('img')[0]).toHaveAccessibleName('Partly cloudy'))

@@ -1,6 +1,7 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
 	import { expect, fn, waitFor } from 'storybook/test'
+	import { canvasOf } from '../../../storybook/play.js'
 	import Breeze from './Breeze.svelte'
 	import { feed } from '../../../stories/sample-data.js'
 
@@ -26,7 +27,8 @@
 <!-- One burst over a card that just settled; the parent unmounts the Breeze on onend. -->
 <Story
 	name="Once"
-	play={async ({ canvas, userEvent, args }) => {
+	play={async ({ canvasElement, userEvent, args }) => {
+		const canvas = canvasOf(canvasElement)
 		const [button] = canvas.getAllByRole('button')
 		await userEvent.click(button!)
 		await waitFor(() => expect(args.onend).toHaveBeenCalled(), { timeout: 3000 })

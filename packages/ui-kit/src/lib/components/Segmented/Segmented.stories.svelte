@@ -1,6 +1,7 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
 	import { expect, fn, waitFor } from 'storybook/test'
+	import { canvasOf } from '../../../storybook/play.js'
 	import Segmented, { type SegmentedItem } from './Segmented.svelte'
 	import { quickLogs, sidebar } from '../../../stories/sample-data.js'
 
@@ -31,7 +32,8 @@
 
 <Story
 	name="Text"
-	play={async ({ canvas, canvasElement, userEvent, args }) => {
+	play={async ({ canvasElement, userEvent, args }) => {
+		const canvas = canvasOf(canvasElement)
 		const tabs = canvas.getAllByRole('tab')
 		await userEvent.click(tabs[0]!)
 		await userEvent.keyboard('{ArrowRight}')
