@@ -47,30 +47,30 @@ Props are listed by name; `*` marks a bindable prop; every component also takes 
 | `Sheet` (new) | the modal base: a `<dialog>` with `showModal()`, a focus trap for Tab cycling, Escape on keydown | `open*`, `placement` (auto, bottom, center, side), `size` (sm, md, lg, full), `label`, `labelledby`, `dismissible` | `onclose(reason: escape, scrim, api)`; `header`, `footer`, `children` | `auto` is a bottom sheet on mobile | Center, Bottom, Side, Auto, Sizes, Not dismissible, Keyboard |
 | `Popover` | an anchored floating panel in the top layer | `anchor`, `open*`, `align`, `side`, `gap`, `role`, `label` | `onclose(reason)`; `children` | inline frame | Below, Above, Flip, As dialog, At a point |
 | `Menu` | the action and context menu, destructive last | `items` (`{ id, label, icon, destructive, shortcut, onselect }`), `open*`, `anchor`, `align`, `label`, `presentation` (auto, menu, sheet) | `onselect` | an action sheet on mobile | Basic, Destructive, Typeahead, Action sheet |
-| `Toast`, `ToastHost`, `toast` | the one toast, for errors and undo | `toast({ message, action, error, duration })`; `ToastHost` `store` | `ondismiss` | above the tab bar on mobile | Undo, Error, Replace, Paused |
+| `Toast`, `ToastHost`, `toast` | the one toast, for errors and undo; one live region per toast | `toast({ message, action: { label, icon, onclick }, error, duration })`; `ToastHost` `store`; the host only dismisses the toast that asked | `ondismiss` | above the tab bar on mobile; paused while hovered or focused | Undo, Error, Replace, Paused, Times out |
 | `ConfirmSheet` | confirm an irreversible or external write | `title`, `subject`, `resource`, `destination`, `payload`, `verb`, `danger` | `onconfirm`, `oncancel` | composes `Sheet` | Delete, External |
 | `QuickLogSheet` | one-field logging (D-12) | `logs`, `selected*`, `embedded` | `onsave(log, value)` | composes `Sheet` | Number, Text, Check, Tabs |
 | `CaptureSheet` | verify a capture before commit (D-13) | `provider`, `cost`, `rows` (`{ id, name, qty, unit, location, expiry, estimated, merge }`) | `oncommit(rows)`, `onclose` | composes `Sheet size="lg"` | Haul, With merges, All removed |
-| `InlineError` | the plain error with the last good time | `message`, `lastGood`, `live` | `onretry` (may return a promise) | | Default, Last good, Retrying |
-| `EmptyState` | title, sentence, action, sample link, motif | `title`, `text`, `action`, `sample`, `motif` | | | Default, With sample |
-| `Banner` (new) | the status-bar and top banners | `tone` (info, warning, danger), `icon`, `message`, `action`, `dismissible`, `placement` | `ondismiss` | | Offline, Stale, Error, Top |
+| `InlineError` | the plain error with the last good time | `message`, `lastGood`, `live` (`role="alert"` only when true) | `onretry` (may return a promise; the button reads Retrying while it is pending) | | Default, Last good, Retrying, Live |
+| `EmptyState` | title, sentence, action, sample link, the frond | `title`, `text`, `action` (`{ label, icon, onclick }`), `sample` (`{ label, onclick }`), `motif` | | | Default, No motif, With sample, Mobile |
+| `Banner` (new) | the status-bar strip and the top bar; the tone colours only the icon and an edge | `tone` (info, warning, danger), `icon`, `message`, `action`, `dismissible`, `placement` (inline, top) | `ondismiss` | `top` pads under the safe-area inset | Offline, Stale, Error, Top |
 
 ## Wave 3, composites
 
 | component | purpose | props | callbacks / snippets | platform | stories |
 |---|---|---|---|---|---|
-| `QuickAdd` | the natural-language add field with parsed chips | `placeholder`, `value*`, `parse`; module `defaultParse` | `onadd(text, parsed)` | | Empty, Parsed, Custom parser |
+| `QuickAdd` | the natural-language add field with parsed chips, on `InputWrap` | `placeholder`, `value*`, `parse`, `id`; module `defaultParse`, `ParsedChip`, `QuickAddParser` | `onadd(text, parsed)` (Enter or the + button) | chips trail the field on desktop, sit beneath on mobile | Empty, Parsed, Weekday and time, Custom parser, Mobile |
 | `ListRow` | one row: primary, detail, meta, actions | `id`, `primary`, `secondary`, `chips`, `badges`, `meta`, `metaWarn`, `icon`, `selecting`, `selected*`, `done`, `actions` | `onopen`, `onaction(item)`, `onselect(selected)` | 44 px rows on mobile | Default, Detail, Done, Selecting, Actions |
 | `List` | rows on a card with a select mode (D-41) | `header`, `count`, `rows`, `compact`, `selectable`, `selecting*` | `onopen(row)`, `onaction(item, row)`, `onselect(ids)`; `children` | | Fridge, Select mode, Compact, Empty |
-| `DataTable` | numbers only | `columns` (`{ label, numeric, muted }`), `rows`, `label` | | | Egress ledger, Quantities |
-| `Widget` | a Garden tile | `title`, `icon`, `domain`, `size` (s, m, l), `empty`, `action`, `editing` | `children` | | Sizes, Empty, Editing |
-| `WidgetGrid` (new) | the four-column layout | `columns`, `children` | | two columns on mobile | Phase-1 layout |
-| `PageHeader` | glyph, name, subtitle, primary action, filters | `name`, `subtitle`, `icon`, `back`, `actions` | `onback`; `filters` snippet | stacks on mobile | Hearth, With back, No actions |
-| `InboxCard` | a notification | `icon`, `line`, `when`, `domain`, `unread`, `actions` | | | Unread, Read, Actions |
-| `GardenerMessage` | a Gardener or owner bubble (D-40) | `text`, `owner` | `children` | | Reply, Owner, With tool card |
-| `CanSee` | the literal "can see" row | `items` (`{ id, count }`), `locked` | `onexpand(item)` | | Default, Locked, Expanded |
-| `ToolCard` | a tool call in honey (D-40) | `name`, `access`, `text`, `payload`, `confirm` | `onconfirm`, `oncancel` | | Read, Draft, Write, External, Confirmed, Cancelled |
-| `ProposalCard` | an inferred fact to accept or dismiss | `fact`, `value` | `onaccept`, `ondismiss` | | Pending, Accepted, Dismissed |
+| `DataTable` | numbers only | `columns` (`{ label, numeric, muted }`), `rows`, `label` (the caption), `showCaption` | | | Egress ledger, Quantities, Muted column |
+| `Widget` | a Garden tile, a named region (titles must be unique in a view) | `title`, `icon`, `domain`, `size` (s, m, l), `empty`, `action`, `editing` | `children` | | Sizes, Empty, Editing, With action |
+| `WidgetGrid` (new, layout only) | the four-column layout, packed densely | `columns` (defaults to the `widget-columns` token), `children` | | two columns on mobile | Phase-1 layout, Mobile |
+| `PageHeader` | glyph, name with the brand rule, subtitle, actions, filters | `name`, `subtitle`, `icon`, `back` (true or the breadcrumb), `actions` (`{ id, label, icon, variant, onclick }`, the first primary) | `onback`; `filters` snippet | actions wrap under the name on mobile | Hearth, With back, No actions, Japanese, Mobile |
+| `InboxCard` | a notification | `icon`, `line`, `when`, `domain`, `unread` (a dot and a spoken word, no weight change), `actions` (`{ id, label, icon, onclick }`) | | | Unread, Read, With actions, Two cards, Mobile |
+| `GardenerMessage`, `Thread` | a Gardener or owner bubble (D-40), and the `role="log"` column that lays them out | `text` (a string or paragraphs), `owner`, `name`; `Thread` `label` | `children` | | Reply, Owner, With a tool card, Streaming, A thread |
+| `CanSee` | the literal "can see" row; one id open at a time into a labelled region | `items` (`{ id, count }`), `locked` | `onexpand(item)`, `onaudit`; `expanded(item)` snippet | | Default, With locked, Expanded |
+| `ToolCard` | a tool call in honey (D-40), on the shared tool chrome that settles once done | `name`, `access`, `text`, `payload`, `confirm` (the verb; buttons only for write and act-external), `state*` (pending, done, cancelled) | `onconfirm`, `oncancel` | | Read, Write draft, Write, Act external, Confirmed, Cancelled |
+| `ProposalCard` | an inferred fact to accept or dismiss, in green | `fact`, `value`, `text`, `state*` (pending, accepted, dismissed) | `onaccept`, `ondismiss` | | Pending, Accepted, Dismissed |
 
 ## Wave 4, shell pieces
 
