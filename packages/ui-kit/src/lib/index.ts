@@ -72,3 +72,14 @@ export type { WidgetAction, WidgetSize } from './components/Widget/Widget.svelte
 export { default as WidgetGrid } from './components/WidgetGrid/WidgetGrid.svelte'
 export { default as PageHeader } from './components/PageHeader/PageHeader.svelte'
 export type { PageHeaderAction } from './components/PageHeader/PageHeader.svelte'
+
+// The Gardener and the inbox
+export { default as InboxCard } from './components/InboxCard/InboxCard.svelte'
+export type { InboxAction } from './components/InboxCard/InboxCard.svelte'
+export { default as GardenerMessage } from './components/GardenerMessage/GardenerMessage.svelte'
+export { default as Thread } from './components/GardenerMessage/Thread.svelte'
+export { default as CanSee } from './components/CanSee/CanSee.svelte'
+export { default as ToolCard } from './components/ToolCard/ToolCard.svelte'
+export type { ToolAccess, ToolState } from './components/ToolCard/ToolCard.svelte'
+export { default as ProposalCard } from './components/ProposalCard/ProposalCard.svelte'
+export type { ProposalState } from './components/ProposalCard/ProposalCard.svelte'
