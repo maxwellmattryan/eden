@@ -63,6 +63,8 @@ Cite ids; never restate. To settle an open question, add a `D-n` entry and mark 
 | D-46 | `tokens.json` in the kit is the single source for tokens; the theme, base and Tailwind stylesheets, the pre-paint script and the token types are generated from it and never hand-edited. The type scale is strict: 12, 13, 14, 15 (voice), 16, 18, 22, 28, 36 and nothing between. |
 | D-47 | Root attributes: `data-theme` (light, dark; "system" is resolved in JS), `data-accent`, `data-font`, `data-brand` (plain, tended, lush), `data-platform` (desktop, mobile) and `data-density` (comfortable, compact; desktop only). Selectors are element-scoped so a subtree can carry its own value; components never read the attributes, only tokens and `--ed-*` variables. |
 | D-48 | Fonts are self-hosted OFL files shipped with the kit (Newsreader, Inter, Geist Mono), never loaded from a CDN. New fonts arrive the same way. |
+| D-49 | The relief is `raised`. Every button-family control (Button in every variant, IconButton, BackButton, button chips) presses the same way: it compresses from the top with its bottom edge fixed, as if it sank into its hole; a filled control's shadow collapses too. Reduced motion removes the movement. (Promoted from OQ-21.) |
+| D-50 | Visual baselines are generated artifacts, never committed: CI regenerates them from `main` and compares pull requests against the latest set; locally `yarn vrt:update` writes them git-ignored. (Promoted from OQ-20.) |
 
 ## Open questions
 
@@ -85,7 +87,7 @@ Cite ids; never restate. To settle an open question, add a `D-n` entry and mark 
 | OQ-15 | Weather provider. | Open-Meteo as the keyless default; WeatherKit later. |
 | OQ-16 | Which astrology computations run locally versus via a provider? | Local ephemeris for sun, moon and transits; horoscope text from a provider only under grant. |
 | OQ-17 | Free-text pseudonymization with re-identification, if ever. | Not before Phase 3, and only with a measured leak rate. |
-| OQ-18 | Re-tune the light accents for contrast before the accent picker ships? | Yes. Until then there is no picker, and the computed `--on-brand` keeps fills legible. |
+| OQ-18 | Re-tune the light accents for contrast before the accent picker ships? | Yes. No picker for now; the kit keeps `data-accent`, the `accents` union and a computed `--on-brand` per accent, so the picker is one settings row once the light values are re-tuned. |
 | OQ-19 | `SwipeRow`: hand-rolled pointer handling or a library? | Hand-rolled, last in the kit's shell wave; may slip to the app scaffold without blocking. |
-| OQ-20 | Visual regression: where do the baselines live and where do they run? A full run is about 205 stories × {light, dark} × {desktop, mobile} at roughly 45 MB per cell, too much for plain git. | Baselines stay local and git-ignored for now, generated on the owner's Mac with `yarn vrt:update`. Decide between Git LFS and a reduced matrix (one theme per platform, or tagged stories only) before a CI job. |
-| OQ-21 | Button relief: flat (no sheen or shadow, an ink wash on press) or raised (a toned-down sheen and shadow, and a press that sinks the control by a pixel)? | Compare both with the Relief toolbar in Storybook (`data-relief`); the kit ships `raised` until decided. The raised press is the one movement on press, and reduced motion removes it. |
+| OQ-20 | Promoted to D-50. | |
+| OQ-21 | Promoted to D-49. | |

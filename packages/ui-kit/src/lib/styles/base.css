@@ -121,8 +121,7 @@
 
 /* Relief (data-relief): raised, flat; default raised. After the brand dial, so a level wins over it in both themes (OQ-21). */
 :root, [data-relief="raised"] {
-	--ed-press-y: 1px;
-	--ed-press-scale: 0.985;
+	--ed-press-scale: 0.96;
 	--ed-press-shadow: 0 1px 1px rgba(31, 42, 34, 0.10);
 }
 [data-theme="dark"], [data-theme="dark"][data-relief="raised"], [data-theme="dark"] [data-relief="raised"] {
@@ -132,8 +131,7 @@
 	--ed-fill-sheen: 0;
 	--ed-fill-highlight: rgba(255, 255, 255, 0);
 	--ed-fill-shadow: none;
-	--ed-press-y: 0px;
-	--ed-press-scale: 1;
+	--ed-press-scale: 0.96;
 	--ed-press-shadow: none;
 }
 
@@ -215,7 +213,6 @@ body::before, .ed-canvas::before {
 		--ed-duration-panel: 0ms;
 		--ed-duration-settle: 0ms;
 		--ed-duration-breeze: 0ms;
-		--ed-press-y: 0px;
 		--ed-press-scale: 1;
 	}
 }

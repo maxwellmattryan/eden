@@ -99,6 +99,11 @@
 		background: var(--surface-3);
 		color: var(--text-primary);
 	}
+	/* The press (D-49): compress from the top, bottom edge fixed */
+	.ed-icon-btn:not(:disabled):active {
+		transform: scale(1, var(--ed-press-scale));
+		transform-origin: 50% 100%;
+	}
 	.ed-icon-btn:focus-visible {
 		outline: 2px solid transparent;
 		box-shadow: var(--focus-ring);
@@ -140,7 +145,6 @@
 		opacity: 0.14;
 	}
 	.ed-icon-btn-fab:not(:disabled):active {
-		transform: translateY(var(--ed-press-y)) scale(var(--ed-press-scale));
 		box-shadow: var(--ed-press-shadow);
 	}
 	.ed-icon-btn-fab:focus-visible {

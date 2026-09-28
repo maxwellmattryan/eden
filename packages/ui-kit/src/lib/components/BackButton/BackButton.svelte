@@ -47,9 +47,11 @@
 		background: transparent;
 		color: var(--text-secondary);
 		cursor: pointer;
-		transition: color var(--ed-duration-micro) var(--ed-ease-out);
+		transition:
+			color var(--ed-duration-micro) var(--ed-ease-out),
+			transform var(--ed-duration-micro) var(--ed-ease-out);
 	}
-	/* the ink wash: a hover is a tint of the ink, never a new hue, and nothing moves on press */
+	/* the ink wash: a hover is a tint of the ink, never a new hue; the press compresses from the top (D-49) */
 	.ed-back::after {
 		content: '';
 		position: absolute;
@@ -70,6 +72,10 @@
 	}
 	.ed-back:active::after {
 		opacity: 0.14;
+	}
+	.ed-back:active {
+		transform: scale(1, var(--ed-press-scale));
+		transform-origin: 50% 100%;
 	}
 	.ed-back:focus-visible {
 		outline: 2px solid transparent;

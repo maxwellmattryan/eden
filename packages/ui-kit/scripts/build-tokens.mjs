@@ -357,7 +357,6 @@ function baseCss() {
 		'\n/* Reduced motion: colour fades stay, movement goes, and a press no longer moves the control. Last, so it wins over the dials. */\n'
 	out += `@media (prefers-reduced-motion: reduce) {\n${block('\t:root, [data-relief]', [
 		...T.motion.reducedMotion.map((n) => `--ed-${n}: 0ms`),
-		'--ed-press-y: 0px',
 		'--ed-press-scale: 1',
 	])
 		.replace(/\n\t/g, '\n\t\t')

@@ -119,7 +119,8 @@
 		transition:
 			background-color var(--ed-duration-micro) var(--ed-ease-out),
 			color var(--ed-duration-micro) var(--ed-ease-out),
-			border-color var(--ed-duration-micro) var(--ed-ease-out);
+			border-color var(--ed-duration-micro) var(--ed-ease-out),
+			transform var(--ed-duration-micro) var(--ed-ease-out);
 	}
 	.ed-chip-mono {
 		font: var(--ed-t-data-sm);
@@ -147,6 +148,11 @@
 	}
 	button.ed-chip:active::after {
 		opacity: 0.14;
+	}
+	/* The press (D-49): a button chip compresses from the top, bottom edge fixed */
+	button.ed-chip:active {
+		transform: scale(1, var(--ed-press-scale));
+		transform-origin: 50% 100%;
 	}
 	button.ed-chip:focus-visible {
 		outline: 2px solid transparent;

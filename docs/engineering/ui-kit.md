@@ -38,7 +38,7 @@ All set on `<html>` (D-47); every selector in the stylesheets is element-scoped,
 | `data-font` | Crate's body-font setting; reserved | settings |
 | `data-platform` | `desktop`, `mobile` | each app, once, statically |
 | `data-density` | `comfortable`, `compact`; desktop only | settings |
-| `data-relief` | `raised`, `flat`; absent means raised | a design dial under comparison (OQ-21); the app ships the default |
+| `data-relief` | `raised`, `flat`; absent means raised | raised by decision (D-49); flat stays available for a dense screen |
 | `data-face` | the display face | Storybook only, never the app |
 
 The pre-paint script reads the localStorage keys in `storageKeys` (`eden:theme`, `eden:accent`, `eden:brand`, `eden:font`, `eden:density`). It sets attributes only; the stylesheets are blocking, so the first frame is already themed without inline colours.
@@ -65,7 +65,7 @@ Rules the generator enforces: every type size is on the scale 12, 13, 14, 15, 16
 
 **The brand dial** redefines `--ed-t-button`, `--ed-t-title`, `--ed-t-title-sm` and `--ed-t-voice` per level, which is how the display face says things at `tended` and `lush` and Inter says them at `plain`. It also sets `--ed-radius-control`, `--ed-radius-card`, `--ed-radius-sheet`, `--ed-btn-pad`, the fill sheen, edge, highlight and shadow, the secondary button ground, the chip edge, the sidebar's current-item colours and bar, the grain and its opacity and the motif size. Components read these, never `--radius-*` directly.
 
-**The relief dial** (`data-relief`, OQ-21) sits after the brand dial: `raised` keeps a toned-down sheen and shadow and sets `--ed-press-y`, `--ed-press-scale` and `--ed-press-shadow` so a filled control sinks on press; `flat` zeroes the sheen and shadow and the press. Reduced motion zeroes the press for both.
+**The relief dial** (`data-relief`, D-49) sits after the brand dial: `raised` keeps a toned-down sheen and shadow; `flat` zeroes them. Both set `--ed-press-scale` and `--ed-press-shadow`: every button-family control presses with `transform: scale(1, var(--ed-press-scale))` from its bottom edge, so it compresses from the top as if it sank into its hole, and a filled control's shadow collapses to `--ed-press-shadow`. Reduced motion zeroes the compression.
 
 **The platform block** sets `--ed-control`, `--ed-row`, `--ed-t-text`, `--ed-t-text-sm`, `--ed-sheet-pad`, `--ed-gutter`, `--ed-tab-bar` and the four `--ed-safe-*` insets. Behavioural differences (a sheet's placement, a menu as an action sheet, the sidebar against the tab bar) are explicit props with an `auto` default that reads the nearest `data-platform` through `platformOf()`. The kit never uses `matchMedia` or a media query.
 
@@ -160,7 +160,7 @@ Foundations pages render the tokens, the type specimens, the icon grid, the dial
 | `yarn build` | `svelte-package` and `publint` | the package builds standalone |
 | `yarn storybook:build` | the static gallery | builds |
 
-CI (`.github/workflows/ci.yml`) runs them on every push. Visual baselines (`scripts/vrt.mjs`, `{light, dark} × {desktop, mobile}` per story) are generated on the owner's machine with `yarn vrt:update` and compared with `yarn vrt`; they are about 45 MB per theme and platform cell, so they stay local and git-ignored until OQ-20 settles Git LFS or a reduced matrix, and there is no CI job yet.
+CI (`.github/workflows/ci.yml`) runs them on every push. Visual baselines (`scripts/vrt.mjs`, `{light, dark} × {desktop, mobile}` per story) are generated artifacts and never committed (D-50): `.github/workflows/vrt.yml` regenerates them on `main` and uploads them as a workflow artifact, and on a pull request downloads the latest set and fails on a pixel difference above 0.1 %. Locally `yarn vrt:update` writes them git-ignored and `yarn vrt` compares.
 
 The paper grain is a full-size pseudo-element, and axe cannot see through one: without `ignorePseudo` on the colour-contrast check it marks every contrast result incomplete instead of failing it, and the gate is inert. The a11y config sets it. Known tension: `text-tertiary` at 12 or 13 px in light sits at 3.3:1 and fails axe's colour-contrast rule. Components use it only where `design/visual-language.md` allows (metadata a reader can do without) and mark that element with `data-tertiary`, the one attribute the a11y config exempts from the contrast rule; nothing else is exempted.
 

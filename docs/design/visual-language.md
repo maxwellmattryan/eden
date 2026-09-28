@@ -104,7 +104,7 @@ Four-pixel base; component padding 8, 12, 16; section gaps 24, 32. Radius: 6 for
 
 ## Motion
 
-Micro-interactions 150 ms, panels and sheets 220 ms, ease-out (`cubic-bezier(0.22, 1, 0.36, 1)`). Panels "unfurl": scale from 0.98 and fade. Growth is the only metaphorical motion: a completed task or a committed capture settles rather than pops. With reduced motion on, only opacity animates. The Breeze specks are the one exception to the no-loops rule (D-42): they play once, 700 ms, on an accepted proposal or a settled action, and render nothing under reduced motion. Hover on a filled control is an ink wash, never a new hue. Whether a press moves the control is open (OQ-21): the raised relief sinks it by a pixel, the flat relief only deepens the wash.
+Micro-interactions 150 ms, panels and sheets 220 ms, ease-out (`cubic-bezier(0.22, 1, 0.36, 1)`). Panels "unfurl": scale from 0.98 and fade. Growth is the only metaphorical motion: a completed task or a committed capture settles rather than pops. With reduced motion on, only opacity animates. The Breeze specks are the one exception to the no-loops rule (D-42): they play once, 700 ms, on an accepted proposal or a settled action, and render nothing under reduced motion. Hover on a filled control is an ink wash, never a new hue. A press compresses the control from the top with its bottom edge fixed, as if it sank into its hole (D-49); reduced motion removes the movement.
 
 ## Charts
 

@@ -5,8 +5,8 @@
 
 <script lang="ts">
 	// One action; primary at most once per view. Every variant hovers the same way, an ink wash over its own colour
-	// (6 % on paper, 8 % on a fill, 14 % on press), never a new hue. Nothing moves except a filled button's press under
-	// the raised relief (OQ-21), where it sinks by --ed-press-y and its shadow collapses. The height follows the platform
+	// (6 % on paper, 8 % on a fill, 14 % on press), never a new hue. The press compresses the button from the top with
+	// its bottom edge fixed, as if it sank into its hole (D-49); a filled button's shadow collapses too. The height follows the platform
 	// through --ed-control unless a size is forced, and the label is set in --ed-t-button, which the brand dial owns.
 	import type { HTMLButtonAttributes } from 'svelte/elements'
 	import type { IconName } from '$lib/icons/icons.js'
@@ -164,9 +164,12 @@
 	.ed-btn-filled:focus-visible {
 		box-shadow: var(--focus-ring);
 	}
-	/* The press: under the raised relief the fill sinks and its shadow collapses; flat zeroes both (OQ-21) */
+	/* The press (D-49): every variant compresses from the top, bottom edge fixed; a fill's shadow collapses as well */
+	.ed-btn:not(:disabled):active {
+		transform: scale(1, var(--ed-press-scale));
+		transform-origin: 50% 100%;
+	}
 	.ed-btn-filled:not(:disabled):active {
-		transform: translateY(var(--ed-press-y)) scale(var(--ed-press-scale));
 		box-shadow:
 			inset 0 1px 0 var(--ed-fill-highlight),
 			var(--ed-press-shadow);
