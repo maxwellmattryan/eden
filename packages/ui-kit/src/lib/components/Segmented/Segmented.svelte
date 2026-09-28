@@ -109,7 +109,7 @@
 		display: inline-flex;
 		gap: 2px;
 		box-sizing: border-box;
-		height: var(--ed-control);
+		height: var(--ed-seg-height);
 		padding: 2px;
 		border-radius: var(--ed-radius-control);
 		background: var(--surface-2);
@@ -139,7 +139,7 @@
 		display: inline-flex;
 		align-items: center;
 		gap: var(--space-1);
-		height: calc(var(--ed-control) - 4px);
+		height: calc(var(--ed-seg-height) - 4px);
 		margin: 0;
 		padding: 0 var(--space-3);
 		border: 0;

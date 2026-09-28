@@ -3,6 +3,8 @@
 	import { expect, fn, userEvent, waitFor } from 'storybook/test'
 	import { canvasOf } from '../../../storybook/play.js'
 	import Sheet from './Sheet.svelte'
+	import Button from '../Button/Button.svelte'
+	import Field from '../Field/Field.svelte'
 
 	const { Story } = defineMeta({
 		title: 'Components/Overlays/Sheet',
@@ -22,16 +24,14 @@
 </script>
 
 {#snippet template(args: Record<string, unknown>)}
-	<button type="button" class="ed-t-button" onclick={() => (open = true)}>Open the sheet</button>
+	<Button label="Open the sheet" onclick={() => (open = true)} />
 	<Sheet bind:open {...args} label="A sheet">
 		{#snippet header()}<h2 class="ed-t-title" style="margin: 0">Delete the recipe?</h2>{/snippet}
 		<p class="ed-t-voice" style="margin: 0">Its stock links will become text. Nothing else changes.</p>
-		<label class="ed-t-label" style="display: block; margin-top: var(--space-3)">
-			Reason<br /><input type="text" style="margin-top: 4px" />
-		</label>
+		<div style="margin-top: var(--space-3)"><Field label="Reason" placeholder="Optional" /></div>
 		{#snippet footer()}
-			<button type="button" onclick={() => (open = false)}>Cancel</button>
-			<button type="button" onclick={() => (open = false)}>Delete recipe</button>
+			<Button label="Cancel" onclick={() => (open = false)} />
+			<Button label="Delete recipe" variant="danger" onclick={() => (open = false)} />
 		{/snippet}
 	</Sheet>
 {/snippet}

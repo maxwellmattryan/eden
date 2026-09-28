@@ -4,7 +4,7 @@ import { focusables } from './focusable.js'
 export interface TrapOptions {
 	/** When false the attachment does nothing. */
 	active?: boolean
-	/** What to focus on open: the first focusable (default), the container, or an element of your choosing. */
+	/** What to focus on open: the first focusable (default; an element with `autofocus` wins), the container, or an element of your choosing. */
 	initial?: 'first' | 'container' | (() => HTMLElement | null | undefined)
 	/** Return focus to whatever had it before, on cleanup. Default true. */
 	returnFocus?: boolean
@@ -27,7 +27,7 @@ export function trapFocus(get: () => TrapOptions = () => ({})): Attachment<HTMLE
 					? options.initial()
 					: options.initial === 'container'
 						? el
-						: (focusables(el)[0] ?? el)
+						: (el.querySelector<HTMLElement>('[autofocus]') ?? focusables(el)[0] ?? el)
 			target?.focus({ preventScroll: true })
 		})
 

@@ -159,6 +159,8 @@
 	}
 	.ed-sheet-body {
 		min-height: 0;
+		overflow: auto;
+		overscroll-behavior: contain;
 	}
 
 	/* centred: the desktop default */

@@ -106,12 +106,8 @@
 		gap: var(--space-1);
 		min-width: 0;
 	}
-	/* the brand rule under the name: --ed-rule is a hairline at tended and lush and 0 at plain */
 	.ed-page-header-name {
-		width: fit-content;
 		margin: 0;
-		padding-bottom: 2px;
-		border-bottom: var(--ed-rule) solid var(--brand-primary);
 		font: var(--ed-t-display-lg);
 		letter-spacing: var(--ed-t-display-lg-tracking);
 		font-variation-settings: var(--ed-t-display-lg-opsz);
