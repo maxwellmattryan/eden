@@ -559,6 +559,41 @@ function report() {
 	return out
 }
 
+// ---- tokens-report.json (the same measurements as data, for the Foundations pages)
+function reportJson() {
+	const out = { pairs: {}, accents: {} }
+	for (const theme of THEMES) {
+		out.pairs[theme] = T.contrast.pairs.map((p) => {
+			const fg = resolveColor(p.fg, theme)
+			const bg = resolveColor(p.bg, theme)
+			const ratio = contrast(fg, bg)
+			const need = p.size === 'large' || p.size === 'non-text' ? 3 : 4.5
+			return { fg: p.fg, bg: p.bg, fgHex: fg, bgHex: bg, size: p.size ?? 'text', ratio, grade: grade(ratio), ok: ratio >= need }
+		})
+		out.accents[theme] = accents.map((a) => {
+			const hexA = resolveColor(a.token.value, theme)
+			const isDef = a === defaultAccent
+			const hover = isDef ? resolveColor('brand-hover', theme) : derivedHover(hexA, theme)
+			const muted = isDef ? resolveColor('brand-muted', theme) : derivedMuted(hexA, theme)
+			const onb = isDef ? resolveColor('on-brand', theme) : onBrandFor(hexA, theme).c
+			return {
+				id: a.id,
+				default: isDef,
+				hex: hexA,
+				onBrand: onb,
+				hover,
+				muted,
+				textOnSurface0: contrast(hexA, resolveColor('surface-0', theme)),
+				textOnSurface1: contrast(hexA, resolveColor('surface-1', theme)),
+				onBrandOnFill: contrast(onb, hexA),
+				hoverOnSurface0: contrast(hover, resolveColor('surface-0', theme)),
+				textPrimaryOnMuted: contrast(resolveColor('text-primary', theme), muted),
+			}
+		})
+	}
+	return JSON.stringify(out, null, '\t') + '\n'
+}
+
 // ---------------------------------------------------------------- write or check
 const outputs = {
 	'src/lib/styles/theme.css': themeCss(),
@@ -569,6 +604,7 @@ const outputs = {
 	'.storybook/preview-head.html': previewHead(),
 	'src/lib/tokens/tokens.ts': tokensTs(),
 	'src/lib/tokens/tokens-report.md': report(),
+	'src/lib/tokens/tokens-report.json': reportJson(),
 }
 let drift = 0
 for (const [rel, content] of Object.entries(outputs)) {

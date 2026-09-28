@@ -308,6 +308,8 @@ export const sizes = {
 	"fab": "56px",
 	"sidebar": "220px",
 	"status-bar": "36px",
+	"sheet-sm": "360px",
+	"sheet-md": "440px",
 	"sheet-max": "900px"
 } as const
 export const motion = {

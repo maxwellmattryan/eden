@@ -19,3 +19,9 @@ export { default as Icon } from './icons/Icon.svelte'
 export { default as UiKitProvider } from './i18n/UiKitProvider.svelte'
 export { useStrings } from './i18n/context.js'
 export { defaultStrings, mergeStrings, type UiStrings, type UiStringsOverride } from './i18n/strings.js'
+
+// Overlays and feedback
+export { default as Sheet } from './components/Sheet/Sheet.svelte'
+export type { SheetCloseReason, SheetPlacement } from './components/Sheet/Sheet.svelte'
+export { ToastStore, TOAST_DURATION, dismissToast, toast, toastStore } from './toast/toast.svelte.js'
+export type { ToastAction, ToastItem, ToastOptions } from './toast/toast.svelte.js'

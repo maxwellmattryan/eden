@@ -13,5 +13,6 @@ packages/ui-kit/src/lib/styles/*.css
 packages/ui-kit/src/lib/styles/prepaint.js
 packages/ui-kit/src/lib/tokens/tokens.ts
 packages/ui-kit/src/lib/tokens/tokens-report.md
+packages/ui-kit/src/lib/tokens/tokens-report.json
 packages/ui-kit/src/lib/icons/icons.ts
 packages/ui-kit/.storybook/preview-head.html

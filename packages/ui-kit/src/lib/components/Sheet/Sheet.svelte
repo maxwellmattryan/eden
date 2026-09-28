@@ -1,0 +1,254 @@
+<script lang="ts">
+	// The modal base every sheet composes: a <dialog> opened with showModal(), so the browser makes the rest of the
+	// page inert, keeps focus inside, returns it on close and paints the scrim as ::backdrop. Escape arrives as the
+	// dialog's `cancel` event; a click on the scrim lands on the dialog element itself. The browser does not cycle Tab
+	// inside a modal dialog (focus can leave to its own chrome), so the panel also carries the focus trap; focus return
+	// stays native. `placement: 'auto'` is a bottom sheet on mobile and a centred sheet on desktop. Enter unfurls
+	// (scale .98 and fade); reduced motion fades only.
+	import type { Snippet } from 'svelte'
+	import type { HTMLDialogAttributes } from 'svelte/elements'
+	import { platformOf } from '$lib/internal/platform.js'
+	import { trapFocus } from '$lib/internal/trap-focus.js'
+
+	export type SheetCloseReason = 'escape' | 'scrim' | 'api'
+	export type SheetPlacement = 'auto' | 'bottom' | 'center' | 'side'
+
+	type Props = Omit<HTMLDialogAttributes, 'open' | 'oncancel' | 'onclose' | 'onkeydown'> & {
+		/** Bindable. Set it to open and close; every close path sets it back to false. */
+		open?: boolean
+		/** auto follows data-platform: bottom on mobile, center on desktop. side is the desktop detail-pane style. */
+		placement?: SheetPlacement
+		/** sm 360, md 440, lg up to 900, full the whole viewport. Bottom sheets are always full width. */
+		size?: 'sm' | 'md' | 'lg' | 'full'
+		/** The accessible name, when no visible title is labelled through `labelledby`. */
+		label?: string
+		labelledby?: string
+		/** When false, Escape and the scrim do nothing; the sheet closes only through `open`. */
+		dismissible?: boolean
+		/** Called after the sheet has closed, with why. */
+		onclose?: (reason: SheetCloseReason) => void
+		header?: Snippet
+		footer?: Snippet
+		children: Snippet
+	}
+	let {
+		open = $bindable(false),
+		placement = 'auto',
+		size = 'md',
+		label,
+		labelledby,
+		dismissible = true,
+		onclose,
+		header,
+		footer,
+		children,
+		class: className = '',
+		...rest
+	}: Props = $props()
+
+	let dialog = $state<HTMLDialogElement>()
+	let reason: SheetCloseReason = 'api'
+	const resolved = $derived<Exclude<SheetPlacement, 'auto'>>(
+		placement === 'auto' ? (dialog && platformOf(dialog) === 'mobile' ? 'bottom' : 'center') : placement
+	)
+
+	$effect(() => {
+		// effect: imperative DOM. showModal() and close() follow `open`.
+		const el = dialog
+		if (!el) return
+		if (open && !el.open) el.showModal()
+		else if (!open && el.open) el.close()
+	})
+
+	// Escape is handled here, on the focused descendant's keydown, and `cancel` stays as the fallback for close requests
+	// that arrive another way (a back gesture through the close watcher).
+	function onkeydown(e: KeyboardEvent) {
+		if (e.key !== 'Escape' || e.defaultPrevented) return
+		e.preventDefault()
+		requestClose('escape')
+	}
+	function oncancel(e: Event) {
+		e.preventDefault()
+		requestClose('escape')
+	}
+	function requestClose(why: SheetCloseReason) {
+		if (!dismissible) return
+		reason = why
+		open = false
+	}
+	function onclosed() {
+		if (open) open = false
+		onclose?.(reason)
+		reason = 'api'
+	}
+	function onscrim(e: MouseEvent) {
+		if (e.target === dialog) requestClose('scrim')
+	}
+</script>
+
+<dialog
+	bind:this={dialog}
+	class="ed-sheet ed-sheet-{resolved} ed-sheet-{size} {className}"
+	aria-label={label}
+	aria-labelledby={labelledby}
+	{oncancel}
+	{onkeydown}
+	onclose={onclosed}
+	onclick={onscrim}
+	{...rest}
+>
+	<div
+		class="ed-sheet-panel"
+		role="document"
+		{@attach trapFocus(() => ({ active: open, initial: 'first', returnFocus: false }))}
+	>
+		{#if resolved === 'bottom'}<span class="ed-sheet-handle" aria-hidden="true"></span>{/if}
+		{#if header}<header class="ed-sheet-header">{@render header()}</header>{/if}
+		<div class="ed-sheet-body">{@render children()}</div>
+		{#if footer}<footer class="ed-sheet-footer">{@render footer()}</footer>{/if}
+	</div>
+</dialog>
+
+<style>
+	.ed-sheet {
+		position: fixed;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		max-width: none;
+		max-height: none;
+		margin: 0;
+		padding: 0;
+		border: 0;
+		background: transparent;
+		color: var(--text-primary);
+		display: none;
+		box-sizing: border-box;
+	}
+	.ed-sheet[open] {
+		display: grid;
+	}
+	.ed-sheet::backdrop {
+		background: var(--ed-scrim, rgba(31, 42, 34, 0.32));
+	}
+	.ed-sheet-panel {
+		background: var(--surface-1);
+		border: 1px solid var(--ed-card-border);
+		border-radius: var(--ed-radius-sheet);
+		box-shadow: var(--shadow-sheet);
+		padding: var(--ed-sheet-pad);
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-4);
+		min-width: 0;
+		max-height: 100%;
+		overflow: auto;
+		box-sizing: border-box;
+		transition:
+			transform var(--ed-duration-panel) var(--ed-ease-out),
+			opacity var(--ed-duration-panel) var(--ed-ease-out);
+	}
+	.ed-sheet-header,
+	.ed-sheet-footer {
+		flex: none;
+	}
+	.ed-sheet-footer {
+		display: flex;
+		justify-content: flex-end;
+		gap: var(--space-2);
+	}
+	.ed-sheet-body {
+		min-height: 0;
+	}
+
+	/* centred: the desktop default */
+	.ed-sheet-center {
+		place-items: center;
+		padding: var(--ed-gutter);
+	}
+	.ed-sheet-center .ed-sheet-panel {
+		width: 100%;
+	}
+	.ed-sheet-center.ed-sheet-sm .ed-sheet-panel {
+		max-width: var(--sheet-sm);
+	}
+	.ed-sheet-center.ed-sheet-md .ed-sheet-panel {
+		max-width: var(--sheet-md);
+	}
+	.ed-sheet-center.ed-sheet-lg .ed-sheet-panel {
+		max-width: var(--sheet-max);
+	}
+	.ed-sheet-center.ed-sheet-full {
+		padding: 0;
+	}
+	.ed-sheet-center.ed-sheet-full .ed-sheet-panel {
+		height: 100%;
+		border-radius: 0;
+		border: 0;
+	}
+
+	/* bottom: mobile */
+	.ed-sheet-bottom {
+		align-items: end;
+		justify-items: stretch;
+	}
+	.ed-sheet-bottom .ed-sheet-panel {
+		width: 100%;
+		max-height: 92dvh;
+		border-radius: var(--ed-radius-sheet) var(--ed-radius-sheet) 0 0;
+		border-bottom: 0;
+		padding-bottom: calc(var(--ed-sheet-pad) + var(--ed-safe-bottom));
+	}
+	.ed-sheet-bottom.ed-sheet-full .ed-sheet-panel {
+		max-height: 100%;
+		height: 100%;
+		border-radius: 0;
+		padding-top: calc(var(--ed-sheet-pad) + var(--ed-safe-top));
+	}
+	.ed-sheet-handle {
+		display: block;
+		width: 36px;
+		height: 4px;
+		border-radius: var(--radius-full);
+		background: var(--stroke-hover);
+		margin: 0 auto;
+		flex: none;
+	}
+
+	/* side: the desktop detail-pane style */
+	.ed-sheet-side {
+		justify-items: end;
+		align-items: stretch;
+	}
+	.ed-sheet-side .ed-sheet-panel {
+		height: 100%;
+		width: min(var(--sheet-md), 100%);
+		border-radius: var(--ed-radius-sheet) 0 0 var(--ed-radius-sheet);
+		border-right: 0;
+	}
+	.ed-sheet-side.ed-sheet-lg .ed-sheet-panel {
+		width: min(var(--sheet-max), 100%);
+	}
+
+	/* the unfurl: scale .98 and fade for centred and side sheets, a short rise for bottom sheets */
+	@starting-style {
+		.ed-sheet[open] .ed-sheet-panel {
+			opacity: 0;
+			transform: scale(0.98);
+		}
+		.ed-sheet-bottom[open] .ed-sheet-panel {
+			transform: translateY(var(--space-4));
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.ed-sheet-panel {
+			transition-property: opacity;
+		}
+		@starting-style {
+			.ed-sheet[open] .ed-sheet-panel,
+			.ed-sheet-bottom[open] .ed-sheet-panel {
+				transform: none;
+			}
+		}
+	}
+</style>

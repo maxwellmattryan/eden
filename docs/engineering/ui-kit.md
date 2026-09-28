@@ -54,7 +54,7 @@ The pre-paint script reads the localStorage keys in `storageKeys` (`eden:theme`,
 | `styles/faces.css` | the alternate faces and `[data-face]` blocks, gallery only |
 | `styles/prepaint.js`, `.storybook/preview-head.html` | the pre-paint script, standalone and inlined |
 | `tokens/tokens.ts` | unions (`Theme`, `Accent`, `BrandLevel`, `Face`, `Platform`, `Density`, `TypeStyle`, `ColorToken`), resolved values, `defaults`, `storageKeys` |
-| `tokens/tokens-report.md` | WCAG ratios for every documented pair and every accent, with the derived values |
+| `tokens/tokens-report.md`, `tokens/tokens-report.json` | WCAG ratios for every documented pair and every accent, with the derived values; the JSON feeds the Foundations pages |
 
 Rules the generator enforces: every type size is on the scale 12, 13, 14, 15, 16, 18, 22, 28, 36; every `{reference}` names an emitted variable; token names are unique.
 
