@@ -4,7 +4,7 @@ status: draft
 summary: One consistent fictional dataset for every mockup: an owner, facts, stock by location, a captured haul, recipes, a grocery list, ideas and projects, a calendar week with layers, a weather week, workouts and a weight series, places and listings, daily lines, notifications, feed and audit entries.
 read-this-if: You are drawing a mockup or seeding an empty state with sample data.
 depends-on: [product/domains/README]
-updated: 2026-09-27
+updated: 2026-09-28
 ---
 
 ## The owner
@@ -101,3 +101,7 @@ Audit entry: 09-30 07:31, surface Hearth chat, model claude-sonnet, read `stock-
 ## Japanese screenshots
 
 Sidebar: 庭, 今日, 台所, 工房, 空, 暦, 活力, 聖域, 野原, 庭師, 設定. The daily line in Japanese: 「足るを知る」.
+
+## Mirror in code
+
+The dataset is mirrored as `packages/ui-kit/src/stories/sample-data.ts`, typed for the kit's stories. Change both together.

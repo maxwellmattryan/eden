@@ -1,0 +1,62 @@
+name: ci
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  STORYBOOK_DISABLE_TELEMETRY: '1'
+
+jobs:
+  checks:
+    name: format, lint, check, tokens
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+      - run: yarn install --frozen-lockfile
+      - run: yarn format:check
+      - run: yarn lint
+      - run: yarn workspace @eden/ui-kit tokens:check
+      - run: yarn workspace @eden/ui-kit icons:check
+      - run: yarn workspace @eden/ui-kit fonts:check
+      - run: yarn check
+
+  test:
+    name: unit and story tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+      - run: yarn install --frozen-lockfile
+      - run: npx playwright install --with-deps chromium
+      - run: yarn test
+
+  build:
+    name: package and storybook
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+      - run: yarn install --frozen-lockfile
+      - run: yarn build
+      - run: yarn storybook:build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: storybook-static
+          path: packages/ui-kit/storybook-static
+          retention-days: 7

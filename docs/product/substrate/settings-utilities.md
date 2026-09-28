@@ -4,7 +4,7 @@ status: draft
 summary: The settings modal and its tabs, appearance, language, the updater, diagnostics and crash handling, data actions, keyboard shortcuts, the Domains tab, and what each reuses from Crate.
 read-this-if: You are designing a settings screen or a utility every app needs.
 depends-on: [shell, data, ai, grants]
-updated: 2026-09-27
+updated: 2026-09-28
 ---
 
 ## Settings modal
@@ -27,7 +27,7 @@ Desktop: a modal with a left tab rail, deep-linkable to a tab, following Crate's
 
 ## Appearance
 
-Reuses Crate's token architecture: `data-theme`, `data-accent` and `data-font` on the root, a pre-paint script reading local storage so there is no theme flash, and zoom handled by the backend. Eden's palettes and accent set are in `design/visual-language.md`. System theme follows the OS.
+Reuses Crate's token architecture as the kit extends it: `data-theme`, `data-accent`, `data-font`, `data-brand`, `data-platform` and `data-density` on the root (D-47), the kit's pre-paint script reading local storage so there is no theme flash (it resolves the system theme in JS and the app re-resolves on change), and zoom handled by the backend. Eden's palettes and accent set are in `design/visual-language.md`.
 
 ## Language
 

@@ -1,19 +1,19 @@
 ---
 title: Visual language
 status: draft
-summary: The token architecture extended from Crate, the light "morning garden" and dark "night forest" themes with candidate values, the accent set, semantic colours and the Gardener tint, typography, iconography, spacing, radius, elevation, motion, chart colours and accessibility targets.
+summary: The token architecture extended from Crate, the light "morning garden" and dark "night forest" themes with their values, the accent set, semantic colours and the Gardener's two colours, typography, iconography, spacing, radius, elevation, motion, chart colours and accessibility targets.
 read-this-if: You are styling anything, building the theme, or drawing a mockup.
 depends-on: [brand]
-updated: 2026-09-27
+updated: 2026-09-28
 ---
 
 ## Token architecture
 
-Eden extends Crate's `theme.css`: plain CSS variables keyed off `data-theme` (light, dark), `data-accent` and `data-font` on the root, mapped into Tailwind's `@theme` for utilities, with a pre-paint script so the first frame is already themed. Eden adds a third surface level, an AI tint, and the accent set below. Every value here is a candidate for Claude Design to iterate on; the names are fixed.
+Eden extends Crate's `theme.css`: plain CSS variables keyed off `data-theme` (light, dark), `data-accent`, `data-font`, `data-brand` (plain, tended, lush), `data-platform` (desktop, mobile) and `data-density` (comfortable, compact) on the root or any subtree (D-47), mapped into Tailwind through `@theme inline` so utilities follow the runtime variables, with a pre-paint script so the first frame is already themed. The stylesheets are generated from the kit's `tokens.json` (D-46, `engineering/ui-kit.md`). Eden adds a third surface level, two Gardener tints and the accent set below. The values here mirror the source; change both together. The names are fixed.
 
 ## Light: morning garden
 
-Warm paper, not white. Moss for the brand, ink-green for text, clay as the warm counterpoint.
+Warm paper, not white. Moss for the brand, ink-green for text, clay as the warm counterpoint, spruce and honey for the Gardener.
 
 | token | value |
 |---|---|
@@ -26,14 +26,16 @@ Warm paper, not white. Moss for the brand, ink-green for text, clay as the warm 
 | `--text-tertiary` | `#7C8A7F` |
 | `--stroke` | `#D9D6C8` |
 | `--stroke-subtle` | `#E8E5D9` |
-| `--brand-primary` | `#4F7A5A` moss |
+| `--stroke-hover` | `#C4C1B1` |
+| `--brand-primary` | `#4F7A5A` moss, `--on-brand` `#FFFFFF` |
 | `--brand-hover` | `#43684D` |
 | `--brand-muted` | `#DCE8DD` |
-| `--ai` | `#8A6A1E` on `--ai-muted` `#F1E6C4` honey |
+| `--ai` | `#1E6E5C` on `--ai-muted` `#D9EFE6` spruce; the Gardener when it speaks |
+| `--honey` | `#8A6A1E` on `--honey-muted` `#F1E6C4` honey; the Gardener when it acts |
 
 ## Dark: night forest
 
-Deep blue-green blacks, not pure black. Desaturated fern for the brand, a firefly gold for the Gardener.
+Deep blue-green blacks, not pure black. Desaturated fern for the brand, sea-glass for the Gardener's voice, a firefly gold for its actions.
 
 | token | value |
 |---|---|
@@ -46,14 +48,16 @@ Deep blue-green blacks, not pure black. Desaturated fern for the brand, a firefl
 | `--text-tertiary` | `#75837A` |
 | `--stroke` | `#2A3730` |
 | `--stroke-subtle` | `#1F2A24` |
-| `--brand-primary` | `#7FB58A` fern |
+| `--stroke-hover` | `#364840` |
+| `--brand-primary` | `#7FB58A` fern, `--on-brand` `#0F1512` |
 | `--brand-hover` | `#93C49D` |
 | `--brand-muted` | `#24382C` |
-| `--ai` | `#F2D27A` on `--ai-muted` `#2E2A18` firefly |
+| `--ai` | `#86D6BF` on `--ai-muted` `#163329` sea-glass; the Gardener when it speaks |
+| `--honey` | `#F2D27A` on `--honey-muted` `#2E2A18` firefly; the Gardener when it acts |
 
 ## Accent set
 
-Ten accents the owner can pick, replacing `--brand-*` at runtime as in Crate. Light and dark values are tuned separately for contrast.
+Ten accents the owner can pick, replacing `--brand-*` at runtime as in Crate. Light and dark values are tuned separately for contrast. Moss keeps hand-tuned hover and muted values; the others derive them from the base colour, and every accent's `--on-brand` is computed at build time by contrast (OQ-18).
 
 | accent | light | dark |
 |---|---|---|
@@ -76,19 +80,19 @@ Ten accents the owner can pick, replacing `--brand-*` at runtime as in Crate. Li
 | warning | `#B8821F` | `#E3B24F` |
 | success | the accent | the accent |
 | info | `#4A82A6` | `#7FB2D6` |
-| Gardener surfaces | `--ai` on `--ai-muted` | same |
+| Gardener surfaces | `--ai` on `--ai-muted` when it speaks, `--honey` on `--honey-muted` when it acts | same |
 
-The Gardener tint is distinct from the accent so an AI surface is always recognisable whatever accent is chosen.
+The Gardener's colours are distinct from the accent so an AI surface is always recognisable whatever accent is chosen: green when it speaks, honey when it acts (D-40).
 
 ## Typography
 
 | role | face | notes |
 |---|---|---|
-| display | Fraunces (variable serif) | headings, the daily line, empty-state titles; optical size on |
+| display | Newsreader (variable serif) | headings, the daily line, the Gardener's voice, empty-state titles; optical size on; metric overrides ascent 98%, descent 26%, line gap 0% (D-39). Fraunces, Instrument Serif and Bricolage exist only behind the Storybook face dial and never ship |
 | body | Inter | everything else |
 | data | Geist Mono | numbers in tables, quantities, code in Toolbench |
 
-Scale: 12, 13, 14 (body), 16, 18, 22, 28, 36. Body line-height 1.5, display 1.15. Crate's font setting stays, with the serif display paired to whichever body face is chosen. Japanese falls back to the system sans (Hiragino Sans, Noto Sans JP) for body and to Noto Serif JP for display.
+Scale: 12, 13, 14 (body), 15 (voice), 16, 18, 22, 28, 36 and nothing between (D-46). Body line-height 1.5, display 1.15. Crate's font setting stays, with the serif display paired to whichever body face is chosen. Japanese falls back to the system sans (Hiragino Sans, Noto Sans JP) for body and to Noto Serif JP for display.
 
 ## Iconography
 
@@ -100,7 +104,7 @@ Four-pixel base; component padding 8, 12, 16; section gaps 24, 32. Radius: 6 for
 
 ## Motion
 
-Micro-interactions 150 ms, panels and sheets 220 ms, ease-out (`cubic-bezier(0.22, 1, 0.36, 1)`). Panels "unfurl": scale from 0.98 and fade. Growth is the only metaphorical motion: a completed task or a committed capture settles rather than pops. With reduced motion on, only opacity animates.
+Micro-interactions 150 ms, panels and sheets 220 ms, ease-out (`cubic-bezier(0.22, 1, 0.36, 1)`). Panels "unfurl": scale from 0.98 and fade. Growth is the only metaphorical motion: a completed task or a committed capture settles rather than pops. With reduced motion on, only opacity animates. The Breeze specks are the one exception to the no-loops rule (D-42): they play once, 700 ms, on an accepted proposal or a settled action, and render nothing under reduced motion.
 
 ## Charts
 
@@ -108,7 +112,7 @@ Numeric widgets (weight trend, later Orchard) use the accent for the primary ser
 
 ## Accessibility targets
 
-Body text contrast 4.5:1, large text 3:1, checked for every accent on both themes. Visible focus rings in the accent, 2 pixels, offset 2. Touch targets 44 by 44 on mobile. Everything reachable by keyboard; the palette is the escape hatch. Reduced motion and system theme respected. Colour is never the only carrier of state.
+Body text contrast 4.5:1, large text 3:1, checked for every accent on both themes. Visible focus rings, 2 pixels, offset 2, composed from tokens (`--focus-ring-width`, `--focus-ring-offset`, `--surface-0`, `--brand-primary`) so they follow the accent and the theme. Touch targets 44 by 44 on mobile. Everything reachable by keyboard; the palette is the escape hatch. Reduced motion and system theme respected. Colour is never the only carrier of state.
 
 ## Density
 

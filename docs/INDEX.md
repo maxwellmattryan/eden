@@ -10,6 +10,8 @@ Every doc in one table per layer: path, status, one-liner, size (S under 120 lin
 
 **Designing mockups**: `design/brand.md` → `design/visual-language.md` → `design/ux-patterns.md` → `design/screens.md` → `design/sample-data.md`, then the domain docs for the screens you are drawing.
 
+**Building a component**: `CONVENTIONS.md` → `engineering/ui-kit.md` → `design/visual-language.md` → `design/ux-patterns.md` → `engineering/ui-kit-components.md`.
+
 ## Conventions
 
 | path | status | one-liner | size | load when |
@@ -78,7 +80,9 @@ Every doc in one table per layer: path, status, one-liner, size (S under 120 lin
 
 | path | status | one-liner | size | load when |
 |---|---|---|---|---|
-| engineering/README.md | planned | Not written yet; lists the questions engineering docs must answer | S | starting engineering |
+| engineering/README.md | draft | Where engineering stands and the questions still open | S | starting engineering |
+| engineering/ui-kit.md | draft | The kit: location, exports, tokens pipeline, conventions, Storybook, gates | M | adding or consuming a component or token |
+| engineering/ui-kit-components.md | draft | Per-component contract: props, bindables, callbacks, snippets, stories | S | changing a component |
 
 ## Status legend
 

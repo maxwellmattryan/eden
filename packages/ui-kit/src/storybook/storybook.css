@@ -1,3 +1,8 @@
 /* The gallery's stylesheet entry. Storybook imports this once; the apps import the same chain from @eden/ui-kit
    (theme.css, base.css, tailwind.css) after their own `@import 'tailwindcss'`. faces.css and frames.css are gallery-only. */
 @import 'tailwindcss';
+@import '../lib/styles/theme.css';
+@import '../lib/styles/base.css';
+@import '../lib/styles/tailwind.css';
+@import '../lib/styles/faces.css';
+@import './frames.css';

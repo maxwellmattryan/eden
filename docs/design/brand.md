@@ -4,7 +4,7 @@ status: draft
 summary: The name and what it means, the metaphor policy, voice and tone with examples, motifs and their limits, the app icon direction, the domain glyph family with a concept per domain, and the splash screen.
 read-this-if: You are making any visual or copy decision, or naming anything the owner will see.
 depends-on: [product/glossary]
-updated: 2026-09-27
+updated: 2026-09-28
 ---
 
 ## Name and meaning
@@ -32,15 +32,15 @@ The Gardener never refers to itself as an AI model in conversation, never claims
 
 ## Motifs and their limits
 
-Leaf and vine linework, a single unfurling frond, paper grain, the light of morning and the dark of a forest at night. Used only in empty states, the splash, onboarding and the app icon. Never as wallpaper, never behind text, never animated in loops. No florals, no pastel pink, no cursive.
+Leaf and vine linework, a single unfurling frond, paper grain, the light of morning and the dark of a forest at night. Used only in empty states, the splash, onboarding and the app icon. Never as wallpaper, never behind text, never animated in loops. Two exceptions (D-42): paper grain sits behind the whole page at the `lush` brand level, at an opacity that never competes with text, and the Breeze specks play once on an accepted proposal or a settled action and never loop. No florals, no pastel pink, no cursive.
 
 ## App icon and logo
 
-A single fern frond unfurling inside a rounded square: moss green on warm paper for light, fern green on night forest for dark, with a small firefly point of gold near the tip in the dark variant. The wordmark is the display serif, lowercase "eden", used only on the splash and in About.
+A single fern frond unfurling inside a rounded square: moss green on warm paper for light, fern green on night forest for dark, with a small firefly point of gold near the tip in the dark variant. The wordmark is the display face, Newsreader (D-39), lowercase "eden", used only on the splash and in About.
 
 ## The domain glyph family (D-17)
 
-One family, drawn on Lucide's 24-pixel grid with a 2-pixel stroke, round caps and joins, so the glyphs sit beside Lucide's utility icons without looking imported. Each ships as SVG at 16, 24 and 32 pixels, in a mono variant and an accent-tinted variant for tiles. Concepts to iterate on in Claude Design:
+One family, drawn on Lucide's 24-pixel grid with a 2-pixel stroke, round caps and joins, so the glyphs sit beside Lucide's utility icons without looking imported. Each ships as SVG at 16, 24 and 32 pixels, in a mono variant and an accent-tinted variant for tiles. Until the family exists the kit maps each plain domain id to a Lucide stand-in through `domainGlyph()`, the one place to swap when a glyph is drawn; a stand-in is never presented as the family. Concepts to iterate on in Claude Design:
 
 | name | glyph concept |
 |---|---|
