@@ -83,3 +83,9 @@ export { default as ToolCard } from './components/ToolCard/ToolCard.svelte'
 export type { ToolAccess, ToolState } from './components/ToolCard/ToolCard.svelte'
 export { default as ProposalCard } from './components/ProposalCard/ProposalCard.svelte'
 export type { ProposalState } from './components/ProposalCard/ProposalCard.svelte'
+
+// Overlays
+export { default as Popover } from './components/Popover/Popover.svelte'
+export type { PopoverAnchor, PopoverCloseReason } from './components/Popover/Popover.svelte'
+export { default as Menu } from './components/Menu/Menu.svelte'
+export type { MenuItem, MenuPresentation } from './components/Menu/Menu.svelte'
