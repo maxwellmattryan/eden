@@ -47,5 +47,8 @@
 		"prettier-plugin-tailwindcss": "0.8.1",
 		"typescript": "5.9.3",
 		"typescript-eslint": "8.71.0"
+	},
+	"resolutions": {
+		"vite": "7.3.6"
 	}
 }
