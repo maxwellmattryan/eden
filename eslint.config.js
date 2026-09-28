@@ -54,6 +54,8 @@ export default defineConfig(
 		// The kit's own rules: see docs/engineering/ui-kit.md.
 		files: ['packages/ui-kit/src/lib/**/*.{ts,svelte}'],
 		rules: {
+			// a SvelteKit rule; the kit is a library and may not import $app/paths
+			'svelte/no-navigation-without-resolve': 'off',
 			'svelte/no-at-html-tags': 'error',
 			'svelte/require-each-key': 'error',
 			'no-restricted-syntax': [

@@ -18,6 +18,8 @@ export interface UiStrings {
 	undo: string
 	select: string
 	selected: (count: number) => string
+	/** The spoken state of a selected row outside a grid, where aria-selected is not allowed. */
+	selectedRow: string
 	actions: string
 	actionsFor: (name: string) => string
 	remove: (name: string) => string
@@ -105,6 +107,22 @@ export interface UiStrings {
 		settings: string
 		domains: string
 		quickLog: string
+		/** The bar's accessible name. */
+		label: string
+		/** The Gardener chip's accessible name: the model and its budget, as one name. */
+		gardenerBudget: (model: string, budget: string) => string
+	}
+	sidebar: {
+		/** The domain nav's accessible name. */
+		label: string
+		/** The pinned list's accessible name: Gardener and Settings. */
+		pinned: string
+	}
+	tabBar: {
+		/** The mobile tab bar's accessible name. */
+		label: string
+		/** A tab with a badge: its label and the count, as one name. */
+		withBadge: (label: string, count: number) => string
 	}
 	sky: {
 		sunny: string
@@ -155,6 +173,7 @@ export const defaultStrings: UiStrings = {
 	undo: 'Undo',
 	select: 'Select',
 	selected: (count) => `${count} selected`,
+	selectedRow: 'Selected',
 	actions: 'Actions',
 	actionsFor: (name) => `Actions for ${name}`,
 	remove: (name) => `Remove ${name}`,
@@ -235,6 +254,16 @@ export const defaultStrings: UiStrings = {
 		settings: 'Settings',
 		domains: 'Domains',
 		quickLog: 'Quick Log',
+		label: 'Status bar',
+		gardenerBudget: (model, budget) => `${model}, ${budget} used`,
+	},
+	sidebar: {
+		label: 'Domains',
+		pinned: 'Gardener and settings',
+	},
+	tabBar: {
+		label: 'Sections',
+		withBadge: (label, count) => `${label}, ${count} new`,
 	},
 	sky: {
 		sunny: 'Sunny',

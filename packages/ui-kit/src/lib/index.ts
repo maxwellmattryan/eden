@@ -96,3 +96,12 @@ export { default as QuickLogSheet } from './components/QuickLogSheet/QuickLogShe
 export type { QuickLog, QuickLogKind } from './components/QuickLogSheet/QuickLogSheet.svelte'
 export { default as CaptureSheet } from './components/CaptureSheet/CaptureSheet.svelte'
 export { LOCATIONS, type CaptureLocation, type CaptureRow } from './components/CaptureSheet/CaptureSheet.svelte'
+
+// Navigation
+export { default as SidebarItem } from './components/SidebarItem/SidebarItem.svelte'
+export { default as Sidebar } from './components/Sidebar/Sidebar.svelte'
+export type { SidebarEntry } from './components/Sidebar/Sidebar.svelte'
+export { default as BottomTabBar } from './components/BottomTabBar/BottomTabBar.svelte'
+export type { BottomTab } from './components/BottomTabBar/BottomTabBar.svelte'
+export { default as SwipeRow } from './components/SwipeRow/SwipeRow.svelte'
+export type { SwipeAction, SwipeLeading, SwipeTrailing } from './components/SwipeRow/SwipeRow.svelte'
