@@ -20,7 +20,7 @@
 	--ed-t-voice-tracking: var(--ed-display-tracking);
 	--ed-fill-sheen: 0.12;
 	--ed-fill-edge: rgba(31, 42, 34, 0.14);
-	--ed-fill-highlight: rgba(255, 255, 255, 0.18);
+	--ed-fill-highlight: rgba(255, 255, 255, 0.08);
 	--ed-fill-shadow: 0 1px 1px rgba(31, 42, 34, 0.10), 0 3px 8px -4px color-mix(in srgb, var(--brand-primary) 25%, transparent);
 	--ed-secondary-bg: var(--surface-0);
 	--ed-secondary-border: var(--stroke);
@@ -37,7 +37,7 @@
 [data-theme="dark"], [data-theme="dark"][data-brand="lush"], [data-theme="dark"] [data-brand="lush"] {
 	--ed-fill-sheen: 0.08;
 	--ed-fill-edge: rgba(0, 0, 0, 0.32);
-	--ed-fill-highlight: rgba(255, 255, 255, 0.08);
+	--ed-fill-highlight: rgba(255, 255, 255, 0.04);
 	--ed-fill-shadow: 0 3px 8px -4px rgba(0, 0, 0, 0.5);
 	--ed-grain-opacity: 0.05;
 }
@@ -60,7 +60,7 @@
 	--ed-t-voice-tracking: 0em;
 	--ed-fill-sheen: 0;
 	--ed-fill-edge: rgba(31, 42, 34, 0.14);
-	--ed-fill-highlight: rgba(255, 255, 255, 0.08);
+	--ed-fill-highlight: rgba(255, 255, 255, 0.04);
 	--ed-fill-shadow: none;
 	--ed-secondary-bg: var(--surface-1);
 	--ed-secondary-border: var(--stroke);
@@ -77,7 +77,7 @@
 [data-theme="dark"][data-brand="plain"], [data-theme="dark"] [data-brand="plain"] {
 	--ed-fill-sheen: 0;
 	--ed-fill-edge: rgba(0, 0, 0, 0.32);
-	--ed-fill-highlight: rgba(255, 255, 255, 0.06);
+	--ed-fill-highlight: rgba(255, 255, 255, 0.03);
 	--ed-fill-shadow: none;
 	--ed-grain-opacity: 0;
 }
@@ -100,7 +100,7 @@
 	--ed-t-voice-tracking: var(--ed-display-tracking);
 	--ed-fill-sheen: 0.08;
 	--ed-fill-edge: rgba(31, 42, 34, 0.14);
-	--ed-fill-highlight: rgba(255, 255, 255, 0.14);
+	--ed-fill-highlight: rgba(255, 255, 255, 0.06);
 	--ed-fill-shadow: 0 1px 1px rgba(31, 42, 34, 0.08);
 	--ed-secondary-bg: var(--surface-0);
 	--ed-secondary-border: var(--stroke);
@@ -117,7 +117,7 @@
 [data-theme="dark"][data-brand="tended"], [data-theme="dark"] [data-brand="tended"] {
 	--ed-fill-sheen: 0.06;
 	--ed-fill-edge: rgba(0, 0, 0, 0.32);
-	--ed-fill-highlight: rgba(255, 255, 255, 0.08);
+	--ed-fill-highlight: rgba(255, 255, 255, 0.04);
 	--ed-fill-shadow: none;
 	--ed-grain-opacity: 0;
 }
