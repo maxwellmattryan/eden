@@ -214,6 +214,9 @@
 	--ed-t-daily-line: var(--ed-display-italic) 400 22px/1.35 var(--ed-font-display);
 	--ed-t-daily-line-opsz: "opsz" 22;
 	--ed-t-daily-line-tracking: var(--ed-display-tracking);
+	--ed-t-daily-line-lg: var(--ed-display-italic) 400 28px/1.35 var(--ed-font-display);
+	--ed-t-daily-line-lg-opsz: "opsz" 28;
+	--ed-t-daily-line-lg-tracking: var(--ed-display-tracking);
 	--ed-t-body-lg: 400 16px/24px var(--ed-font-sans);
 	--ed-t-body-lg-opsz: normal;
 	--ed-t-body-lg-tracking: normal;
@@ -401,6 +404,11 @@
 	font: var(--ed-t-daily-line);
 	letter-spacing: var(--ed-t-daily-line-tracking, normal);
 	font-variation-settings: var(--ed-t-daily-line-opsz, normal);
+}
+.ed-t-daily-line-lg {
+	font: var(--ed-t-daily-line-lg);
+	letter-spacing: var(--ed-t-daily-line-lg-tracking, normal);
+	font-variation-settings: var(--ed-t-daily-line-lg-opsz, normal);
 }
 .ed-t-body-lg {
 	font: var(--ed-t-body-lg);

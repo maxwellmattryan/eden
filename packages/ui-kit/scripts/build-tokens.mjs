@@ -101,6 +101,7 @@ for (const [level, vars] of Object.entries(T.dials.brand.levels))
 		if (isRole(v) && !scale.has(parseFloat(v.size)))
 			fail(`brand level "${level}" role "${k}" uses ${v.size}, off the scale`)
 	}
+for (const vars of Object.values(T.dials.relief.levels)) for (const k of Object.keys(vars)) known.add('ed-' + k)
 for (const vars of Object.values(T.platform.vars)) for (const k of Object.keys(vars)) known.add('ed-' + k)
 ;['ed-safe-top', 'ed-safe-right', 'ed-safe-bottom', 'ed-safe-left'].forEach((n) => known.add(n))
 noteRefs(T)
@@ -254,14 +255,6 @@ function themeCss() {
 // ---- base.css
 function baseCss() {
 	let out = banner('the brand, platform and density dials, and the rules every surface shares')
-	out += '\n/* Reduced motion: colour fades stay, movement goes. */\n'
-	out += `@media (prefers-reduced-motion: reduce) {\n${block(
-		'\t:root',
-		T.motion.reducedMotion.map((n) => `--ed-${n}: 0ms`)
-	)
-		.replace(/\n\t/g, '\n\t\t')
-		.replace(/\n}/, '\n\t}')}}\n`
-
 	out += `\n/* Brand presence (data-brand): ${T.dials.brand.levels ? Object.keys(T.dials.brand.levels).join(', ') : ''}; default ${T.dials.brand.default}. Components read only these --ed-* variables. */\n`
 	const levelDecls = (vars, theme) => {
 		const decls = []
@@ -283,6 +276,28 @@ function baseCss() {
 			if (!dark.length) continue
 			const own = `[data-theme="${theme}"][data-brand="${level}"], [data-theme="${theme}"] [data-brand="${level}"]`
 			out += block(isDefault ? `[data-theme="${theme}"], ${own}` : own, dark)
+		}
+	}
+
+	out += `\n/* Relief (data-relief): ${Object.keys(T.dials.relief.levels).join(', ')}; default ${T.dials.relief.default}. After the brand dial, so a level wins over it in both themes (OQ-21). */\n`
+	for (const [level, vars] of Object.entries(T.dials.relief.levels)) {
+		const isDefault = level === T.dials.relief.default
+		const own = `[data-relief="${level}"]`
+		const darkForms = THEMES.slice(1).flatMap((theme) => [
+			`[data-theme="${theme}"]${own}`,
+			`[data-theme="${theme}"] ${own}`,
+		])
+		const light = Object.entries(vars).map(([k, v]) => `--ed-${k}: ${css(isThemed(v) ? v[THEMES[0]] : v)}`)
+		const dark = Object.entries(vars)
+			.filter(([, v]) => isThemed(v))
+			.map(([k, v]) => `--ed-${k}: ${css(v[THEMES[1]])}`)
+		if (isDefault) {
+			out += block(`:root, ${own}`, light)
+			if (dark.length) out += block([`[data-theme="${THEMES[1]}"]`, ...darkForms].join(', '), dark)
+		} else {
+			// emitted with the dark forms too, so the level beats the dark brand blocks on specificity
+			out += block([own, ...darkForms].join(', '), light)
+			if (dark.length) out += block(darkForms.join(', '), dark)
 		}
 	}
 
@@ -338,6 +353,15 @@ function baseCss() {
 		'[data-theme="dark"] body::before, [data-theme="dark"] .ed-canvas::before, [data-theme="dark"].ed-canvas::before',
 		['mix-blend-mode: screen']
 	)
+	out +=
+		'\n/* Reduced motion: colour fades stay, movement goes, and a press no longer moves the control. Last, so it wins over the dials. */\n'
+	out += `@media (prefers-reduced-motion: reduce) {\n${block('\t:root, [data-relief]', [
+		...T.motion.reducedMotion.map((n) => `--ed-${n}: 0ms`),
+		'--ed-press-y: 0px',
+		'--ed-press-scale: 1',
+	])
+		.replace(/\n\t/g, '\n\t\t')
+		.replace(/\n}/, '\n\t}')}}\n`
 	out += '\n/* Visually hidden, for text that only assistive technology needs */\n'
 	out += block('.ed-sr-only', [
 		'position: absolute',
@@ -478,6 +502,9 @@ export type Platform = (typeof platforms)[number]
 export const densities = ${lit(Object.keys(T.density.vars))}
 export type Density = (typeof densities)[number]
 
+export const reliefs = ${lit(Object.keys(T.dials.relief.levels))}
+export type Relief = (typeof reliefs)[number]
+
 export const typeStyleNames = ${lit(styles.map((s) => s.name))}
 export type TypeStyle = (typeof typeStyleNames)[number]
 
@@ -491,6 +518,7 @@ export const defaults = {
 	face: ${JSON.stringify(T.dials.face.default)},
 	platform: ${JSON.stringify(T.platform.default)},
 	density: ${JSON.stringify(T.density.default)},
+	relief: ${JSON.stringify(T.dials.relief.default)},
 } as const
 
 /** Resolved colour values per theme (aliases followed), for swatches and tests. The CSS is the runtime source. */
@@ -568,7 +596,16 @@ function reportJson() {
 			const bg = resolveColor(p.bg, theme)
 			const ratio = contrast(fg, bg)
 			const need = p.size === 'large' || p.size === 'non-text' ? 3 : 4.5
-			return { fg: p.fg, bg: p.bg, fgHex: fg, bgHex: bg, size: p.size ?? 'text', ratio, grade: grade(ratio), ok: ratio >= need }
+			return {
+				fg: p.fg,
+				bg: p.bg,
+				fgHex: fg,
+				bgHex: bg,
+				size: p.size ?? 'text',
+				ratio,
+				grade: grade(ratio),
+				ok: ratio >= need,
+			}
 		})
 		out.accents[theme] = accents.map((a) => {
 			const hexA = resolveColor(a.token.value, theme)

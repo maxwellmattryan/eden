@@ -3,7 +3,7 @@ import { withThemeByDataAttribute } from '@storybook/addon-themes'
 import '../src/storybook/storybook.css'
 import PlatformFrame from '../src/storybook/PlatformFrame.svelte'
 import RootAttributes from '../src/storybook/RootAttributes.svelte'
-import { accents, brandLevels, defaults, densities, faces, platforms } from '../src/lib/tokens/tokens.js'
+import { accents, brandLevels, defaults, densities, faces, platforms, reliefs } from '../src/lib/tokens/tokens.js'
 
 const preview: Preview = {
 	parameters: {
@@ -53,6 +53,10 @@ const preview: Preview = {
 				dynamicTitle: true,
 			},
 		},
+		relief: {
+			description: 'data-relief: raised (a toned-down sheen and a real press) or flat (ink wash only), OQ-21',
+			toolbar: { title: 'Relief', icon: 'button', items: [...reliefs], dynamicTitle: true },
+		},
 		density: {
 			description: 'data-density: desktop row density',
 			toolbar: { title: 'Density', icon: 'menu', items: [...densities], dynamicTitle: true },
@@ -64,6 +68,7 @@ const preview: Preview = {
 		face: defaults.face,
 		platform: 'both',
 		density: defaults.density,
+		relief: defaults.relief,
 	},
 	decorators: [
 		withThemeByDataAttribute({
@@ -73,7 +78,7 @@ const preview: Preview = {
 		}),
 		(_story, { globals }) => ({
 			Component: RootAttributes,
-			props: { accent: globals.accent, brand: globals.brand, face: globals.face },
+			props: { accent: globals.accent, brand: globals.brand, face: globals.face, relief: globals.relief },
 		}),
 		(_story, { globals, parameters, viewMode }) => ({
 			Component: PlatformFrame,

@@ -88,3 +88,4 @@ Cite ids; never restate. To settle an open question, add a `D-n` entry and mark 
 | OQ-18 | Re-tune the light accents for contrast before the accent picker ships? | Yes. Until then there is no picker, and the computed `--on-brand` keeps fills legible. |
 | OQ-19 | `SwipeRow`: hand-rolled pointer handling or a library? | Hand-rolled, last in the kit's shell wave; may slip to the app scaffold without blocking. |
 | OQ-20 | Visual regression in CI: a macOS runner or Docker? | Baselines are generated on the owner's Mac for now; decide when the CI job is added. |
+| OQ-21 | Button relief: flat (no sheen or shadow, an ink wash on press) or raised (a toned-down sheen and shadow, and a press that sinks the control by a pixel)? | Compare both with the Relief toolbar in Storybook (`data-relief`); the kit ships `raised` until decided. The raised press is the one movement on press, and reduced motion removes it. |

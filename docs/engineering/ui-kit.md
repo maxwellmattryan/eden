@@ -38,6 +38,7 @@ All set on `<html>` (D-47); every selector in the stylesheets is element-scoped,
 | `data-font` | Crate's body-font setting; reserved | settings |
 | `data-platform` | `desktop`, `mobile` | each app, once, statically |
 | `data-density` | `comfortable`, `compact`; desktop only | settings |
+| `data-relief` | `raised`, `flat`; absent means raised | a design dial under comparison (OQ-21); the app ships the default |
 | `data-face` | the display face | Storybook only, never the app |
 
 The pre-paint script reads the localStorage keys in `storageKeys` (`eden:theme`, `eden:accent`, `eden:brand`, `eden:font`, `eden:density`). It sets attributes only; the stylesheets are blocking, so the first frame is already themed without inline colours.
@@ -63,6 +64,8 @@ Rules the generator enforces: every type size is on the scale 12, 13, 14, 15, 16
 **Type.** Each style is a `font` shorthand variable, `--ed-t-<style>` (for example `--ed-t-body: 400 14px/21px var(--ed-font-sans)`), with `--ed-t-<style>-opsz` and `--ed-t-<style>-tracking` beside it. Components write `font: var(--ed-t-voice)` and never a pixel size. Display styles take their weight, tracking and italic from `--ed-display-weight`, `--ed-display-tracking` and `--ed-display-italic`, which the face dial sets.
 
 **The brand dial** redefines `--ed-t-button`, `--ed-t-title`, `--ed-t-title-sm` and `--ed-t-voice` per level, which is how the display face says things at `tended` and `lush` and Inter says them at `plain`. It also sets `--ed-radius-control`, `--ed-radius-card`, `--ed-radius-sheet`, `--ed-btn-pad`, the fill sheen, edge, highlight and shadow, the secondary button ground, the chip edge, the sidebar's current-item colours and bar, the grain and its opacity, the motif size and the page-name rule. Components read these, never `--radius-*` directly.
+
+**The relief dial** (`data-relief`, OQ-21) sits after the brand dial: `raised` keeps a toned-down sheen and shadow and sets `--ed-press-y`, `--ed-press-scale` and `--ed-press-shadow` so a filled control sinks on press; `flat` zeroes the sheen and shadow and the press. Reduced motion zeroes the press for both.
 
 **The platform block** sets `--ed-control`, `--ed-row`, `--ed-t-text`, `--ed-t-text-sm`, `--ed-sheet-pad`, `--ed-gutter`, `--ed-tab-bar` and the four `--ed-safe-*` insets. Behavioural differences (a sheet's placement, a menu as an action sheet, the sidebar against the tab bar) are explicit props with an `auto` default that reads the nearest `data-platform` through `platformOf()`. The kit never uses `matchMedia` or a media query.
 

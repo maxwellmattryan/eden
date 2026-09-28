@@ -18,7 +18,10 @@ export type Platform = (typeof platforms)[number]
 export const densities = ["comfortable", "compact"] as const
 export type Density = (typeof densities)[number]
 
-export const typeStyleNames = ["display-xl", "display-lg", "display-md", "display-sm", "voice", "daily-line", "body-lg", "body", "body-sm", "label", "title", "title-lg", "caption", "data-lg", "data", "data-sm", "code"] as const
+export const reliefs = ["raised", "flat"] as const
+export type Relief = (typeof reliefs)[number]
+
+export const typeStyleNames = ["display-xl", "display-lg", "display-md", "display-sm", "voice", "daily-line", "daily-line-lg", "body-lg", "body", "body-sm", "label", "title", "title-lg", "caption", "data-lg", "data", "data-sm", "code"] as const
 export type TypeStyle = (typeof typeStyleNames)[number]
 
 export const colorTokenNames = ["surface-0", "surface-1", "surface-2", "surface-3", "text-primary", "text-secondary", "text-tertiary", "stroke", "stroke-subtle", "stroke-hover", "brand-primary", "brand-hover", "brand-muted", "on-brand", "ai", "ai-muted", "honey", "honey-muted", "on-honey", "on-ai", "danger", "on-danger", "warning", "info", "success", "accent-moss", "accent-fern", "accent-sage", "accent-clay", "accent-marigold", "accent-lavender", "accent-plum", "accent-sky", "accent-slate", "accent-rose", "chart-primary", "chart-reference", "chart-series-2", "chart-series-3", "chart-series-4", "chart-axis", "chart-grid", "chart-label"] as const
@@ -31,6 +34,7 @@ export const defaults = {
 	face: "newsreader",
 	platform: "desktop",
 	density: "comfortable",
+	relief: "raised",
 } as const
 
 /** Resolved colour values per theme (aliases followed), for swatches and tests. The CSS is the runtime source. */
@@ -184,6 +188,16 @@ export const typeStyles = {
 		"italic": true,
 		"sample": "Tend what you can reach.",
 		"usage": "The daily line on the splash, the Garden and Sanctuary, with its source beneath in caption. Italic is reserved for this style."
+	},
+	"daily-line-lg": {
+		"family": "display",
+		"size": 28,
+		"lineHeight": 1.35,
+		"weight": 400,
+		"opsz": 28,
+		"italic": true,
+		"sample": "Tend what you can reach.",
+		"usage": "The daily line on the splash and the Sanctuary page: the same italic voice at the display-lg size, still weight 400 and the looser leading."
 	},
 	"body-lg": {
 		"family": "sans",
