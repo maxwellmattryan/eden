@@ -162,7 +162,7 @@ Foundations pages render the tokens, the type specimens, the icon grid, the dial
 
 CI (`.github/workflows/ci.yml`) runs them on every push. Visual baselines (`scripts/vrt.mjs`, `{light, dark} × {desktop, mobile}` per story) are generated on the owner's machine and committed; running them in CI is OQ-20.
 
-Known tension: `text-tertiary` at 12 or 13 px in light sits at 3.3:1 and fails axe's colour-contrast rule. Components use it only where `design/visual-language.md` allows (metadata a reader can do without) and mark that element with `data-tertiary`, the one attribute the a11y config exempts from the contrast rule; nothing else is exempted.
+The paper grain is a full-size pseudo-element, and axe cannot see through one: without `ignorePseudo` on the colour-contrast check it marks every contrast result incomplete instead of failing it, and the gate is inert. The a11y config sets it. Known tension: `text-tertiary` at 12 or 13 px in light sits at 3.3:1 and fails axe's colour-contrast rule. Components use it only where `design/visual-language.md` allows (metadata a reader can do without) and mark that element with `data-tertiary`, the one attribute the a11y config exempts from the contrast rule; nothing else is exempted.
 
 ## Not in the kit
 
