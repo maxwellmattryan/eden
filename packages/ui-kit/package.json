@@ -41,7 +41,7 @@
 		"test:watch": "vitest",
 		"storybook": "storybook dev -p 6006 --no-open",
 		"build-storybook": "storybook build",
-		"build": "yarn tokens:check && yarn icons:check && svelte-package -o dist && publint --pack npm",
+		"build": "yarn tokens:check && yarn icons:check && svelte-package -o dist && node scripts/prune-dist.mjs && publint --pack npm",
 		"vrt": "node scripts/vrt.mjs",
 		"vrt:update": "node scripts/vrt.mjs --update"
 	},

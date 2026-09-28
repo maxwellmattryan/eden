@@ -9,7 +9,7 @@ updated: 2026-09-28
 
 ## Where it lives
 
-The kit is the workspace package `@eden/ui-kit` at `packages/ui-kit` (D-43). Apps in `apps/*` depend on it by exact version (Yarn 1 has no `workspace:` protocol) and consume it from source: `exports` point at `src/lib`, so Vite compiles the kit with the app and HMR crosses the package boundary. `svelte-package` plus `publint` run as a build gate so the package would also stand alone. The toolchain is pinned in D-44.
+The kit is the workspace package `@eden/ui-kit` at `packages/ui-kit` (D-43). Apps in `apps/*` depend on it by exact version (Yarn 1 has no `workspace:` protocol) and consume it from source: `exports` point at `src/lib`, so Vite compiles the kit with the app and HMR crosses the package boundary. `svelte-package` plus `publint` run as a build gate so the package would also stand alone; `svelte-package` copies stories and tests into `dist` (it has no exclude), so `scripts/prune-dist.mjs` removes them and the gallery-only fonts before `publint` checks the tarball. The toolchain is pinned in D-44.
 
 The package is SvelteKit-shaped because `svelte-package`, `svelte-check` and the Storybook framework expect it; the one route only points at Storybook. The kit never imports `$app/*` or `svelte/store` (ESLint forbids both).
 
