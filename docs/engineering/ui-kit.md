@@ -124,14 +124,14 @@ Newsreader (upright and italic), Inter and Geist Mono ship from `src/lib/fonts`,
 |---|---|
 | `anchor(get)` | positions a `position: fixed` element against an element or a pointer rect, flips when there is no room, clamps to the viewport, sets `data-side` |
 | `dismiss(get)` | Escape, pointer outside, optional focus-out; keeps a stack of open layers so Escape closes the innermost and a click inside a layer above does not count as outside |
-| `trapFocus(get)` | Tab cycling inside a non-modal layer and focus return; `<dialog>` opened with `showModal()` gets this from the browser |
+| `trapFocus(get)` | Tab cycling inside a layer and focus return; a `<dialog>` opened with `showModal()` makes the page inert and returns focus natively but does not cycle Tab, so `Sheet` uses the trap for the cycling only |
 | `roving(get)` | one tab stop per group, arrows, Home and End, optional first-letter typeahead |
 | `measure(cb)` | rect now, on resize and after fonts load |
 | `portal(target)` | fallback for a WebView without the popover API, behind `hasTopLayer()` |
 | `PausableTimer` | the toast's eight seconds, paused while hovered or focused |
 | `platformOf(el)` | the nearest `data-platform`, desktop by default |
 
-Overlays use the browser's top layer: `Sheet` is a `<dialog>` opened with `showModal()` (native inertness, Escape through `cancel`, focus return, `::backdrop` scrim); `Popover` is `popover="manual"` placed by `anchor`. The floor is WebKit 17 for `popover` and 17.5 for `@starting-style`; the enter animation degrades to a class toggle below that.
+Overlays use the browser's top layer: `Sheet` is a `<dialog>` opened with `showModal()` (native inertness, focus return, `::backdrop` scrim; Escape is handled on keydown, with the dialog's `cancel` event as the fallback for other close requests); `Popover` is `popover="manual"` placed by `anchor`. The floor is WebKit 17 for `popover` and 17.5 for `@starting-style`; the enter animation degrades to a class toggle below that.
 
 ## Strings
 
