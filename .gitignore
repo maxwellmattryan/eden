@@ -18,3 +18,6 @@ eden-design-system/
 
 # npm pack output (publint)
 *.tgz
+
+# visual baselines: about 45 MB per theme×platform cell, kept local until OQ-20 decides between Git LFS and a reduced matrix
+packages/ui-kit/src/vrt/__baselines__/*.png
