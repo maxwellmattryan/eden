@@ -54,6 +54,10 @@ export interface UiStrings {
 		budgets: string
 		budget: (used: string, cap: string) => string
 		tool: string
+		/** The conversation log's accessible name. */
+		thread: string
+		/** The one-line expansion of a can-see chip when there are no rows to show. */
+		inContext: (count: number | string, id: string) => string
 	}
 	access: {
 		read: string
@@ -72,6 +76,15 @@ export interface UiStrings {
 		everyRowRemoved: string
 		footer: (created: number, merged: number) => string
 		locations: { fridge: string; freezer: string; pantry: string; counter: string }
+		/** The accessible names of a draft row's editable name and quantity. */
+		rowName: string
+		rowQty: string
+		/** The accessible name of a row's location radio group. */
+		location: (name: string) => string
+		/** The label before a row's expiry. */
+		expires: string
+		/** The thumbnail's alt text. */
+		image: string
 	}
 	confirmSheet: { subject: string; resource: string; destination: string; payload: string }
 	quickLog: {
@@ -79,6 +92,8 @@ export interface UiStrings {
 		quickActions: string
 		tookIt: string
 		last: (value: string, when: string) => string
+		/** The sparkline's legend. */
+		series: string
 	}
 	statusBar: {
 		inbox: string
@@ -117,6 +132,10 @@ export interface UiStrings {
 		/** The budget meter's accessible name and its value. */
 		budgetUsed: string
 		percent: (value: number) => string
+	}
+	widget: {
+		/** The drag handle's name in the Garden's edit mode. */
+		move: (title: string) => string
 	}
 }
 
@@ -172,6 +191,8 @@ export const defaultStrings: UiStrings = {
 		budgets: 'Budgets',
 		budget: (used, cap) => `${used} of ${cap}`,
 		tool: 'Tool',
+		thread: 'Conversation with the Gardener',
+		inContext: (count, id) => `${count} ${id} rows are in this request.`,
 	},
 	access: {
 		read: 'read',
@@ -190,6 +211,11 @@ export const defaultStrings: UiStrings = {
 		everyRowRemoved: 'Every row was removed. Nothing will be created.',
 		footer: (created, merged) => (merged ? `${created} to create, ${merged} to merge` : `${created} to create`),
 		locations: { fridge: 'Fridge', freezer: 'Freezer', pantry: 'Pantry', counter: 'Counter' },
+		rowName: 'Name',
+		rowQty: 'Quantity',
+		location: (name) => `Location of ${name}`,
+		expires: 'Expires',
+		image: 'The captured image',
 	},
 	confirmSheet: { subject: 'Subject', resource: 'Resource', destination: 'Destination', payload: 'Payload' },
 	quickLog: {
@@ -197,6 +223,7 @@ export const defaultStrings: UiStrings = {
 		quickActions: 'Quick actions',
 		tookIt: 'Took it',
 		last: (value, when) => `Last ${value}, ${when}`,
+		series: 'Recent values',
 	},
 	statusBar: {
 		inbox: 'Inbox',
@@ -232,6 +259,9 @@ export const defaultStrings: UiStrings = {
 		status: { healthy: 'Healthy', stale: 'Stale', failed: 'Failed', off: 'Not connected' },
 		budgetUsed: 'Budget used',
 		percent: (value) => `${value} %`,
+	},
+	widget: {
+		move: (title) => `Move ${title}`,
 	},
 }
 

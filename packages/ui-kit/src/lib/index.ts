@@ -61,3 +61,14 @@ export { default as InlineError } from './components/InlineError/InlineError.sve
 export { default as EmptyState } from './components/EmptyState/EmptyState.svelte'
 export { default as Banner } from './components/Banner/Banner.svelte'
 export type { BannerPlacement, BannerTone } from './components/Banner/Banner.svelte'
+
+// Inputs, data and the Garden
+export { default as QuickAdd } from './components/QuickAdd/QuickAdd.svelte'
+export { defaultParse, type ParsedChip, type QuickAddParser } from './components/QuickAdd/QuickAdd.svelte'
+export { default as DataTable } from './components/DataTable/DataTable.svelte'
+export type { DataTableColumn } from './components/DataTable/DataTable.svelte'
+export { default as Widget } from './components/Widget/Widget.svelte'
+export type { WidgetAction, WidgetSize } from './components/Widget/Widget.svelte'
+export { default as WidgetGrid } from './components/WidgetGrid/WidgetGrid.svelte'
+export { default as PageHeader } from './components/PageHeader/PageHeader.svelte'
+export type { PageHeaderAction } from './components/PageHeader/PageHeader.svelte'
