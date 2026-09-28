@@ -1,0 +1,71 @@
+---
+title: Conventions
+status: draft
+summary: How these docs are written and maintained: the required header, the status vocabulary, the rules every change follows, and the Crate patterns to reuse.
+read-this-if: You are editing any doc in this repo.
+depends-on: []
+updated: 2026-09-28
+---
+
+## What this repo is right now
+
+Product and design documents only. There is no application code yet. Engineering docs come after product and design are stable, and the app scaffold will be ported from Crate at `~/dev/bbx/repos/crate`.
+
+## Read `docs/INDEX.md` first
+
+Never read the whole tree. INDEX lists every doc with a one-liner, a status, a size hint and when to load it, plus three reading paths (new agent, domain work, mockups). Load the docs a task needs and nothing else. `docs/product/decisions.md` is the second thing to read: it holds what is settled and what is open.
+
+## Doc header (required on every doc)
+
+```yaml
+---
+title: Kitchen
+status: draft            # planned | draft | review | stable | stub | candidate | deprecated
+summary: Pantry, recipes from what you have, grocery lists, food allergies.
+read-this-if: You are working on pantry, recipes, grocery lists, or food allergies.
+depends-on: [substrate/privacy, substrate/registry, domains/_template]
+updated: 2026-09-27
+---
+```
+
+The front matter is the summary; the first H2 starts the content. `depends-on` lists the docs an agent should load before this one, as paths relative to `docs/product/` or `docs/design/`, and stays limited to what is load-bearing.
+
+## Status vocabulary
+
+| status | meaning |
+|---|---|
+| planned | listed in INDEX, file may not exist yet |
+| draft | written, not yet reviewed against its dependencies |
+| review | reviewed once; ready to mock up or build from |
+| stable | built against; changes need a decision entry |
+| stub | deliberately shallow; the doc says when it will be specced |
+| candidate | a one-pager for a domain that may never be built |
+| deprecated | kept for history, do not build from it |
+
+## Rules
+
+- Update `docs/INDEX.md` in the same change as any doc you add, rename, or whose status you change. INDEX status must equal the doc's front matter.
+- Decisions live in `docs/product/decisions.md` with ids (`D-n` decided, `OQ-n` open). Docs cite ids; they never restate a decision or an open question. A decision is never deleted or silently rewritten: a superseded entry stays in place with a "superseded by D-n" note.
+- Every fact type, entity type and primitive kind has a row in `docs/product/substrate/registry.md` with a category, an owner and a tier. Declared AI reads, grants and audit entries reference registry ids only. Kind ids carry no domain prefix and no dot.
+- Never duplicate substrate content in a domain doc. Link it.
+- No domain doc references another domain's entity except through a substrate primitive, a fact, an intent, a signal, or a typed entity link.
+- Vocabulary is fixed in `docs/product/glossary.md`. In particular: "event" is the calendar primitive, pub/sub messages are "signals", the T3 attachment store is the "Vault", the per-user store is the "workspace".
+- Metaphor policy: domains carry themed display names with a plain subtitle; substrate and utility names stay plain. See the glossary before naming anything.
+- Filenames are kebab-case. Split a doc that passes roughly 400 lines.
+- Substrate docs tag sections as Phase 1 or later. Manifest fields no Phase 1 domain consumes are marked planned.
+- Commits are authored solely by the repo owner. No co-author trailers, no generated-with footers.
+
+## Crate references (patterns to reuse)
+
+| pattern | path in Crate |
+|---|---|
+| conventions | `CLAUDE.md` |
+| theme tokens (`data-theme`, `data-accent`, `data-font`) | `shared/styles/theme.css` |
+| settings modal with tab rail | `apps/desktop/src/lib/components/settings/SettingsModal.svelte` |
+| onboarding wizard and tour | `apps/desktop/src/lib/components/onboarding/` |
+| i18n setup and locale files | `shared/i18n/` |
+| updater with channel guard | `src-tauri/src/updater.rs` |
+| diagnostics and crash screen | `src-tauri/src/services/diagnostics.rs`, `common/CrashScreen.svelte` |
+| backup export | `src-tauri/src/services/backup.rs` |
+| local-first sync (HLC, client-side merge over blobs) | `src-tauri/src/services/cloud_sync/` |
+| PRD shape | `.claude/docs/MOBILE_PRD.md` |
