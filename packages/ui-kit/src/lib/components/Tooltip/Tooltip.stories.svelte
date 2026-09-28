@@ -1,9 +1,9 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
+	import SidebarItem from '../SidebarItem/SidebarItem.svelte'
 	import type { SvelteRenderer } from '@storybook/svelte'
 	import type { PlayFunctionContext } from 'storybook/internal/csf'
 	import { expect, screen, waitFor } from 'storybook/test'
-	import Icon from '$lib/icons/Icon.svelte'
 	import { domainGlyph } from '$lib/icons/domain-glyphs.js'
 	import { defaultStrings } from '$lib/i18n/strings.js'
 	import { sidebar } from '../../../stories/sample-data.js'
@@ -72,10 +72,13 @@
 	play={showsOnFocus(hearth.subtitle)}
 >
 	{#snippet template()}
-		<button type="button" class="sb-row" {@attach tooltip(() => hearth.subtitle)}>
-			<Icon name={domainGlyph('kitchen')} size="md" />
-			<span>{hearth.name}</span>
-		</button>
+		<SidebarItem
+			id="kitchen"
+			name={hearth.name}
+			subtitle={hearth.subtitle}
+			icon={domainGlyph('kitchen')}
+			showSubtitle={false}
+		/>
 	{/snippet}
 </Story>
 
@@ -132,26 +135,6 @@
 </Story>
 
 <style>
-	/* a stand-in for SidebarItem, which arrives in wave 4 */
-	.sb-row {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
-		width: var(--sidebar);
-		height: var(--ed-row);
-		padding: 0 var(--space-3);
-		border: 0;
-		border-radius: var(--ed-radius-control);
-		background: var(--surface-1);
-		color: var(--text-primary);
-		font: var(--ed-t-text);
-		text-align: left;
-		cursor: pointer;
-	}
-	.sb-row:focus-visible {
-		outline: 2px solid transparent;
-		box-shadow: var(--focus-ring);
-	}
 	.sb-column {
 		display: flex;
 		flex-direction: column;
