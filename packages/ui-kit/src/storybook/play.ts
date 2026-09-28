@@ -8,3 +8,11 @@ import { within } from 'storybook/test'
 export function canvasOf(canvasElement: HTMLElement) {
 	return within(canvasElement.querySelector<HTMLElement>('.ed-canvas') ?? canvasElement)
 }
+
+/**
+ * True when the story rendered a canvas. A single-platform story still runs under the other platform's Vitest
+ * project, where the frame shows only a note; a play function starts with `if (!hasCanvas(canvasElement)) return`.
+ */
+export function hasCanvas(canvasElement: HTMLElement) {
+	return canvasElement.querySelector('.ed-canvas') !== null
+}

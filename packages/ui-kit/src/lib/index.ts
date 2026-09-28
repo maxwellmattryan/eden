@@ -105,3 +105,7 @@ export { default as BottomTabBar } from './components/BottomTabBar/BottomTabBar.
 export type { BottomTab } from './components/BottomTabBar/BottomTabBar.svelte'
 export { default as SwipeRow } from './components/SwipeRow/SwipeRow.svelte'
 export type { SwipeAction, SwipeLeading, SwipeTrailing } from './components/SwipeRow/SwipeRow.svelte'
+
+// The status bar
+export { default as StatusBar } from './components/StatusBar/StatusBar.svelte'
+export type { StatusBarGardener, StatusBarIntegration } from './components/StatusBar/StatusBar.svelte'
