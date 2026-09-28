@@ -1,5 +1,6 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
+	import Button from '../Button/Button.svelte'
 	import { expect, fn, waitFor } from 'storybook/test'
 	import { canvasOf } from '../../../storybook/play.js'
 	import Breeze from './Breeze.svelte'
@@ -51,7 +52,7 @@
 				{/if}
 				{settled.line}
 			</div>
-			<button type="button" onclick={() => (playing = true)} style="font: var(--ed-t-body)">Settle</button>
+			<Button label="Settle" onclick={() => (playing = true)} />
 			<p style="margin: 0; font: var(--ed-t-caption); color: var(--text-secondary)">
 				Played {played}
 				{played === 1 ? 'time' : 'times'}. The Breeze is unmounted when it calls onend.

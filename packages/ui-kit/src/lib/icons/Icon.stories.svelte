@@ -1,5 +1,6 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
+	import Button from '../components/Button/Button.svelte'
 	import Icon from './Icon.svelte'
 	import { iconNames } from './icons.js'
 	import { GLYPHS, domainIds, shellIds } from './domain-glyphs.js'
@@ -65,12 +66,10 @@
 
 <Story name="Live swap">
 	{#snippet template()}
-		<button
-			type="button"
+		<Button
+			icon={live}
+			label={live}
 			onclick={() => (live = cycle[(cycle.indexOf(live) + 1) % cycle.length] ?? 'sun')}
-			style="display: inline-flex; gap: 8px; align-items: center; font: var(--ed-t-body)"
-		>
-			<Icon name={live} size="lg" label={live} /> next
-		</button>
+		/>
 	{/snippet}
 </Story>

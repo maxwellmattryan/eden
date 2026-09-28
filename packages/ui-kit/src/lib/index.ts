@@ -89,3 +89,10 @@ export { default as Popover } from './components/Popover/Popover.svelte'
 export type { PopoverAnchor, PopoverCloseReason } from './components/Popover/Popover.svelte'
 export { default as Menu } from './components/Menu/Menu.svelte'
 export type { MenuItem, MenuPresentation } from './components/Menu/Menu.svelte'
+
+// Sheets
+export { default as ConfirmSheet } from './components/ConfirmSheet/ConfirmSheet.svelte'
+export { default as QuickLogSheet } from './components/QuickLogSheet/QuickLogSheet.svelte'
+export type { QuickLog, QuickLogKind } from './components/QuickLogSheet/QuickLogSheet.svelte'
+export { default as CaptureSheet } from './components/CaptureSheet/CaptureSheet.svelte'
+export { LOCATIONS, type CaptureLocation, type CaptureRow } from './components/CaptureSheet/CaptureSheet.svelte'

@@ -157,10 +157,15 @@
 		justify-content: flex-end;
 		gap: var(--space-2);
 	}
+	/* The body scrolls under the pinned footer. A scroll container clips anything outside its box, so it takes inner
+	   padding equal to the focus ring's reach and the same negative margin: layout is unchanged and rings have room. */
 	.ed-sheet-body {
+		--ring-room: calc(var(--focus-ring-offset) + var(--focus-ring-width));
 		min-height: 0;
 		overflow: auto;
 		overscroll-behavior: contain;
+		padding: var(--ring-room);
+		margin: calc(-1 * var(--ring-room));
 	}
 
 	/* centred: the desktop default */

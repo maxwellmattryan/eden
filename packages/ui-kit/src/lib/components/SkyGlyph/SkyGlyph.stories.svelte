@@ -1,5 +1,6 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
+	import Button from '../Button/Button.svelte'
 	import { expect, waitFor } from 'storybook/test'
 	import { canvasOf } from '../../../storybook/play.js'
 	import SkyGlyph, { CONDITIONS } from './SkyGlyph.svelte'
@@ -51,9 +52,7 @@
 		<div style="display: flex; align-items: center; gap: var(--space-3); font: var(--ed-t-body)">
 			<SkyGlyph {...args} condition={current.condition} />
 			<span>{current.day} · {current.hi}° / {current.lo}°{current.note ? ` · ${current.note}` : ''}</span>
-			<button type="button" onclick={() => (day = (day + 1) % skyWeek.length)} style="font: var(--ed-t-body)">
-				Next day
-			</button>
+			<Button label="Next day" onclick={() => (day = (day + 1) % skyWeek.length)} />
 		</div>
 	{/snippet}
 </Story>
