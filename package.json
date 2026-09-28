@@ -1,0 +1,51 @@
+{
+	"name": "eden",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Eden, a personal digital garden. Apps in apps/* are composed from the packages in packages/*.",
+	"type": "module",
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
+	"engines": {
+		"node": ">=22.18 <23",
+		"yarn": ">=1.22 <2"
+	},
+	"packageManager": "yarn@1.22.22",
+	"scripts": {
+		"format": "prettier --write \"**/*.{ts,js,mjs,json,svelte,css,md,yml,yaml,html}\"",
+		"format:check": "prettier --check \"**/*.{ts,js,mjs,json,svelte,css,md,yml,yaml,html}\"",
+		"lint": "eslint --cache --max-warnings 0 \"**/*.{ts,js,mjs,svelte}\"",
+		"lint:fix": "eslint --cache --fix \"**/*.{ts,js,mjs,svelte}\"",
+		"check": "yarn workspace @eden/ui-kit check",
+		"test": "yarn workspace @eden/ui-kit test",
+		"build": "yarn workspace @eden/ui-kit build",
+		"storybook": "yarn workspace @eden/ui-kit storybook",
+		"storybook:build": "yarn workspace @eden/ui-kit build-storybook",
+		"tokens": "yarn workspace @eden/ui-kit tokens",
+		"icons": "yarn workspace @eden/ui-kit icons",
+		"prepare": "husky"
+	},
+	"lint-staged": {
+		"*.{ts,js,mjs,svelte,json,css,md,yml,yaml,html}": "prettier --write",
+		"*.{ts,js,mjs,svelte}": "eslint --cache --fix",
+		"packages/ui-kit/src/lib/tokens/*.json": "yarn tokens && yarn icons && git add packages/ui-kit/src/lib/styles packages/ui-kit/src/lib/tokens packages/ui-kit/src/lib/icons/icons.ts packages/ui-kit/.storybook/preview-head.html"
+	},
+	"devDependencies": {
+		"@eslint/compat": "2.1.1",
+		"@eslint/js": "10.0.1",
+		"@types/node": "22.20.4",
+		"eslint": "10.11.0",
+		"eslint-config-prettier": "10.1.8",
+		"eslint-plugin-svelte": "3.23.0",
+		"globals": "17.12.0",
+		"husky": "9.1.7",
+		"lint-staged": "16.4.0",
+		"prettier": "3.9.9",
+		"prettier-plugin-svelte": "4.1.1",
+		"prettier-plugin-tailwindcss": "0.8.1",
+		"typescript": "5.9.3",
+		"typescript-eslint": "8.71.0"
+	}
+}

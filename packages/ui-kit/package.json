@@ -1,0 +1,87 @@
+{
+	"name": "@eden/ui-kit",
+	"version": "0.1.0",
+	"private": true,
+	"description": "The Eden design system: tokens, themes, fonts, icons and Svelte 5 components shared by the desktop and mobile apps.",
+	"type": "module",
+	"svelte": "./src/lib/index.ts",
+	"types": "./src/lib/index.ts",
+	"exports": {
+		".": {
+			"types": "./src/lib/index.ts",
+			"svelte": "./src/lib/index.ts",
+			"default": "./src/lib/index.ts"
+		},
+		"./theme.css": "./src/lib/styles/theme.css",
+		"./base.css": "./src/lib/styles/base.css",
+		"./tailwind.css": "./src/lib/styles/tailwind.css",
+		"./prepaint.js": "./src/lib/styles/prepaint.js",
+		"./tokens": {
+			"types": "./src/lib/tokens/index.ts",
+			"default": "./src/lib/tokens/index.ts"
+		},
+		"./tokens.json": "./src/lib/tokens/tokens.json",
+		"./icons": {
+			"types": "./src/lib/icons/icons.ts",
+			"default": "./src/lib/icons/icons.ts"
+		},
+		"./fonts/*": "./src/lib/fonts/*"
+	},
+	"sideEffects": [
+		"**/*.css"
+	],
+	"files": [
+		"dist",
+		"src/lib/styles",
+		"src/lib/fonts",
+		"!src/lib/fonts/alternates"
+	],
+	"scripts": {
+		"tokens": "node scripts/build-tokens.mjs",
+		"tokens:check": "node scripts/build-tokens.mjs --check",
+		"icons": "node scripts/build-icons.mjs",
+		"icons:check": "node scripts/build-icons.mjs --check",
+		"fonts:check": "node scripts/check-fonts.mjs",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && node scripts/lint-css.mjs",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"storybook": "storybook dev -p 6006 --no-open",
+		"build-storybook": "storybook build",
+		"build": "yarn tokens:check && yarn icons:check && svelte-package -o dist && publint",
+		"vrt": "node scripts/vrt.mjs",
+		"vrt:update": "node scripts/vrt.mjs --update"
+	},
+	"peerDependencies": {
+		"svelte": "^5.0.0"
+	},
+	"devDependencies": {
+		"@storybook/addon-a11y": "10.6.0",
+		"@storybook/addon-docs": "10.6.0",
+		"@storybook/addon-svelte-csf": "5.1.4",
+		"@storybook/addon-themes": "10.6.0",
+		"@storybook/addon-vitest": "10.6.0",
+		"@storybook/svelte": "10.6.0",
+		"@storybook/sveltekit": "10.6.0",
+		"@sveltejs/kit": "2.70.3",
+		"@sveltejs/package": "2.5.8",
+		"@sveltejs/vite-plugin-svelte": "6.2.4",
+		"@tailwindcss/vite": "4.3.3",
+		"@types/react": "19.3.0",
+		"@vitest/browser": "4.1.11",
+		"@vitest/browser-playwright": "4.1.11",
+		"fontkit": "2.0.4",
+		"lucide-static": "1.48.0",
+		"pixelmatch": "7.2.0",
+		"playwright": "1.63.0",
+		"pngjs": "7.0.0",
+		"publint": "0.3.24",
+		"storybook": "10.6.0",
+		"svelte": "5.57.1",
+		"svelte-check": "4.7.6",
+		"svg-path-bbox": "2.1.0",
+		"tailwindcss": "4.3.3",
+		"typescript": "5.9.3",
+		"vite": "7.3.6",
+		"vitest": "4.1.11"
+	}
+}
