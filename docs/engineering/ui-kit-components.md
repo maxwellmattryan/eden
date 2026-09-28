@@ -22,29 +22,29 @@ Props are listed by name; `*` marks a bindable prop; every component also takes 
 
 | component | purpose | props | callbacks / snippets | platform | stories |
 |---|---|---|---|---|---|
-| `Button` | one action; primary at most once per view | `label`, `variant` (primary, secondary, quiet, danger, ai, honey), `size` (md, lg, auto), `icon`, `iconRight`, `disabled`, `type` | `onclick` | `auto` is 44 px on mobile | Variants, Sizes, Icon only, Disabled |
-| `IconButton` | an icon control with a required name | `icon`, `label` (required), `count`, `fab`, `size` (sm, md), `active`, `pressed` | `onclick` | `fab` is mobile only | Default, With count, Fab, Active |
-| `Chip` | a pill: unit, filter, integration, model | `label`, `tone` (neutral, accent, ai, honey, grey, outline), `icon`, `count`, `status` (healthy, stale, failed, off), `meter`, `selectable`, `selected*`, `mono` | `onclick`, `onselect` | | Tones, Status, Meter, Selectable, Mono |
+| `Button` | one action; primary at most once per view | `label` or `aria-label` (one is required), `variant` (primary, secondary, quiet, danger, ai, honey), `size` (md, lg, auto), `icon`, `iconRight`, `disabled`, `type` | `onclick` | `auto` is 44 px on mobile; filled variants press under the raised relief (OQ-21) | Variants, Sizes, Icon only, Disabled, With icons, Keyboard, Relief comparison |
+| `IconButton` | an icon control with a required name; hover and press on a circle | `icon`, `label` (required), `count`, `fab`, `size` (sm, md), `active`, `pressed`, `tooltip` (true shows the label, a string shows that string) | `onclick` | `fab` is mobile only and presses under the raised relief | Default, With count, Fab, Active, Pressed, Sizes |
+| `Chip` | a pill: unit, filter, integration, model | `label`, `tone` (neutral, accent, ai, honey, grey, outline), `icon`, `count`, `status` (healthy, stale, failed, off; the word is read out), `meter`, `selectable`, `selected*`, `mono` | `onclick`, `onselect(selected)` | | Tones, With icon and count, Status, Meter, Selectable, Mono |
 | `Badge` | access levels and row qualifiers | `kind` (read, write-draft, write, act-external, tier, estimated, origin, warning, ai, danger, neutral), `label` | | `read` renders nothing | All kinds, In a row |
-| `Field` | a labelled input whose border becomes the focus ring | `label`, `value*`, `placeholder`, `unit`, `helper`, `error`, `icon`, `mono`, `large`, `type`, `id` | `oninput`, `onkeydown`; `trailing` snippet | | Default, Unit, Helper, Error, Large, Trailing |
-| `Segmented` | tabs inside a domain, with a sliding pill | `items` (strings or `{ label, icon }`), `selected*`, `iconPosition`, `label` | `onchange` | | Text, Icons, In a header |
+| `Field` | a labelled input whose border becomes the focus ring (on the internal `InputWrap`) | `label`, `value*`, `placeholder`, `unit`, `helper`, `error`, `icon`, `mono`, `large`, `type`, `id`; the input's attributes pass through | `oninput`, `onkeydown`; `trailing` snippet | | Default, Unit, Helper, Error, With icon, Large, Mono, Trailing |
+| `Segmented` | tabs inside a domain, with a sliding pill | `items` (strings or `{ id, label, icon }`), `selected*`, `iconPosition`, `label` | `onchange` (only on a real change) | | Text, Icons, In a header |
 | `Skeleton` | loading rows matching the final layout | `rows`, `icon` | | one fade-in, no loop | Default, Compact |
 | `Stat` | a headline figure | `value`, `unit` | | | Default, Unit |
-| `DailyLine` | the italic line and its source | `line`, `source`, `large` | | | Default, Large, Japanese |
+| `DailyLine` | the italic line and its source | `line`, `source`, `large` (the `daily-line-lg` style) | | | Default, Large, Japanese |
 | `Wordmark` | "eden" in the display face | `name` | splash and About only | | Default, Splash |
 | `Breeze` | the one-shot specks (D-42) | `count`, `size` | `onend` | renders nothing under reduced motion | Once |
 | `Sparkline` | a numeric trend with a dashed reference | `values`, `reference`, `width`, `height`, `label`, `legend`, `referenceLabel` | | | Default, Reference, Empty, Single |
 | `SkyGlyph` | Sky's live glyph until the family is drawn | `condition`, `night`, `size`, `label`; module `iconFor`, `CONDITIONS` | | | All conditions, Live |
 | `Toggle` (new) | an on/off switch | `checked*`, `label`, `description`, `disabled` | `onchange` | 44 px on mobile | On and off, Disabled, In a settings row |
-| `Tooltip` (new) | the collapsed subtitle, an icon's name | attachment `tooltip(text)` and `Tooltip` | | never on touch | On an icon button, On a sidebar item |
-| `Stepper` (new) | the onboarding step indicator | `steps`, `current`, `labels` | | dots on mobile | Steps, With labels |
+| `Tooltip` (new) | the collapsed subtitle, an icon's name | attachment `tooltip(text, { side, delay })` on any control, and a `Tooltip` wrapper for markup | | never on touch; shown on hover and keyboard focus only | On an icon button, On a sidebar item, Wrapper, Delay |
+| `Stepper` (new) | the onboarding step indicator | `steps`, `current`, `labels`, `label`, `shape` (bars, dots, auto) | | dots on mobile and when the row is too narrow | Steps, With labels, Compact |
 | `BackButton` (new) | the quiet back arrow with its breadcrumb | `breadcrumb`, `label` | `onback` | hidden without `onback` | Default, Breadcrumb |
 
 ## Wave 2, overlays and feedback
 
 | component | purpose | props | callbacks / snippets | platform | stories |
 |---|---|---|---|---|---|
-| `Sheet` (new) | the modal base: a `<dialog>` | `open*`, `placement` (auto, bottom, center, side), `size` (sm, md, lg, full), `label`, `labelledby`, `dismissible` | `onclose(reason)`; `header`, `footer`, `children` | `auto` is a bottom sheet on mobile | Center, Bottom, Side, Non-dismissible, Footer |
+| `Sheet` (new) | the modal base: a `<dialog>` with `showModal()`, a focus trap for Tab cycling, Escape on keydown | `open*`, `placement` (auto, bottom, center, side), `size` (sm, md, lg, full), `label`, `labelledby`, `dismissible` | `onclose(reason: escape, scrim, api)`; `header`, `footer`, `children` | `auto` is a bottom sheet on mobile | Center, Bottom, Side, Auto, Sizes, Not dismissible, Keyboard |
 | `Popover` | an anchored floating panel in the top layer | `anchor`, `open*`, `align`, `side`, `gap`, `role`, `label` | `onclose(reason)`; `children` | inline frame | Below, Above, Flip, As dialog, At a point |
 | `Menu` | the action and context menu, destructive last | `items` (`{ id, label, icon, destructive, shortcut, onselect }`), `open*`, `anchor`, `align`, `label`, `presentation` (auto, menu, sheet) | `onselect` | an action sheet on mobile | Basic, Destructive, Typeahead, Action sheet |
 | `Toast`, `ToastHost`, `toast` | the one toast, for errors and undo | `toast({ message, action, error, duration })`; `ToastHost` `store` | `ondismiss` | above the tab bar on mobile | Undo, Error, Replace, Paused |
