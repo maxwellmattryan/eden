@@ -31,7 +31,8 @@ Props are listed by name; `*` marks a bindable prop; every component also takes 
 | `Skeleton` | loading rows matching the final layout | `rows`, `icon` | | one fade-in, no loop | Default, Compact |
 | `Stat` | a headline figure | `value`, `unit` | | | Default, Unit |
 | `DailyLine` | the italic line and its source | `line`, `source`, `large` (the `daily-line-lg` style) | | | Default, Large, Japanese |
-| `Wordmark` | "eden" in the display face | `name` | splash and About only | | Default, Splash |
+| `Wordmark` | "eden" in the display face | `name`, `size` (xl, md) | splash and About at xl; the sidebar's head at md (D-55) | | Default, Sidebar size, Splash |
+| `AppMark` (new) | the app mark: the icon's placeholder in brand ground and on-brand ink, decorative | | always beside a `Wordmark`; the one place to swap when the icon is drawn | | Default, With wordmark |
 | `Breeze` | the one-shot specks (D-42) | `count`, `size` | `onend` | renders nothing under reduced motion | Once |
 | `Sparkline` | a numeric trend with a dashed reference | `values`, `reference`, `width`, `height`, `label`, `legend`, `referenceLabel` | | | Default, Reference, Empty, Single |
 | `SkyGlyph` | Sky's live glyph until the family is drawn | `condition`, `night`, `size`, `label`; module `iconFor`, `CONDITIONS` | | | All conditions, Live |
@@ -76,8 +77,8 @@ Props are listed by name; `*` marks a bindable prop; every component also takes 
 
 | component | purpose | props | callbacks / snippets | platform | stories |
 |---|---|---|---|---|---|
-| `SidebarItem` | one nav entry: a link with `href`, a button without | `id`, `name`, `subtitle`, `icon`, `current`, `shortcut`, `showSubtitle` (otherwise the subtitle is the tooltip), `showShortcut`, `href` | `onclick` | desktop | Default, Current, With subtitle, With shortcut, Subtitle as tooltip, As a link |
-| `Sidebar` | domain nav with pinned items, one tab stop | `items`, `pinned` (`SidebarEntry`), `subtitles`, `shortcuts`, `current*` (an id), `label` | `onselect(id)` | desktop only | Phase-1, Subtitles on, Shortcuts on, Japanese |
+| `SidebarItem` | one nav entry: a link with `href`, a button without; becoming current fades the ground in and settles the leaf bar | `id`, `name`, `subtitle`, `icon`, `current`, `shortcut`, `showSubtitle` (otherwise the subtitle is the tooltip), `showShortcut`, `href` | `onclick` | desktop; reduced motion keeps only the fade | Default, Current, With subtitle, With shortcut, Subtitle as tooltip, As a link |
+| `Sidebar` | domain nav with a brand head, grouped items under rules and pinned items, one tab stop (D-55) | `groups` (`SidebarEntry[][]`), `pinned` (`SidebarEntry`), `brand` (the app name; shows the mark and wordmark), `subtitles`, `shortcuts`, `current*` (an id), `label` | `onselect(id)` | desktop only | Phase-1, Subtitles on, Shortcuts on, Without brand, Japanese |
 | `StatusBar` | sync, integration chips with detail dialogs, the Gardener chip with its meter, the bell with the inbox, + with the embedded Quick Log | `sync`, `banner`, `integrations` (`StatusBarIntegration`: id, label, status, detail, onconnect), `gardener` (`StatusBarGardener`: label, budget, noKey, onopen), `inbox`, `logs` | `onlog`, `oninboxaction`, `onsync` | desktop only | Default, Offline banner, No key, Granted not connected here, Stale, With unread |
 | `BottomTabBar` (new) | the mobile navigation landmark | `items` (`BottomTab`: id, label, icon, badge), `current*`, `label` | `onselect(id)` (also on the current tab) | mobile only; safe-area padding | Five tabs, With badge, Japanese |
 | `SwipeRow` (new) | leading and trailing actions revealed by a horizontal drag; real buttons, so Tab and Enter work too | `leading` (`SwipeLeading`), `trailing` (`SwipeTrailing`), `children` | | mobile; a long press under reduced motion; desktop renders children unchanged | Leading done, Trailing delete, Both, Desktop passthrough |

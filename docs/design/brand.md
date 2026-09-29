@@ -36,7 +36,7 @@ Leaf and vine linework, a single unfurling frond, paper grain, the light of morn
 
 ## App icon and logo
 
-A single fern frond unfurling inside a rounded square: moss green on warm paper for light, fern green on night forest for dark, with a small firefly point of gold near the tip in the dark variant. The wordmark is the display face, Newsreader (D-39), lowercase "eden", used only on the splash and in About.
+A single fern frond unfurling inside a rounded square: moss green on warm paper for light, fern green on night forest for dark, with a small firefly point of gold near the tip in the dark variant. The wordmark is the display face, Newsreader (D-39), lowercase "eden", used only on the splash, in About, and beside the mark at the head of the desktop sidebar (D-55). Until the icon is drawn the kit's `AppMark` traces the placeholder in `src-tauri/icons/src`, the one place to swap.
 
 ## The domain glyph family (D-17)
 

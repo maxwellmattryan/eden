@@ -28,34 +28,39 @@
 
 	const UPDATE_INTERVAL = 60 * 60 * 1000
 
-	// Garden, Today, then the Phase 1 domains in the fixed order; the owner's order arrives with the Domains tab.
+	// Today, Garden, then the Phase 1 domains in the fixed order, each its own group under a rule (D-55); the owner's
+	// order arrives with the Domains tab.
 	const hrefs = {
-		garden: resolve('/garden'),
 		today: resolve('/today'),
+		garden: resolve('/garden'),
 		kitchen: resolve('/kitchen'),
 		toolbench: resolve('/toolbench'),
 		weather: resolve('/weather'),
 	} as const
 	const domains = ['kitchen', 'toolbench', 'weather'] as const
 
-	const items = $derived<SidebarEntry[]>([
-		{
-			id: 'garden',
-			name: $t('shell.garden'),
-			subtitle: $t('shell.gardenSubtitle'),
-			icon: domainGlyph('garden'),
-			shortcut: '⌘1',
-			href: hrefs.garden,
-		},
-		{
-			id: 'today',
-			name: $t('shell.today'),
-			subtitle: $t('shell.todaySubtitle'),
-			icon: domainGlyph('today'),
-			shortcut: '⌘2',
-			href: hrefs.today,
-		},
-		...domains.map((id, index) => ({
+	const groups = $derived<SidebarEntry[][]>([
+		[
+			{
+				id: 'today',
+				name: $t('shell.today'),
+				subtitle: $t('shell.todaySubtitle'),
+				icon: domainGlyph('today'),
+				shortcut: '⌘1',
+				href: hrefs.today,
+			},
+		],
+		[
+			{
+				id: 'garden',
+				name: $t('shell.garden'),
+				subtitle: $t('shell.gardenSubtitle'),
+				icon: domainGlyph('garden'),
+				shortcut: '⌘2',
+				href: hrefs.garden,
+			},
+		],
+		domains.map((id, index) => ({
 			id,
 			name: $t(`domains.${id}.name`),
 			subtitle: $t(`domains.${id}.subtitle`),
@@ -64,6 +69,7 @@
 			href: hrefs[id],
 		})),
 	])
+	const items = $derived(groups.flat())
 	const pinned = $derived<SidebarEntry[]>([
 		{
 			id: 'gardener',
@@ -131,7 +137,14 @@
 
 <UiKitProvider strings={uiKitStrings($locale)}>
 	<div class="shell">
-		<Sidebar {items} {pinned} subtitles={settings.subtitles} {current} {onselect} />
+		<Sidebar
+			{groups}
+			{pinned}
+			brand={$t('app.name').toLowerCase()}
+			subtitles={settings.subtitles}
+			{current}
+			{onselect}
+		/>
 		<main class="content">
 			<div class="content-back"><BackButton {onback} /></div>
 			{@render children()}

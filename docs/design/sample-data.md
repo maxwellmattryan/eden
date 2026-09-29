@@ -110,7 +110,7 @@ Audit entry: 09-30 07:31, surface Hearth chat, model claude-sonnet, read `stock-
 
 ## Japanese screenshots
 
-Sidebar: 庭, 今日, 台所, 工房, 空, 暦, 活力, 聖域, 野原, 庭師, 設定. The daily line in Japanese: 「足るを知る」.
+Sidebar: 今日, 庭, 台所, 工房, 空, 暦, 活力, 聖域, 野原, 庭師, 設定. The daily line in Japanese: 「足るを知る」.
 
 ## Mirror in code
 

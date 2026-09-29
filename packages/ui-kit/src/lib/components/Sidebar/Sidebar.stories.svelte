@@ -11,14 +11,14 @@
 	/** The sample entries with their stand-in glyphs; the ids are the plain domain and shell ids. */
 	const withGlyphs = (entries: Omit<SidebarEntry, 'icon'>[]): SidebarEntry[] =>
 		entries.map((entry) => ({ ...entry, icon: domainGlyph(entry.id as GlyphId) }))
-	const items = withGlyphs(sidebar.items)
+	const groups = sidebar.groups.map(withGlyphs)
 	const pinned = withGlyphs(sidebar.pinned)
 
 	const { Story } = defineMeta({
 		title: 'Components/Shell/Sidebar',
 		component: Sidebar,
 		tags: ['autodocs'],
-		args: { items, pinned, current: 'kitchen', subtitles: false, shortcuts: false, onselect: fn() },
+		args: { groups, pinned, brand: 'eden', current: 'kitchen', subtitles: false, shortcuts: false, onselect: fn() },
 		parameters: { platforms: ['desktop'] },
 	})
 </script>
@@ -31,7 +31,7 @@
 	</div>
 {/snippet}
 
-<!-- Garden, Today, Hearth, Toolbench, Sky; Gardener and Settings pinned. One tab stop: arrows, Home, End and typing move focus; Enter selects -->
+<!-- The mark and wordmark at the head; Today, a rule, Garden, a rule, then Hearth, Toolbench, Sky; Gardener and Settings pinned. One tab stop across the groups: arrows, Home, End and typing move focus; Enter selects -->
 <Story
 	name="Phase-1 sidebar"
 	{template}
@@ -51,6 +51,10 @@
 		await expect(canvas.getByRole('button', { name: 'Settings' })).toHaveFocus()
 		await userEvent.keyboard('g')
 		await expect(canvas.getByRole('button', { name: 'Garden' })).toHaveFocus()
+		await userEvent.keyboard('{Home}')
+		await expect(canvas.getByRole('button', { name: 'Today' })).toHaveFocus()
+		await userEvent.keyboard('{ArrowDown}')
+		await expect(canvas.getByRole('button', { name: 'Garden' })).toHaveFocus()
 	}}
 />
 
@@ -59,9 +63,12 @@
 
 <Story name="Shortcuts on" args={{ shortcuts: true }} {template} />
 
+<!-- without a name there is no head: the groups start at the top -->
+<Story name="Without brand" args={{ brand: undefined }} {template} />
+
 <Story
 	name="Japanese"
-	args={{ items: withGlyphs(sidebarJa.items), pinned: withGlyphs(sidebarJa.pinned), subtitles: true, lang: 'ja' }}
+	args={{ groups: sidebarJa.groups.map(withGlyphs), pinned: withGlyphs(sidebarJa.pinned), subtitles: true, lang: 'ja' }}
 >
 	{#snippet template(args)}
 		<UiKitProvider strings={{ sidebar: { label: '領域', pinned: '庭師と設定' } }}>

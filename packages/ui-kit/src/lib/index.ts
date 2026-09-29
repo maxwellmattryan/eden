@@ -38,6 +38,7 @@ export { default as Sparkline } from './components/Sparkline/Sparkline.svelte'
 // Brand
 export { default as DailyLine } from './components/DailyLine/DailyLine.svelte'
 export { default as Wordmark } from './components/Wordmark/Wordmark.svelte'
+export { default as AppMark } from './components/AppMark/AppMark.svelte'
 export { default as Breeze } from './components/Breeze/Breeze.svelte'
 export { default as SkyGlyph } from './components/SkyGlyph/SkyGlyph.svelte'
 export { CONDITIONS, iconFor, type SkyCondition } from './components/SkyGlyph/SkyGlyph.svelte'
