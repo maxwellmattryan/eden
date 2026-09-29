@@ -23,8 +23,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # No `toolchain` input: the action reads rust-toolchain.toml (channel, components, targets).
+      # dtolnay/rust-toolchain needs the channel as an input; it is read from rust-toolchain.toml so the pin lives in one place
+      - id: pin
+        run: echo "channel=$(grep -m1 '^channel' rust-toolchain.toml | cut -d'"' -f2)" >> "$GITHUB_OUTPUT"
+        shell: bash
       - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.pin.outputs.channel }}
       - run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
 
   clippy:
@@ -42,7 +47,13 @@ jobs:
             target: --target aarch64-apple-ios --no-default-features
     steps:
       - uses: actions/checkout@v4
+      # dtolnay/rust-toolchain needs the channel as an input; it is read from rust-toolchain.toml so the pin lives in one place
+      - id: pin
+        run: echo "channel=$(grep -m1 '^channel' rust-toolchain.toml | cut -d'"' -f2)" >> "$GITHUB_OUTPUT"
+        shell: bash
       - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.pin.outputs.channel }}
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
