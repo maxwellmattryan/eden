@@ -31,6 +31,14 @@ Rowan Hale, they/them, a developer in Austin, Texas. Home is a `home` Place in H
 | `followed-tradition` | Buddhism, Stoicism | user-asserted |
 | `value` | patience, craft, generosity | user-asserted |
 
+## Today
+
+Wednesday's tasks, as the Today widget shows them: "Book the dentist" (overdue since Mon 09-28), "Renew library card" (due today), "Morning LMNT" (a routine, done 06:50). In code: `todayTasks`.
+
+## The Garden
+
+The Phase 1 default layout, one list the mockup and the app both read (`gardenLayout`): `weather-now` (Sky, S), `today` (Tasks, M), `expiring-soon` (Hearth, S), `cook-tonight` (Hearth, M), `resurfaced-idea` (Toolbench, S), `active-projects` (Toolbench, M), `sun-and-moon` (Sky, S), `daily-line` (neutral, M), `quick-log` (Vigor's weight, S). The activity feed is a column beside the grid on desktop, not a tile.
+
 ## Hearth
 
 **Stock by location** (`expiryEstimated` marked ~):
@@ -52,6 +60,8 @@ Rowan Hale, they/them, a developer in Austin, Texas. Home is a `home` Place in H
 
 **Ideas**: "Pantry barcode scanner on the Pi" (exploring, homelab), "nannou sketch: flow field over Austin weather" (building → linked project), "Bike light that reads Sky's forecast" (idea, hardware), "Solar logger for the balcony" (idea, hardware), "Command palette for the Synology" (archived), "Eden plugin: seed library" (idea, app). Resurfaced idea widget shows the solar logger (untouched 41 days).
 
+**Idea log** for the flow field (`ideaLog`): 09-12 "Captured from a sketchbook page"; 09-18 "Moved to exploring: mapped hourly wind to a vector field"; 09-26 "Moved to building: linked the weather-field project". Its brainstorm thread is two messages: Rowan asks "How do I make the field feel like the day rather than a noise demo?"; the Gardener answers that the noise scale should follow the wind speed and the palette the hour, so a still morning reads as slow, wide curves and a stormy evening as tight, dark ones, and that seed 2049 already has the right bones.
+
 **Projects**: "weather-field" (nannou; repo `github.com/rowanhale/weather-field`; next steps: pick a palette per season, export 4K frames); "pi-pantry" (exploring; parts list: Pi Zero 2 W 15.00, barcode module 32.50, case 9.00; estimated 56.50).
 
 **Lab**: `pi-pantry.local` (Pi 5, services: scanner-api, node-exporter; updated 09-21; backup routine weekly), `nas.local` (Synology, services: photos, backups; updated 09-14).
@@ -60,7 +70,7 @@ Rowan Hale, they/them, a developer in Austin, Texas. Home is a `home` Place in H
 
 ## Sky
 
-Austin week: Mon 31/22 °C clear, Tue 32/23 partly cloudy, **Wed 29/21 showers from 16:00**, Thu 27/19 clear, Fri 28/18 clear, Sat 30/19 clear, Sun 31/20 clear. Today: sunrise 07:22, sunset 19:14, golden hour 18:35, moon waning gibbous 84 %. Alert: none. "Good day for": an early run before the showers. Rain-before-plans nudge: the Wednesday 17:30 workout session.
+Austin week: Mon 31/22 °C clear, Tue 32/23 partly cloudy, **Wed 29/21 showers from 16:00**, Thu 27/19 clear, Fri 28/18 clear, Sat 30/19 clear, Sun 31/20 clear. Today's hours from 08:00 (`skyHours`, temperature and chance of rain): 08:00 22° 0 %, 09:00 23° 0 %, 10:00 25° 0 %, 11:00 26° 5 %, 12:00 27° 10 %, 13:00 28° 15 %, 14:00 29° 25 % cloudy, 15:00 29° 40 % cloudy, 16:00 27° 70 % rain, 17:00 26° 75 % rain, 18:00 25° 65 % rain, 19:00 24° 45 % drizzle. Today: sunrise 07:22, sunset 19:14, golden hour 18:35, moon waning gibbous 84 %. Alert: none. "Good day for": an early run before the showers. Rain-before-plans nudge: the Wednesday 17:30 workout session.
 
 ## Almanac week
 

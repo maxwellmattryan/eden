@@ -4,12 +4,12 @@ status: draft
 summary: The screen inventory for mockups: a template per screen, the shell screens, the domain screens, mobile variants, and the priority order for Claude Design.
 read-this-if: You are drawing mockups or checking that a screen covers its states.
 depends-on: [ux-patterns, sample-data, product/substrate/shell]
-updated: 2026-09-27
+updated: 2026-09-28
 ---
 
 ## Screen template
 
-Each screen below lists: id, platform, purpose, must show, primary actions, states, widgets or sample-data reference, and mockup notes. Every screen uses `design/sample-data.md` so the mockups agree with each other.
+Each screen below lists: id, platform, purpose, must show, primary actions, states, widgets or sample-data reference, and mockup notes. Every screen uses `design/sample-data.md` so the mockups agree with each other. A screen that has been mocked in the kit's Storybook (D-54, `engineering/ui-kit.md` "Domain mockups") names its story in the id cell; the story is the reference until the page is built.
 
 ## Shell screens
 
@@ -17,7 +17,7 @@ Each screen below lists: id, platform, purpose, must show, primary actions, stat
 |---|---|---|---|---|---|---|
 | `splash` | both | the daily line while the workspace opens | wordmark, one line, source | none | neutral line when Sanctuary is off | Sanctuary Wednesday line |
 | `onboarding-1..10` | both | first launch | step indicator, back, skip | continue | steps 5, 7, 8 are the ones that matter | Rowan's home, key entry, the two T2 grants with the "can see" chip |
-| `garden` | both | the dashboard | quick-nav row, widget grid, activity feed, daily line | edit mode, ⌘K | first run empty, edit mode, offline | the Phase 1 default layout |
+| `garden`, mocked as `Domains/Garden/Garden` | both | the dashboard | quick-nav row, widget grid, activity feed, daily line | edit mode, ⌘K | first run empty, edit mode, offline | the Phase 1 default layout (`gardenLayout`) |
 | `garden-edit` | desktop | arrange widgets | drag handles, resize, catalog sheet by domain | done | | |
 | `today` | both | tasks and routines | overdue, due today, routines, habits, Quick Log strip, quick-add | add, done, snooze | empty, overdue | Wednesday's task and routines |
 | `palette` | desktop | ⌘K | verbs, fuzzy results, recents | run | no results | "log weight 82.4", "go to almanac" |
@@ -38,16 +38,16 @@ Each screen below lists: id, platform, purpose, must show, primary actions, stat
 
 | id | platform | purpose | must show | primary actions | states | sample data |
 |---|---|---|---|---|---|---|
-| `hearth-stock` | both | stock by location | Fridge, Freezer, Pantry, Counter sections, expiry sort, low-stock filter | capture haul, add | empty, expiring | the stock table |
+| `hearth-stock`, mocked as `Domains/Hearth/Stock` | both | stock by location | Fridge, Freezer, Pantry, Counter sections, expiry sort, low-stock filter | capture haul, add | empty, expiring | the stock table |
 | `hearth-recipes` | desktop | recipes and cook this | list, detail with ingredients marked in stock or missing | cook this, add missing to grocery | empty | the three recipes |
-| `hearth-grocery` | both | the list | grouped by store, check off, origin badges | add, clear checked, export (later) | empty, all checked | H-E-B Saturday |
+| `hearth-grocery`, mocked as `Domains/Hearth/Grocery` | both | the list | grouped by store, check off, origin badges | add, clear checked, export (later) | empty, all checked | H-E-B Saturday |
 | `hearth-tips` | desktop | storage tips | search, tip cards | | | miso, ginger, avocados |
-| `toolbench-ideas` | both | the inbox of ideas | status filter, list, detail with log and brainstorm thread | capture, change status | empty | the six ideas |
+| `toolbench-ideas`, mocked as `Domains/Toolbench/Ideas` (desktop) | both | the inbox of ideas | status filter, list, detail with log and brainstorm thread | capture, change status | empty | the six ideas, `ideaLog` |
 | `toolbench-projects` | desktop | projects | list, detail with repo, next steps, log | add step | | weather-field, pi-pantry |
 | `toolbench-lab` | desktop | devices | device rows with services and routine status | add device | | the two devices |
 | `toolbench-studio` | desktop | render gallery | grid of renders, sketch detail with seed and parameters | | empty | weather-field |
 | `toolbench-notes` | both | technical notes | search-first list, Markdown detail | add | | |
-| `sky` | both | weather | now, hours, days, sun and moon, alerts, location switcher | | offline (last updated) | the Austin week |
+| `sky`, mocked as `Domains/Sky/Sky` | both | weather | now, hours, days, sun and moon, alerts, location switcher | | offline (last updated), night | the Austin week, `skyHours` |
 | `almanac-month` | desktop | the almanac | month grid with layer glyphs and legend, layer panel | create, toggle layer | no sources | the week's layers |
 | `almanac-week` | desktop | the week | timeline with Events by kind colour, task markers | | | |
 | `almanac-agenda` | both | the list | days with Events and annotations | | | |

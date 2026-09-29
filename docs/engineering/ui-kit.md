@@ -149,6 +149,10 @@ The toolbar carries Theme, Accent, Brand, Face, Platform and Density. Platform d
 
 Foundations pages render the tokens, the type specimens, the icon grid, the dials and the Tailwind mapping from the generated data, so they cannot drift from the code.
 
+### Domain mockups
+
+A page is mocked in the kit's Storybook before it is built (D-54): `packages/ui-kit/src/stories/domains/<domain>/<Page>.svelte` is the composition, `<Page>.stories.svelte` its states, titled `Domains/<Domain>/<Page>` (`Domains/Hearth/Stock`, `Domains/Sky/Sky`; the Garden sits under `Domains/Garden/Garden` although it is a shell screen). Nothing under `src/stories` is exported: the pages import kit components from the barrel plus plain markup for what the kit lacks, take their data from `sample-data.ts` and their callbacks as props, and follow every component rule (tokens and `--ed-*` only, keyed `{#each}`, no literal `aria-label`), so an approved mockup ports to `apps/*` without translation. The shared `domains/_frame/AppFrame.svelte` is the shell around each page, region for region as `product/substrate/shell.md` draws it: the Sidebar with subtitles on, `<main>` with the back arrow when a story hands it a breadcrumb, the StatusBar at the foot; on the phone the page above a pinned BottomTabBar. `apps/desktop`'s root layout follows it. The stories run under the same gates as the components (both platform projects, axe at `error`, `play` assertions on landmarks and key text); `design/screens.md` names the story that mocks each screen. Lifecycle: mock → approve from the two canvases in light and dark → implement in `apps/*` → the story stays as the reference and is updated with the page.
+
 ## Tests and gates
 
 | command | runs | gate |

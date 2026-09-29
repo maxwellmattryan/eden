@@ -288,3 +288,83 @@ export const quickLogs = [
 	},
 	{ id: 'note', label: 'Note', kind: 'text' as const, placeholder: 'One line is enough.' },
 ]
+
+/** Today's hours from 08:00, twelve of them; the showers arrive at 16:00 (Sky's Wednesday). */
+export interface SkyHour {
+	id: string
+	time: string
+	temp: number
+	condition: SkyCondition
+	/** Chance of precipitation, in percent. */
+	precip: number
+}
+export const skyHours: SkyHour[] = [
+	{ id: 'h08', time: '08:00', temp: 22, condition: 'sunny', precip: 0 },
+	{ id: 'h09', time: '09:00', temp: 23, condition: 'sunny', precip: 0 },
+	{ id: 'h10', time: '10:00', temp: 25, condition: 'sunny', precip: 0 },
+	{ id: 'h11', time: '11:00', temp: 26, condition: 'partly-cloudy', precip: 5 },
+	{ id: 'h12', time: '12:00', temp: 27, condition: 'partly-cloudy', precip: 10 },
+	{ id: 'h13', time: '13:00', temp: 28, condition: 'partly-cloudy', precip: 15 },
+	{ id: 'h14', time: '14:00', temp: 29, condition: 'cloudy', precip: 25 },
+	{ id: 'h15', time: '15:00', temp: 29, condition: 'cloudy', precip: 40 },
+	{ id: 'h16', time: '16:00', temp: 27, condition: 'rain', precip: 70 },
+	{ id: 'h17', time: '17:00', temp: 26, condition: 'rain', precip: 75 },
+	{ id: 'h18', time: '18:00', temp: 25, condition: 'rain', precip: 65 },
+	{ id: 'h19', time: '19:00', temp: 24, condition: 'drizzle', precip: 45 },
+]
+
+/** The log and the brainstorm attached to idea i-02 (the nannou flow field), oldest first. */
+export const ideaLog = {
+	ideaId: 'i-02',
+	entries: [
+		{ id: 'il-01', when: '09-12', line: 'Captured from a sketchbook page' },
+		{ id: 'il-02', when: '09-18', line: 'Moved to exploring: mapped hourly wind to a vector field' },
+		{ id: 'il-03', when: '09-26', line: 'Moved to building: linked the weather-field project' },
+	],
+	brainstorm: [
+		{ id: 'bm-01', owner: true, text: 'How do I make the field feel like the day rather than a noise demo?' },
+		{
+			id: 'bm-02',
+			owner: false,
+			text: 'Drive the noise scale from the wind speed and the palette from the hour, so a still morning reads as slow, wide curves and a stormy evening as tight, dark ones. Seed 2049 already has the right bones.',
+		},
+	],
+} as const
+
+/** Wednesday's tasks for the Today widget: one overdue, one due today, one routine already done. */
+export type TaskState = 'overdue' | 'due' | 'done'
+export interface TodayTask {
+	id: string
+	title: string
+	/** When it was or is due, already formatted. */
+	when: string
+	state: TaskState
+	/** A routine rather than a one-off task. */
+	routine?: boolean
+}
+export const todayTasks: TodayTask[] = [
+	{ id: 't-01', title: 'Book the dentist', when: 'Mon 09-28', state: 'overdue' },
+	{ id: 't-02', title: 'Renew library card', when: 'today', state: 'due' },
+	{ id: 't-03', title: 'Morning LMNT', when: '06:50', state: 'done', routine: true },
+]
+
+/** The Phase 1 default Garden (product/substrate/shell.md): the mockup and the app read this one list. */
+export type GardenWidgetSize = 's' | 'm' | 'l'
+export type GardenDomain = 'weather' | 'today' | 'kitchen' | 'toolbench' | 'fitness' | 'garden'
+export interface GardenTile {
+	id: string
+	/** The contributing domain's plain id; `garden` for the neutral tiles the shell owns. */
+	domain: GardenDomain
+	size: GardenWidgetSize
+}
+export const gardenLayout: GardenTile[] = [
+	{ id: 'weather-now', domain: 'weather', size: 's' },
+	{ id: 'today', domain: 'today', size: 'm' },
+	{ id: 'expiring-soon', domain: 'kitchen', size: 's' },
+	{ id: 'cook-tonight', domain: 'kitchen', size: 'm' },
+	{ id: 'resurfaced-idea', domain: 'toolbench', size: 's' },
+	{ id: 'active-projects', domain: 'toolbench', size: 'm' },
+	{ id: 'sun-and-moon', domain: 'weather', size: 's' },
+	{ id: 'daily-line', domain: 'garden', size: 'm' },
+	{ id: 'quick-log', domain: 'fitness', size: 's' },
+]
