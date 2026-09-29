@@ -1,0 +1,614 @@
+name: cd.release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 0.2.0 or 0.2.0-staging.1); a dispatch never creates the tag'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark the GitHub Release as a pre-release'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.validate.outputs.version }}
+      tag: ${{ steps.validate.outputs.tag }}
+      prerelease: ${{ steps.validate.outputs.prerelease }}
+      channel: ${{ steps.validate.outputs.channel }}
+      config: ${{ steps.validate.outputs.config }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine the version and channel
+        id: validate
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+          INPUT_PRERELEASE: ${{ github.event.inputs.prerelease }}
+        run: |
+          if [[ "$EVENT_NAME" == "push" ]]; then
+            TAG="$REF_NAME"
+            VERSION="${TAG#v}"
+          else
+            VERSION="$INPUT_VERSION"
+            TAG="v$VERSION"
+          fi
+
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "Error: invalid version format '$VERSION'; use MAJOR.MINOR.PATCH[-staging.N]"
+            exit 1
+          fi
+
+          # A tag push must match the version the tree carries; a dispatch builds whatever version is asked for.
+          TREE_VERSION=$(node -p "require('./package.json').version")
+          if [[ "$EVENT_NAME" == "push" && "$TREE_VERSION" != "$VERSION" ]]; then
+            echo "Error: tag $TAG but package.json is at $TREE_VERSION (run scripts/tag.sh)"
+            exit 1
+          fi
+
+          # The changelog must carry the version, or for a staging increment the first prerelease of its base.
+          BASE_VERSION="${VERSION%%-*}"
+          if ! grep -q "## \[$VERSION\]" CHANGELOG.md; then
+            if [[ "$VERSION" =~ -staging\. ]] && grep -q "## \[${BASE_VERSION}-staging\." CHANGELOG.md; then
+              echo "Changelog entry found for an earlier staging prerelease of $BASE_VERSION"
+            elif [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+              echo "::warning::Version $VERSION is not in CHANGELOG.md; the release notes will be empty"
+            else
+              echo "Error: version $VERSION not found in CHANGELOG.md"
+              exit 1
+            fi
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+          if [[ "$VERSION" =~ -staging\. ]]; then
+            CHANNEL=staging
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          elif [[ "$EVENT_NAME" == "push" ]]; then
+            CHANNEL=production
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          else
+            CHANNEL=production
+            echo "prerelease=$INPUT_PRERELEASE" >> "$GITHUB_OUTPUT"
+          fi
+          echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
+
+          # The overlay carries the updater endpoint, so the mapping fails closed.
+          case "$CHANNEL" in
+            staging) echo "config=staging" >> "$GITHUB_OUTPUT" ;;
+            production) echo "config=prod" >> "$GITHUB_OUTPUT" ;;
+            *) echo "Error: no Tauri config for channel '$CHANNEL'"; exit 1 ;;
+          esac
+
+      - name: Extract the release notes
+        env:
+          VERSION: ${{ steps.validate.outputs.version }}
+        run: |
+          awk -v ver="$VERSION" '
+            /^## \[/ {
+              if (found) exit
+              if ($0 ~ "\\[" ver "\\]") found=1
+              next
+            }
+            found { print }
+          ' CHANGELOG.md > release_notes.md
+          cat release_notes.md
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release_notes.md
+
+  build:
+    name: Build ${{ matrix.os }}
+    needs: validate
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            artifact_name: macos
+          - os: windows-latest
+            artifact_name: windows
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+      - uses: dtolnay/rust-toolchain@master
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          shared-key: build-${{ matrix.os }}
+          cache-on-failure: true
+          save-if: 'false'
+
+      - name: Install Strawberry Perl (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          choco install strawberryperl -y --no-progress
+          echo "C:\Strawberry\perl\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - run: yarn install --frozen-lockfile
+
+      # Signing and notarization are gated on the secrets: without them the macOS bundle is unsigned and the updater
+      # artifacts are unsigned, which is what a dry run of this workflow produces.
+      - name: Determine signing availability
+        id: signing
+        env:
+          HAS_APPLE: ${{ secrets.APPLE_CERTIFICATE != '' && secrets.APPLE_SIGNING_IDENTITY != '' }}
+          HAS_NOTARY: ${{ secrets.APPLE_ID != '' && secrets.APPLE_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
+          HAS_UPDATER_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+        shell: bash
+        run: |
+          echo "apple=$HAS_APPLE" >> "$GITHUB_OUTPUT"
+          echo "notary=$HAS_NOTARY" >> "$GITHUB_OUTPUT"
+          echo "updater=$HAS_UPDATER_KEY" >> "$GITHUB_OUTPUT"
+          [[ "$HAS_APPLE" == "true" ]] || echo "::warning::Apple signing secrets not configured: the macOS bundle will be unsigned"
+          [[ "$HAS_NOTARY" == "true" ]] || echo "::warning::Apple notarization secrets not configured"
+          [[ "$HAS_UPDATER_KEY" == "true" ]] || echo "::warning::TAURI_SIGNING_PRIVATE_KEY not configured: updater artifacts are off for this run"
+
+      - name: Build (macOS universal)
+        if: matrix.os == 'macos-latest'
+        env:
+          EDEN_ENV: ${{ needs.validate.outputs.channel }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ steps.signing.outputs.notary == 'true' && secrets.APPLE_ID || '' }}
+          APPLE_PASSWORD: ${{ steps.signing.outputs.notary == 'true' && secrets.APPLE_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ steps.signing.outputs.notary == 'true' && secrets.APPLE_TEAM_ID || '' }}
+          UPDATER: ${{ steps.signing.outputs.updater }}
+        run: |
+          OVERRIDE='{}'
+          [[ "$UPDATER" == "true" ]] || OVERRIDE='{"bundle":{"createUpdaterArtifacts":false}}'
+          yarn tauri build --config src-tauri/tauri.${{ needs.validate.outputs.config }}.conf.json --config "$OVERRIDE" --target universal-apple-darwin --features desktop
+
+      # The staging and production overlays differ in identity and updater endpoint, so prove the binary polls its
+      # own channel's manifest before it can be published.
+      - name: Verify the updater endpoint (macOS)
+        if: matrix.os == 'macos-latest'
+        env:
+          CHANNEL: ${{ needs.validate.outputs.channel }}
+        run: |
+          BIN=$(ls src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app/Contents/MacOS/eden-app)
+          EXPECTED="eden-releases/${CHANNEL}/latest.json"
+          if [[ "$CHANNEL" == "staging" ]]; then OTHER="eden-releases/production/latest.json"; else OTHER="eden-releases/staging/latest.json"; fi
+          if ! strings "$BIN" | grep -q "$EXPECTED"; then
+            echo "Error: the built app does not embed the $CHANNEL updater endpoint ($EXPECTED)"
+            exit 1
+          fi
+          if strings "$BIN" | grep -q "$OTHER"; then
+            echo "Error: the built app embeds the other channel's updater endpoint ($OTHER)"
+            exit 1
+          fi
+          echo "Updater endpoint verified: $EXPECTED"
+
+      - name: Build (Windows, unsigned)
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        env:
+          EDEN_ENV: ${{ needs.validate.outputs.channel }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          UPDATER: ${{ steps.signing.outputs.updater }}
+        run: |
+          OVERRIDE='{}'
+          [[ "$UPDATER" == "true" ]] || OVERRIDE='{"bundle":{"createUpdaterArtifacts":false}}'
+          yarn tauri build --config src-tauri/tauri.${{ needs.validate.outputs.config }}.conf.json --config "$OVERRIDE" --features desktop
+
+      - name: Upload macOS artifacts
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-macos
+          if-no-files-found: error
+          path: |
+            src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+            src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz
+            src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz.sig
+
+      - name: Upload Windows artifacts
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          if-no-files-found: error
+          path: |
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/msi/*.msi.sig
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/nsis/*.exe.sig
+
+  android:
+    name: Build Android APK
+    needs: validate
+    # Off until the Android project is generated (gen/android needs a JDK 17 or 21 on the owner's machine, see
+    # docs/engineering/app-scaffold.md); the release job treats a skipped Android build as non-blocking.
+    if: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+      - uses: dtolnay/rust-toolchain@master
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          shared-key: mobile-android
+          cache-on-failure: true
+          save-if: 'false'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - name: Configure the Android NDK toolchain
+        run: |
+          NDK="$ANDROID_NDK_LATEST_HOME"
+          TOOLCHAIN="$NDK/toolchains/llvm/prebuilt/linux-x86_64"
+          echo "$TOOLCHAIN/bin" >> "$GITHUB_PATH"
+          {
+            echo "ANDROID_NDK_ROOT=$NDK"
+            echo "ANDROID_NDK_HOME=$NDK"
+            echo "CC_aarch64-linux-android=$TOOLCHAIN/bin/aarch64-linux-android29-clang"
+            echo "CXX_aarch64-linux-android=$TOOLCHAIN/bin/aarch64-linux-android29-clang++"
+            echo "AR_aarch64-linux-android=$TOOLCHAIN/bin/llvm-ar"
+            echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$TOOLCHAIN/bin/aarch64-linux-android29-clang"
+          } >> "$GITHUB_ENV"
+      - run: yarn install --frozen-lockfile
+
+      - name: Determine signing availability
+        id: signing
+        env:
+          HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        run: |
+          echo "signed=$HAS_KEYSTORE" >> "$GITHUB_OUTPUT"
+          [[ "$HAS_KEYSTORE" == "true" ]] || echo "::warning::Android signing secrets not configured: building an unsigned APK"
+
+      # key.properties must land in the app module dir; gen/android/app/build.gradle.kts reads it from there.
+      - name: Write key.properties
+        if: steps.signing.outputs.signed == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          {
+            echo "storeFile=$RUNNER_TEMP/release.keystore"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > src-tauri/gen/android/app/key.properties
+
+      # The inline --config overlays the release version only; the channel overlays never reach `tauri android`
+      # (an identifier override would break the JNI binding).
+      - name: Build the APK
+        env:
+          EDEN_ENV: ${{ needs.validate.outputs.channel }}
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: yarn tauri android build --apk true --config "{\"version\":\"$VERSION\"}" --features mobile
+
+      - name: Prepare the artifacts
+        id: artifacts
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+          SIGNED: ${{ steps.signing.outputs.signed }}
+        run: |
+          APK=$(find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" -path "*/release/*" | head -1)
+          if [[ -z "$APK" ]]; then
+            echo "::error::No release APK found"
+            exit 1
+          fi
+          if [[ "$SIGNED" == "true" && "$APK" == *-unsigned.apk ]]; then
+            echo "::error::Signing secrets are configured but Gradle produced an unsigned APK ($APK): key.properties was not picked up"
+            exit 1
+          fi
+          DEST="Eden_${VERSION}_android.apk"
+          cp "$APK" "$DEST"
+          sha256sum "$DEST" > "${DEST}.sha256"
+          echo "apk=$DEST" >> "$GITHUB_OUTPUT"
+          echo "sha256=${DEST}.sha256" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-android
+          path: |
+            ${{ steps.artifacts.outputs.apk }}
+            ${{ steps.artifacts.outputs.sha256 }}
+
+  ios:
+    name: Build iOS (ad-hoc)
+    needs: validate
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+      - uses: dtolnay/rust-toolchain@master
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          shared-key: mobile-ios
+          cache-on-failure: true
+          save-if: 'false'
+
+      # Ad-hoc distribution (D-52): a distribution certificate and an ad-hoc profile listing the devices. No App Store
+      # Connect record is ever created, so the App ID can move to another team later.
+      - name: Determine signing availability
+        id: signing
+        env:
+          HAS_CERT: ${{ secrets.IOS_DIST_CERTIFICATE_P12_BASE64 != '' }}
+          HAS_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 != '' && secrets.IOS_PROVISIONING_PROFILE_NAME != '' }}
+        run: |
+          if [[ "$HAS_CERT" == "true" && "$HAS_PROFILE" == "true" ]]; then
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::iOS ad-hoc signing secrets not configured: skipping the iOS build"
+          fi
+
+      - if: steps.signing.outputs.signed == 'true'
+        run: yarn install --frozen-lockfile
+
+      # Tauri uses the committed pbxproj as-is and never selects a profile, so the profile and the distribution identity
+      # are written into the pbxproj on the runner (never committed).
+      - name: Configure manual signing
+        if: steps.signing.outputs.signed == 'true'
+        env:
+          IOS_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
+        run: node scripts/write-ios-signing.mjs
+
+      - name: Build the IPA
+        if: steps.signing.outputs.signed == 'true'
+        env:
+          EDEN_ENV: ${{ needs.validate.outputs.channel }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          IOS_CERTIFICATE: ${{ secrets.IOS_DIST_CERTIFICATE_P12_BASE64 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DIST_CERTIFICATE_PASSWORD }}
+          IOS_MOBILE_PROVISION: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+        run: yarn tauri ios build --config src-tauri/tauri.${{ needs.validate.outputs.config }}.conf.json --export-method ad-hoc --features mobile
+
+      # The OTA manifest Safari opens through itms-services: the IPA's final URL in the bucket, the channel's bundle id
+      # (the base identifier from tauri.conf.json plus the overlay's suffix), the version and the title.
+      - name: Prepare the artifacts and the OTA manifest
+        if: steps.signing.outputs.signed == 'true'
+        id: artifacts
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+          CHANNEL: ${{ needs.validate.outputs.channel }}
+          CONFIG: ${{ needs.validate.outputs.config }}
+        run: |
+          IPA=$(find src-tauri/gen/apple/build -name "*.ipa" | head -1)
+          if [[ -z "$IPA" ]]; then
+            echo "::error::No IPA found after the build"
+            exit 1
+          fi
+          DEST="Eden_${VERSION}_ios.ipa"
+          cp "$IPA" "$DEST"
+          BASE_ID=$(node -p "require('./src-tauri/tauri.conf.json').identifier")
+          BUNDLE_ID=$(node -p "require('./src-tauri/tauri.${CONFIG}.conf.json').identifier || '$BASE_ID'")
+          TITLE=$(node -p "require('./src-tauri/tauri.${CONFIG}.conf.json').productName || require('./src-tauri/tauri.conf.json').productName")
+          IPA_URL="https://storage.googleapis.com/eden-releases/${CHANNEL}/${VERSION}/ios/${DEST}"
+          cat > manifest.plist <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>items</key>
+            <array>
+              <dict>
+                <key>assets</key>
+                <array>
+                  <dict>
+                    <key>kind</key>
+                    <string>software-package</string>
+                    <key>url</key>
+                    <string>${IPA_URL}</string>
+                  </dict>
+                </array>
+                <key>metadata</key>
+                <dict>
+                  <key>bundle-identifier</key>
+                  <string>${BUNDLE_ID}</string>
+                  <key>bundle-version</key>
+                  <string>${VERSION%%-*}</string>
+                  <key>kind</key>
+                  <string>software</string>
+                  <key>title</key>
+                  <string>${TITLE}</string>
+                </dict>
+              </dict>
+            </array>
+          </dict>
+          </plist>
+          EOF
+          cat manifest.plist
+          COUNT=$(find src-tauri/gen/apple -type d -name '*.dSYM' | wc -l | tr -d ' ')
+          if [[ "$COUNT" != "0" ]]; then
+            find src-tauri/gen/apple -type d -name '*.dSYM' -print0 | xargs -0 zip -qr "Eden_${VERSION}_ios_dSYMs.zip"
+          else
+            echo "::warning::No dSYMs found under src-tauri/gen/apple"
+          fi
+
+      - name: Upload iOS artifacts
+        if: steps.signing.outputs.signed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-ios
+          path: |
+            Eden_*_ios.ipa
+            manifest.plist
+            Eden_*_ios_dSYMs.zip
+
+      - name: Clean up the keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" 2>/dev/null || true
+
+  release:
+    name: Publish
+    needs: [validate, build, android, ios]
+    # A release is published when validate and both desktop builds succeed; a mobile job that was skipped (Android
+    # off, iOS without secrets) does not block, a mobile job that failed does.
+    if: >-
+      always()
+      && needs.validate.result == 'success'
+      && needs.build.result == 'success'
+      && (needs.android.result == 'success' || needs.android.result == 'skipped')
+      && (needs.ios.result == 'success' || needs.ios.result == 'skipped')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - run: ls -R artifacts
+
+      - name: Create the draft GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.validate.outputs.tag }}
+          name: v${{ needs.validate.outputs.version }}
+          body_path: artifacts/release-notes/release_notes.md
+          prerelease: ${{ needs.validate.outputs.prerelease }}
+          draft: true
+          files: |
+            artifacts/release-macos/**/*.dmg
+            artifacts/release-macos/**/*.app.tar.gz
+            artifacts/release-macos/**/*.app.tar.gz.sig
+            artifacts/release-windows/**/*.msi
+            artifacts/release-windows/**/*.msi.sig
+            artifacts/release-windows/**/*.exe
+            artifacts/release-windows/**/*.exe.sig
+            artifacts/release-android/*.apk
+            artifacts/release-android/*.sha256
+            artifacts/release-ios/*.ipa
+            artifacts/release-ios/manifest.plist
+            artifacts/release-ios/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # The bucket is the updater's and the download page's source. Without the service account key the release stops
+      # at the draft, which is what a dry run of this workflow produces.
+      - name: Determine bucket availability
+        id: bucket
+        env:
+          HAS_KEY: ${{ secrets.GCS_SERVICE_ACCOUNT_KEY != '' }}
+        run: |
+          echo "available=$HAS_KEY" >> "$GITHUB_OUTPUT"
+          [[ "$HAS_KEY" == "true" ]] || echo "::warning::GCS_SERVICE_ACCOUNT_KEY not configured: skipping the bucket upload and the manifests"
+
+      - name: Authenticate to Google Cloud
+        if: steps.bucket.outputs.available == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCS_SERVICE_ACCOUNT_KEY }}
+
+      - name: Set up the Cloud SDK
+        if: steps.bucket.outputs.available == 'true'
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Upload to the bucket and write latest.json and downloads.json
+        if: steps.bucket.outputs.available == 'true'
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+          CHANNEL: ${{ needs.validate.outputs.channel }}
+        run: |
+          shopt -s globstar nullglob
+
+          BUCKET="eden-releases"
+          PREFIX="${CHANNEL}/${VERSION}"
+          BASE_URL="https://storage.googleapis.com/${BUCKET}/${PREFIX}"
+
+          upload() { # file, platform dir, content type
+            gcloud storage cp "$1" "gs://${BUCKET}/${PREFIX}/$2/$(basename "$1")" --content-type="$3" --cache-control="public, max-age=31536000"
+          }
+          for f in artifacts/release-macos/**/*.app.tar.gz; do upload "$f" macos application/gzip; done
+          for f in artifacts/release-macos/**/*.app.tar.gz.sig; do upload "$f" macos text/plain; done
+          for f in artifacts/release-macos/**/*.dmg; do upload "$f" macos application/x-apple-diskimage; done
+          for f in artifacts/release-windows/**/*.msi; do upload "$f" windows application/x-msi; done
+          for f in artifacts/release-windows/**/*.msi.sig; do upload "$f" windows text/plain; done
+          for f in artifacts/release-android/*.apk; do upload "$f" android application/vnd.android.package-archive; done
+          for f in artifacts/release-android/*.sha256; do upload "$f" android text/plain; done
+          for f in artifacts/release-ios/*.ipa; do upload "$f" ios application/octet-stream; done
+          for f in artifacts/release-ios/manifest.plist; do upload "$f" ios application/xml; done
+
+          MACOS_SIG=""; WINDOWS_SIG=""; MACOS_FILE=""; WINDOWS_FILE=""; DMG_FILE=""; APK_FILE=""; SHA_FILE=""; IPA_FILE=""; MANIFEST_FILE=""
+          for f in artifacts/release-macos/**/*.app.tar.gz.sig; do MACOS_SIG=$(cat "$f"); done
+          for f in artifacts/release-windows/**/*.msi.sig; do WINDOWS_SIG=$(cat "$f"); done
+          for f in artifacts/release-macos/**/*.app.tar.gz; do MACOS_FILE=$(basename "$f"); done
+          for f in artifacts/release-windows/**/*.msi; do WINDOWS_FILE=$(basename "$f"); done
+          for f in artifacts/release-macos/**/*.dmg; do DMG_FILE=$(basename "$f"); done
+          for f in artifacts/release-android/*.apk; do APK_FILE=$(basename "$f"); done
+          for f in artifacts/release-android/*.sha256; do SHA_FILE=$(basename "$f"); done
+          for f in artifacts/release-ios/*.ipa; do IPA_FILE=$(basename "$f"); done
+          for f in artifacts/release-ios/manifest.plist; do MANIFEST_FILE=$(basename "$f"); done
+
+          # The Tauri updater manifest, one entry per desktop target, only when the updater artifacts were signed.
+          if [[ -n "$MACOS_SIG" && -n "$WINDOWS_SIG" ]]; then
+            cat > latest.json <<EOF
+          {
+            "version": "${VERSION}",
+            "notes": "",
+            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "platforms": {
+              "darwin-aarch64": { "signature": "${MACOS_SIG}", "url": "${BASE_URL}/macos/${MACOS_FILE}" },
+              "darwin-x86_64": { "signature": "${MACOS_SIG}", "url": "${BASE_URL}/macos/${MACOS_FILE}" },
+              "windows-x86_64": { "signature": "${WINDOWS_SIG}", "url": "${BASE_URL}/windows/${WINDOWS_FILE}" }
+            }
+          }
+          EOF
+            gcloud storage cp latest.json "gs://${BUCKET}/${CHANNEL}/latest.json" --content-type="application/json" --cache-control="public, max-age=300"
+            cat latest.json
+          else
+            echo "::warning::No updater signatures: ${CHANNEL}/latest.json left unchanged"
+          fi
+
+          # What the download page reads.
+          node - <<EOF
+          const fs = require('fs')
+          const base = '${BASE_URL}'
+          const file = (dir, name) => (name ? base + '/' + dir + '/' + name : undefined)
+          const downloads = {
+            macos: { dmg: file('macos', '${DMG_FILE}'), filename: '${DMG_FILE}' || undefined },
+            windows: { msi: file('windows', '${WINDOWS_FILE}'), filename: '${WINDOWS_FILE}' || undefined },
+            android: { apk: file('android', '${APK_FILE}'), sha256: file('android', '${SHA_FILE}'), filename: '${APK_FILE}' || undefined },
+            ios: { manifest: file('ios', '${MANIFEST_FILE}'), ipa: file('ios', '${IPA_FILE}'), filename: '${IPA_FILE}' || undefined },
+          }
+          for (const key of Object.keys(downloads)) {
+            const entry = downloads[key]
+            for (const k of Object.keys(entry)) if (entry[k] === undefined) delete entry[k]
+            if (Object.keys(entry).length === 0) delete downloads[key]
+          }
+          fs.writeFileSync('downloads.json', JSON.stringify({ version: '${VERSION}', date: new Date().toISOString().slice(0, 10), downloads }, null, 2) + '\n')
+          EOF
+          gcloud storage cp downloads.json "gs://${BUCKET}/${CHANNEL}/downloads.json" --content-type="application/json" --cache-control="public, max-age=300"
+          cat downloads.json

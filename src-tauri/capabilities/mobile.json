@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/mobile-schema.json",
+  "identifier": "mobile",
+  "description": "Mobile-only plugin permissions: haptics (light impact feedback on tap). The plugin ships no `default` permission set, so the command is granted explicitly.",
+  "platforms": ["iOS", "android"],
+  "windows": ["main"],
+  "permissions": ["haptics:allow-impact-feedback"]
+}

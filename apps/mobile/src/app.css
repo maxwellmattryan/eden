@@ -1,0 +1,7 @@
+/* The stylesheet chain every app imports (docs/engineering/ui-kit.md, "What an app imports"). The kit's components use
+   Tailwind utilities and Tailwind 4 only scans the app's own tree, so the kit's sources are added as a source. */
+@import 'tailwindcss';
+@import '@eden/ui-kit/theme.css';
+@import '@eden/ui-kit/base.css';
+@import '@eden/ui-kit/tailwind.css';
+@source '../../../packages/ui-kit/src/lib';

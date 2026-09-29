@@ -1,0 +1,63 @@
+[package]
+name = "eden-app"
+version = "0.1.0"
+description = "Eden, a personal digital garden: the Tauri shell for the desktop and mobile apps."
+authors = ["Matthew Maxwell"]
+edition = "2021"
+publish = false
+
+[lib]
+name = "eden_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[features]
+# No default features: every build selects its platform explicitly — desktop with
+# `--features desktop`, mobile with `--features mobile`. `desktop` MUST NOT be a default
+# feature: `tauri ios/android dev|build` has no `--no-default-features` flag and always
+# inherits the crate's default features, so a desktop default leaks desktop-only deps
+# (souvlaki, the native menu, rodio, …) into the iOS/Android build and breaks compilation.
+default = []
+# Desktop-only: the updater with the channel guard, the process plugin (relaunch after an update) and window-state.
+desktop = [
+  "dep:tauri-plugin-window-state",
+  "dep:tauri-plugin-process",
+  "dep:tauri-plugin-updater",
+]
+# Mobile-only: haptics (light impact feedback on tap).
+mobile = ["dep:tauri-plugin-haptics"]
+devtools = ["tauri/devtools"]
+
+[build-dependencies]
+tauri-build = { version = "2.6", features = [] }
+
+[dependencies]
+# 2.11 floor: `Builder::on_web_content_process_terminate` (webview crash recovery) landed in 2.11.
+tauri = { version = "2.11", features = [] }
+tauri-plugin-opener = "2.5"
+tauri-plugin-dialog = "2.7"
+tauri-plugin-fs = "2.5"
+tauri-plugin-clipboard-manager = "2.3"
+tauri-plugin-notification = "2.3"
+tauri-plugin-window-state = { version = "2.4", optional = true }
+tauri-plugin-process = { version = "2.3", optional = true }
+tauri-plugin-updater = { version = "2.10", optional = true }
+tauri-plugin-haptics = { version = "2.3", optional = true }
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+log = "0.4"
+env_logger = "0.11"
+semver = "1.0"
+sysinfo = "0.37"
+thiserror = "2.0"
+
+# iOS unified logging: a normally-launched app's stderr is discarded by iOS, so `env_logger` output never reaches
+# Console.app. `oslog` routes the `log` facade to os_log under the app's identifier as subsystem.
+[target.'cfg(target_os = "ios")'.dependencies]
+oslog = "0.2"
+
+# Android counterpart: stderr never reaches logcat, so route the `log` facade there.
+[target.'cfg(target_os = "android")'.dependencies]
+android_logger = "0.15"

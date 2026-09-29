@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en" data-platform="mobile">
+	<head>
+		<meta charset="utf-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+		/>
+		<!-- The kit's pre-paint script, inlined by src/hooks.server.ts: theme, accent, brand, font and density from
+		     localStorage before the first frame, so nothing flashes. No splash on mobile: the OS launch screen covers
+		     the gap and the shell paints straight into it. -->
+		<script>
+			%eden.prepaint%
+		</script>
+		<title>Eden</title>
+		%sveltekit.head%
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<div style="display: contents">%sveltekit.body%</div>
+	</body>
+</html>

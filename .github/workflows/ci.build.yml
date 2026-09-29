@@ -1,0 +1,89 @@
+name: ci.build
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  group: ci-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: tauri build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+      - uses: dtolnay/rust-toolchain@master
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          shared-key: build-${{ matrix.os }}
+          cache-on-failure: true
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Install Strawberry Perl (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          choco install strawberryperl -y --no-progress
+          echo "C:\Strawberry\perl\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - run: yarn install --frozen-lockfile
+      # Updater artifacts are off: a CI build has no signing key, and the release workflow is where they are made.
+      - name: Build (macOS universal)
+        if: matrix.os == 'macos-latest'
+        run: yarn tauri build --target universal-apple-darwin --config '{"bundle":{"createUpdaterArtifacts":false}}' --features desktop
+      - name: Build (Windows)
+        if: matrix.os == 'windows-latest'
+        run: yarn tauri build --config '{"bundle":{"createUpdaterArtifacts":false}}' --features desktop
+
+  # Mobile targets are compile-checked only (no bundle) so a desktop change that leaks into shared code cannot break the
+  # mobile build unnoticed.
+  ios:
+    name: cargo check (iOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          shared-key: mobile-ios
+          cache-on-failure: true
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - run: cargo check --manifest-path src-tauri/Cargo.toml --target aarch64-apple-ios --no-default-features --features mobile
+
+  android:
+    name: cargo check (Android)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          shared-key: mobile-android
+          cache-on-failure: true
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      # The NDK clang and ar for the crates that build C; the API level matches minSdkVersion 29.
+      - name: Configure the Android NDK toolchain
+        run: |
+          NDK="$ANDROID_NDK_LATEST_HOME"
+          TOOLCHAIN="$NDK/toolchains/llvm/prebuilt/linux-x86_64"
+          echo "$TOOLCHAIN/bin" >> "$GITHUB_PATH"
+          {
+            echo "ANDROID_NDK_ROOT=$NDK"
+            echo "ANDROID_NDK_HOME=$NDK"
+            echo "CC_aarch64-linux-android=$TOOLCHAIN/bin/aarch64-linux-android29-clang"
+            echo "CXX_aarch64-linux-android=$TOOLCHAIN/bin/aarch64-linux-android29-clang++"
+            echo "AR_aarch64-linux-android=$TOOLCHAIN/bin/llvm-ar"
+            echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$TOOLCHAIN/bin/aarch64-linux-android29-clang"
+          } >> "$GITHUB_ENV"
+      - run: cargo check --manifest-path src-tauri/Cargo.toml --target aarch64-linux-android --no-default-features --features mobile

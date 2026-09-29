@@ -1,0 +1,13 @@
+# Rust stable, pinned (D-51). rustup installs the channel, the components and the targets on first use; CI reads the
+# same file through dtolnay/rust-toolchain. The targets are the desktop pair for the universal macOS bundle, the iOS
+# device and simulator, and Android.
+[toolchain]
+channel = "1.91"
+components = ["rustfmt", "clippy"]
+targets = [
+  "aarch64-apple-darwin",
+  "x86_64-apple-darwin",
+  "aarch64-apple-ios",
+  "aarch64-apple-ios-sim",
+  "aarch64-linux-android",
+]

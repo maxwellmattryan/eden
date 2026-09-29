@@ -28,7 +28,7 @@ jobs:
       - run: yarn workspace @eden/ui-kit tokens:check
       - run: yarn workspace @eden/ui-kit icons:check
       - run: yarn workspace @eden/ui-kit fonts:check
-      - run: yarn check
+      - run: yarn run check
 
   test:
     name: unit and story tests
@@ -44,7 +44,7 @@ jobs:
       - run: yarn test
 
   build:
-    name: package and storybook
+    name: packages, apps and storybook
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

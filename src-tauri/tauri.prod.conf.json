@@ -1,0 +1,14 @@
+{
+	"productName": "Eden",
+	"bundle": {
+		"createUpdaterArtifacts": true
+	},
+	"app": {
+		"windows": [{ "title": "Eden" }]
+	},
+	"plugins": {
+		"updater": {
+			"endpoints": ["https://storage.googleapis.com/eden-releases/production/latest.json"]
+		}
+	}
+}

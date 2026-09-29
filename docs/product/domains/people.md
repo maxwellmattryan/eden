@@ -4,7 +4,7 @@ status: candidate
 summary: Candidate domain for relationships: people, birthdays, gift ideas, last contact, dietary notes for hosting, and the places you went together. Id `people`.
 read-this-if: You are considering a People domain or wondering where a person-related feature belongs.
 depends-on: [substrate/primitives, domains/_template]
-updated: 2026-09-27
+updated: 2026-09-28
 ---
 
 ## Purpose
@@ -30,3 +30,7 @@ Meadow's visits (a visit with people becomes an interaction), Trails (who you tr
 ## Trigger to promote
 
 The owner asks for a birthday reminder or a guest's dietary note twice.
+
+## Later: message sources as interactions
+
+Deferred until the domain is promoted; recorded here so the option is not lost. Message apps (iMessage on macOS, SMS on Android, Gmail, Slack) could emit a generic contact event (handle, timestamp, direction, kind) that becomes an `interaction`. People consumes contact events and never knows the source, so new apps are new emitters. Message bodies are never ingested; only metadata, which stays T1 and keeps content away from the Gardener. iOS has no Messages API, so this is a desktop emitter and the phone sees interactions through sync (Phase 3). Handle-to-person matching (Contacts access or a one-time manual mapping into contact hints) is the hard part; unmatched handles stay out of People. Needs a catalog row in `substrate/integrations.md` and a decision on content when picked up.

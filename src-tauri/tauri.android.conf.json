@@ -1,0 +1,13 @@
+{
+	"build": {
+		"beforeDevCommand": "yarn workspace @eden/mobile dev",
+		"beforeBuildCommand": "yarn workspace @eden/mobile build",
+		"devUrl": "http://localhost:1421",
+		"frontendDist": "../apps/mobile/build"
+	},
+	"bundle": {
+		"android": {
+			"minSdkVersion": 29
+		}
+	}
+}

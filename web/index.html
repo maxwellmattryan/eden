@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Eden</title>
+		<meta name="description" content="Download Eden, a personal digital garden, for macOS, Windows, Android and iOS." />
+		<script>
+			// The theme from the OS, before the first paint: the page has no settings of its own.
+			;(function () {
+				try {
+					if (window.matchMedia('(prefers-color-scheme: dark)').matches)
+						document.documentElement.setAttribute('data-theme', 'dark')
+				} catch (e) {}
+			})()
+		</script>
+		<style>
+			/* The kit's tokens by hand: the page is static, hosted on GitHub Pages, and loads nothing from a CDN. */
+			:root {
+				--surface-0: #f6f4ec;
+				--surface-1: #efede3;
+				--surface-2: #e6e3d6;
+				--text-primary: #1f2a22;
+				--text-secondary: #4c5a50;
+				--text-tertiary: #7c8a7f;
+				--stroke: #d9d6c8;
+				--brand-primary: #4f7a5a;
+				--brand-hover: #43684d;
+				--on-brand: #ffffff;
+				--danger: #b0413e;
+				--radius-card: 14px;
+				--radius-control: 10px;
+			}
+			[data-theme='dark'] {
+				--surface-0: #0f1512;
+				--surface-1: #16201b;
+				--surface-2: #1e2a24;
+				--text-primary: #e6ebe4;
+				--text-secondary: #a9b5ac;
+				--text-tertiary: #75837a;
+				--stroke: #2a3730;
+				--brand-primary: #7fb58a;
+				--brand-hover: #93c49d;
+				--on-brand: #0f1512;
+				--danger: #e0706c;
+			}
+			* {
+				box-sizing: border-box;
+			}
+			body {
+				margin: 0;
+				min-height: 100vh;
+				background: var(--surface-0);
+				color: var(--text-primary);
+				font:
+					400 15px/1.5 -apple-system,
+					BlinkMacSystemFont,
+					'Inter',
+					system-ui,
+					sans-serif;
+			}
+			main {
+				max-width: 640px;
+				margin: 0 auto;
+				padding: 64px 24px 48px;
+			}
+			h1 {
+				margin: 0;
+				font:
+					400 48px/1.1 'Newsreader',
+					Georgia,
+					'Times New Roman',
+					serif;
+				letter-spacing: -0.01em;
+			}
+			.tagline {
+				margin: 8px 0 32px;
+				color: var(--text-secondary);
+			}
+			.card {
+				border: 1px solid var(--stroke);
+				border-radius: var(--radius-card);
+				background: var(--surface-1);
+				padding: 24px;
+			}
+			.meta {
+				display: flex;
+				gap: 16px;
+				margin: 0 0 20px;
+				font-size: 13px;
+				color: var(--text-tertiary);
+			}
+			.meta strong {
+				color: var(--text-secondary);
+				font-weight: 500;
+			}
+			.downloads {
+				display: grid;
+				gap: 10px;
+				margin: 0;
+				padding: 0;
+				list-style: none;
+			}
+			.downloads a {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 12px;
+				border-radius: var(--radius-control);
+				background: var(--brand-primary);
+				color: var(--on-brand);
+				padding: 12px 16px;
+				text-decoration: none;
+				font-weight: 500;
+			}
+			.downloads a:hover {
+				background: var(--brand-hover);
+			}
+			.downloads a.secondary {
+				background: var(--surface-2);
+				color: var(--text-primary);
+				border: 1px solid var(--stroke);
+			}
+			.downloads small {
+				font-size: 12px;
+				opacity: 0.8;
+				font-weight: 400;
+			}
+			.note {
+				margin: 16px 0 0;
+				font-size: 13px;
+				color: var(--text-tertiary);
+			}
+			.note a,
+			footer a {
+				color: var(--text-secondary);
+			}
+			.error {
+				color: var(--danger);
+			}
+			footer {
+				margin-top: 32px;
+				font-size: 13px;
+				color: var(--text-tertiary);
+			}
+			.hidden {
+				display: none;
+			}
+		</style>
+	</head>
+	<body>
+		<main>
+			<h1>eden</h1>
+			<p class="tagline">A personal digital garden. One app for the domains of your life.</p>
+			<section class="card" aria-live="polite">
+				<p class="meta">
+					<span>Channel <strong id="channel">production</strong></span>
+					<span>Version <strong id="version">…</strong></span>
+					<span>Released <strong id="date">…</strong></span>
+				</p>
+				<ul class="downloads" id="downloads"></ul>
+				<p class="note" id="status">Loading the latest release…</p>
+			</section>
+			<footer>
+				Every release is also on
+				<a id="releases" href="https://github.com/maxwellmattryan/eden/releases">GitHub Releases</a>. Add
+				<code>?channel=staging</code> to this address for the staging channel.
+			</footer>
+		</main>
+		<script>
+			;(function () {
+				var BUCKET = 'https://storage.googleapis.com/eden-releases'
+				var params = new URLSearchParams(location.search)
+				var channel = params.get('channel') === 'staging' ? 'staging' : 'production'
+				document.getElementById('channel').textContent = channel
+
+				var list = document.getElementById('downloads')
+				var status = document.getElementById('status')
+
+				function row(label, href, small, secondary) {
+					var li = document.createElement('li')
+					var a = document.createElement('a')
+					a.href = href
+					if (secondary) a.className = 'secondary'
+					a.appendChild(document.createTextNode(label))
+					if (small) {
+						var s = document.createElement('small')
+						s.textContent = small
+						a.appendChild(s)
+					}
+					li.appendChild(a)
+					list.appendChild(li)
+				}
+
+				fetch(BUCKET + '/' + channel + '/downloads.json', { cache: 'no-store' })
+					.then(function (r) {
+						if (!r.ok) throw new Error('HTTP ' + r.status)
+						return r.json()
+					})
+					.then(function (d) {
+						document.getElementById('version').textContent = d.version || '…'
+						document.getElementById('date').textContent = d.date || '…'
+						var dl = d.downloads || {}
+						if (dl.macos && dl.macos.dmg) row('macOS', dl.macos.dmg, dl.macos.filename)
+						if (dl.windows && dl.windows.msi) row('Windows', dl.windows.msi, dl.windows.filename)
+						if (dl.android && dl.android.apk) row('Android', dl.android.apk, dl.android.filename)
+						if (dl.android && dl.android.sha256) row('Android checksum', dl.android.sha256, 'sha256', true)
+						if (dl.ios && dl.ios.manifest) {
+							// Over-the-air install: Safari on the device opens the manifest through itms-services. The device
+							// must be in the ad-hoc profile, and both the manifest and the IPA must be served over HTTPS.
+							row(
+								'iOS',
+								'itms-services://?action=download-manifest&url=' + encodeURIComponent(dl.ios.manifest),
+								'ad-hoc, open on the device'
+							)
+						}
+						status.textContent = list.children.length ? '' : 'No downloads in this release yet.'
+						if (!list.children.length) status.className = 'note'
+					})
+					.catch(function (e) {
+						status.className = 'note error'
+						status.textContent = 'Could not load the latest release (' + e.message + '). Use GitHub Releases below.'
+					})
+			})()
+		</script>
+	</body>
+</html>

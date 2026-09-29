@@ -50,7 +50,7 @@ From the root (`package.json`):
 | `yarn build:production`, `yarn build:staging` | `tauri build` with the channel overlay |
 | `yarn build:ios:adhoc`, `yarn build:android:apk` | the mobile bundles |
 | `yarn check` | svelte-check for the kit, `@eden/shared`, desktop and mobile, plus the kit's CSS lint |
-| `yarn check:cargo`, `yarn lint:rust`, `yarn format:rust[:check]` | `cargo check`, clippy `-D warnings` and `cargo fmt` for both features (Rust stays out of `yarn format` and `yarn lint` so the Node CI job needs no toolchain) |
+| `yarn check:cargo`, `yarn lint:rust`, `yarn format:rust[:check]` | `cargo check`, clippy `-D warnings` and `cargo fmt`: the desktop feature on the host, the mobile feature against the iOS target (a desktop host would try to resolve the desktop capability against plugins the mobile feature does not compile). Rust stays out of `yarn format` and `yarn lint` so the Node CI job needs no toolchain |
 | `yarn bump`, `yarn changelog:prepare|graduate`, `./scripts/tag.sh` | the release flow (`engineering/release.md`) |
 
 Rust is stable, pinned by `rust-toolchain.toml` (channel, `rustfmt`, `clippy` and the five targets); `cargo` installs the missing pieces on first use.

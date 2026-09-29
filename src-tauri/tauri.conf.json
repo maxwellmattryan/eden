@@ -1,0 +1,49 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Eden",
+  "version": "0.1.0",
+  "identifier": "dev.mattmaxwell.eden",
+  "build": {
+    "beforeDevCommand": "yarn workspace @eden/desktop dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "yarn workspace @eden/desktop build",
+    "frontendDist": "../apps/desktop/build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Eden",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 960,
+        "minHeight": 600,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "createUpdaterArtifacts": "v1Compatible",
+    "icon": [
+      "icons/prod/32x32.png",
+      "icons/prod/128x128.png",
+      "icons/prod/128x128@2x.png",
+      "icons/prod/icon.icns",
+      "icons/prod/icon.ico"
+    ],
+    "macOS": {
+      "entitlements": "./Entitlements.plist",
+      "minimumSystemVersion": "11.0"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "PLACEHOLDER: run `yarn tauri signer generate -w ~/.tauri/eden.key` and paste the public key (docs/engineering/release.md)",
+      "dialog": false
+    }
+  }
+}
