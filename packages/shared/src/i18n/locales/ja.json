@@ -482,6 +482,12 @@
 			"updateFailed": "更新を確認できませんでした。",
 			"updatesNotAvailable": "更新の確認はインストール済みのアプリから行います。"
 		},
+		"integrations": {
+			"weatherProvider": "天気の提供元",
+			"weatherProviderHelp": "空の予報の取得先です。接続できないときは Open-Meteo が代わりになります。",
+			"weatherSources": "空の情報源",
+			"weatherSourcesHelp": "空が利用する情報源です。送信されるのは丸めた座標だけです。"
+		},
 		"placeholder": {
 			"title": "まだありません",
 			"text": "このタブは基盤とともに届きます。"

@@ -3,6 +3,7 @@
 import type { ProviderId } from './model.js'
 import type { AirQualitySource, AllergenSource, ForecastProvider } from './provider.js'
 import { openMeteo } from './providers/open-meteo.js'
+import { weatherKit } from './providers/weatherkit.js'
 import { openMeteoAirQuality, openMeteoPollen } from './sources/open-meteo-air-quality.js'
 
 /** The default on every platform, and the one that stands in when the chosen provider cannot answer (D-57). */
@@ -10,6 +11,7 @@ export const DEFAULT_PROVIDER: ProviderId = 'open-meteo'
 
 export const forecastProviders: Partial<Record<ProviderId, ForecastProvider>> = {
 	'open-meteo': openMeteo,
+	weatherkit: weatherKit,
 }
 
 /** The provider for a choice; the default when the choice is not one this build carries. */

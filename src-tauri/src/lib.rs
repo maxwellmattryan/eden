@@ -114,6 +114,8 @@ pub fn run() {
             commands::diagnostics::log_error,
             domains::documents::load_domain_document,
             domains::documents::save_domain_document,
+            domains::weather::weatherkit_status,
+            domains::weather::weatherkit_forecast,
         ])
         .setup(|app| {
             let app_data_dir = app

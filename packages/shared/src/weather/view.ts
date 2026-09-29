@@ -34,12 +34,23 @@ export function hoursFrom(forecast: Forecast, now: number, count: number): HourR
 	return start < 0 ? [] : forecast.hours.slice(start, start + count)
 }
 
-/** Days the newer forecast lacks, kept from the mirror before it: the past of the week survives a provider's gaps. */
-export function mergeDays(previous: DayReading[], next: DayReading[]): DayReading[] {
-	const first = next[0]?.date
+/**
+ * The newer forecast's days with the days it lacks filled from another set (the mirror before it, or the default
+ * provider's observed days), from a first date on: the past of the week survives a provider's gaps, and the mirror
+ * never grows without end.
+ */
+export function mergeDays(fill: DayReading[], next: DayReading[], from: string): DayReading[] {
 	const held = new Set(next.map((day) => day.date))
-	const kept = previous.filter((day) => !held.has(day.date) && (first === undefined || day.date < first))
-	return [...kept, ...next].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+	const last = next[next.length - 1]?.date
+	const kept = fill.filter((day) => !held.has(day.date) && (last === undefined || day.date < last))
+	return [...kept, ...next]
+		.filter((day) => day.date >= from)
+		.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+}
+
+/** Whether the calendar week has a row without a reading. */
+export function weekHasGap(forecast: Forecast, weekStart: WeekStart, now: number): boolean {
+	return weekOf(forecast, weekStart, now).some((row) => !row.day)
 }
 
 /** The US index's category (AirNow's breakpoints). */

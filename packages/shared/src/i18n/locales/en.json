@@ -482,6 +482,12 @@
 			"updateFailed": "Could not check for updates.",
 			"updatesNotAvailable": "Updates are checked from the installed app."
 		},
+		"integrations": {
+			"weatherProvider": "Weather provider",
+			"weatherProviderHelp": "Where Sky's forecast comes from. If it can't be reached, Open-Meteo stands in.",
+			"weatherSources": "Sky's sources",
+			"weatherSourcesHelp": "What Sky draws on. Only rounded coordinates are sent."
+		},
 		"placeholder": {
 			"title": "Not built yet",
 			"text": "This tab arrives with its substrate."

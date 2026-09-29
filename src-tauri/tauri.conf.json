@@ -37,7 +37,10 @@
     ],
     "macOS": {
       "entitlements": "./Entitlements.plist",
-      "minimumSystemVersion": "11.0"
+      "minimumSystemVersion": "13.0"
+    },
+    "iOS": {
+      "minimumSystemVersion": "16.0"
     }
   },
   "plugins": {

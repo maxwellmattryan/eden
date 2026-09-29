@@ -26,7 +26,8 @@ import { OfflineError } from './provider.js'
 import { DEFAULT_PROVIDER, airQualitySources, allergenSources, providerFor } from './registry.js'
 import { fillSlot, slotStale } from './supplement.js'
 import { temperature } from './units.js'
-import { hoursFrom, mergeDays, todayOf, weekOf, type WeekDay } from './view.js'
+import { hoursFrom, mergeDays, todayOf, weekHasGap, weekOf, type WeekDay } from './view.js'
+import { addDays, placeToday } from './week.js'
 
 export interface WeatherData {
 	/** When the forecast was fetched, as an ISO timestamp: the "last good" time. */
@@ -146,7 +147,16 @@ export class WeatherStore {
 		const request = { place, pastDays: PAST_DAYS, forecastDays: FORECAST_DAYS }
 		const chosen = providerFor(settings.weatherProvider)
 		try {
-			return await chosen.fetch(request)
+			const forecast = await chosen.fetch(request)
+			if (chosen.id === DEFAULT_PROVIDER || !weekHasGap(forecast, settings.weekStart, Date.now())) return forecast
+			// a provider that could not give the week's past borrows it from the default one; without it the rows read
+			// "no data" and the forecast still stands
+			const past = await providerFor(DEFAULT_PROVIDER)
+				.fetch(request)
+				.then((fill) => fill.days.filter((day) => day.observed))
+				.catch(() => [])
+			const from = addDays(placeToday(forecast.timeZone), -PAST_DAYS)
+			return { ...forecast, days: mergeDays(past, forecast.days, from) }
 		} catch (error) {
 			if (!(error instanceof OfflineError) || chosen.id === DEFAULT_PROVIDER) throw error
 			const forecast = await providerFor(DEFAULT_PROVIDER).fetch(request)
@@ -178,7 +188,8 @@ export class WeatherStore {
 					? previous.allergens
 					: fillSlot(allergenSources, place, fetchedAt),
 			])
-			const days = previous ? mergeDays(previous.forecast.days, forecast.days) : forecast.days
+			const from = addDays(placeToday(forecast.timeZone, now), -PAST_DAYS)
+			const days = mergeDays(previous?.forecast.days ?? [], forecast.days, from)
 			this.data = { fetchedAt, place, forecast: { ...forecast, days }, alerts, airQuality, allergens }
 			this.at = now
 			this.offline = false
