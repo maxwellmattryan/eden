@@ -856,7 +856,7 @@
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: var(--space-4) var(--space-6);
+		gap: var(--space-4) var(--space-8);
 	}
 	.now-trend {
 		flex: 1 1 calc(var(--space-8) * 8);
