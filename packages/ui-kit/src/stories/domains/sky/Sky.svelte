@@ -8,6 +8,7 @@
 	import {
 		Badge,
 		Banner,
+		Breeze,
 		Button,
 		Chip,
 		Field,
@@ -19,11 +20,15 @@
 		MoonGlyph,
 		Notice,
 		PageHeader,
+		Popover,
 		Sheet,
+		Sketch,
 		SkyGlyph,
 		Stat,
+		SunArc,
 		TrendChart,
 		iconFor,
+		skyField,
 		type BadgeLevel,
 		type IconName,
 		type MenuItem,
@@ -37,6 +42,7 @@
 		skyAllergens,
 		skyDetails,
 		skyHours,
+		skyMotif,
 		skyPlaceResults,
 		skySundayBefore,
 		skyToday,
@@ -63,11 +69,14 @@
 		allergens?: 'available' | 'unavailable'
 		/** The change-location sheet is open: a search, its results, and the choice that becomes home. */
 		locating?: boolean
+		/** The alerts' popover is open: the one active alert, behind its button in the header. */
+		alerting?: boolean
 		onplace?: (id: string) => void
 		onsources?: () => void
 		onretry?: () => void | Promise<unknown>
 		onlocation?: (item: MenuItem) => void
 		onopentoday?: () => void
+		ondismiss?: () => void
 		onnavigate?: (id: string) => void
 	}
 	let {
@@ -79,11 +88,13 @@
 		fallback = false,
 		allergens = 'available',
 		locating = false,
+		alerting = false,
 		onplace,
 		onsources,
 		onretry,
 		onlocation,
 		onopentoday,
+		ondismiss,
 		onnavigate,
 	}: Props = $props()
 
@@ -334,6 +345,23 @@
 		{ id: 'air', icon: 'wind', text: 'Air quality by Open-Meteo and CAMS' },
 		{ id: 'alerts', icon: 'triangle-alert', text: 'Alerts by the National Weather Service' },
 	])
+	/** What the header's motif draws: the morning's wind, or the evening's under a clear sky. */
+	const motifParams = $derived(night ? { ...skyMotif, windSpeed: 6, windGust: 9, cloudCover: 0 } : skyMotif)
+	/** A sample time (`HH:MM`) on the sample Wednesday, as an instant. */
+	const at = (time: string) => {
+		const [hour = 0, minute = 0] = time.split(':').map(Number)
+		return Date.UTC(2026, 8, 30, hour, minute)
+	}
+	/** The sun on its day: at 07:40 a little over the horizon, and beneath it in the evening. */
+	const sun = $derived({
+		sunrise: at(skyToday.sunrise),
+		sunset: at(skyToday.sunset),
+		now: at(night ? '21:30' : skyToday.lastGood),
+		labels: { sunrise: onClock(skyToday.sunrise), sunset: onClock(skyToday.sunset) },
+		label: night
+			? `The sun set at ${onClock(skyToday.sunset)}.`
+			: `The sun is up. It rose at ${onClock(skyToday.sunrise)} and sets at ${onClock(skyToday.sunset)}.`,
+	})
 	const temps = skyHours.map((hour) => hour.temp)
 	const trendLabel = $derived(
 		`Temperature from ${onClock(skyHours[0]!.time, true)} to ${onClock(skyHours.at(-1)!.time, true)}, between ${Math.min(...temps)}° and ${Math.max(...temps)}°`
@@ -343,6 +371,20 @@
 	let open = $state(false)
 	// svelte-ignore state_referenced_locally
 	let finding = $state(locating)
+	let alertsAnchor = $state<HTMLElement>()
+	// svelte-ignore state_referenced_locally
+	let alertsOpen = $state(alerting)
+	// The owner has dismissed the one alert: the panel closes, and the button leaves with the Breeze beside it.
+	let buttonLeaving = $state(false)
+	let dismissed = $state(false)
+
+	function dismiss() {
+		alertsOpen = false
+		buttonLeaving = true
+		// the button is about to leave the page, so the focus goes to the control beside it
+		anchor?.querySelector('button')?.focus()
+		ondismiss?.()
+	}
 	let query = $state('Austin')
 
 	function choose(item: MenuItem) {
@@ -355,6 +397,10 @@
 	{#snippet children(platform)}
 		<div class="page">
 			<PageHeader name={sky.name} subtitle={sky.subtitle} icon={iconFor(condition, night)}>
+				<!-- the page's one live thing (D-62): the wind as it blows -->
+				{#snippet motif()}
+					<Sketch sketch={skyField} params={motifParams} />
+				{/snippet}
 				{#snippet filters()}
 					<span class="anchor" bind:this={anchor}>
 						<Chip
@@ -367,15 +413,33 @@
 						/>
 					</span>
 					<Menu bind:open {anchor} align="start" label="Location" items={places} onselect={choose} />
-				{/snippet}
-				<!-- the top right is the page's notices: the alert, what it is first and what it touches beneath -->
-				{#snippet aside()}
-					<Notice
-						tone="warning"
-						title={alert.title}
-						detail={alert.detail}
-						action={{ label: 'Open Today', onclick: onopentoday }}
-					/>
+					<!-- the alert waits behind a button that is there only while one is active and not dismissed -->
+					{#if !dismissed}
+						<span class={['anchor', 'alerts', { 'alerts-leaving': buttonLeaving }]} bind:this={alertsAnchor}>
+							{#if buttonLeaving}<Breeze onend={() => (dismissed = true)} />{/if}
+							<IconButton
+								icon="triangle-alert"
+								label="Weather alerts"
+								count={1}
+								tooltip
+								active={alertsOpen}
+								aria-haspopup="dialog"
+								aria-expanded={alertsOpen}
+								onclick={() => (alertsOpen = !alertsOpen)}
+							/>
+						</span>
+						<Popover bind:open={alertsOpen} anchor={alertsAnchor} align="start" label="Weather alerts">
+							<div class="alerts-list">
+								<Notice
+									tone="warning"
+									title={alert.title}
+									detail={alert.detail}
+									action={{ label: 'Open Today', onclick: onopentoday }}
+									ondismiss={dismiss}
+								/>
+							</div>
+						</Popover>
+					{/if}
 				{/snippet}
 			</PageHeader>
 
@@ -427,6 +491,10 @@
 										format={(value) => `${value}°`}
 										label={trendLabel}
 									/>
+								</div>
+								<!-- and the light's: the sun on its wave, where the day has reached -->
+								<div class="now-sun">
+									<SunArc {...sun} height={144} />
 								</div>
 							</div>
 							<p class="voice">Good day for {skyToday.goodFor}.</p>
@@ -621,6 +689,29 @@
 	.anchor {
 		display: inline-flex;
 	}
+	/* Leaving: the button fades and draws in a little where it stands, and the Breeze rises beside it */
+	.alerts {
+		position: relative;
+	}
+	.alerts :global(.ed-icon-btn) {
+		color: var(--warning);
+		transition:
+			opacity var(--ed-duration-settle) var(--ed-ease-out),
+			scale var(--ed-duration-settle) var(--ed-ease-out);
+	}
+	.alerts-leaving {
+		pointer-events: none;
+	}
+	.alerts-leaving :global(.ed-icon-btn) {
+		opacity: 0;
+		scale: 0.9;
+	}
+	.alerts-list {
+		box-sizing: border-box;
+		width: var(--sheet-sm);
+		max-width: 100%;
+		padding: var(--space-2);
+	}
 	.body {
 		display: flex;
 		flex: 1 0 auto;
@@ -693,7 +784,8 @@
 		align-items: center;
 		gap: var(--space-4) var(--space-6);
 	}
-	.now-trend {
+	.now-trend,
+	.now-sun {
 		flex: 1 1 calc(var(--space-8) * 8);
 		min-width: 0;
 	}

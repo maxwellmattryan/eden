@@ -35,6 +35,7 @@ export { default as Skeleton } from './components/Skeleton/Skeleton.svelte'
 export { default as Stat } from './components/Stat/Stat.svelte'
 export { default as Sparkline } from './components/Sparkline/Sparkline.svelte'
 export { default as TrendChart } from './components/TrendChart/TrendChart.svelte'
+export { default as SunArc } from './components/SunArc/SunArc.svelte'
 
 // Brand
 export { default as DailyLine } from './components/DailyLine/DailyLine.svelte'
@@ -43,6 +44,13 @@ export { default as AppMark } from './components/AppMark/AppMark.svelte'
 export { default as Breeze } from './components/Breeze/Breeze.svelte'
 export { default as SkyGlyph } from './components/SkyGlyph/SkyGlyph.svelte'
 export { CONDITIONS, iconFor, type SkyCondition } from './components/SkyGlyph/SkyGlyph.svelte'
+
+// Sketches: the canvas, what a sketch is made of, and the kit's own motifs
+export { default as Sketch } from './components/Sketch/Sketch.svelte'
+export type { SketchDefinition, SketchFrame } from './sketch/types.js'
+export { createRandom, type Random } from './sketch/random.js'
+export { createNoise, type Noise } from './sketch/noise.js'
+export { skyField, type SkyFieldParams } from './sketches/sky-field.js'
 
 // Actions and data
 export { default as Button } from './components/Button/Button.svelte'

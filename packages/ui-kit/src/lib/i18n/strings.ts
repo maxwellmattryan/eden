@@ -9,6 +9,8 @@ export interface UiStrings {
 	confirm: string
 	done: string
 	dismiss: string
+	/** The cross on a notice, named after what it dismisses. */
+	dismissNamed: (name: string) => string
 	discard: string
 	commit: string
 	close: string
@@ -164,6 +166,7 @@ export const defaultStrings: UiStrings = {
 	confirm: 'Confirm',
 	done: 'Done',
 	dismiss: 'Dismiss',
+	dismissNamed: (name) => `Dismiss ${name}`,
 	discard: 'Discard',
 	commit: 'Commit',
 	close: 'Close',

@@ -4,7 +4,7 @@ status: draft
 summary: The name and what it means, the metaphor policy, voice and tone with examples, motifs and their limits, the app icon direction, the domain glyph family with a concept per domain, and the splash screen.
 read-this-if: You are making any visual or copy decision, or naming anything the owner will see.
 depends-on: [product/glossary]
-updated: 2026-09-28
+updated: 2026-09-29
 ---
 
 ## Name and meaning
@@ -32,7 +32,7 @@ The Gardener never refers to itself as an AI model in conversation, never claims
 
 ## Motifs and their limits
 
-Leaf and vine linework, a single unfurling frond, paper grain, the light of morning and the dark of a forest at night. Used only in empty states, the splash, onboarding and the app icon. Never as wallpaper, never behind text, never animated in loops. Two exceptions (D-42): paper grain sits behind the whole page at the `lush` brand level, at an opacity that never competes with text, and the Breeze specks play once on an accepted proposal or a settled action and never loop. No florals, no pastel pink, no cursive.
+Leaf and vine linework, a single unfurling frond, paper grain, the light of morning and the dark of a forest at night. Used only in empty states, the splash, onboarding and the app icon. Never as wallpaper, never behind text, never animated in loops. Two exceptions (D-42): paper grain overlays the whole page at the `lush` brand level (D-61), at an opacity that never competes with text, and flickers as film grain does (D-63), still under reduced motion, and the Breeze specks play once on an accepted proposal or a settled action and never loop. A third (D-62): a domain's page header may carry a live motif in the room beside its name, drawn from the domain's own readings. No florals, no pastel pink, no cursive.
 
 ## App icon and logo
 

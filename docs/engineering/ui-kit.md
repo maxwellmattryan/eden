@@ -50,7 +50,7 @@ The pre-paint script reads the localStorage keys in `storageKeys` (`eden:theme`,
 | file | holds |
 |---|---|
 | `styles/theme.css` | `@font-face` for the shipped fonts; the light and dark token blocks; scales, motion, z-order; the composed focus ring; families and the type styles; the accent blocks; `.ed-t-*` classes |
-| `styles/base.css` | reduced-motion overrides; the brand dial; the platform and density blocks; body defaults, selection colour, the paper grain, `.ed-sr-only` |
+| `styles/base.css` | reduced-motion overrides; the brand dial; the platform and density blocks; body defaults, selection colour, the paper grain overlay, `.ed-sr-only` |
 | `styles/tailwind.css` | the `@theme inline` mapping and the custom variants |
 | `styles/faces.css` | the alternate faces and `[data-face]` blocks, gallery only |
 | `styles/prepaint.js`, `.storybook/preview-head.html` | the pre-paint script, standalone and inlined |
@@ -63,7 +63,7 @@ Rules the generator enforces: every type size is on the scale 12, 13, 14, 15, 16
 
 **Type.** Each style is a `font` shorthand variable, `--ed-t-<style>` (for example `--ed-t-body: 400 14px/21px var(--ed-font-sans)`), with `--ed-t-<style>-opsz` and `--ed-t-<style>-tracking` beside it. Components write `font: var(--ed-t-voice)` and never a pixel size. Display styles take their weight, tracking and italic from `--ed-display-weight`, `--ed-display-tracking` and `--ed-display-italic`, which the face dial sets.
 
-**The brand dial** redefines `--ed-t-button`, `--ed-t-title`, `--ed-t-title-sm` and `--ed-t-voice` per level, which is how the display face says things at `tended` and `lush` and Inter says them at `plain`. It also sets `--ed-radius-control`, `--ed-radius-card`, `--ed-radius-sheet`, `--ed-btn-pad`, the fill sheen, edge, highlight and shadow, the secondary button ground, the chip edge, the sidebar's current-item colours and bar, the grain and its opacity and the motif size. Components read these, never `--radius-*` directly.
+**The brand dial** redefines `--ed-t-button`, `--ed-t-title`, `--ed-t-title-sm` and `--ed-t-voice` per level, which is how the display face says things at `tended` and `lush` and Inter says them at `plain`. It also sets `--ed-radius-control`, `--ed-radius-card`, `--ed-radius-sheet`, `--ed-btn-pad`, the fill sheen, edge, highlight and shadow, the secondary button ground, the chip edge, the sidebar's current-item colours and bar, the grain, its opacity and its motion (`--ed-grain-motion`, D-63: the `ed-grain` keyframes in `base.css`, whose offsets are `GRAIN_STEPS` in `build-tokens.mjs`) and the motif size. Components read these, never `--radius-*` directly.
 
 **The relief dial** (`data-relief`, D-49) sits after the brand dial: `raised` keeps a toned-down sheen and shadow; `flat` zeroes them. Both set `--ed-press-scale` and `--ed-press-shadow`: every button-family control presses with `transform: scale(1, var(--ed-press-scale))` from its bottom edge, so it compresses from the top as if it sank into its hole, and a filled control's shadow collapses to `--ed-press-shadow`. Reduced motion zeroes the compression.
 
@@ -134,8 +134,22 @@ Newsreader (upright and italic), Inter and Geist Mono ship from `src/lib/fonts`,
 | `portal(target)` | fallback for a WebView without the popover API, behind `hasTopLayer()` |
 | `PausableTimer` | the toast's eight seconds, paused while hovered or focused |
 | `platformOf(el)` | the nearest `data-platform`, desktop by default |
+| `runSketch(canvas, options)` | the engine under `Sketch`: sizes the backing store to the element and the screen (twice the density at most), resolves the sketch's colour tokens where the canvas stands and again when the theme changes, drives the frames, rests while the canvas is out of sight or paused; `motionReduced(el)` reads the zeroed duration tokens, so the stylesheet stays the one place that knows about reduced motion |
 
 Overlays use the browser's top layer: `Sheet` is a `<dialog>` opened with `showModal()` (native inertness, focus return, `::backdrop` scrim; Escape is handled on keydown, with the dialog's `cancel` event as the fallback for other close requests); `Popover` is `popover="manual"` placed by `anchor`. The floor is WebKit 17 for `popover` and 17.5 for `@starting-style`; the enter animation degrades to a class toggle below that.
+
+## Sketches
+
+Generative art is drawn on one canvas, the `Sketch` component (D-62); nothing else in the kit or the apps creates a `<canvas>`. A sketch is a plain object, a `SketchDefinition` in nannou's shape: `setup(frame)` builds the model and `draw(frame, model)` moves it on and paints it. The frame carries the 2D context already scaled to CSS pixels, the size, `time` and `delta` in seconds, the wall clock (`now`), the `params` as they are at that frame, the colours the sketch named as tokens, and a seeded `random` and `noise` (`createRandom`, `createNoise`): the kit never calls `Math.random`, so a seed names a render and a still is the same picture every time, which is what the visual baselines compare.
+
+| rule | why |
+|---|---|
+| colours are tokens listed in `colors`, read from `frame.colors`; alpha through `globalAlpha` | a sketch follows the theme and the accent like any component |
+| everything a sketch shows comes from `params` | content arrives as props; a story fixes the instant with a parameter, the app leaves it to the clock |
+| when `frame.still` is set, `draw` composes the whole picture in one call | reduced motion gets a still, never an empty box |
+| a sketch has no DOM, no listeners and no timers | one definition serves a header, a tile and a full page |
+
+The kit's own sketches live in `src/lib/sketches` and are exported from the barrel (`skyField`); a domain's private sketch lives with the domain under `apps/*/src/lib/domains/<id>/` and imports the types from the kit. A nannou or p5.js sketch is ported to this shape, not embedded: nannou draws to a native window the WebView cannot host, and p5 brings its own loop, globals and canvas.
 
 ## Strings
 
@@ -167,7 +181,7 @@ A page is mocked in the kit's Storybook before it is built (D-54): `packages/ui-
 
 CI (`.github/workflows/ci.frontend.yml`) runs them on every push to `develop` and every pull request into it. Visual baselines (`scripts/vrt.mjs`, `{light, dark} × {desktop, mobile}` per story) are generated artifacts and never committed (D-50): `.github/workflows/vrt.yml` regenerates them on `main` and uploads them as a workflow artifact, and on a pull request downloads the latest set and fails on a pixel difference above 0.1 %. Locally `yarn vrt:update` writes them git-ignored and `yarn vrt` compares.
 
-The paper grain is a full-size pseudo-element, and axe cannot see through one: without `ignorePseudo` on the colour-contrast check it marks every contrast result incomplete instead of failing it, and the gate is inert. The a11y config sets it. Known tension: `text-tertiary` at 12 or 13 px in light sits at 3.3:1 and fails axe's colour-contrast rule. Components use it only where `design/visual-language.md` allows (metadata a reader can do without) and mark that element with `data-tertiary`, the one attribute the a11y config exempts from the contrast rule; nothing else is exempted.
+The paper grain is a full-size pseudo-element over the page (D-61: `--ed-z-grain`, `mix-blend-mode: overlay`, pointer-inert; the sheet panel and every `[popover]` carry their own, as the top layer sits above the body's), and axe cannot see through one: without `ignorePseudo` on the colour-contrast check it marks every contrast result incomplete instead of failing it, and the gate is inert. The a11y config sets it. Known tension: `text-tertiary` at 12 or 13 px in light sits at 3.3:1 and fails axe's colour-contrast rule. Components use it only where `design/visual-language.md` allows (metadata a reader can do without) and mark that element with `data-tertiary`, the one attribute the a11y config exempts from the contrast rule; nothing else is exempted.
 
 ## Not in the kit
 

@@ -427,6 +427,11 @@
 			"trend": {
 				"label": "{from}から{to}までの気温、{low}°から{high}°"
 			},
+			"sunArc": {
+				"before": "日の出は{sunrise}、日の入りは{sunset}です。",
+				"up": "太陽が出ています。日の出は{sunrise}、日の入りは{sunset}です。",
+				"after": "日の入りは{sunset}でした。"
+			},
 			"scale": "{name} {value}、{category}",
 			"place": {
 				"change": "自宅を変更…",
@@ -439,6 +444,9 @@
 				"none": "その名前の場所は見つかりませんでした。",
 				"failed": "{source} に接続できませんでした。",
 				"searching": "検索中…"
+			},
+			"alerts": {
+				"label": "気象警報"
 			},
 			"alert": {
 				"from": "{start} から {end} まで。",
@@ -606,6 +614,7 @@
 		"confirm": "確認",
 		"done": "完了",
 		"dismiss": "閉じる",
+		"dismissNamed": "{0}を閉じる",
 		"discard": "破棄",
 		"close": "閉じる",
 		"back": "戻る",

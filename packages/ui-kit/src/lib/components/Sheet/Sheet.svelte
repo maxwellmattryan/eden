@@ -150,6 +150,9 @@
 		background: var(--ed-scrim, rgba(31, 42, 34, 0.32));
 	}
 	.ed-sheet-panel {
+		/* the grain layer (styles/base.css) is placed against the panel and blends with it alone */
+		position: relative;
+		isolation: isolate;
 		background: var(--surface-1);
 		border: 1px solid var(--ed-card-border);
 		border-radius: var(--ed-radius-sheet);

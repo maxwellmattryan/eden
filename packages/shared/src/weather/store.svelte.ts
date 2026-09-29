@@ -37,6 +37,8 @@ export interface WeatherData {
 	alerts: WeatherAlert[]
 	airQuality: SupplementSlot<AirQuality>
 	allergens: SupplementSlot<Allergens>
+	/** The ids of the alerts the owner has dismissed; one is forgotten once its alert is no longer issued. */
+	dismissed?: string[]
 }
 
 export interface Sun {
@@ -72,7 +74,11 @@ export class WeatherStore {
 	at = $state(Date.now())
 
 	readonly lastGood = $derived(this.data?.fetchedAt)
-	readonly alerts = $derived(this.data?.alerts ?? [])
+	/** The active alerts the owner has not dismissed. */
+	readonly alerts = $derived.by(() => {
+		const dismissed = this.data?.dismissed ?? []
+		return (this.data?.alerts ?? []).filter((alert) => !dismissed.includes(alert.id))
+	})
 	readonly forecast = $derived<Forecast | undefined>(this.data?.forecast)
 	/** The place's timezone: every time on the page is written in it. */
 	readonly timeZone = $derived(this.data?.forecast.timeZone)
@@ -164,6 +170,13 @@ export class WeatherStore {
 		}
 	}
 
+	/** Takes an alert off the page for as long as it is issued; the mirror remembers it across a relaunch. */
+	async dismissAlert(id: string): Promise<void> {
+		if (!this.data || this.data.dismissed?.includes(id)) return
+		this.data.dismissed = [...(this.data.dismissed ?? []), id]
+		await save<WeatherData>(DOCUMENT, { version: VERSION, data: $state.snapshot(this.data) }).catch(() => null)
+	}
+
 	/**
 	 * Fetches the forecast and the alerts for the home place, then the supplementary slots that are due. A failure of
 	 * the forecast keeps the last good one and flags offline; a failure of a supplement marks its slot alone.
@@ -190,7 +203,8 @@ export class WeatherStore {
 			])
 			const from = addDays(placeToday(forecast.timeZone, now), -PAST_DAYS)
 			const days = mergeDays(previous?.forecast.days ?? [], forecast.days, from)
-			this.data = { fetchedAt, place, forecast: { ...forecast, days }, alerts, airQuality, allergens }
+			const dismissed = (previous?.dismissed ?? []).filter((id) => alerts.some((alert) => alert.id === id))
+			this.data = { fetchedAt, place, forecast: { ...forecast, days }, alerts, airQuality, allergens, dismissed }
 			this.at = now
 			this.offline = false
 			await save<WeatherData>(DOCUMENT, { version: VERSION, data: $state.snapshot(this.data) }).catch(() => null)

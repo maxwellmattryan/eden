@@ -427,6 +427,11 @@
 			"trend": {
 				"label": "Temperature from {from} to {to}, between {low}° and {high}°"
 			},
+			"sunArc": {
+				"before": "The sun rises at {sunrise} and sets at {sunset}.",
+				"up": "The sun is up. It rose at {sunrise} and sets at {sunset}.",
+				"after": "The sun set at {sunset}."
+			},
 			"scale": "{name} {value}, {category}",
 			"place": {
 				"change": "Change home…",
@@ -439,6 +444,9 @@
 				"none": "No place by that name.",
 				"failed": "Couldn't reach {source}.",
 				"searching": "Searching…"
+			},
+			"alerts": {
+				"label": "Weather alerts"
 			},
 			"alert": {
 				"from": "From {start} until {end}.",

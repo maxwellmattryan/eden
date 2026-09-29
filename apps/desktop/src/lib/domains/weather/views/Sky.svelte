@@ -1,8 +1,9 @@
 <script lang="ts">
 	// The Sky view (product/domains/weather.md, "Surfaces"), ported from Domains/Sky/Sky: now, the next hours as a
 	// strip that scrolls sideways, the details, the calendar week from the owner's week start (D-58), the air quality
-	// and the allergens (D-59), sun and moon, the active alerts, the sources' attribution, and the location chip over
-	// home. The header's glyph is live. Every time is the place's, on the owner's clock. The page is the same whatever
+	// and the allergens (D-59), sun and moon, the active alerts behind a button in the header, the sources' attribution, and the location chip over
+	// home. The header's glyph is live, behind the header the motif draws the wind (D-62), and in the now block the
+	// sun stands on its wave where the minute puts it. Every time is the place's, on the owner's clock. The page is the same whatever
 	// the provider (D-56): the attribution follows it, and a note says so when the chosen one could not answer. Home
 	// is changed from the location menu: a search by name, and the place chosen becomes home.
 	// Offline, an InlineError names the last good forecast and the status bar carries the banner; the numbers stay,
@@ -10,6 +11,7 @@
 	import {
 		Badge,
 		Banner,
+		Breeze,
 		Button,
 		Chip,
 		EmptyState,
@@ -22,15 +24,20 @@
 		MoonGlyph,
 		Notice,
 		PageHeader,
+		Popover,
 		Sheet,
+		Sketch,
 		SkyGlyph,
 		Stat,
+		SunArc,
 		TrendChart,
 		iconFor,
+		skyField,
 		useStrings,
 		type BadgeLevel,
 		type IconName,
 		type MenuItem,
+		type SkyFieldParams,
 	} from '@eden/ui-kit'
 	import { openExternal } from '@eden/shared/api'
 	import { locale, t } from '@eden/shared/i18n'
@@ -70,6 +77,8 @@
 	])
 	let anchor = $state<HTMLElement>()
 	let open = $state(false)
+	let alertsAnchor = $state<HTMLElement>()
+	let alertsOpen = $state(false)
 
 	// Changing home: the search runs a moment after the typing stops, and only the latest answer is kept.
 	const SEARCH_DELAY_MS = 300
@@ -165,6 +174,33 @@
 	const now = $derived(weather.now)
 	const today = $derived(weather.today)
 	const headerIcon = $derived(now ? iconFor(now.condition, now.night) : iconFor('partly-cloudy'))
+	/** What the header's motif draws: the wind, the cloud and the rain as they read now. */
+	const field = $derived<SkyFieldParams | undefined>(
+		now
+			? {
+					windFrom: now.windDirection,
+					windSpeed: now.windSpeed,
+					windGust: now.windGust,
+					cloudCover: now.cloudCover,
+					precipitation: now.precipitation,
+				}
+			: undefined
+	)
+	// The sun moves with the clock, not with the forecast: the minute is read here and the readings stay the mirror's.
+	const MINUTE_MS = 60 * 1000
+	let clock = $state(Date.now())
+	$effect(() => {
+		const tick = setInterval(() => (clock = Date.now()), MINUTE_MS)
+		return () => clearInterval(tick)
+	})
+	/** The sun on its day: the two times as they are written, and the sentence that says where it stands. */
+	const sun = $derived.by(() => {
+		if (!weather.sun) return undefined
+		const { sunrise, sunset } = weather.sun
+		const values = { sunrise: formatTime(sunrise, format), sunset: formatTime(sunset, format) }
+		const state = clock < sunrise ? 'before' : clock < sunset ? 'up' : 'after'
+		return { sunrise, sunset, now: clock, labels: values, label: $t(`domains.weather.sunArc.${state}`, { values }) }
+	})
 	const lastGood = $derived(weather.lastGood ? formatTime(weather.lastGood, format) : undefined)
 	/** Each day of the calendar week with everything the forecast says of it; a day without a reading has no facts. */
 	const week = $derived(
@@ -344,6 +380,31 @@
 			}
 		})
 	)
+	// Dismissing: an alert leaves with its Breeze and is taken from the page once that has played. With the last one
+	// the panel closes instead, and it is the button that leaves with the Breeze, taking the alerts with it.
+	let going = $state<string[]>([])
+	let buttonLeaving = $state(false)
+
+	function ondismiss(id: string) {
+		going = [...going, id]
+		if (going.length < notices.length) return
+		alertsOpen = false
+		buttonLeaving = true
+		// the button is about to leave the page, so the focus goes to the control beside it
+		anchor?.querySelector('button')?.focus()
+	}
+	function ondismissed(id: string) {
+		if (buttonLeaving) return
+		going = going.filter((other) => other !== id)
+		void weather.dismissAlert(id)
+	}
+	function onbuttongone() {
+		for (const id of going) void weather.dismissAlert(id)
+		going = []
+		buttonLeaving = false
+	}
+	/** The button takes the colour of the gravest alert behind it. */
+	const gravest = $derived(notices.some((notice) => notice.tone === 'danger') ? 'danger' : 'warning')
 	const about = (name: string) => $t('domains.weather.hint.about', { values: { name } })
 	/** The hours of the day the chart names: the rest are ticks without words, so the names never crowd. */
 	const NAMED_EVERY = 6
@@ -421,6 +482,10 @@
 
 <div class="page">
 	<PageHeader name={$t('domains.weather.name')} subtitle={$t('domains.weather.subtitle')} icon={headerIcon}>
+		<!-- the page's one live thing: the wind as it reads now -->
+		{#snippet motif()}
+			{#if field}<Sketch sketch={skyField} params={field} />{/if}
+		{/snippet}
 		{#snippet filters()}
 			<span class="anchor" bind:this={anchor}>
 				<Chip
@@ -440,12 +505,40 @@
 				items={places}
 				onselect={onlocation}
 			/>
-		{/snippet}
-		<!-- the top right is the page's notices: each alert, what it is first, when it holds beneath -->
-		{#snippet aside()}
-			{#each notices as notice (notice.id)}
-				<Notice tone={notice.tone} title={notice.title} detail={notice.detail} meta={notice.meta} />
-			{/each}
+			<!-- the alerts wait behind a button that is there only while one is active: each says what it is first,
+			     when it holds beneath -->
+			{#if notices.length}
+				<span
+					class={['anchor', 'alerts', `alerts-${gravest}`, { 'alerts-leaving': buttonLeaving }]}
+					bind:this={alertsAnchor}
+				>
+					{#if buttonLeaving}<Breeze onend={onbuttongone} />{/if}
+					<IconButton
+						icon="triangle-alert"
+						label={$t('domains.weather.alerts.label')}
+						count={notices.length}
+						tooltip
+						active={alertsOpen}
+						aria-haspopup="dialog"
+						aria-expanded={alertsOpen}
+						onclick={() => (alertsOpen = !alertsOpen)}
+					/>
+				</span>
+				<Popover bind:open={alertsOpen} anchor={alertsAnchor} align="start" label={$t('domains.weather.alerts.label')}>
+					<div class="alerts-list">
+						{#each notices as notice (notice.id)}
+							<Notice
+								tone={notice.tone}
+								title={notice.title}
+								detail={notice.detail}
+								meta={notice.meta}
+								ondismiss={() => ondismiss(notice.id)}
+								ondismissed={() => ondismissed(notice.id)}
+							/>
+						{/each}
+					</div>
+				</Popover>
+			{/if}
 		{/snippet}
 	</PageHeader>
 
@@ -509,6 +602,12 @@
 											},
 										})}
 									/>
+								</div>
+							{/if}
+							{#if sun}
+								<!-- and the light's: the sun on its wave, where the day has reached -->
+								<div class="now-sun">
+									<SunArc {...sun} height={144} />
 								</div>
 							{/if}
 						</div>
@@ -786,6 +885,37 @@
 	.anchor {
 		display: inline-flex;
 	}
+	/* Leaving: the button fades and draws in a little where it stands, and the Breeze rises beside it */
+	.alerts {
+		position: relative;
+	}
+	.alerts :global(.ed-icon-btn) {
+		transition:
+			opacity var(--ed-duration-settle) var(--ed-ease-out),
+			scale var(--ed-duration-settle) var(--ed-ease-out);
+	}
+	.alerts-leaving {
+		pointer-events: none;
+	}
+	.alerts-leaving :global(.ed-icon-btn) {
+		opacity: 0;
+		scale: 0.9;
+	}
+	.alerts-warning :global(.ed-icon-btn) {
+		color: var(--warning);
+	}
+	.alerts-danger :global(.ed-icon-btn) {
+		color: var(--danger);
+	}
+	.alerts-list {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+		box-sizing: border-box;
+		width: var(--sheet-sm);
+		max-width: 100%;
+		padding: var(--space-2);
+	}
 	.body {
 		display: flex;
 		flex: 1 0 auto;
@@ -861,7 +991,8 @@
 		align-items: center;
 		gap: var(--space-4) var(--space-8);
 	}
-	.now-trend {
+	.now-trend,
+	.now-sun {
 		flex: 1 1 calc(var(--space-8) * 8);
 		min-width: 0;
 	}

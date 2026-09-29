@@ -243,6 +243,15 @@ export const skyToday = {
 	lastGood: '07:40',
 }
 
+/** What the Sky motif draws, from the same Wednesday at 07:40: the wind from the south-south-east and the cloud. */
+export const skyMotif = {
+	windFrom: 157.5,
+	windSpeed: skyDetails.wind,
+	windGust: skyDetails.gust,
+	cloudCover: skyDetails.cloudCover,
+	precipitation: 0,
+}
+
 /** Daily weight in kg, 09-17 to 09-30; seven-day average 82.7; goal 80.0 by 12-31. */
 export const weightSeries = [83.6, 83.4, 83.5, 83.1, 83.2, 82.9, 83.0, 82.8, 82.7, 82.9, 82.6, 82.5, 82.6, 82.4]
 export const weightAverage = 82.7

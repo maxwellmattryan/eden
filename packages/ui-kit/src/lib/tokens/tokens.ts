@@ -363,7 +363,8 @@ export const zIndex = {
 	"status": 30,
 	"popover": 1000,
 	"sheet": 1100,
-	"toast": 1200
+	"toast": 1200,
+	"grain": 1300
 } as const
 export const breakpoints = {
 	"phone": 480,

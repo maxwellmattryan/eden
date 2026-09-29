@@ -1,7 +1,7 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
 	import type { ComponentProps } from 'svelte'
-	import { expect, fn, userEvent, within } from 'storybook/test'
+	import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 	import { canvasOf, hasCanvas } from '../../../storybook/play.js'
 	import { defaultStrings } from '$lib/i18n/strings.js'
 	import { sidebar, skyAirQuality, skyAllergens, skyHours, skyToday, skyWeek } from '../../sample-data.js'
@@ -24,11 +24,19 @@
 			docs: {
 				description: {
 					component:
-						'The Sky view (product/domains/weather.md), mocked from kit components under D-54. The header’s glyph is live and the location chip opens a Menu over home and the saved venues. Beneath: the now block with the temperature and the day’s range, the one active alert as a Banner, twelve hours from 08:00 in a strip that scrolls sideways (a named tab stop), with the showers arriving at 16:00, the details as tiles, the calendar week as a strip across the page from the week start, a day to a column with its rain, UV, wind and light, with today marked and the days before it observed (D-58), the air quality and the pollen and mold cards, the sun and moon card, and the sources’ attribution. The page is the same whatever the provider (D-56): Apple Weather changes the attribution line only, and a failed provider adds the fallback note. Offline, an InlineError names the last good forecast and the status bar carries the banner; the numbers stay. At night the glyph turns to a moon.',
+						'The Sky view (product/domains/weather.md), mocked from kit components under D-54. The header’s glyph is live and the location chip opens a Menu over home and the saved venues. Beside the name the motif draws the wind as a flow field (D-62), and a button with a count opens the active alert in a Popover, where it can be dismissed; with no alert left the button goes. Beneath: the now block with the temperature and the day’s range, the day’s temperature as a chart and the sun on its wave, twelve hours from 08:00 in a strip that scrolls sideways (a named tab stop), with the showers arriving at 16:00, the details as tiles, the calendar week as a strip across the page from the week start, a day to a column with its rain, UV, wind and light, with today marked and the days before it observed (D-58), the air quality and the pollen and mold cards, the sun and moon card, and the sources’ attribution. The page is the same whatever the provider (D-56): Apple Weather changes the attribution line only, and a failed provider adds the fallback note. Offline, an InlineError names the last good forecast and the status bar carries the banner; the numbers stay. At night the glyph turns to a moon.',
 				},
 			},
 		},
-		args: { onretry: fn(), onlocation: fn(), onopentoday: fn(), onnavigate: fn(), onsources: fn(), onplace: fn() },
+		args: {
+			onretry: fn(),
+			onlocation: fn(),
+			onopentoday: fn(),
+			ondismiss: fn(),
+			onnavigate: fn(),
+			onsources: fn(),
+			onplace: fn(),
+		},
 	})
 </script>
 
@@ -50,8 +58,9 @@
 		await expect(now).toBeVisible()
 		// the reading, which the chart's side may repeat as one of its figures
 		await expect(within(now).getAllByText(`${skyHours[0]!.temp}°`)[0]).toBeVisible()
-		await expect(canvas.getByRole('alert')).toHaveTextContent('Showers from 16:00')
-		await expect(canvas.getByRole('alert')).toHaveTextContent('Your 17:30 session may get wet.')
+		// the alert waits behind its button
+		await expect(canvas.getByRole('button', { name: /^Weather alerts/ })).toHaveAttribute('aria-expanded', 'false')
+		await expect(canvas.queryByRole('alert')).toBeNull()
 		const hours = canvas.getByRole('region', { name: 'Hours' })
 		await expect(hours).toBeVisible()
 		await expect(within(hours).getByRole('list', { name: 'Hourly forecast' })).toHaveAttribute('tabindex', '0')
@@ -78,7 +87,9 @@
 		const allergens = canvas.getByRole('region', { name: 'Pollen and mold' })
 		for (const allergen of skyAllergens) await expect(within(allergens).getByText(allergen.name)).toBeVisible()
 		await expect(canvas.getByRole('region', { name: 'Sun and moon' })).toBeVisible()
-		await expect(canvas.getByText(skyToday.sunrise)).toBeVisible()
+		// the time stands in the sun and moon card and under the sun's wave
+		await expect(canvas.getAllByText(skyToday.sunrise)).toHaveLength(2)
+		await expect(within(now).getByRole('img', { name: /^The sun is up\. It rose at 07:22/ })).toBeVisible()
 		await expect(canvas.getByText('Forecast by Open-Meteo')).toBeVisible()
 		await expect(
 			within(air).getByRole('img', { name: `US air quality index ${skyAirQuality.index}, Good` })
@@ -118,6 +129,7 @@
 		const canvas = canvasOf(canvasElement)
 		await expect(canvas.getByText('Clear night')).toBeVisible()
 		await expect(canvas.getAllByRole('img', { name: strings.sky.clearNight }).length).toBeGreaterThan(0)
+		await expect(canvas.getByRole('img', { name: 'The sun set at 19:14.' })).toBeVisible()
 	}}
 />
 
@@ -150,10 +162,8 @@
 		const hours = canvas.getByRole('region', { name: 'Hours' })
 		await expect(within(hours).getByText('8 AM')).toBeVisible()
 		await expect(within(hours).getByText('4 PM')).toBeVisible()
-		await expect(canvas.getByRole('alert')).toHaveTextContent('Showers from 4 PM')
-		await expect(canvas.getByRole('alert')).toHaveTextContent('Your 5:30 PM session')
-		await expect(canvas.getByText('7:22 AM')).toBeVisible()
-		await expect(canvas.getByText('7:14 PM')).toBeVisible()
+		await expect(canvas.getAllByText('7:22 AM')).toHaveLength(2)
+		await expect(canvas.getAllByText('7:14 PM')).toHaveLength(2)
 	}}
 />
 
@@ -198,6 +208,29 @@
 		const canvas = canvasOf(canvasElement)
 		const allergens = canvas.getByRole('region', { name: 'Pollen and mold' })
 		await expect(within(allergens).getByText('No pollen or mold source covers this place yet.')).toBeVisible()
+	}}
+/>
+
+<!-- The alerts' button opens a popover with the one active alert: what it is, what it touches, and the way to Today -->
+<Story
+	name="Alerts"
+	{template}
+	args={{ alerting: true }}
+	parameters={{ platformFrame: 'inline' }}
+	play={async ({ canvasElement, args }) => {
+		const page = within(canvasElement.ownerDocument.body)
+		const panel = await page.findByRole('dialog', { name: 'Weather alerts' })
+		await expect(within(panel).getByRole('alert')).toHaveTextContent('Showers from 16:00')
+		await expect(within(panel).getByRole('alert')).toHaveTextContent('Your 17:30 session may get wet.')
+		await expect(page.getByRole('button', { name: /^Weather alerts/ })).toHaveAttribute('aria-expanded', 'true')
+		await userEvent.click(within(panel).getByRole('button', { name: 'Open Today' }))
+		await expect(args.onopentoday).toHaveBeenCalledTimes(1)
+		// dismissed, the alert takes its panel and its button with it
+		await userEvent.click(within(panel).getByRole('button', { name: 'Dismiss Showers from 16:00' }))
+		await expect(args.ondismiss).toHaveBeenCalledTimes(1)
+		// the panel closes at once; the button goes when its Breeze has played
+		await waitFor(() => expect(page.queryByRole('button', { name: /^Weather alerts/ })).toBeNull(), { timeout: 3000 })
+		await expect(page.queryByRole('alert')).toBeNull()
 	}}
 />
 

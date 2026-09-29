@@ -1,6 +1,6 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
-	import { expect, fn } from 'storybook/test'
+	import { expect, fn, waitFor } from 'storybook/test'
 	import { canvasOf, hasCanvas } from '../../../storybook/play.js'
 	import PageHeader from '../PageHeader/PageHeader.svelte'
 	import Notice from './Notice.svelte'
@@ -48,6 +48,20 @@
 />
 
 <Story name="Title only" args={{ tone: 'info', title: 'Frost tonight', detail: undefined, meta: undefined }} />
+
+<!-- A notice the owner can put away: the cross is named after what it dismisses -->
+<Story
+	name="Dismissible"
+	args={{ ondismiss: fn(), ondismissed: fn() }}
+	play={async ({ canvasElement, args }) => {
+		if (!hasCanvas(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		canvas.getByRole('button', { name: `Dismiss ${watch.title}` }).click()
+		await expect(args.ondismiss).toHaveBeenCalledTimes(1)
+		// it fades and its Breeze plays; then it says it has gone
+		await waitFor(() => expect(args.ondismissed).toHaveBeenCalledTimes(1), { timeout: 3000 })
+	}}
+/>
 
 <!-- Where it sits: the top right of a page, in the header's aside -->
 <Story name="In a page header">

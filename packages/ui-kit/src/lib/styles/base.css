@@ -29,8 +29,9 @@
 	--ed-nav-current-fg: var(--brand-hover);
 	--ed-nav-current-glyph: var(--brand-hover);
 	--ed-nav-bar: 3px;
-	--ed-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .6 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)'/%3E%3C/svg%3E");
-	--ed-grain-opacity: 0.06;
+	--ed-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23g)'/%3E%3C/svg%3E");
+	--ed-grain-motion: ed-grain 1.2s steps(1, end) infinite;
+	--ed-grain-opacity: 0.4;
 	--ed-motif-size: 64px;
 }
 [data-theme="dark"], [data-theme="dark"][data-brand="lush"], [data-theme="dark"] [data-brand="lush"] {
@@ -38,7 +39,7 @@
 	--ed-fill-edge: rgba(0, 0, 0, 0.32);
 	--ed-fill-highlight: rgba(255, 255, 255, 0.04);
 	--ed-fill-shadow: 0 3px 8px -4px rgba(0, 0, 0, 0.5);
-	--ed-grain-opacity: 0.05;
+	--ed-grain-opacity: 0.3;
 }
 [data-brand="plain"] {
 	--ed-radius-control: var(--radius-control);
@@ -69,6 +70,7 @@
 	--ed-nav-current-glyph: var(--text-primary);
 	--ed-nav-bar: 3px;
 	--ed-grain: none;
+	--ed-grain-motion: none;
 	--ed-grain-opacity: 0;
 	--ed-motif-size: 48px;
 }
@@ -108,6 +110,7 @@
 	--ed-nav-current-glyph: var(--brand-hover);
 	--ed-nav-bar: 3px;
 	--ed-grain: none;
+	--ed-grain-motion: none;
 	--ed-grain-opacity: 0;
 	--ed-motif-size: 56px;
 }
@@ -183,16 +186,31 @@ body {
 	color: var(--text-primary);
 }
 
-/* Paper grain at lush (D-42): a fixed layer between the page colour and the content, never over text at a legible opacity. .ed-canvas frames paint their own. */
+/* Paper grain at lush (D-61): a fixed layer over the whole page, overlay blended so one mid-grey tile reads in both themes without shifting colour, and at an opacity that leaves text crisp. It ignores the pointer. The tile is raw desaturated noise, never pushed for contrast, which is what keeps it fine (D-63), and it jumps to a new offset about eight times a second (D-63), which reads as fresh grain. .ed-canvas frames paint their own. */
 body::before, .ed-canvas::before {
 	content: "";
 	position: fixed;
 	inset: 0;
-	z-index: -1;
+	z-index: var(--ed-z-grain);
 	pointer-events: none;
 	background-image: var(--ed-grain);
 	opacity: var(--ed-grain-opacity);
-	mix-blend-mode: multiply;
+	mix-blend-mode: overlay;
+	animation: var(--ed-grain-motion);
+}
+
+/* The top layer paints above every z-index, so each surface that lives there carries the grain itself: the sheet panel (the dialog around it is a transparent box over the scrim), and the popover, menu and tooltip. */
+.ed-sheet-panel::after, [popover]::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: var(--ed-z-grain);
+	pointer-events: none;
+	border-radius: inherit;
+	background-image: var(--ed-grain);
+	opacity: var(--ed-grain-opacity);
+	mix-blend-mode: overlay;
+	animation: var(--ed-grain-motion);
 }
 .ed-canvas {
 	position: relative;
@@ -203,17 +221,29 @@ body::before, .ed-canvas::before {
 .ed-canvas::before {
 	position: absolute;
 }
-[data-theme="dark"] body::before, [data-theme="dark"] .ed-canvas::before, [data-theme="dark"].ed-canvas::before {
-	mix-blend-mode: screen;
+@keyframes ed-grain {
+	0% { background-position: 0px 0px; }
+	10% { background-position: -97px 143px; }
+	20% { background-position: 61px -188px; }
+	30% { background-position: -211px -52px; }
+	40% { background-position: 134px 89px; }
+	50% { background-position: -38px -229px; }
+	60% { background-position: 177px 203px; }
+	70% { background-position: -154px 34px; }
+	80% { background-position: 23px -117px; }
+	90% { background-position: -226px 171px; }
 }
 
-/* Reduced motion: colour fades stay, movement goes, and a press no longer moves the control. Last, so it wins over the dials. */
+/* Reduced motion: colour fades stay, movement goes, the grain holds still and a press no longer moves the control. Last, so it wins over the dials. */
 @media (prefers-reduced-motion: reduce) {
 	:root, [data-relief] {
 		--ed-duration-panel: 0ms;
 		--ed-duration-settle: 0ms;
 		--ed-duration-breeze: 0ms;
 		--ed-press-scale: 1;
+	}
+	body::before, .ed-canvas::before, .ed-sheet-panel::after, [popover]::after {
+		animation: none;
 	}
 }
 
