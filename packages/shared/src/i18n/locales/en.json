@@ -564,6 +564,51 @@
 			"weatherSources": "Sky's sources",
 			"weatherSourcesHelp": "What Sky draws on. Only rounded coordinates are sent."
 		},
+		"sync": {
+			"exportAll": "Export everything",
+			"exportAllHelp": "Every row in the workspace as plain files in one archive, with your settings. What Eden caches from other services stays out.",
+			"exportDomain": "Export one domain",
+			"exportDomainHelp": "What the domain owns, with the same data as CSV and Markdown beside the rows.",
+			"exportAction": "Export…",
+			"exporting": "Exporting…",
+			"exported": "Exported {count, plural, one {# row} other {# rows}} to {file}.",
+			"import": "Import",
+			"importHelp": "From an archive Eden exported. Nothing changes until you choose how to import it.",
+			"choose": "Choose an archive…",
+			"reading": "Reading the archive…",
+			"archive": "{file}, exported {date}, {count, plural, one {# row} other {# rows}}.",
+			"scope": {
+				"full": "The whole workspace",
+				"domain": "{domain} only"
+			},
+			"mode": "How to import",
+			"modes": {
+				"merge": "Merge",
+				"replace": "Replace"
+			},
+			"modeHelp": {
+				"merge": "The newer version of each row is kept. Nothing here is deleted unless it was deleted there.",
+				"replace": "What is here is cleared first and the archive takes its place. A backup is written before anything is cleared."
+			},
+			"importing": "Importing…",
+			"imported": "{inserted} added, {updated} updated, {skipped} already here.",
+			"backupSaved": "The workspace as it was is in {file}.",
+			"replaceConfirm": {
+				"titleFull": "Replace the whole workspace?",
+				"titleDomain": "Replace everything in {domain}?",
+				"text": "What is here is cleared and the archive takes its place. A backup of the workspace is written first.",
+				"subject": "You"
+			},
+			"notAvailable": "Export and import work in the installed app.",
+			"errors": {
+				"unreadable": "That file is not an archive Eden exported.",
+				"version": "That archive was written by a newer Eden. Update, then import it.",
+				"hash": "The archive was changed after it was exported. Nothing was imported.",
+				"backup": "The backup could not be written. Nothing was changed.",
+				"import": "The import did not finish. Nothing was changed.",
+				"export": "The archive could not be written."
+			}
+		},
 		"placeholder": {
 			"title": "Not built yet",
 			"text": "This tab arrives with its substrate."

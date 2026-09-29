@@ -4,7 +4,7 @@ status: draft
 summary: How the workspace is stored and encrypted, how tiers apply to storage, sync, export and sharing, the Vault and its three doors out, export and import formats, backup, end-to-end encrypted sync, purge and retention, and the one-user-per-workspace model.
 read-this-if: You are designing anything that stores, syncs, exports, shares or deletes the owner's data.
 depends-on: [privacy, primitives]
-updated: 2026-09-27
+updated: 2026-09-29
 ---
 
 ## Principles
@@ -17,7 +17,7 @@ updated: 2026-09-27
 ## Storage model (Phase 1)
 
 - One encrypted SQLCipher database per workspace, as in Crate. The key lives in the OS keychain (a key file on desktop until the keychain path is ported, Keychain on iOS, Keystore on Android).
-- Tables: the four primitive tables, one table per domain entity type, facts, grants, settings, signals (for the activity feed), audit, and a registry table generated from manifests.
+- Tables: the four primitive tables, one table for every domain entity (D-67), facts, grants, settings, signals (for the activity feed), audit, and a registry table generated from manifests.
 - Every row carries hybrid logical clock stamps and a tombstone on delete, so sync can be added without a migration.
 - Mirrors sit in the same tables with `mirror: true` and are skipped by sync and export (D-32).
 

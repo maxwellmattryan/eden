@@ -2,7 +2,9 @@
 // is needed, serves every host: it moves to whichever control is hovered (mouse or pen, never touch) or focused from
 // the keyboard, names it through aria-describedby while it shows, and hides on leave, blur, Escape, pointer down or
 // when the host goes away. A tooltip is the visible form of a label that already exists (an icon's name, a collapsed
-// subtitle); it is never the only place a fact lives, and it never appears on touch.
+// subtitle); it is never the only place a fact lives, and it never appears on touch hover. A `toggle` host, one with no
+// action of its own such as an info glyph, also shows it on click or tap and hides it on the next; shown that way it
+// stays through pointer leave until a click, a pointer down elsewhere, Escape or blur.
 import { mount } from 'svelte'
 import type { Attachment } from 'svelte/attachments'
 import { anchor } from '../../internal/anchor.js'
@@ -15,6 +17,8 @@ export interface TooltipOptions {
 	side?: 'top' | 'bottom'
 	/** Hover delay in ms, 400 by default. There is none while another tooltip is still up or just closing. */
 	delay?: number
+	/** A click toggles the bubble: for a host whose only job is to explain, so pressing it is never a dead end. */
+	toggle?: boolean
 }
 
 const HIDE_DELAY = 100
@@ -24,6 +28,8 @@ const HIDE_DELAY = 100
 let counter = 0
 let bubble: HTMLElement | undefined
 let host: HTMLElement | undefined
+// shown by a click on a toggle host: it outlasts pointer leave and closes on a pointer down anywhere but the host
+let pinned = false
 let hideTimer: ReturnType<typeof setTimeout> | undefined
 let unanchor: (() => void) | undefined
 let undismiss: (() => void) | undefined
@@ -53,12 +59,13 @@ function undescribe(el: HTMLElement, id: string) {
 
 const cleanup = (off: void | (() => void)) => (typeof off === 'function' ? off : undefined)
 
-function show(next: HTMLElement, text: string, side: 'top' | 'bottom') {
+function show(next: HTMLElement, text: string, side: 'top' | 'bottom', pin = false) {
 	const el = ensureBubble()
 	clearTimeout(hideTimer)
 	hideTimer = undefined
 	if (host && host !== next) undescribe(host, el.id)
 	host = next
+	pinned = pin
 	el.textContent = text
 	// the preferred side first, so the unfurl starts from the right direction; anchor() corrects it if it must flip
 	el.dataset.side = side
@@ -71,7 +78,9 @@ function show(next: HTMLElement, text: string, side: 'top' | 'bottom') {
 		el.dataset.open = ''
 	}
 	unanchor = cleanup(anchor(() => ({ anchor: next, side }))(el))
-	undismiss = cleanup(dismiss(() => ({ onDismiss: () => hide(true), focusout: false, outside: false }))(el))
+	undismiss = cleanup(
+		dismiss(() => ({ onDismiss: () => hide(true), focusout: false, outside: pin, ignore: () => [next] }))(el)
+	)
 }
 
 function settle() {
@@ -82,6 +91,7 @@ function settle() {
 	undismiss = undefined
 	if (host && bubble) undescribe(host, bubble.id)
 	host = undefined
+	pinned = false
 	if (!bubble) return
 	if (hasTopLayer()) {
 		if (bubble.matches(':popover-open')) bubble.hidePopover()
@@ -103,10 +113,11 @@ const warm = () => host !== undefined
 /**
  * Attaches a tooltip to a control: `<button {@attach tooltip(s.back)}>`. `text` may be a getter, read each time the
  * bubble opens, so a changing label needs no re-attachment. Shows after `delay` on hover (mouse or pen only) and at once
- * on keyboard focus; hides on leave, blur, pointer down, Escape, or when the host is removed.
+ * on keyboard focus; hides on leave, blur, pointer down, Escape, or when the host is removed. With `toggle` a click shows
+ * it pinned and the next click hides it.
  */
 export function tooltip(text: string | (() => string), options: TooltipOptions = {}): Attachment<HTMLElement> {
-	const { side = 'bottom', delay = 400 } = options
+	const { side = 'bottom', delay = 400, toggle = false } = options
 	const read = () => (typeof text === 'function' ? text() : text)
 	return (el) => {
 		let showTimer: ReturnType<typeof setTimeout> | undefined
@@ -127,8 +138,24 @@ export function tooltip(text: string | (() => string), options: TooltipOptions =
 			cancel()
 			showTimer = setTimeout(open, warm() ? 0 : delay)
 		}
-		const onPointerLeave = () => leave()
-		const onPointerDown = () => leave(true)
+		const onPointerLeave = () => (pinned && host === el ? cancel() : leave())
+		// open and not on its way out
+		const isOpen = () => host === el && hideTimer === undefined
+		// a toggle host keeps the bubble through its own press and remembers whether it was up, so the focus that the
+		// press brings (which may show it) cannot turn the click that follows into a close
+		let openAtPress = false
+		const onPointerDown = () => {
+			if (!toggle) return leave(true)
+			cancel()
+			openAtPress = isOpen()
+		}
+		const onClick = (e: MouseEvent) => {
+			cancel()
+			// a pointer click (detail > 0) goes by the state at its press; Enter or Space by the state now
+			if (e.detail > 0 ? openAtPress : isOpen()) return hide(true)
+			const value = read()
+			if (value) show(el, value, side, true)
+		}
 		const onFocusIn = () => {
 			// keyboard focus only: a click or a tap focuses the control too, and neither wants a tooltip
 			if (el.matches(':focus-visible') || el.querySelector(':focus-visible')) open()
@@ -142,12 +169,14 @@ export function tooltip(text: string | (() => string), options: TooltipOptions =
 		el.addEventListener('pointerdown', onPointerDown)
 		el.addEventListener('focusin', onFocusIn)
 		el.addEventListener('focusout', onFocusOut)
+		if (toggle) el.addEventListener('click', onClick)
 		return () => {
 			el.removeEventListener('pointerenter', onPointerEnter)
 			el.removeEventListener('pointerleave', onPointerLeave)
 			el.removeEventListener('pointerdown', onPointerDown)
 			el.removeEventListener('focusin', onFocusIn)
 			el.removeEventListener('focusout', onFocusOut)
+			el.removeEventListener('click', onClick)
 			leave(true)
 		}
 	}

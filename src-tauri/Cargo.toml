@@ -60,6 +60,13 @@ thiserror = "2.0"
 # The workspace database (docs/engineering/data-layer.md): SQLCipher built from source with its own OpenSSL, so every
 # target links the same encrypted SQLite and nothing depends on a system library.
 rusqlite = { version = "0.38.0", features = ["bundled-sqlcipher-vendored-openssl"] }
+# Entity ids (D-24): sortable by creation time, generated monotonically within the process.
+ulid = "1"
+# The hash of an attachment's bytes, and of each file in an export bundle; already in the tree.
+sha2 = "0.10"
+# The export bundle is a zip archive, which every system opens without a tool. Direct, so that mobile has it too: it
+# is otherwise in the tree only through the desktop updater.
+zip = { version = "4", default-features = false, features = ["deflate"] }
 
 # iOS unified logging: a normally-launched app's stderr is discarded by iOS, so `env_logger` output never reaches
 # Console.app. `oslog` routes the `log` facade to os_log under the app's identifier as subsystem.

@@ -24,7 +24,7 @@
 			docs: {
 				description: {
 					component:
-						'The visible form of a label that already exists: an icon-only control’s name, a sidebar subtitle the owner collapsed. Most consumers put the attachment straight on the control, `<IconButton {@attach tooltip(s.back)} />`; the `Tooltip` component wraps a host that cannot take one. It shows on hover after 400 ms (mouse or pen only, never touch) and at once on keyboard focus; it hides on leave, blur, pointer down and Escape. One shared bubble serves every host, so neighbouring controls hand it over without flicker.',
+						'The visible form of a label that already exists: an icon-only control’s name, a sidebar subtitle the owner collapsed. Most consumers put the attachment straight on the control, `<IconButton {@attach tooltip(s.back)} />`; the `Tooltip` component wraps a host that cannot take one. It shows on hover after 400 ms (mouse or pen only, never touch) and at once on keyboard focus; it hides on leave, blur, pointer down and Escape. With `toggle`, for a host that has no action of its own like an info glyph, a click or tap shows it too and the next click hides it. One shared bubble serves every host, so neighbouring controls hand it over without flicker.',
 				},
 			},
 		},
@@ -131,6 +131,34 @@
 				1200 ms
 			</p>
 		</div>
+	{/snippet}
+</Story>
+
+<Story
+	name="Toggle"
+	parameters={{
+		docs: {
+			description: {
+				story:
+					'An info glyph has nothing to do but explain, so `toggle` lets a click or tap show the bubble and the next click hide it; shown that way it stays through pointer leave until a pointer down elsewhere, Escape or blur. `IconButton` turns it on by itself when it has a `tooltip` and no `onclick`.',
+			},
+		},
+	}}
+	play={async ({ canvas, userEvent }) => {
+		const button = canvas.getByRole('button')
+		await userEvent.click(button)
+		const tip = await screen.findByRole('tooltip')
+		await expect(tip).toHaveTextContent(hearth.subtitle)
+		// past the hide grace: a pinned bubble outlasts the pointer leaving
+		await userEvent.unhover(button)
+		await new Promise((resolve) => setTimeout(resolve, 300))
+		await expect(screen.getByRole('tooltip')).toHaveTextContent(hearth.subtitle)
+		await userEvent.click(button)
+		await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull())
+	}}
+>
+	{#snippet template()}
+		<IconButton icon="info" size="xs" label={hearth.name} tooltip={hearth.subtitle} />
 	{/snippet}
 </Story>
 

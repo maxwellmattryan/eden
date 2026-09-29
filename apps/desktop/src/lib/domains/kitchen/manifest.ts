@@ -1,5 +1,6 @@
 // Hearth's manifest (product/domains/kitchen.md; product/substrate/domain-manifest.md, "Example: Hearth's manifest"):
 // the fields the shell composes from today. Capture, the tools and the signals arrive with their substrates.
+import { kitchenExtras } from '@eden/shared/domains/kitchen'
 import { get } from 'svelte/store'
 import { goto } from '$app/navigation'
 import { resolve } from '$app/paths'
@@ -51,5 +52,10 @@ export const kitchenManifest: DomainManifest = {
 		{ id: 'add-to-grocery', label: 'domains.kitchen.grocery.add', icon: 'plus' },
 	],
 	load: () => kitchen.load(),
+	reload: () => kitchen.reload(),
+	extras: async () => {
+		await kitchen.load()
+		return kitchenExtras(kitchen.data())
+	},
 	seed: () => kitchen.seed(get(t)('domains.kitchen.name')),
 }

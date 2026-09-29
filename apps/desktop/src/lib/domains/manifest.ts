@@ -4,6 +4,7 @@
 // grow this type rather than replace it.
 import type { Component } from 'svelte'
 import type { ResolvedPathname } from '$app/types'
+import type { BundleExtra } from '@eden/shared/data'
 import type { DomainId, IconName, WidgetSize } from '@eden/ui-kit'
 
 /** The route ids a domain may own; a page with tabs takes the tab as an optional parameter. */
@@ -52,4 +53,11 @@ export interface DomainManifest {
 	load?: () => Promise<void>
 	/** Seeds the store from the kit's sample dataset and returns the undo; behind the empty states' "Add sample data". */
 	seed?: () => () => void
+	/** Reads the store again from its rows, after an import changed them under it. */
+	reload?: () => Promise<void>
+	/**
+	 * The domain's data in formats made for reading, for its export bundle. A domain that declares this owns rows and
+	 * can be exported on its own.
+	 */
+	extras?: () => Promise<BundleExtra[]>
 }
