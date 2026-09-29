@@ -1,0 +1,57 @@
+/* Gallery-only chrome around the platform canvases. Nothing here ships in the app. */
+.sb-frames {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 24px;
+	align-items: start;
+	padding: 16px;
+}
+@media (max-width: 900px) {
+	.sb-frames {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+.sb-frame-label {
+	font: var(--ed-t-caption);
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	/* text-secondary, not tertiary: 12 px tertiary is 3.3:1 in light and trips the a11y gate */
+	color: var(--text-secondary);
+	margin-bottom: 8px;
+}
+.sb-desktop {
+	border: 1px solid var(--stroke);
+	border-radius: 12px;
+	overflow: hidden;
+	background: var(--surface-0);
+}
+.sb-desktop-viewport {
+	width: 1280px;
+	min-height: 480px;
+	padding: 24px;
+	box-sizing: border-box;
+}
+.sb-phone {
+	width: 390px;
+	height: 844px;
+	border-radius: 44px;
+	border: 8px solid #1a1f1c;
+	overflow: hidden;
+	background: var(--surface-0);
+	box-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.35);
+}
+.sb-phone-viewport {
+	height: 100%;
+	overflow: auto;
+	padding: calc(var(--ed-safe-top) + 8px) 16px calc(var(--ed-safe-bottom) + 8px);
+	box-sizing: border-box;
+}
+.sb-inline {
+	padding: 24px;
+	min-height: 100%;
+}
+.sb-note {
+	font: var(--ed-t-voice);
+	color: var(--text-secondary);
+	padding: 24px;
+}

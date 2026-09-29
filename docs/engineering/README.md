@@ -1,19 +1,24 @@
 ---
 title: Engineering
-status: planned
-summary: Not written yet. Engineering docs follow once product and design reach review; this page lists the questions they must answer.
-read-this-if: You are starting engineering and want to know what has to be decided first.
+status: draft
+summary: Where engineering stands. It started with the UI kit ahead of the rest reaching review; this page lists what is answered so far and the questions the remaining engineering docs must answer.
+read-this-if: You are starting engineering work and want to know what is decided and what has to be decided first.
 depends-on: [product/roadmap, product/substrate/domain-manifest, product/substrate/data]
-updated: 2026-09-27
+updated: 2026-09-28
 ---
 
 ## When
 
-After every non-stub product and design doc is at `review` and the Phase 1 screens are mocked (`product/roadmap.md`, Phase 0).
+Engineering started with the UI kit (D-43) ahead of the rest of the docs reaching `review`, because the kit only depends on the design docs. The remaining topics below still wait until every non-stub product and design doc is at `review` and the Phase 1 screens are mocked (`product/roadmap.md`, Phase 0).
+
+## Answered so far
+
+- The UI kit: location, exports, tokens pipeline, conventions, Storybook, gates (`engineering/ui-kit.md`).
+- The per-component contract: props, bindables, callbacks, snippets, stories (`engineering/ui-kit-components.md`).
 
 ## Questions the engineering docs must answer
 
-- The monorepo layout ported from Crate: `apps/desktop`, `apps/mobile`, `shared/`, `src-tauri/`, and where domains live in each.
+- The monorepo layout, answered in part: `apps/desktop`, `apps/mobile` and `packages/*`, with the kit at `packages/ui-kit` (D-43, `engineering/ui-kit.md`). The Rust backend's location is decided with the scaffold port, and where domains live in each app is still open.
 - The domain module structure: how a manifest is expressed in code, how a domain's Svelte views, stores, Rust models, services and commands are laid out, and how the shell composes them.
 - The resource registry as code: generated from manifests, validated at build time, the source for grant and audit checks.
 - The IPC boundary: which operations cross into Rust, the substrate API surface (`createTask`, `createEvent`, `createPlace`, `attach`, `query`, `link`).

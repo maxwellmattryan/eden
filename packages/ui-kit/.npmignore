@@ -1,0 +1,14 @@
+# What the package publishes: the built dist, the source under src/lib (consumed from source in the workspace),
+# README and package.json. Stories, tests and the gallery-only faces stay out.
+/*
+!/dist
+!/src
+/src/*
+!/src/lib
+/src/lib/**/*.stories.svelte
+/src/lib/**/*.test.ts
+/src/lib/**/*.test.mjs
+/src/lib/fonts/alternates/
+/src/lib/styles/faces.css
+!/README.md
+!/package.json

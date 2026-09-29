@@ -4,7 +4,7 @@ status: draft
 summary: Everything settled (D-n) and everything open (OQ-n), with ids the other docs cite. Entries are never deleted; a superseded decision stays with a note.
 read-this-if: You are about to make a design choice, or a doc cites an id you need to resolve.
 depends-on: []
-updated: 2026-09-27
+updated: 2026-09-28
 ---
 
 ## How to use this doc
@@ -53,6 +53,18 @@ Cite ids; never restate. To settle an open question, add a `D-n` entry and mark 
 | D-36 | Kind ids carry no domain prefix and no dot. The registry maps each kind to its current owner. |
 | D-37 | Grants sync as workspace policy; connections, device-capability grants and secrets are per device. Mirror-derived entities snapshot their essentials. An interested Listing becomes a tentative Event. |
 | D-38 | Home is a Place of kind `home` (T2). The `home-area` fact (T1) is derived from it by the substrate. There is no separate address fact. |
+| D-39 | The display face is Newsreader, with metric overrides (ascent 98%, descent 26%, line gap 0%). Fraunces, Instrument Serif and Bricolage exist only behind the Storybook face dial and never ship. (Supersedes the Fraunces display face named in `design/visual-language.md` before the kit existed.) |
+| D-40 | The Gardener has two colours, neither the accent: `--ai` (spruce green, sea-glass in dark) when it speaks, `--honey` when it acts (tool cards, the model chip); proposal cards and the can-see row speak, so they are green. (Supersedes the honey-only pairing in `design/visual-language.md`.) |
+| D-41 | Selection is a mode, not a checkbox. Rows show no mark outside select mode; "Select" in the list header or a row's menu turns it on, Space toggles a row, "Done" leaves it. (Supersedes the hover-checkbox sentence in `design/ux-patterns.md`.) |
+| D-42 | Two exceptions to the motif limits in `design/brand.md`: paper grain sits behind the page at the `lush` brand level only, and the Breeze specks play once on an accepted proposal or a settled action. Grain is off at `tended` and `plain`; Breeze renders nothing under reduced motion. |
+| D-43 | Engineering begins with the UI kit ahead of the rest of the docs reaching `review`. The repo is a Yarn 1 workspace with `apps/*` and `packages/*`; the kit is `packages/ui-kit` (`@eden/ui-kit`), consumed from source inside the workspace, with `svelte-package` and `publint` as a build gate. The app scaffolds follow, ported from Crate. |
+| D-44 | Toolchain pins: Node 22.18, Yarn 1.22, Svelte 5.57, SvelteKit 2.70 (tooling only), Vite 7.3, Vitest 4.1 in browser mode, Storybook 10.6 with Svelte CSF, Tailwind 4.3, TypeScript 5.9, ESLint 10 flat config, Prettier 3.9 with Crate's rules. Exact versions live in the package manifests. |
+| D-45 | Storybook 10 with Svelte CSF is the acceptance surface. Every story renders desktop and mobile side by side by default and runs as a Vitest browser test once per platform with an axe gate at `error`. |
+| D-46 | `tokens.json` in the kit is the single source for tokens; the theme, base and Tailwind stylesheets, the pre-paint script and the token types are generated from it and never hand-edited. The type scale is strict: 12, 13, 14, 15 (voice), 16, 18, 22, 28, 36 and nothing between. |
+| D-47 | Root attributes: `data-theme` (light, dark; "system" is resolved in JS), `data-accent`, `data-font`, `data-brand` (plain, tended, lush), `data-platform` (desktop, mobile) and `data-density` (comfortable, compact; desktop only). Selectors are element-scoped so a subtree can carry its own value; components never read the attributes, only tokens and `--ed-*` variables. |
+| D-48 | Fonts are self-hosted OFL files shipped with the kit (Newsreader, Inter, Geist Mono), never loaded from a CDN. New fonts arrive the same way. |
+| D-49 | The relief is `raised`. Every button-family control (Button in every variant, IconButton, BackButton, button chips) presses the same way: it compresses from the top with its bottom edge fixed, as if it sank into its hole; a filled control's shadow collapses too. Reduced motion removes the movement. (Promoted from OQ-21.) |
+| D-50 | Visual baselines are generated artifacts, never committed: CI regenerates them from `main` and compares pull requests against the latest set; locally `yarn vrt:update` writes them git-ignored. (Promoted from OQ-20.) |
 
 ## Open questions
 
@@ -75,3 +87,7 @@ Cite ids; never restate. To settle an open question, add a `D-n` entry and mark 
 | OQ-15 | Weather provider. | Open-Meteo as the keyless default; WeatherKit later. |
 | OQ-16 | Which astrology computations run locally versus via a provider? | Local ephemeris for sun, moon and transits; horoscope text from a provider only under grant. |
 | OQ-17 | Free-text pseudonymization with re-identification, if ever. | Not before Phase 3, and only with a measured leak rate. |
+| OQ-18 | Re-tune the light accents for contrast before the accent picker ships? | Yes. No picker for now; the kit keeps `data-accent`, the `accents` union and a computed `--on-brand` per accent, so the picker is one settings row once the light values are re-tuned. |
+| OQ-19 | `SwipeRow`: hand-rolled pointer handling or a library? | Hand-rolled, last in the kit's shell wave; may slip to the app scaffold without blocking. |
+| OQ-20 | Promoted to D-50. | |
+| OQ-21 | Promoted to D-49. | |

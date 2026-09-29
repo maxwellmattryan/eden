@@ -1,0 +1,22 @@
+import { Meta } from '@storybook/addon-docs/blocks'
+
+<Meta title="Foundations/Overview" />
+
+# Eden UI kit
+
+This gallery is the acceptance surface for `@eden/ui-kit`. Every component renders here for desktop and mobile side by side; the toolbar sets the same root attributes the app sets.
+
+| toolbar  | attribute       | what it changes                                                 |
+| -------- | --------------- | --------------------------------------------------------------- |
+| Theme    | `data-theme`    | light, the morning garden; dark, the night forest               |
+| Accent   | `data-accent`   | the owner's accent, replacing the brand triplet                 |
+| Brand    | `data-brand`    | how much of the garden shows in the chrome: plain, tended, lush |
+| Face     | `data-face`     | the display face; gallery only, the app ships Newsreader        |
+| Platform | `data-platform` | one canvas per platform, or both                                |
+| Density  | `data-density`  | desktop row density                                             |
+
+The rules live in the repo's docs, not here: `docs/design/brand.md` for the voice and the metaphor policy, `docs/design/visual-language.md` for the tokens, `docs/design/ux-patterns.md` for the patterns, `docs/engineering/ui-kit.md` for how the kit is built and `docs/engineering/ui-kit-components.md` for each component's contract.
+
+## Voice, in one line
+
+Calm, plain, warm, brief. Sentence case. No exclamation marks, no emoji, no garden words for states or errors. The display face is what Eden says; Inter is what Eden holds; Geist Mono is where numbers align.

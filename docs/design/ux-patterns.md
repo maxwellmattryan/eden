@@ -4,7 +4,7 @@ status: draft
 summary: The reusable interaction patterns every screen is built from: navigation, page anatomy, lists and cards, forms and quick-add, the Quick Log sheet, the Capture verification sheet, states, confirmation and risk patterns, Gardener surfaces, notifications, widgets, context menus, mobile adaptations, keyboard and focus.
 read-this-if: You are designing a screen or a component and want to reuse what exists.
 depends-on: [visual-language, product/substrate/shell, product/substrate/grants, product/substrate/ai]
-updated: 2026-09-27
+updated: 2026-09-28
 ---
 
 ## Navigation
@@ -17,7 +17,7 @@ Header: the domain glyph, the themed name with its subtitle in `--text-tertiary`
 
 ## Lists, tables, cards
 
-Lists are the default; tables only for numeric data (stock quantities, metrics). Cards for things with an image (recipes, places, renders). Row height 40 comfortable, 32 compact. Each row has one primary text, one secondary line, trailing metadata in mono for numbers, and a hover action cluster. Selection is a checkbox that appears on hover and stays once any row is selected.
+Lists are the default; tables only for numeric data (stock quantities, metrics). Cards for things with an image (recipes, places, renders). Row height 40 comfortable, 32 compact. Each row has one primary text, one secondary line, trailing metadata in mono for numbers, and a hover action cluster. Selection is a mode (D-41): rows show no mark outside select mode; "Select" in the list header or a row's menu turns it on, Space toggles a row, and "Done" leaves it. There are no checkboxes.
 
 ## Forms and quick-add
 
@@ -49,7 +49,7 @@ Access levels have badges: `read` shows nothing, `write-draft` shows a pencil, `
 
 ## Gardener surfaces
 
-The panel: a thread list on the left when wide, the conversation, a "can see" chip row above the composer listing registry ids with counts (tap to expand to rows), a model chip with the budget meter, and a cost preview when the request is unusual (an image, the Council). Replies stream. Tool calls render as compact cards with their access badge; `write` and `act-external` cards carry their confirm inline. Proposal cards for facts carry accept and dismiss. The Council view shows one column per model with the chair synthesis, when enabled, above them. Gardener surfaces use the AI tint so they are never mistaken for the owner's own data.
+The panel: a thread list on the left when wide, the conversation, a "can see" chip row above the composer listing registry ids with counts (tap to expand to rows), a model chip with the budget meter, and a cost preview when the request is unusual (an image, the Council). Replies stream. Tool calls render as compact cards with their access badge; `write` and `act-external` cards carry their confirm inline. Proposal cards for facts carry accept and dismiss. The Council view shows one column per model with the chair synthesis, when enabled, above them. Gardener surfaces use the Gardener's colours so they are never mistaken for the owner's own data: green when it speaks (replies, proposal cards, the "can see" chip), honey when it acts (tool cards, the model chip) (D-40).
 
 ## Notifications
 
@@ -65,8 +65,8 @@ Right-click and long-press menus follow Crate's convention: the same items as th
 
 ## Mobile adaptations
 
-Bottom tabs, sheets for anything modal, a floating button for Quick Log and Capture, swipe actions on rows (leading: done or check; trailing: delete), safe-area insets respected, and an Android back handler that closes the top-most sheet first.
+Bottom tabs (the kit's `BottomTabBar`), sheets for anything modal (`Sheet`), a floating button for Quick Log and Capture, swipe actions on rows (`SwipeRow`; leading: done or check; trailing: delete), safe-area insets respected, and an Android back handler that closes the top-most sheet first.
 
 ## Keyboard and focus
 
-Every action reachable by keyboard; ⌘K is the escape hatch. Focus rings are always visible when navigating by keyboard. Lists support arrow keys, Enter to open, Space to select, and type-ahead. Sheets trap focus and return it on close.
+Every action reachable by keyboard; ⌘K is the escape hatch. Focus rings are always visible when navigating by keyboard. Lists support arrow keys, Enter to open, Space to select, and type-ahead. Sheets are the kit's `Sheet`, a `<dialog>`, which traps focus and returns it on close.
