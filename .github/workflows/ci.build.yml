@@ -35,7 +35,7 @@ jobs:
           workspaces: src-tauri
           shared-key: build-${{ matrix.os }}
           cache-on-failure: true
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          save-if: ${{ github.ref == 'refs/heads/develop' }}
       - name: Install Strawberry Perl (Windows)
         if: matrix.os == 'windows-latest'
         run: |
@@ -71,7 +71,7 @@ jobs:
           workspaces: src-tauri
           shared-key: mobile-ios
           cache-on-failure: true
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          save-if: ${{ github.ref == 'refs/heads/develop' }}
       - run: cargo check --manifest-path src-tauri/Cargo.toml --target aarch64-apple-ios --no-default-features --features mobile
 
   android:
@@ -91,7 +91,7 @@ jobs:
           workspaces: src-tauri
           shared-key: mobile-android
           cache-on-failure: true
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          save-if: ${{ github.ref == 'refs/heads/develop' }}
       # The NDK clang and ar for the crates that build C; the API level matches minSdkVersion 29.
       - name: Configure the Android NDK toolchain
         run: |

@@ -2,7 +2,7 @@ name: cd.web
 
 on:
   push:
-    branches: [main]
+    branches: [develop]
     paths:
       - 'web/**'
       - '.github/workflows/cd.web.yml'
