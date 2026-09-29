@@ -1,0 +1,410 @@
+{
+	"timeZone": "America/Chicago",
+	"current": {
+		"time": 1790698500000,
+		"temp": 30.1,
+		"feelsLike": 33.4,
+		"condition": "mostlyClear",
+		"daylight": true,
+		"humidity": 63,
+		"dewPoint": 22.3,
+		"windSpeed": 14.4,
+		"windGust": 22.0,
+		"windDirection": 180,
+		"pressure": 1011.8,
+		"visibility": 25.3,
+		"cloudCover": 27,
+		"precipitation": 0.0,
+		"uv": 5
+	},
+	"hours": [
+		{
+			"time": 1790694000000,
+			"temp": 27.2,
+			"condition": "partlyCloudy",
+			"daylight": true,
+			"precipChance": 3
+		},
+		{
+			"time": 1790697600000,
+			"temp": 29.4,
+			"condition": "mostlyClear",
+			"daylight": true,
+			"precipChance": 1
+		},
+		{
+			"time": 1790701200000,
+			"temp": 31.6,
+			"condition": "mostlyClear",
+			"daylight": true,
+			"precipChance": 1
+		},
+		{
+			"time": 1790704800000,
+			"temp": 32.7,
+			"condition": "mostlyClear",
+			"daylight": true,
+			"precipChance": 2
+		},
+		{
+			"time": 1790708400000,
+			"temp": 33.6,
+			"condition": "cloudy",
+			"daylight": true,
+			"precipChance": 0
+		},
+		{
+			"time": 1790712000000,
+			"temp": 34.2,
+			"condition": "mostlyClear",
+			"daylight": true,
+			"precipChance": 1
+		},
+		{
+			"time": 1790715600000,
+			"temp": 33.9,
+			"condition": "cloudy",
+			"daylight": true,
+			"precipChance": 2
+		},
+		{
+			"time": 1790719200000,
+			"temp": 32.6,
+			"condition": "cloudy",
+			"daylight": true,
+			"precipChance": 3
+		},
+		{
+			"time": 1790722800000,
+			"temp": 32.6,
+			"condition": "cloudy",
+			"daylight": true,
+			"precipChance": 1
+		},
+		{
+			"time": 1790726400000,
+			"temp": 30.7,
+			"condition": "partlyCloudy",
+			"daylight": true,
+			"precipChance": 4
+		},
+		{
+			"time": 1790730000000,
+			"temp": 28.6,
+			"condition": "cloudy",
+			"daylight": false,
+			"precipChance": 1
+		},
+		{
+			"time": 1790733600000,
+			"temp": 28.3,
+			"condition": "cloudy",
+			"daylight": false,
+			"precipChance": 1
+		},
+		{
+			"time": 1790737200000,
+			"temp": 27.7,
+			"condition": "cloudy",
+			"daylight": false,
+			"precipChance": 1
+		},
+		{
+			"time": 1790740800000,
+			"temp": 27.5,
+			"condition": "cloudy",
+			"daylight": false,
+			"precipChance": 1
+		},
+		{
+			"time": 1790744400000,
+			"temp": 26.3,
+			"condition": "cloudy",
+			"daylight": false,
+			"precipChance": 0
+		},
+		{
+			"time": 1790748000000,
+			"temp": 25.7,
+			"condition": "cloudy",
+			"daylight": false,
+			"precipChance": 0
+		},
+		{
+			"time": 1790751600000,
+			"temp": 25.5,
+			"condition": "cloudy",
+			"daylight": false,
+			"precipChance": 1
+		},
+		{
+			"time": 1790755200000,
+			"temp": 25.6,
+			"condition": "cloudy",
+			"daylight": false,
+			"precipChance": 1
+		},
+		{
+			"time": 1790758800000,
+			"temp": 24.4,
+			"condition": "cloudy",
+			"daylight": false,
+			"precipChance": 2
+		},
+		{
+			"time": 1790762400000,
+			"temp": 24.2,
+			"condition": "cloudy",
+			"daylight": false,
+			"precipChance": 9
+		},
+		{
+			"time": 1790766000000,
+			"temp": 23.8,
+			"condition": "cloudy",
+			"daylight": false,
+			"precipChance": 9
+		},
+		{
+			"time": 1790769600000,
+			"temp": 24.6,
+			"condition": "cloudy",
+			"daylight": false,
+			"precipChance": 7
+		},
+		{
+			"time": 1790773200000,
+			"temp": 24.6,
+			"condition": "cloudy",
+			"daylight": true,
+			"precipChance": 9
+		},
+		{
+			"time": 1790776800000,
+			"temp": 26.2,
+			"condition": "cloudy",
+			"daylight": true,
+			"precipChance": 7
+		},
+		{
+			"time": 1790780400000,
+			"temp": 28.3,
+			"condition": "cloudy",
+			"daylight": true,
+			"precipChance": 4
+		},
+		{
+			"time": 1790784000000,
+			"temp": 30.1,
+			"condition": "cloudy",
+			"daylight": true,
+			"precipChance": 6
+		},
+		{
+			"time": 1790787600000,
+			"temp": 31.4,
+			"condition": "cloudy",
+			"daylight": true,
+			"precipChance": 7
+		},
+		{
+			"time": 1790791200000,
+			"temp": 33.0,
+			"condition": "cloudy",
+			"daylight": true,
+			"precipChance": 10
+		},
+		{
+			"time": 1790794800000,
+			"temp": 33.6,
+			"condition": "cloudy",
+			"daylight": true,
+			"precipChance": 5
+		},
+		{
+			"time": 1790798400000,
+			"temp": 34.3,
+			"condition": "cloudy",
+			"daylight": true,
+			"precipChance": 11
+		},
+		{
+			"time": 1790802000000,
+			"temp": 34.8,
+			"condition": "cloudy",
+			"daylight": true,
+			"precipChance": 13
+		},
+		{
+			"time": 1790805600000,
+			"temp": 34.5,
+			"condition": "cloudy",
+			"daylight": true,
+			"precipChance": 12
+		}
+	],
+	"days": [
+		{
+			"time": 1790139600000,
+			"condition": "cloudy",
+			"hi": 35.1,
+			"lo": 23.3,
+			"precipChance": 28,
+			"precipAmount": 0.0,
+			"uvMax": 7,
+			"sunrise": 1790166000000,
+			"sunset": 1790209572000,
+			"windMax": 14.2
+		},
+		{
+			"time": 1790226000000,
+			"condition": "cloudy",
+			"hi": 35.3,
+			"lo": 22.3,
+			"precipChance": 3,
+			"precipAmount": 0.0,
+			"uvMax": 7,
+			"sunrise": 1790252433000,
+			"sunset": 1790295896000,
+			"windMax": 11.1
+		},
+		{
+			"time": 1790312400000,
+			"condition": "cloudy",
+			"hi": 36.2,
+			"lo": 23.9,
+			"precipChance": 2,
+			"precipAmount": 0.0,
+			"uvMax": 7,
+			"sunrise": 1790338867000,
+			"sunset": 1790382220000,
+			"windMax": 11.2
+		},
+		{
+			"time": 1790398800000,
+			"condition": "cloudy",
+			"hi": 33.6,
+			"lo": 23.9,
+			"precipChance": 0,
+			"precipAmount": 0.0,
+			"uvMax": 6,
+			"sunrise": 1790425301000,
+			"sunset": 1790468544000,
+			"windMax": 10.7
+		},
+		{
+			"time": 1790485200000,
+			"condition": "cloudy",
+			"hi": 36.7,
+			"lo": 21.6,
+			"precipChance": 25,
+			"precipAmount": 0.0,
+			"uvMax": 7,
+			"sunrise": 1790511735000,
+			"sunset": 1790554868000,
+			"windMax": 12.8
+		},
+		{
+			"time": 1790571600000,
+			"condition": "partlyCloudy",
+			"hi": 36.2,
+			"lo": 22.8,
+			"precipChance": 5,
+			"precipAmount": 0.0,
+			"uvMax": 7,
+			"sunrise": 1790598169000,
+			"sunset": 1790641192000,
+			"windMax": 15.5
+		},
+		{
+			"time": 1790658000000,
+			"condition": "cloudy",
+			"hi": 34.2,
+			"lo": 24.1,
+			"precipChance": 4,
+			"precipAmount": 0.0,
+			"uvMax": 7,
+			"sunrise": 1790684603000,
+			"sunset": 1790727517000,
+			"windMax": 19.8
+		},
+		{
+			"time": 1790744400000,
+			"condition": "cloudy",
+			"hi": 34.8,
+			"lo": 23.8,
+			"precipChance": 23,
+			"precipAmount": 0.0,
+			"uvMax": 6,
+			"sunrise": 1790771038000,
+			"sunset": 1790813841000,
+			"windMax": 22.1
+		},
+		{
+			"time": 1790830800000,
+			"condition": "hail",
+			"hi": 30.9,
+			"lo": 24.1,
+			"precipChance": 92,
+			"precipAmount": 30.83,
+			"uvMax": 6,
+			"sunrise": 1790857473000,
+			"sunset": 1790900167000,
+			"windMax": 19.2
+		},
+		{
+			"time": 1790917200000,
+			"condition": "thunderstorms",
+			"hi": 28.0,
+			"lo": 22.4,
+			"precipChance": 91,
+			"precipAmount": 12.1,
+			"uvMax": 5,
+			"sunrise": 1790943908000,
+			"sunset": 1790986493000,
+			"windMax": 13.4
+		},
+		{
+			"time": 1791003600000,
+			"condition": "drizzle",
+			"hi": 26.7,
+			"lo": 23.2,
+			"precipChance": 65,
+			"precipAmount": 2.6,
+			"uvMax": 5,
+			"sunrise": 1791030343000,
+			"sunset": 1791072819000,
+			"windMax": 16.8
+		},
+		{
+			"time": 1791090000000,
+			"condition": "cloudy",
+			"hi": 29.4,
+			"lo": 23.0,
+			"precipChance": 42,
+			"precipAmount": 0.0,
+			"uvMax": 5,
+			"sunrise": 1791116779000,
+			"sunset": 1791159146000,
+			"windMax": 22.3
+		},
+		{
+			"time": 1791176400000,
+			"condition": "cloudy",
+			"hi": 28.5,
+			"lo": 23.3,
+			"precipChance": 17,
+			"precipAmount": 0.0,
+			"uvMax": 5,
+			"sunrise": 1791203215000,
+			"sunset": 1791245475000,
+			"windMax": 20.7
+		}
+	],
+	"attribution": {
+		"name": "Apple Weather",
+		"markLight": "data:image/png;base64,iVBORw0KGgo=",
+		"markDark": "data:image/png;base64,iVBORw0KGgo=",
+		"legalUrl": "https://developer.apple.com/weatherkit/data-source-attribution/"
+	}
+}

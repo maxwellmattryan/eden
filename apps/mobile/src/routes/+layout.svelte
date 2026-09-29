@@ -7,14 +7,18 @@
 	import { goto } from '$app/navigation'
 	import { resolve } from '$app/paths'
 	import { page } from '$app/state'
-	import { BottomTabBar, ToastHost, UiKitProvider, domainGlyph, type BottomTab } from '@eden/ui-kit'
+	import { BottomTabBar, ToastHost, UiKitProvider, domainGlyph, iconFor, type BottomTab } from '@eden/ui-kit'
 	import { initializeI18n, locale, t, uiKitStrings } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
+	import { weather } from '@eden/shared/weather'
 	import CrashScreen from '$lib/components/CrashScreen.svelte'
 	import { useGlobalErrorHandler } from '$lib/hooks/useGlobalErrorHandler'
 	import SettingsSheet from '$lib/settings/SettingsSheet.svelte'
 
 	let { children } = $props()
+
+	/** How often the shell asks the weather store whether its forecast is stale, so the tab glyph keeps up. */
+	const WEATHER_INTERVAL = 10 * 60 * 1000
 
 	const hrefs = {
 		garden: resolve('/garden'),
@@ -29,7 +33,12 @@
 		{ id: 'garden', label: $t('shell.garden'), icon: domainGlyph('garden') },
 		{ id: 'today', label: $t('shell.today'), icon: domainGlyph('today') },
 		{ id: 'kitchen', label: $t('domains.kitchen.name'), icon: domainGlyph('kitchen') },
-		{ id: 'weather', label: $t('domains.weather.name'), icon: domainGlyph('weather') },
+		{
+			id: 'weather',
+			label: $t('domains.weather.name'),
+			// Sky's glyph is live: it follows the current conditions (weather.md).
+			icon: weather.now ? iconFor(weather.now.condition, weather.now.night) : domainGlyph('weather'),
+		},
 		{ id: 'more', label: $t('shell.more'), icon: 'menu' },
 	])
 	const current = $derived(page.route.id?.split('/')[1] || 'garden')
@@ -43,7 +52,10 @@
 		const cleanupErrors = useGlobalErrorHandler()
 		settings.load()
 		initializeI18n(settings.language)
+		void weather.load().catch(() => null)
+		const skyTimer = setInterval(() => void weather.load().catch(() => null), WEATHER_INTERVAL)
 		return () => {
+			clearInterval(skyTimer)
 			cleanupErrors()
 			settings.dispose()
 		}
@@ -62,6 +74,8 @@
 
 <style>
 	.content {
+		display: flex;
+		flex-direction: column;
 		min-height: 100dvh;
 		box-sizing: border-box;
 		padding: calc(var(--ed-safe-top) + var(--ed-gutter)) calc(var(--ed-safe-right) + var(--ed-gutter))

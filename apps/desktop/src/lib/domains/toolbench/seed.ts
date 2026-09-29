@@ -1,7 +1,7 @@
 // The sample dataset (design/sample-data.md, "Toolbench") mapped into the store's shapes: the six ideas with the
 // solar logger untouched for 41 days, the log and the brainstorm on the nannou flow field, and its project.
 import { ideaLog, ideas, projects } from '@eden/ui-kit/sample-data'
-import { daysFromToday, shiftSampleDate } from '../dates.js'
+import { daysFromToday, shiftSampleDate } from '@eden/shared/dates'
 import type { Idea, Project, ToolbenchData } from './store.svelte.js'
 
 export function seedData(): ToolbenchData {

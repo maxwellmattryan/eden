@@ -586,12 +586,12 @@
 				"hex": "#3e8e5e",
 				"onBrand": "#ffffff",
 				"hover": "#397f55",
-				"muted": "#dcebe2",
+				"muted": "#cfdccb",
 				"textOnSurface0": 3.64,
 				"textOnSurface1": 3.42,
 				"onBrandOnFill": 4.01,
 				"hoverOnSurface0": 4.39,
-				"textPrimaryOnMuted": 12.05
+				"textPrimaryOnMuted": 10.44
 			},
 			{
 				"id": "sage",
@@ -599,12 +599,12 @@
 				"hex": "#6f8f7c",
 				"onBrand": "#1f2a22",
 				"hover": "#63806e",
-				"muted": "#e5ebe7",
+				"muted": "#d8dcd0",
 				"textOnSurface0": 3.23,
 				"textOnSurface1": 3.03,
 				"onBrandOnFill": 4.17,
 				"hoverOnSurface0": 3.94,
-				"textPrimaryOnMuted": 12.3
+				"textPrimaryOnMuted": 10.67
 			},
 			{
 				"id": "clay",
@@ -612,12 +612,12 @@
 				"hex": "#b5644a",
 				"onBrand": "#ffffff",
 				"hover": "#9f5b44",
-				"muted": "#f2e3de",
+				"muted": "#e5d4c7",
 				"textOnSurface0": 3.9,
 				"textOnSurface1": 3.66,
 				"onBrandOnFill": 4.3,
 				"hoverOnSurface0": 4.7,
-				"textPrimaryOnMuted": 11.91
+				"textPrimaryOnMuted": 10.32
 			},
 			{
 				"id": "marigold",
@@ -625,12 +625,12 @@
 				"hex": "#c98a2e",
 				"onBrand": "#1f2a22",
 				"hover": "#b07c2c",
-				"muted": "#f5ead9",
+				"muted": "#e8dbc2",
 				"textOnSurface0": 2.66,
 				"textOnSurface1": 2.5,
 				"onBrandOnFill": 5.07,
 				"hoverOnSurface0": 3.31,
-				"textPrimaryOnMuted": 12.5
+				"textPrimaryOnMuted": 10.86
 			},
 			{
 				"id": "lavender",
@@ -638,12 +638,12 @@
 				"hex": "#7b6fae",
 				"onBrand": "#ffffff",
 				"hover": "#6d6599",
-				"muted": "#e7e5f0",
+				"muted": "#dad6d9",
 				"textOnSurface0": 4.03,
 				"textOnSurface1": 3.79,
 				"onBrandOnFill": 4.44,
 				"hoverOnSurface0": 4.8,
-				"textPrimaryOnMuted": 11.94
+				"textPrimaryOnMuted": 10.34
 			},
 			{
 				"id": "plum",
@@ -651,12 +651,12 @@
 				"hex": "#7a4b72",
 				"onBrand": "#ffffff",
 				"hover": "#6c4666",
-				"muted": "#e7dfe6",
+				"muted": "#dad0cf",
 				"textOnSurface0": 6.2,
 				"textOnSurface1": 5.82,
 				"onBrandOnFill": 6.82,
 				"hoverOnSurface0": 7.05,
-				"textPrimaryOnMuted": 11.39
+				"textPrimaryOnMuted": 9.84
 			},
 			{
 				"id": "sky",
@@ -664,12 +664,12 @@
 				"hex": "#4a82a6",
 				"onBrand": "#ffffff",
 				"hover": "#447592",
-				"muted": "#dee9ef",
+				"muted": "#d1dad8",
 				"textOnSurface0": 3.79,
 				"textOnSurface1": 3.55,
 				"onBrandOnFill": 4.17,
 				"hoverOnSurface0": 4.53,
-				"textPrimaryOnMuted": 12.04
+				"textPrimaryOnMuted": 10.43
 			},
 			{
 				"id": "slate",
@@ -677,12 +677,12 @@
 				"hex": "#5b6b78",
 				"onBrand": "#ffffff",
 				"hover": "#52616b",
-				"muted": "#e1e4e7",
+				"muted": "#d4d6d0",
 				"textOnSurface0": 4.99,
 				"textOnSurface1": 4.69,
 				"onBrandOnFill": 5.5,
 				"hoverOnSurface0": 5.81,
-				"textPrimaryOnMuted": 11.65
+				"textPrimaryOnMuted": 10.14
 			},
 			{
 				"id": "rose",
@@ -690,12 +690,12 @@
 				"hex": "#b3606f",
 				"onBrand": "#ffffff",
 				"hover": "#9d5863",
-				"muted": "#f1e2e5",
+				"muted": "#e4d4ce",
 				"textOnSurface0": 3.96,
 				"textOnSurface1": 3.71,
 				"onBrandOnFill": 4.36,
 				"hoverOnSurface0": 4.76,
-				"textPrimaryOnMuted": 11.86
+				"textPrimaryOnMuted": 10.34
 			}
 		],
 		"dark": [

@@ -23,7 +23,7 @@
 	})
 </script>
 
-<!-- a shell of fixed height, so the pinned pair sits at the bottom as it does in the app -->
+<!-- a shell of fixed height, so Settings sits at the bottom as it does in the app -->
 {#snippet template(args: ComponentProps<typeof Sidebar>)}
 	<div class="sb-shell">
 		<Sidebar {...args} />
@@ -31,7 +31,7 @@
 	</div>
 {/snippet}
 
-<!-- The mark and wordmark at the head; Today, a rule, Garden, a rule, then Hearth, Toolbench, Sky; Gardener and Settings pinned. One tab stop across the groups: arrows, Home, End and typing move focus; Enter selects -->
+<!-- The mark and wordmark at the head; Today, a rule, Garden, Gardener and Toolbench, a rule, then Hearth and Sky; Settings pinned. One tab stop across the groups: arrows, Home, End and typing move focus; Enter selects, except Settings, an action that never becomes current -->
 <Story
 	name="Phase-1 sidebar"
 	{template}
@@ -40,15 +40,22 @@
 		const canvas = canvasOf(canvasElement)
 		await userEvent.tab()
 		await expect(canvas.getByRole('button', { name: 'Hearth' })).toHaveFocus()
-		await userEvent.keyboard('{ArrowDown}')
+		await userEvent.keyboard('{ArrowUp}')
 		const toolbench = canvas.getByRole('button', { name: 'Toolbench' })
 		await expect(toolbench).toHaveFocus()
 		await userEvent.keyboard('{Enter}')
 		await expect(args.onselect).toHaveBeenLastCalledWith('toolbench')
 		await expect(toolbench).toHaveAttribute('aria-current', 'page')
 		await expect(canvas.getByRole('button', { name: 'Hearth' })).not.toHaveAttribute('aria-current')
+		await userEvent.keyboard('{ArrowUp}')
+		await expect(canvas.getByRole('button', { name: 'Gardener' })).toHaveFocus()
 		await userEvent.keyboard('{End}')
-		await expect(canvas.getByRole('button', { name: 'Settings' })).toHaveFocus()
+		const settings = canvas.getByRole('button', { name: 'Settings' })
+		await expect(settings).toHaveFocus()
+		await userEvent.keyboard('{Enter}')
+		await expect(args.onselect).toHaveBeenLastCalledWith('settings')
+		await expect(settings).not.toHaveAttribute('aria-current')
+		await expect(toolbench).toHaveAttribute('aria-current', 'page')
 		await userEvent.keyboard('g')
 		await expect(canvas.getByRole('button', { name: 'Garden' })).toHaveFocus()
 		await userEvent.keyboard('{Home}')
@@ -71,7 +78,7 @@
 	args={{ groups: sidebarJa.groups.map(withGlyphs), pinned: withGlyphs(sidebarJa.pinned), subtitles: true, lang: 'ja' }}
 >
 	{#snippet template(args)}
-		<UiKitProvider strings={{ sidebar: { label: '領域', pinned: '庭師と設定' } }}>
+		<UiKitProvider strings={{ sidebar: { label: '領域', pinned: '設定' } }}>
 			<div class="sb-shell">
 				<Sidebar {...args} />
 				<div class="sb-page"></div>

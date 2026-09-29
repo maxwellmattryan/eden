@@ -296,8 +296,186 @@
 				"last-quarter": "下弦",
 				"waning-crescent": "有明"
 			},
+			"details": {
+				"title": "詳細",
+				"feelsLike": "体感温度",
+				"humidity": "湿度",
+				"dewPoint": "露点",
+				"wind": "風",
+				"gusts": "突風",
+				"uv": "UV指数",
+				"rainfall": "今日の雨量",
+				"cloudCover": "雲量",
+				"pressure": "気圧",
+				"visibility": "視程"
+			},
+			"value": {
+				"degrees": "{value}°",
+				"percent": "{value} %",
+				"measure": "{value} {unit}",
+				"wind": "{direction} {value} {unit}",
+				"concentration": "{value} µg/m³"
+			},
+			"units": {
+				"kmh": "km/h",
+				"mph": "mph",
+				"hpa": "hPa",
+				"inhg": "inHg",
+				"km": "km",
+				"mi": "mi",
+				"mm": "mm",
+				"in": "in"
+			},
+			"compass": {
+				"N": "北",
+				"NNE": "北北東",
+				"NE": "北東",
+				"ENE": "東北東",
+				"E": "東",
+				"ESE": "東南東",
+				"SE": "南東",
+				"SSE": "南南東",
+				"S": "南",
+				"SSW": "南南西",
+				"SW": "南西",
+				"WSW": "西南西",
+				"W": "西",
+				"WNW": "西北西",
+				"NW": "北西",
+				"NNW": "北北西"
+			},
+			"uvCategory": {
+				"low": "弱い",
+				"moderate": "中程度",
+				"high": "強い",
+				"very-high": "非常に強い",
+				"extreme": "極端に強い"
+			},
+			"airQuality": {
+				"title": "大気質",
+				"usAqi": "米国AQI",
+				"europeanAqi": "欧州AQI",
+				"pm25": "PM2.5",
+				"pm10": "PM10",
+				"ozone": "オゾン",
+				"no2": "NO₂",
+				"category": {
+					"good": "良好",
+					"moderate": "普通",
+					"sensitive": "敏感な人に不健康",
+					"unhealthy": "不健康",
+					"very-unhealthy": "非常に不健康",
+					"hazardous": "危険"
+				},
+				"unavailable": "この場所の大気質を提供する情報源はまだありません。",
+				"failed": "{source} に接続できませんでした。"
+			},
+			"allergens": {
+				"title": "花粉とカビ",
+				"kind": {
+					"tree": "樹木の花粉",
+					"alder": "ハンノキの花粉",
+					"birch": "シラカバの花粉",
+					"olive": "オリーブの花粉",
+					"grass": "イネ科の花粉",
+					"weed": "雑草の花粉",
+					"mugwort": "ヨモギの花粉",
+					"ragweed": "ブタクサの花粉",
+					"mold": "カビ"
+				},
+				"level": {
+					"none": "なし",
+					"low": "少ない",
+					"moderate": "やや多い",
+					"high": "多い",
+					"very-high": "非常に多い"
+				},
+				"unavailable": "この場所の花粉やカビを提供する情報源はまだありません。",
+				"failed": "{source} に接続できませんでした。"
+			},
+			"observed": "実測",
+			"noData": "データなし",
+			"fallback": "{provider} に接続できませんでした。代わりに {fallback} の予報を表示しています。",
+			"sources": {
+				"label": "情報源",
+				"forecast": "予報: {name}",
+				"airQuality": "大気質: {name}",
+				"allergens": "花粉: {name}",
+				"alerts": "警報: 米国国立気象局",
+				"legal": "データの提供元"
+			},
+			"hint": {
+				"about": "{name}について",
+				"feelsLike": "肌で感じる気温です。風は熱を奪い、湿った空気は汗の蒸発を遅らせるため、温度計の値と違うことがあります。",
+				"humidity": "相対湿度です。空気中の水蒸気の量を、この気温で含みうる最大量に対する割合で示します。暖かい空気ほど多く含めるので、同じ割合でも暑い日のほうが水分は多くなります。",
+				"dewPoint": "割合ではなく温度です。空気をこの温度まで冷やすと、水分が露になります。空気中の実際の水分量を表し、およそ18 °C以上では蒸し暑く感じます。",
+				"uv": "今日の最も強い時間帯の、肌を焼く紫外線の強さです。世界保健機関の指標で、3以上では対策が勧められます。薄い雲は紫外線の大部分を通します。",
+				"pressure": "上にある空気の重さを、標高の違う場所どうしで比べられるよう海面の値に直したものです。平均はおよそ1013 hPaで、気圧が下がると風や雨になりやすくなります。",
+				"visibility": "空を背にした大きく暗い物体が見える、最も遠い距離です。1 km未満は霧とされます。",
+				"pm25": "煙や排気に含まれる2.5マイクロメートル以下の微粒子です。肺の奥まで届きます。",
+				"pm10": "10マイクロメートル以下の粒子です。ちり、花粉、カビの胞子などです。",
+				"ozone": "日光が汚染物質から作る気体です。暑い午後に多く、気道を刺激します。",
+				"no2": "二酸化窒素です。主に交通や燃料の燃焼から出て、気道を刺激します。",
+				"wind": "平均の風速と、風が吹いてくる方角です。南風は南から吹きます。",
+				"gusts": "平均の風速を上回る、数秒間の突風です。にわか雨や雷雨の周辺で強くなりがちです。",
+				"rainfall": "一日を通して降る雨の深さです。1ミリは、1平方メートルあたり1リットルの水にあたります。",
+				"cloudCover": "空のうち雲に覆われている割合です。雲は地面の熱を逃がしにくくするため、晴れた夜ほど冷え込みます。",
+				"hours": "パーセントは、その1時間にこの場所で雨や雪が降る確率です。",
+				"aboutHours": "時間ごとの予報について",
+				"aqi": "米国の指数は0から500までで、最も悪い汚染物質に従います。50までは良好で、100を超えると敏感な人は注意が必要です。"
+			},
+			"trend": {
+				"label": "{from}から{to}までの気温、{low}°から{high}°"
+			},
+			"sunArc": {
+				"before": "日の出は{sunrise}、日の入りは{sunset}です。",
+				"up": "太陽が出ています。日の出は{sunrise}、日の入りは{sunset}です。",
+				"after": "日の入りは{sunset}でした。"
+			},
+			"scale": "{name} {value}、{category}",
+			"place": {
+				"change": "自宅を変更…",
+				"title": "自宅を変更",
+				"find": "場所を探す",
+				"placeholder": "市区町村の名前",
+				"helper": "送信されるのは入力した名前だけで、送信先は Open-Meteo です。",
+				"results": "場所",
+				"result": "{name} · {region}",
+				"none": "その名前の場所は見つかりませんでした。",
+				"failed": "{source} に接続できませんでした。",
+				"searching": "検索中…"
+			},
+			"motif": {
+				"wind": "{from}の風、{speed} {unit}。上が北です。",
+				"hint": "上が北で、線は風の吹く向きへ、風が強いほど速く流れます。{place}ひとつの観測値で、地図ではないため、縮尺はありません。"
+			},
+			"alerts": {
+				"label": "気象警報"
+			},
+			"alert": {
+				"from": "{start} から {end} まで。",
+				"until": "{end} まで。",
+				"starts": "{start} から。",
+				"issued": "{sender} · {time}",
+				"issuedAt": "{time} 発表"
+			},
+			"weekStrip": "日ごとの予報",
+			"todayMark": "今日",
+			"moonLit": "輝面比 {percent} %",
+			"fact": {
+				"rain": "雨",
+				"uv": "最大UV指数",
+				"wind": "最大風速",
+				"light": "日の出と日の入り"
+			},
+			"factValue": {
+				"rain": "{chance} % · {amount}",
+				"uv": "UV {value}",
+				"light": "{from} – {to}",
+				"low": "/ {value}°"
+			},
 			"offline": {
-				"message": "Open-Meteo に接続できませんでした。",
+				"message": "{provider} に接続できませんでした。",
 				"lastGood": "{time} の予報を表示しています。",
 				"banner": "オフライン。{time} の予報を表示しています。"
 			}
@@ -323,10 +501,18 @@
 			"languageHelp": "すぐに反映されます。",
 			"english": "English",
 			"japanese": "日本語",
-			"units": "気温の単位",
-			"unitsHelp": "天気予報と庭の空のタイルに使います。",
-			"celsius": "°C",
-			"fahrenheit": "°F"
+			"measurement": "単位",
+			"measurementHelp": "気温、風、気圧、距離、雨量に使います。",
+			"metric": "メートル法",
+			"imperial": "ヤード・ポンド法",
+			"weekStart": "週の始まり",
+			"weekStartHelp": "Edenが表示する週はこの曜日から始まります。",
+			"monday": "月曜日",
+			"sunday": "日曜日",
+			"clock": "時刻の表示",
+			"clockHelp": "すべての時刻の書き方です。",
+			"clock24": "24時間",
+			"clock12": "12時間"
 		},
 		"appearance": {
 			"theme": "テーマ",
@@ -334,6 +520,12 @@
 			"dark": "ダーク",
 			"system": "システム",
 			"accent": "アクセント",
+			"brand": "ブランドの濃さ",
+			"brandLevels": {
+				"lush": "豊か",
+				"tended": "手入れ",
+				"plain": "簡素"
+			},
 			"font": "フォント",
 			"fontDefault": "標準",
 			"fontSystem": "システム",
@@ -365,6 +557,12 @@
 			"updateAvailable": "{version} が利用できます。",
 			"updateFailed": "更新を確認できませんでした。",
 			"updatesNotAvailable": "更新の確認はインストール済みのアプリから行います。"
+		},
+		"integrations": {
+			"weatherProvider": "天気の提供元",
+			"weatherProviderHelp": "空の予報の取得先です。接続できないときは Open-Meteo が代わりになります。",
+			"weatherSources": "空の情報源",
+			"weatherSourcesHelp": "空が利用する情報源です。送信されるのは丸めた座標だけです。"
 		},
 		"placeholder": {
 			"title": "まだありません",
@@ -414,12 +612,16 @@
 		}
 	},
 	"uiKit": {
+		"compass": {
+			"north": "北"
+		},
 		"add": "追加",
 		"save": "保存",
 		"cancel": "キャンセル",
 		"confirm": "確認",
 		"done": "完了",
 		"dismiss": "閉じる",
+		"dismissNamed": "{0}を閉じる",
 		"discard": "破棄",
 		"close": "閉じる",
 		"back": "戻る",
@@ -455,7 +657,7 @@
 		},
 		"sidebar": {
 			"label": "ドメイン",
-			"pinned": "庭師と設定"
+			"pinned": "設定"
 		},
 		"tabBar": {
 			"label": "セクション",

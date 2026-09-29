@@ -4,7 +4,7 @@ status: draft
 summary: How these docs are written and maintained: the required header, the status vocabulary, the rules every change follows, and the Crate patterns to reuse.
 read-this-if: You are editing any doc in this repo.
 depends-on: []
-updated: 2026-09-28
+updated: 2026-09-29
 ---
 
 ## What this repo is right now
@@ -55,6 +55,7 @@ The front matter is the summary; the first H2 starts the content. `depends-on` l
 - Substrate docs tag sections as Phase 1 or later. Manifest fields no Phase 1 domain consumes are marked planned.
 - Generated files are never hand-edited: the kit's `src/lib/styles/*`, `tokens/tokens.ts`, `tokens/tokens-report.md`, `icons/icons.ts` and `.storybook/preview-head.html`. Change `tokens.json` or `icon-list.json` and run the generator; CI checks for drift.
 - Code conventions live in `docs/engineering/ui-kit.md`. This file holds doc conventions only.
+- Never commit or push unless the owner explicitly asks. Changes stay in the working tree until the owner commits them; an instruction to commit covers that one commit only.
 - Commits are authored solely by the repo owner. No co-author trailers, no generated-with footers.
 
 ## Crate references (patterns to reuse)

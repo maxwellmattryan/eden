@@ -1,59 +1,512 @@
 <script lang="ts">
 	// The Sky view (product/domains/weather.md, "Surfaces"), ported from Domains/Sky/Sky: now, the next hours as a
-	// strip that scrolls sideways, the week, sun and moon, the active alerts, and the location chip over home. The
-	// header's glyph is live. Offline, an InlineError names the last good forecast and the status bar carries the
-	// banner; the numbers stay, since a mirror is still worth reading.
+	// strip that scrolls sideways, the details, the calendar week from the owner's week start (D-58), the air quality
+	// and the allergens (D-59), sun and moon, the active alerts behind a button in the header, the sources' attribution, and the location chip over
+	// home. The header's glyph is live, behind the header the motif draws the wind (D-62), and in the now block the
+	// sun stands on its wave where the minute puts it. Every time is the place's, on the owner's clock. The page is the same whatever
+	// the provider (D-56): the attribution follows it, and a note says so when the chosen one could not answer. Home
+	// is changed from the location menu: a search by name, and the place chosen becomes home.
+	// Offline, an InlineError names the last good forecast and the status bar carries the banner; the numbers stay,
+	// since a mirror is still worth reading.
 	import {
+		Badge,
 		Banner,
+		Breeze,
+		Button,
 		Chip,
+		Compass,
 		EmptyState,
+		Field,
+		Icon,
+		IconButton,
 		InlineError,
-		List,
+		LevelScale,
 		Menu,
+		MoonGlyph,
+		Notice,
 		PageHeader,
+		Popover,
+		Sheet,
+		Sketch,
 		SkyGlyph,
 		Stat,
+		SunArc,
+		TrendChart,
 		iconFor,
+		skyField,
 		useStrings,
-		type ListRowData,
+		type BadgeLevel,
+		type IconName,
 		type MenuItem,
+		type SkyFieldParams,
 	} from '@eden/ui-kit'
+	import { openExternal } from '@eden/shared/api'
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
-	import { formatTime, formatWeekday } from '../../dates'
-	import { conditionLabel } from '../conditions'
-	import { weather } from '../store.svelte'
+	import { dayOfMonth, formatHour, hourOfDay, formatMoment, formatTime, formatWeekdayOf } from '@eden/shared/dates'
+	import {
+		MIN_QUERY,
+		airCategory,
+		compass,
+		conditionLabel,
+		distance,
+		homeFrom,
+		pressure,
+		providerFor,
+		rainfall,
+		searchPlaces,
+		speed,
+		uvCategory,
+		weather,
+		type AirCategory,
+		type AllergenLevel,
+		type Measure,
+		type PlaceResult,
+		type UvCategory,
+		type WeatherAlert,
+	} from '@eden/shared/weather'
 
 	const uid = $props.id()
 	const s = useStrings()
 	const lang = $derived($locale ?? 'en')
+	/** Sky's times are the place's, on the owner's clock (D-58). */
+	const format = $derived({ lang, clock: settings.clock, timeZone: weather.timeZone })
 
 	const places = $derived<MenuItem[]>([
 		{ id: 'home', label: $t('domains.weather.home', { values: { label: settings.home.label } }), icon: 'house' },
+		{ id: 'change', label: $t('domains.weather.place.change'), icon: 'search' },
 	])
 	let anchor = $state<HTMLElement>()
 	let open = $state(false)
+	let alertsAnchor = $state<HTMLElement>()
+	let alertsOpen = $state(false)
+
+	// Changing home: the search runs a moment after the typing stops, and only the latest answer is kept.
+	const SEARCH_DELAY_MS = 300
+	let finding = $state(false)
+	let query = $state('')
+	let results = $state<PlaceResult[]>([])
+	let search = $state<'idle' | 'searching' | 'done' | 'failed'>('idle')
+	let timer: ReturnType<typeof setTimeout> | undefined
+	let asked = 0
+
+	function onquery() {
+		clearTimeout(timer)
+		const text = query.trim()
+		const request = ++asked
+		if (text.length < MIN_QUERY) {
+			results = []
+			search = 'idle'
+			return
+		}
+		search = 'searching'
+		timer = setTimeout(async () => {
+			try {
+				const found = await searchPlaces(text, lang)
+				if (request !== asked) return
+				results = found
+				search = 'done'
+			} catch {
+				if (request !== asked) return
+				results = []
+				search = 'failed'
+			}
+		}, SEARCH_DELAY_MS)
+	}
+
+	function onlocation(item: MenuItem) {
+		if (item.id !== 'change') return
+		query = ''
+		results = []
+		search = 'idle'
+		finding = true
+	}
+
+	function choose(place: PlaceResult) {
+		finding = false
+		settings.setHome(homeFrom(place))
+		void weather.load()
+	}
+
+	/** Each category's step on the six-step scale: the dot's colour beside the word. */
+	const AIR_LEVEL: Record<AirCategory, BadgeLevel> = {
+		good: 1,
+		moderate: 2,
+		sensitive: 3,
+		unhealthy: 4,
+		'very-unhealthy': 5,
+		hazardous: 6,
+	}
+	const ALLERGEN_LEVEL: Record<AllergenLevel, BadgeLevel> = {
+		none: 1,
+		low: 1,
+		moderate: 2,
+		high: 3,
+		'very-high': 4,
+	}
+	const UV_LEVEL: Record<UvCategory, BadgeLevel> = { low: 1, moderate: 2, high: 3, 'very-high': 4, extreme: 5 }
+	/** Where each band of the US air quality index ends. */
+	const AQI_STOPS = [50, 100, 150, 200, 300, 500]
+	/** The hours the sparkline beside the reading draws. */
+	const TREND_HOURS = 24
+
+	interface Detail {
+		id: string
+		label: string
+		icon: IconName
+		value: string
+		/** What the figure is measured in, beside it and quieter. */
+		unit?: string
+		/** A level's word and step beside the figure: the UV index's category. */
+		level?: { label: string; level: BadgeLevel }
+		/** What the figure is, in a sentence: the hint beside the label. */
+		hint?: string
+	}
+
+	// A figure and its unit apart, the way a Stat sets them; `measure` is the two as one string, for a line of text.
+	const degrees = (celsius: number) => ({
+		value: $t('domains.weather.value.degrees', { values: { value: weather.temperature(celsius) } }),
+	})
+	const percent = (value: number) => ({ value: String(Math.round(value)), unit: '%' })
+	const figure = ({ value, unit }: Measure) => ({ value: String(value), unit: $t(`domains.weather.units.${unit}`) })
+	const measure = ({ value, unit }: Measure) =>
+		$t('domains.weather.value.measure', { values: { value, unit: $t(`domains.weather.units.${unit}`) } })
 
 	const now = $derived(weather.now)
+	const today = $derived(weather.today)
 	const headerIcon = $derived(now ? iconFor(now.condition, now.night) : iconFor('partly-cloudy'))
-	const lastGood = $derived(weather.lastGood ? formatTime(weather.lastGood, lang) : undefined)
-	const week = $derived<ListRowData[]>(
-		weather.week.map((day, i) => {
-			const weekday = formatWeekday(`${day.date}T12:00:00`, lang)
+	/** What the header's motif draws: the wind, the cloud and the rain as they read now. */
+	const field = $derived<SkyFieldParams | undefined>(
+		now
+			? {
+					windFrom: now.windDirection,
+					windSpeed: now.windSpeed,
+					windGust: now.windGust,
+					cloudCover: now.cloudCover,
+					precipitation: now.precipitation,
+				}
+			: undefined
+	)
+	/** What the motif shows, for its compass: the way the wind blows to, and the reading in a sentence. */
+	const wind = $derived.by(() => {
+		if (!now) return undefined
+		const { value, unit } = speed(now.windSpeed, settings.measurement)
+		const values = {
+			speed: value,
+			unit: $t(`domains.weather.units.${unit}`),
+			from: $t(`domains.weather.compass.${compass(now.windDirection)}`),
+			place: settings.home.label,
+		}
+		return {
+			bearing: (now.windDirection + 180) % 360,
+			label: $t('domains.weather.motif.wind', { values }),
+			hint: $t('domains.weather.motif.hint', { values }),
+		}
+	})
+	// The sun moves with the clock, not with the forecast: the minute is read here and the readings stay the mirror's.
+	const MINUTE_MS = 60 * 1000
+	let clock = $state(Date.now())
+	$effect(() => {
+		const tick = setInterval(() => (clock = Date.now()), MINUTE_MS)
+		return () => clearInterval(tick)
+	})
+	/** The sun on its day: the two times as they are written, and the sentence that says where it stands. */
+	const sun = $derived.by(() => {
+		if (!weather.sun) return undefined
+		const { sunrise, sunset } = weather.sun
+		const values = { sunrise: formatTime(sunrise, format), sunset: formatTime(sunset, format) }
+		const state = clock < sunrise ? 'before' : clock < sunset ? 'up' : 'after'
+		return { sunrise, sunset, now: clock, labels: values, label: $t(`domains.weather.sunArc.${state}`, { values }) }
+	})
+	const lastGood = $derived(weather.lastGood ? formatTime(weather.lastGood, format) : undefined)
+	/** Each day of the calendar week with everything the forecast says of it; a day without a reading has no facts. */
+	const week = $derived(
+		weather.week.map(({ date, today, day }) => {
+			const facts: { id: string; icon: IconName; name: string; value: string }[] = []
+			if (day) {
+				const amount = measure(rainfall(day.precipAmount, settings.measurement))
+				facts.push({
+					id: 'rain',
+					icon: 'umbrella',
+					name: $t('domains.weather.fact.rain'),
+					// a day that has passed has no chance left to give, only what fell
+					value:
+						day.precipChance == null
+							? amount
+							: $t('domains.weather.factValue.rain', { values: { chance: Math.round(day.precipChance), amount } }),
+				})
+				if (day.uvMax != null) {
+					facts.push({
+						id: 'uv',
+						icon: 'sun',
+						name: $t('domains.weather.fact.uv'),
+						value: $t('domains.weather.factValue.uv', { values: { value: Math.round(day.uvMax) } }),
+					})
+				}
+				if (day.windMax != null) {
+					facts.push({
+						id: 'wind',
+						icon: 'wind',
+						name: $t('domains.weather.fact.wind'),
+						value: measure(speed(day.windMax, settings.measurement)),
+					})
+				}
+				if (day.sunrise != null && day.sunset != null) {
+					facts.push({
+						id: 'light',
+						icon: 'sunrise',
+						name: $t('domains.weather.fact.light'),
+						value: $t('domains.weather.factValue.light', {
+							values: { from: formatTime(day.sunrise, format), to: formatTime(day.sunset, format) },
+						}),
+					})
+				}
+			}
 			return {
-				id: day.id,
-				primary: i === 0 ? $t('domains.weather.today', { values: { day: weekday } }) : weekday,
-				secondary: conditionLabel(s, day.condition, false),
-				icon: iconFor(day.condition),
-				meta: `${weather.temperature(day.hi)}° / ${weather.temperature(day.lo)}°`,
-				metaWarn: i === 0,
+				id: date,
+				name: formatWeekdayOf(date, lang, 'short'),
+				full: formatWeekdayOf(date, lang),
+				date: dayOfMonth(date),
+				today,
+				day,
+				facts,
 			}
 		})
 	)
+	const details = $derived.by<Detail[]>(() => {
+		if (!now) return []
+		const wind = speed(now.windSpeed, settings.measurement)
+		const uv = today?.uvMax ?? now.uv
+		return [
+			{
+				id: 'feels',
+				label: $t('domains.weather.details.feelsLike'),
+				icon: 'thermometer',
+				...degrees(now.feelsLike),
+				hint: $t('domains.weather.hint.feelsLike'),
+			},
+			{
+				id: 'humidity',
+				label: $t('domains.weather.details.humidity'),
+				icon: 'droplets',
+				...percent(now.humidity),
+				hint: $t('domains.weather.hint.humidity'),
+			},
+			{
+				id: 'dew',
+				label: $t('domains.weather.details.dewPoint'),
+				icon: 'droplet',
+				...degrees(now.dewPoint),
+				hint: $t('domains.weather.hint.dewPoint'),
+			},
+			{
+				id: 'wind',
+				label: $t('domains.weather.details.wind'),
+				icon: 'wind',
+				hint: $t('domains.weather.hint.wind'),
+				value: String(wind.value),
+				unit: `${$t(`domains.weather.units.${wind.unit}`)} ${$t(`domains.weather.compass.${compass(now.windDirection)}`)}`,
+			},
+			{
+				id: 'gust',
+				label: $t('domains.weather.details.gusts'),
+				icon: 'wind',
+				...figure(speed(now.windGust, settings.measurement)),
+				hint: $t('domains.weather.hint.gusts'),
+			},
+			{
+				id: 'uv',
+				label: $t('domains.weather.details.uv'),
+				icon: 'sun',
+				value: String(Math.round(uv)),
+				level: { label: $t(`domains.weather.uvCategory.${uvCategory(uv)}`), level: UV_LEVEL[uvCategory(uv)] },
+				hint: $t('domains.weather.hint.uv'),
+			},
+			{
+				id: 'rain',
+				label: $t('domains.weather.details.rainfall'),
+				icon: 'umbrella',
+				...figure(rainfall(today?.precipAmount ?? now.precipitation, settings.measurement)),
+				hint: $t('domains.weather.hint.rainfall'),
+			},
+			{
+				id: 'cloud',
+				label: $t('domains.weather.details.cloudCover'),
+				icon: 'cloud',
+				...percent(now.cloudCover),
+				hint: $t('domains.weather.hint.cloudCover'),
+			},
+			{
+				id: 'pressure',
+				label: $t('domains.weather.details.pressure'),
+				icon: 'gauge',
+				...figure(pressure(now.pressure, settings.measurement)),
+				hint: $t('domains.weather.hint.pressure'),
+			},
+			{
+				id: 'visibility',
+				label: $t('domains.weather.details.visibility'),
+				icon: 'eye',
+				...figure(distance(now.visibility, settings.measurement)),
+				hint: $t('domains.weather.hint.visibility'),
+			},
+		]
+	})
+
+	const air = $derived(weather.airQuality)
+	/** The US index where there is one, the European otherwise. */
+	const airIndex = $derived(
+		air.data?.usAqi != null
+			? { value: air.data.usAqi, unit: $t('domains.weather.airQuality.usAqi'), category: airCategory(air.data.usAqi) }
+			: air.data?.europeanAqi != null
+				? { value: air.data.europeanAqi, unit: $t('domains.weather.airQuality.europeanAqi'), category: undefined }
+				: undefined
+	)
+	const pollutants = $derived(
+		(['pm25', 'pm10', 'ozone', 'no2'] as const).flatMap((id) => {
+			const value = air.data?.[id]
+			if (value == null) return []
+			return [{ id, label: $t(`domains.weather.airQuality.${id}`), value, hint: $t(`domains.weather.hint.${id}`) }]
+		})
+	)
+	/** An alert in three lines: what it is, when it holds, and who issued it when. */
+	const notices = $derived(
+		weather.alerts.map((alert: WeatherAlert) => {
+			const start = alert.onset ? formatMoment(alert.onset, format) : undefined
+			const end = alert.ends ? formatMoment(alert.ends, format) : undefined
+			const issued = alert.issued ? formatMoment(alert.issued, format) : undefined
+			return {
+				id: alert.id,
+				tone: alert.severity === 'extreme' || alert.severity === 'severe' ? ('danger' as const) : ('warning' as const),
+				title: alert.event || alert.headline,
+				detail:
+					start && end
+						? $t('domains.weather.alert.from', { values: { start, end } })
+						: end
+							? $t('domains.weather.alert.until', { values: { end } })
+							: start
+								? $t('domains.weather.alert.starts', { values: { start } })
+								: alert.event
+									? alert.headline
+									: undefined,
+				meta: !issued
+					? undefined
+					: alert.sender
+						? $t('domains.weather.alert.issued', { values: { time: issued, sender: alert.sender } })
+						: $t('domains.weather.alert.issuedAt', { values: { time: issued } }),
+			}
+		})
+	)
+	// Dismissing: an alert leaves with its Breeze and is taken from the page once that has played. With the last one
+	// the panel closes instead, and it is the button that leaves with the Breeze, taking the alerts with it.
+	let going = $state<string[]>([])
+	let buttonLeaving = $state(false)
+
+	function ondismiss(id: string) {
+		going = [...going, id]
+		if (going.length < notices.length) return
+		alertsOpen = false
+		buttonLeaving = true
+		// the button is about to leave the page, so the focus goes to the control beside it
+		anchor?.querySelector('button')?.focus()
+	}
+	function ondismissed(id: string) {
+		if (buttonLeaving) return
+		going = going.filter((other) => other !== id)
+		void weather.dismissAlert(id)
+	}
+	function onbuttongone() {
+		for (const id of going) void weather.dismissAlert(id)
+		going = []
+		buttonLeaving = false
+	}
+	/** The button takes the colour of the gravest alert behind it. */
+	const gravest = $derived(notices.some((notice) => notice.tone === 'danger') ? 'danger' : 'warning')
+	const about = (name: string) => $t('domains.weather.hint.about', { values: { name } })
+	/** The hours of the day the chart names: the rest are ticks without words, so the names never crowd. */
+	const NAMED_EVERY = 6
+	/**
+	 * The temperature over the coming hours, in the owner's units and on their clock: the day's shape. `label` is the
+	 * hour for the sentence; `tick` is what is written under the chart, the round hours only.
+	 */
+	const trend = $derived(
+		(weather.forecast?.hours ?? []).slice(0, TREND_HOURS).map((hour) => {
+			const label = formatHour(hour.time, format)
+			return {
+				temp: weather.temperature(hour.temp),
+				label,
+				tick: hourOfDay(hour.time, weather.timeZone) % NAMED_EVERY === 0 ? label : '',
+			}
+		})
+	)
+	const light = $derived<{ id: string; label: string; icon: IconName; value: string }[]>(
+		weather.sun
+			? [
+					{
+						id: 'sunrise',
+						label: $t('domains.weather.sunrise'),
+						icon: 'sunrise',
+						value: formatTime(weather.sun.sunrise, format),
+					},
+					{
+						id: 'sunset',
+						label: $t('domains.weather.sunset'),
+						icon: 'sunset',
+						value: formatTime(weather.sun.sunset, format),
+					},
+					{
+						id: 'golden',
+						label: $t('domains.weather.goldenHour'),
+						icon: 'sun-medium',
+						value: formatTime(weather.sun.goldenHour, format),
+					},
+				]
+			: []
+	)
+	const allergens = $derived(weather.allergens)
+	const attribution = $derived(weather.attribution)
+	const mark = $derived(attribution?.mark?.[settings.resolvedTheme])
+	/** Each source with the glyph of what it gives; a provider's own mark takes the forecast's place when it has one. */
+	const sources = $derived.by(() => {
+		const list: { id: string; icon: IconName; text: string }[] = []
+		if (attribution && !mark) {
+			list.push({
+				id: 'forecast',
+				icon: 'cloud-sun',
+				text: $t('domains.weather.sources.forecast', { values: { name: attribution.name } }),
+			})
+		}
+		if (air.status === 'ok' && air.source) {
+			list.push({
+				id: 'air',
+				icon: 'wind',
+				text: $t('domains.weather.sources.airQuality', { values: { name: air.source } }),
+			})
+		}
+		if (allergens.status === 'ok' && allergens.source) {
+			list.push({
+				id: 'allergens',
+				icon: 'flower-2',
+				text: $t('domains.weather.sources.allergens', { values: { name: allergens.source } }),
+			})
+		}
+		if (weather.alerts.length) {
+			list.push({ id: 'alerts', icon: 'triangle-alert', text: $t('domains.weather.sources.alerts') })
+		}
+		return list
+	})
 </script>
 
 <div class="page">
 	<PageHeader name={$t('domains.weather.name')} subtitle={$t('domains.weather.subtitle')} icon={headerIcon}>
+		<!-- the page's one live thing: the wind as it reads now -->
+		{#snippet motif()}
+			{#if field}<Sketch sketch={skyField} params={field} />{/if}
+		{/snippet}
+		<!-- which way the streaks run, north up: a compass and nothing written -->
+		{#snippet legend()}
+			{#if wind}<Compass bearing={wind.bearing} label={wind.label} tooltip={wind.hint} />{/if}
+		{/snippet}
 		{#snippet filters()}
 			<span class="anchor" bind:this={anchor}>
 				<Chip
@@ -65,7 +518,48 @@
 					onclick={() => (open = !open)}
 				/>
 			</span>
-			<Menu bind:open {anchor} align="start" label={$t('domains.weather.location')} items={places} />
+			<Menu
+				bind:open
+				{anchor}
+				align="start"
+				label={$t('domains.weather.location')}
+				items={places}
+				onselect={onlocation}
+			/>
+			<!-- the alerts wait behind a button that is there only while one is active: each says what it is first,
+			     when it holds beneath -->
+			{#if notices.length}
+				<span
+					class={['anchor', 'alerts', `alerts-${gravest}`, { 'alerts-leaving': buttonLeaving }]}
+					bind:this={alertsAnchor}
+				>
+					{#if buttonLeaving}<Breeze onend={onbuttongone} />{/if}
+					<IconButton
+						icon="triangle-alert"
+						label={$t('domains.weather.alerts.label')}
+						count={notices.length}
+						tooltip
+						active={alertsOpen}
+						aria-haspopup="dialog"
+						aria-expanded={alertsOpen}
+						onclick={() => (alertsOpen = !alertsOpen)}
+					/>
+				</span>
+				<Popover bind:open={alertsOpen} anchor={alertsAnchor} align="start" label={$t('domains.weather.alerts.label')}>
+					<div class="alerts-list">
+						{#each notices as notice (notice.id)}
+							<Notice
+								tone={notice.tone}
+								title={notice.title}
+								detail={notice.detail}
+								meta={notice.meta}
+								ondismiss={() => ondismiss(notice.id)}
+								ondismissed={() => ondismissed(notice.id)}
+							/>
+						{/each}
+					</div>
+				</Popover>
+			{/if}
 		{/snippet}
 	</PageHeader>
 
@@ -73,79 +567,283 @@
 		{#if weather.offline}
 			<div class="area-error">
 				<InlineError
-					message={$t('domains.weather.offline.message')}
+					message={$t('domains.weather.offline.message', { values: { provider: weather.providerName } })}
 					lastGood={lastGood ? $t('domains.weather.offline.lastGood', { values: { time: lastGood } }) : undefined}
 					onretry={() => weather.refresh()}
 				/>
 			</div>
 		{/if}
+		{#if weather.fallbackFrom && attribution}
+			<div class="area-fallback">
+				<Banner
+					tone="info"
+					message={$t('domains.weather.fallback', {
+						values: { provider: providerFor(weather.fallbackFrom).name, fallback: attribution.name },
+					})}
+					action={{ label: s.retry, onclick: () => void weather.refresh() }}
+				/>
+			</div>
+		{/if}
 
-		{#if now && weather.sun}
-			<section class="now card" aria-labelledby="{uid}-now">
-				<h2 class="section-title" id="{uid}-now">{$t('domains.weather.now')}</h2>
-				<div class="now-row">
-					<SkyGlyph condition={now.condition} night={now.night} size="lg" class="now-glyph" />
-					<div class="now-text">
-						<Stat value="{weather.temperature(now.temp)}°" unit={conditionLabel(s, now.condition, now.night)} />
-						<p class="now-line">
-							<span class="mono">{$t('domains.weather.high', { values: { value: weather.temperature(now.hi) } })}</span>
-							<span class="mono">{$t('domains.weather.low', { values: { value: weather.temperature(now.lo) } })}</span>
-						</p>
-					</div>
+		{#if now}
+			<div class="cols cols-wide">
+				<div class="col col-main">
+					<section class="now card" aria-labelledby="{uid}-now">
+						<h2 class="section-title" id="{uid}-now">{$t('domains.weather.now')}</h2>
+						<div class="now-split">
+							<div class="now-row">
+								<SkyGlyph condition={now.condition} night={now.night} size="lg" class="now-glyph" />
+								<div class="now-text">
+									<Stat value="{weather.temperature(now.temp)}°" unit={conditionLabel(s, now.condition, now.night)} />
+									<p class="now-line">
+										<span class="mono">
+											{$t('domains.weather.high', { values: { value: weather.temperature(now.hi) } })}
+										</span>
+										<span class="mono">
+											{$t('domains.weather.low', { values: { value: weather.temperature(now.lo) } })}
+										</span>
+									</p>
+								</div>
+							</div>
+							{#if trend.length > 1}
+								<!-- the day's shape beside the reading: where the temperature goes over the coming hours -->
+								<div class="now-trend">
+									<TrendChart
+										step={10}
+										height={144}
+										values={trend.map((hour) => hour.temp)}
+										labels={trend.map((hour) => hour.tick)}
+										format={(value) => $t('domains.weather.value.degrees', { values: { value } })}
+										label={$t('domains.weather.trend.label', {
+											values: {
+												from: trend[0]?.label,
+												to: trend.at(-1)?.label,
+												low: Math.min(...trend.map((hour) => hour.temp)),
+												high: Math.max(...trend.map((hour) => hour.temp)),
+											},
+										})}
+									/>
+								</div>
+							{/if}
+							{#if sun}
+								<!-- and the light's: the sun on its wave, where the day has reached -->
+								<div class="now-sun">
+									<SunArc {...sun} height={144} />
+								</div>
+							{/if}
+						</div>
+					</section>
+
+					<section class="hours" aria-labelledby="{uid}-hours">
+						<h2 class="section-title" id="{uid}-hours">
+							{$t('domains.weather.hours')}
+							<IconButton
+								icon="info"
+								size="xs"
+								label={$t('domains.weather.hint.aboutHours')}
+								tooltip={$t('domains.weather.hint.hours')}
+							/>
+						</h2>
+						<!-- a scroll region is a tab stop so the keyboard reaches what it hides (axe scrollable-region-focusable) -->
+						<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+						<ol class="hours-list" tabindex="0" aria-label={$t('domains.weather.hoursStrip')}>
+							{#each weather.hours as hour (hour.time)}
+								<li class="hour" class:hour-wet={hour.precipChance >= 50}>
+									<span class="hour-time">{formatHour(hour.time, format)}</span>
+									<SkyGlyph condition={hour.condition} night={hour.night} size="md" class="hour-glyph" />
+									<span class="mono">{weather.temperature(hour.temp)}°</span>
+									<span class="hour-precip"
+										>{$t('domains.weather.precip', { values: { value: hour.precipChance } })}</span
+									>
+								</li>
+							{/each}
+						</ol>
+					</section>
+
+					<section class="details card" aria-labelledby="{uid}-details">
+						<h2 class="section-title" id="{uid}-details">{$t('domains.weather.details.title')}</h2>
+						<dl class="tiles">
+							{#each details as detail (detail.id)}
+								<div class="tile">
+									<dt>
+										<Icon name={detail.icon} size="sm" class="tile-icon" />
+										{detail.label}
+										{#if detail.hint}
+											<IconButton icon="info" size="xs" label={about(detail.label)} tooltip={detail.hint} />
+										{/if}
+									</dt>
+									<dd>
+										<Stat size="md" value={detail.value} unit={detail.unit} />
+										{#if detail.level}
+											<Badge kind="neutral" level={detail.level.level} label={detail.level.label} />
+										{/if}
+									</dd>
+								</div>
+							{/each}
+						</dl>
+					</section>
 				</div>
-			</section>
 
-			{#if weather.alerts.length}
-				<div class="alert">
-					{#each weather.alerts as alert (alert.id)}
-						<Banner
-							tone={alert.severity === 'extreme' || alert.severity === 'severe' ? 'danger' : 'warning'}
-							message={alert.headline}
-						/>
-					{/each}
+				<div class="col col-side">
+					{#if weather.sun}
+						<section class="sun card" aria-labelledby="{uid}-sun">
+							<h2 class="section-title" id="{uid}-sun">{$t('domains.weather.sunAndMoon')}</h2>
+							<dl class="light">
+								{#each light as row (row.id)}
+									<div class="light-row">
+										<dt><Icon name={row.icon} class="light-icon" />{row.label}</dt>
+										<dd class="mono">{row.value}</dd>
+									</div>
+								{/each}
+								<div class="light-row">
+									<dt><MoonGlyph cycle={weather.sun.moon.cycle} size="md" />{$t('domains.weather.moon')}</dt>
+									<dd>
+										{$t(`domains.weather.moonPhase.${weather.sun.moon.phase}`)}
+										<span class="quiet">
+											{$t('domains.weather.moonLit', { values: { percent: weather.sun.moon.illumination } })}
+										</span>
+									</dd>
+								</div>
+							</dl>
+						</section>
+					{/if}
+
+					<section class="air card" aria-labelledby="{uid}-air">
+						<h2 class="section-title" id="{uid}-air">{$t('domains.weather.airQuality.title')}</h2>
+						{#if airIndex}
+							<div class="air-row">
+								<Stat value={String(Math.round(airIndex.value))} unit={airIndex.unit} />
+								{#if airIndex.category}
+									<IconButton
+										icon="info"
+										size="xs"
+										label={about(airIndex.unit)}
+										tooltip={$t('domains.weather.hint.aqi')}
+									/>
+								{/if}
+								{#if airIndex.category}
+									<Badge
+										kind="neutral"
+										level={AIR_LEVEL[airIndex.category]}
+										label={$t(`domains.weather.airQuality.category.${airIndex.category}`)}
+									/>
+								{/if}
+							</div>
+							{#if airIndex.category}
+								<LevelScale
+									value={airIndex.value}
+									stops={AQI_STOPS}
+									label={$t('domains.weather.scale', {
+										values: {
+											name: airIndex.unit,
+											value: Math.round(airIndex.value),
+											category: $t(`domains.weather.airQuality.category.${airIndex.category}`),
+										},
+									})}
+								/>
+							{/if}
+							<dl class="fields pollutants">
+								{#each pollutants as pollutant (pollutant.id)}
+									<dt>
+										{pollutant.label}
+										<IconButton icon="info" size="xs" label={about(pollutant.label)} tooltip={pollutant.hint} />
+									</dt>
+									<dd><Stat size="sm" value={String(pollutant.value)} unit="µg/m³" /></dd>
+								{/each}
+							</dl>
+						{:else if air.status === 'failed'}
+							<p class="quiet">{$t('domains.weather.airQuality.failed', { values: { source: air.source ?? '' } })}</p>
+						{:else}
+							<p class="quiet">{$t('domains.weather.airQuality.unavailable')}</p>
+						{/if}
+					</section>
+
+					<section class="allergens card" aria-labelledby="{uid}-allergens">
+						<h2 class="section-title" id="{uid}-allergens">{$t('domains.weather.allergens.title')}</h2>
+						{#if allergens.data}
+							<dl class="fields">
+								{#each allergens.data.items as allergen (allergen.kind)}
+									<dt>{$t(`domains.weather.allergens.kind.${allergen.kind}`)}</dt>
+									<dd>
+										<Badge
+											kind="neutral"
+											level={ALLERGEN_LEVEL[allergen.level]}
+											label={$t(`domains.weather.allergens.level.${allergen.level}`)}
+										/>
+									</dd>
+								{/each}
+							</dl>
+						{:else if allergens.status === 'failed'}
+							<p class="quiet">
+								{$t('domains.weather.allergens.failed', { values: { source: allergens.source ?? '' } })}
+							</p>
+						{:else}
+							<p class="quiet">{$t('domains.weather.allergens.unavailable')}</p>
+						{/if}
+					</section>
 				</div>
-			{/if}
+			</div>
 
-			<section class="hours" aria-labelledby="{uid}-hours">
-				<h2 class="section-title" id="{uid}-hours">{$t('domains.weather.hours')}</h2>
+			<section class="week" aria-labelledby="{uid}-week">
+				<h2 class="section-title" id="{uid}-week">{$t('domains.weather.week')}</h2>
 				<!-- a scroll region is a tab stop so the keyboard reaches what it hides (axe scrollable-region-focusable) -->
 				<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-				<ol class="hours-list" tabindex="0" aria-label={$t('domains.weather.hoursStrip')}>
-					{#each weather.hours as hour (hour.id)}
-						<li class="hour" class:hour-wet={hour.precip >= 50}>
-							<span class="hour-time">{hour.time}</span>
-							<SkyGlyph condition={hour.condition} night={hour.night} size="md" class="hour-glyph" />
-							<span class="mono">{weather.temperature(hour.temp)}°</span>
-							<span class="hour-precip">{$t('domains.weather.precip', { values: { value: hour.precip } })}</span>
+				<ol class="days" tabindex="0" aria-label={$t('domains.weather.weekStrip')}>
+					{#each week as cell (cell.id)}
+						<li class="day" class:day-today={cell.today} aria-current={cell.today ? 'date' : undefined}>
+							<p class="day-head">
+								<span class="day-name" title={cell.full}>{cell.name}</span>
+								<span class="day-date">{cell.date}</span>
+								{#if cell.today}
+									<Badge kind="neutral" label={$t('domains.weather.todayMark')} />
+								{:else if cell.day?.observed}
+									<Badge kind="neutral" label={$t('domains.weather.observed')} />
+								{/if}
+							</p>
+							{#if cell.day}
+								<div class="day-sky">
+									<SkyGlyph condition={cell.day.condition} size="md" class="day-glyph" />
+									<span>{conditionLabel(s, cell.day.condition, false)}</span>
+								</div>
+								<Stat
+									size="md"
+									value="{weather.temperature(cell.day.hi)}°"
+									unit={$t('domains.weather.factValue.low', { values: { value: weather.temperature(cell.day.lo) } })}
+								/>
+								<ul class="day-facts">
+									{#each cell.facts as fact (fact.id)}
+										<li><Icon name={fact.icon} size="sm" label={fact.name} class="day-icon" />{fact.value}</li>
+									{/each}
+								</ul>
+							{:else}
+								<p class="quiet">{$t('domains.weather.noData')}</p>
+							{/if}
 						</li>
 					{/each}
 				</ol>
 			</section>
 
-			<div class="week">
-				<List header={$t('domains.weather.week')} rows={week} />
-			</div>
-
-			<section class="sun card" aria-labelledby="{uid}-sun">
-				<h2 class="section-title" id="{uid}-sun">{$t('domains.weather.sunAndMoon')}</h2>
-				<dl class="fields">
-					<dt>{$t('domains.weather.sunrise')}</dt>
-					<dd class="mono">{weather.sun.sunrise}</dd>
-					<dt>{$t('domains.weather.sunset')}</dt>
-					<dd class="mono">{weather.sun.sunset}</dd>
-					<dt>{$t('domains.weather.goldenHour')}</dt>
-					<dd class="mono">{weather.sun.goldenHour}</dd>
-					<dt>{$t('domains.weather.moon')}</dt>
-					<dd>
-						{$t('domains.weather.moonLine', {
-							values: {
-								phase: $t(`domains.weather.moonPhase.${weather.sun.moon.phase}`),
-								percent: weather.sun.moon.illumination,
-							},
-						})}
-					</dd>
-				</dl>
-			</section>
+			{#if attribution}
+				<footer class="sources" aria-label={$t('domains.weather.sources.label')}>
+					{#if mark}
+						<!-- a provider's own mark and legal link, where its terms require them (Apple's, D-57) -->
+						<img class="sources-mark" src={mark} alt={attribution.name} />
+						{#if attribution.legalUrl}
+							{@const legal = attribution.legalUrl}
+							<Button
+								variant="quiet"
+								size="md"
+								label={$t('domains.weather.sources.legal')}
+								iconRight="external-link"
+								onclick={() => void openExternal(legal)}
+							/>
+						{/if}
+					{/if}
+					{#each sources as source (source.id)}
+						<p class="source"><Icon name={source.icon} size="sm" class="source-icon" />{source.text}</p>
+					{/each}
+				</footer>
+			{/if}
 		{:else if weather.ready && !weather.loading}
 			<div class="area-empty">
 				<EmptyState title={$t('empty.weather.title')} text={$t('empty.weather.text')} />
@@ -154,57 +852,135 @@
 	</div>
 </div>
 
+<Sheet bind:open={finding} size="sm" label={$t('domains.weather.place.title')}>
+	{#snippet header()}
+		<h2 class="sheet-title">{$t('domains.weather.place.title')}</h2>
+	{/snippet}
+	<div class="finder">
+		<Field
+			label={$t('domains.weather.place.find')}
+			bind:value={query}
+			icon="search"
+			placeholder={$t('domains.weather.place.placeholder')}
+			helper={$t('domains.weather.place.helper')}
+			oninput={onquery}
+		/>
+		<div aria-live="polite">
+			{#if search === 'searching'}
+				<p class="quiet">{$t('domains.weather.place.searching')}</p>
+			{:else if search === 'failed'}
+				<p class="quiet">{$t('domains.weather.place.failed', { values: { source: 'Open-Meteo' } })}</p>
+			{:else if search === 'done' && !results.length}
+				<p class="quiet">{$t('domains.weather.place.none')}</p>
+			{/if}
+		</div>
+		{#if results.length}
+			<ul class="places" aria-label={$t('domains.weather.place.results')}>
+				{#each results as place (place.id)}
+					<li>
+						<Button
+							variant="quiet"
+							icon="map-pin"
+							label={place.region
+								? $t('domains.weather.place.result', { values: { name: place.name, region: place.region } })
+								: place.name}
+							onclick={() => choose(place)}
+						/>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</div>
+</Sheet>
+
 <style>
+	/* The page fills its region, so the sources keep to its foot with the room above them, not beneath: the page
+	   reaches down through the region's own bottom padding, leaving a breath above the status bar */
 	.page {
 		display: flex;
 		flex-direction: column;
-		padding-bottom: var(--space-8);
+		box-sizing: border-box;
+		min-height: 100%;
+		margin-bottom: calc(var(--space-3) - var(--ed-gutter));
 	}
 	.anchor {
 		display: inline-flex;
 	}
-	/* The forecast on the left, the alerts and the light on the right */
-	.body {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) var(--sheet-sm);
-		grid-template-areas: 'error error' 'now alert' 'hours sun' 'week sun' 'week .';
-		gap: var(--space-6);
-		align-items: start;
-		padding: 0 var(--ed-gutter);
+	/* Leaving: the button fades and draws in a little where it stands, and the Breeze rises beside it */
+	.alerts {
+		position: relative;
 	}
-	.area-error {
-		grid-area: error;
+	.alerts :global(.ed-icon-btn) {
+		transition:
+			opacity var(--ed-duration-settle) var(--ed-ease-out),
+			scale var(--ed-duration-settle) var(--ed-ease-out);
 	}
-	.area-empty {
-		grid-column: 1 / -1;
+	.alerts-leaving {
+		pointer-events: none;
 	}
-	.now {
-		grid-area: now;
+	.alerts-leaving :global(.ed-icon-btn) {
+		opacity: 0;
+		scale: 0.9;
 	}
-	.alert {
-		grid-area: alert;
+	.alerts-warning :global(.ed-icon-btn) {
+		color: var(--warning);
+	}
+	.alerts-danger :global(.ed-icon-btn) {
+		color: var(--danger);
+	}
+	.alerts-list {
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-2);
+		box-sizing: border-box;
+		width: var(--sheet-sm);
+		max-width: 100%;
+		padding: var(--space-2);
+	}
+	.body {
+		display: flex;
+		flex: 1 0 auto;
+		flex-direction: column;
+		gap: var(--space-6);
+		padding: 0 var(--ed-gutter);
+	}
+	/* Two columns that fill on their own and end on one line: the forecast on the left, and the light, the air and
+	   the allergens on the right. On a phone they are one column, in reading order. */
+	.cols {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-6);
 		min-width: 0;
 	}
-	.hours {
-		grid-area: hours;
+	.cols-wide {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) var(--sheet-sm);
+	}
+	.col {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-6);
 		min-width: 0;
 	}
-	.week {
-		grid-area: week;
+	.cols-wide .col > :last-child {
+		flex: 1 0 auto;
 	}
-	.sun {
-		grid-area: sun;
+	.area-fallback {
+		min-width: 0;
 	}
-	/* An alert reads whole: the strip wraps its sentence rather than trimming it */
-	.alert :global(.ed-banner-inline) {
+	.area-empty {
+		display: flex;
+		flex: 1 0 auto;
+		flex-direction: column;
+		grid-column: 1 / -1;
+	}
+	/* An alert and the note read whole: the strip wraps its sentence rather than trimming it */
+	.area-fallback :global(.ed-banner-inline) {
 		display: flex;
 		width: 100%;
 		padding-block: var(--space-1);
 	}
-	.alert :global(.ed-banner-message) {
+	.area-fallback :global(.ed-banner-message) {
 		white-space: normal;
 	}
 
@@ -220,14 +996,29 @@
 		box-shadow: var(--shadow-card);
 	}
 	.section-title {
+		display: flex;
+		align-items: center;
+		gap: var(--space-1);
 		margin: 0;
 		font: var(--ed-t-title);
 		letter-spacing: var(--ed-t-title-tracking);
 		font-variation-settings: var(--ed-t-title-opsz);
 		color: var(--text-secondary);
 	}
-	/* Now: the glyph large beside the temperature, the day's range beneath it */
+	/* Now: the reading on one side, the day's shape on the other; they stack when the card is narrow */
+	.now-split {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--space-4) var(--space-8);
+	}
+	.now-trend,
+	.now-sun {
+		flex: 1 1 calc(var(--space-8) * 8);
+		min-width: 0;
+	}
 	.now-row {
+		flex: 0 1 auto;
 		display: flex;
 		align-items: center;
 		gap: var(--space-4);
@@ -265,34 +1056,37 @@
 		flex-direction: column;
 		gap: var(--space-2);
 	}
+	/* One surface, the hours divided by hairlines: a strip to read along, not a row of separate tiles */
 	.hours-list {
 		display: flex;
-		gap: var(--space-2);
 		margin: 0;
-		padding: 0 0 var(--space-1);
+		padding: 0;
 		list-style: none;
 		overflow-x: auto;
 		scroll-snap-type: x proximity;
 		scrollbar-width: thin;
+		border: 1px solid var(--ed-card-border);
+		border-radius: var(--ed-radius-card);
+		background: var(--surface-1);
+		box-shadow: var(--shadow-card);
 	}
 	.hours-list:focus-visible {
 		outline: 2px solid transparent;
 		box-shadow: var(--focus-ring);
-		border-radius: var(--ed-radius-control);
 	}
 	.hour {
 		display: flex;
-		flex: 0 0 calc(var(--space-8) + var(--space-6));
+		flex: 1 0 calc(var(--space-8) + var(--space-6));
 		flex-direction: column;
 		align-items: center;
-		gap: var(--space-1);
+		gap: var(--space-2);
 		box-sizing: border-box;
 		min-width: 0;
-		padding: var(--space-2) var(--space-1);
-		border: 1px solid var(--ed-card-border);
-		border-radius: var(--ed-radius-control);
-		background: var(--surface-1);
+		padding: var(--space-3) var(--space-1);
 		scroll-snap-align: start;
+	}
+	.hour + .hour {
+		border-inline-start: 1px solid var(--stroke-subtle);
 	}
 	.hour-wet {
 		background: var(--surface-2);
@@ -306,6 +1100,225 @@
 		letter-spacing: var(--ed-t-data-sm-tracking);
 		font-variant-numeric: tabular-nums;
 		color: var(--text-secondary);
+	}
+
+	/* Details: tiles that fill the row, a label over its figure */
+	.tiles {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(calc(var(--space-8) * 5), 1fr));
+		gap: var(--space-4);
+		margin: 0;
+	}
+	.tile {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-1);
+		min-width: 0;
+	}
+	.tile :global(.tile-icon) {
+		margin-inline-end: var(--space-1);
+	}
+	.tile :global(.tile-icon),
+	.light :global(.light-icon) {
+		flex: none;
+		color: var(--text-secondary);
+	}
+	.tile dt,
+	.fields dt {
+		display: flex;
+		align-items: center;
+		gap: 2px;
+		min-height: var(--space-6);
+		white-space: nowrap;
+	}
+	.tile dt {
+		font: var(--ed-t-body-sm);
+		letter-spacing: var(--ed-t-body-sm-tracking);
+		color: var(--text-secondary);
+	}
+	.tile dd {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--space-2);
+		margin: 0;
+		padding-inline-start: calc(var(--space-4) + var(--space-1));
+	}
+	.quiet,
+	.source {
+		margin: 0 0 var(--space-4);
+		font: var(--ed-t-body-sm);
+		letter-spacing: var(--ed-t-body-sm-tracking);
+		color: var(--text-secondary);
+	}
+	/* Sun and moon: a glyph, its name, its time */
+	.light {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-3);
+		margin: 0;
+	}
+	.light-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-3);
+	}
+	.light dt {
+		display: flex;
+		align-items: center;
+		gap: var(--space-3);
+		font: var(--ed-t-body-sm);
+		letter-spacing: var(--ed-t-body-sm-tracking);
+		color: var(--text-secondary);
+	}
+	.light dd {
+		margin: 0;
+		font: var(--ed-t-body);
+		letter-spacing: var(--ed-t-body-tracking);
+	}
+	.source {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-2);
+	}
+	.source :global(.source-icon) {
+		flex: none;
+	}
+	.sheet-title {
+		margin: 0;
+		font: var(--ed-t-title-lg);
+		color: var(--text-primary);
+	}
+	.finder {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-4);
+	}
+	.places {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: var(--space-1);
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	/* The pollutants two abreast: a name and its figure, twice a row */
+	.fields.pollutants {
+		grid-template-columns: repeat(2, auto minmax(0, 1fr));
+		gap: var(--space-1) var(--space-3);
+	}
+	.air-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--space-3);
+	}
+	/* The sources close the page: pushed to its foot, a breath below the week */
+	.sources {
+		margin-top: auto;
+		padding-block: var(--space-6) 0;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--space-2) var(--space-6);
+	}
+	.sources-mark {
+		height: var(--space-4);
+		width: auto;
+	}
+
+	/* The week: one surface across the page, a day to a column, read along like the hours */
+	.week {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+		min-width: 0;
+	}
+	.days {
+		display: flex;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		overflow-x: auto;
+		scroll-snap-type: x proximity;
+		scrollbar-width: thin;
+		border: 1px solid var(--ed-card-border);
+		border-radius: var(--ed-radius-card);
+		background: var(--surface-1);
+		box-shadow: var(--shadow-card);
+	}
+	.days:focus-visible {
+		outline: 2px solid transparent;
+		box-shadow: var(--focus-ring);
+	}
+	.day {
+		display: flex;
+		flex: 1 0 calc(var(--space-8) * 4.5);
+		flex-direction: column;
+		gap: var(--space-2);
+		box-sizing: border-box;
+		min-width: 0;
+		padding: var(--space-3);
+		scroll-snap-align: start;
+	}
+	.day + .day {
+		border-inline-start: 1px solid var(--stroke-subtle);
+	}
+	.day-today {
+		background: var(--surface-2);
+	}
+	.day-head {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		margin: 0;
+		min-height: var(--space-6);
+		font: var(--ed-t-body);
+		letter-spacing: var(--ed-t-body-tracking);
+	}
+	.day-name {
+		font-weight: 600;
+	}
+	.day-date {
+		font: var(--ed-t-data-sm);
+		color: var(--text-secondary);
+	}
+	/* The day's mark, today or observed, keeps to the end of the line so the names stay in one column */
+	.day-head :global(.ed-badge) {
+		margin-inline-start: auto;
+	}
+	.day-sky {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		font: var(--ed-t-body-sm);
+		letter-spacing: var(--ed-t-body-sm-tracking);
+		color: var(--text-secondary);
+	}
+	.day :global(.day-glyph),
+	.day :global(.day-icon) {
+		flex: none;
+		color: var(--text-secondary);
+	}
+	.day-facts {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-1);
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		font: var(--ed-t-data-sm);
+		letter-spacing: var(--ed-t-data-sm-tracking);
+		font-variant-numeric: tabular-nums;
+		color: var(--text-secondary);
+	}
+	.day-facts li {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		white-space: nowrap;
 	}
 
 	.fields {

@@ -64,6 +64,17 @@ The identifier is still the placeholder (D-52); do the App ID steps after the st
 
 `scripts/write-ios-signing.mjs` rewrites the committed pbxproj on the runner to manual signing with that profile; the committed project keeps automatic signing for `yarn dev:ios`.
 
+## WeatherKit
+
+Sky can use Apple's WeatherKit through the native framework (D-57). The bridge and its commands are in every Apple build; what is missing until these steps are done is the entitlement, so WeatherKit refuses and Sky falls back to Open-Meteo with a note. Nothing else depends on them. The minimum systems are macOS 13 and iOS 16.
+
+1. In the developer portal, on the BBX team, open each App ID (the base identifier, `.dev` and `.staging`) and enable WeatherKit twice: under Capabilities and under App Services. With the identifier still a placeholder (D-52) this is done again when it changes.
+2. iOS: add `com.apple.developer.weatherkit` (`true`) to `src-tauri/gen/apple/eden-app_iOS/eden-app_iOS.entitlements`, regenerate the ad-hoc profile so it carries the capability, and update `IOS_PROVISIONING_PROFILE_BASE64`.
+3. macOS: add the same key to `src-tauri/Entitlements.plist`, create a Developer ID provisioning profile per App ID, and embed it through `bundle.macOS.files` (`embedded.provisionprofile`) in the channel overlay; CI needs the profile as a secret. The key must not be added before the profile exists: a restricted entitlement without a matching profile stops a signed app from launching.
+4. Verify on a signed build on a real Mac and a real iPhone: choose Apple Weather in Settings → Integrations and confirm the forecast and Apple's attribution. The simulator is not a reliable test.
+
+Not yet confirmed: that Apple grants WeatherKit to a Developer ID build outside the Mac App Store. If it does not, WeatherKit is iOS only until the distribution changes. An unsigned `yarn dev` build never has the entitlement and always shows the fallback.
+
 ## Android
 
 The Android project is not generated yet: `tauri android init` needs a JDK 17 or 21 and the owner's machine has 26 (`brew install --cask temurin@17`, then `export JAVA_HOME=$(/usr/libexec/java_home -v 17)` and the init command in `engineering/app-scaffold.md`). Until it exists the `android` job in the release workflow is `if: false` and the release treats it as skipped.

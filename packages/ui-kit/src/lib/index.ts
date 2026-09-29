@@ -34,6 +34,8 @@ export { default as Toggle } from './components/Toggle/Toggle.svelte'
 export { default as Skeleton } from './components/Skeleton/Skeleton.svelte'
 export { default as Stat } from './components/Stat/Stat.svelte'
 export { default as Sparkline } from './components/Sparkline/Sparkline.svelte'
+export { default as TrendChart } from './components/TrendChart/TrendChart.svelte'
+export { default as SunArc } from './components/SunArc/SunArc.svelte'
 
 // Brand
 export { default as DailyLine } from './components/DailyLine/DailyLine.svelte'
@@ -43,6 +45,13 @@ export { default as Breeze } from './components/Breeze/Breeze.svelte'
 export { default as SkyGlyph } from './components/SkyGlyph/SkyGlyph.svelte'
 export { CONDITIONS, iconFor, type SkyCondition } from './components/SkyGlyph/SkyGlyph.svelte'
 
+// Sketches: the canvas, what a sketch is made of, and the kit's own motifs
+export { default as Sketch } from './components/Sketch/Sketch.svelte'
+export type { SketchDefinition, SketchFrame } from './sketch/types.js'
+export { createRandom, type Random } from './sketch/random.js'
+export { createNoise, type Noise } from './sketch/noise.js'
+export { skyField, type SkyFieldParams } from './sketches/sky-field.js'
+
 // Actions and data
 export { default as Button } from './components/Button/Button.svelte'
 export { default as IconButton } from './components/IconButton/IconButton.svelte'
@@ -50,7 +59,10 @@ export { default as BackButton } from './components/BackButton/BackButton.svelte
 export { default as Chip } from './components/Chip/Chip.svelte'
 export type { ChipStatus, ChipTone } from './components/Chip/Chip.svelte'
 export { default as Badge } from './components/Badge/Badge.svelte'
-export type { BadgeKind } from './components/Badge/Badge.svelte'
+export type { BadgeKind, BadgeLevel } from './components/Badge/Badge.svelte'
+export { default as MoonGlyph } from './components/MoonGlyph/MoonGlyph.svelte'
+export { default as Compass } from './components/Compass/Compass.svelte'
+export { default as LevelScale } from './components/LevelScale/LevelScale.svelte'
 export { default as Stepper } from './components/Stepper/Stepper.svelte'
 export { default as Tooltip } from './components/Tooltip/Tooltip.svelte'
 export { tooltip } from './components/Tooltip/tooltip.js'
@@ -61,6 +73,8 @@ export { default as ToastHost } from './toast/ToastHost.svelte'
 export { default as InlineError } from './components/InlineError/InlineError.svelte'
 export { default as EmptyState } from './components/EmptyState/EmptyState.svelte'
 export { default as Banner } from './components/Banner/Banner.svelte'
+export { default as Notice } from './components/Notice/Notice.svelte'
+export type { NoticeTone } from './components/Notice/Notice.svelte'
 export type { BannerPlacement, BannerTone } from './components/Banner/Banner.svelte'
 
 // Inputs, data and the Garden

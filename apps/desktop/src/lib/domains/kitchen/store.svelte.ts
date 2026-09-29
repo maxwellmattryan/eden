@@ -2,7 +2,7 @@
 // `kitchen` document. Every write snapshots first and hands back an undo, so the page can show the undo toast in
 // place of a confirm sheet (D-12); each write also lands in the Garden's activity feed.
 import { load, save } from '@eden/shared/persistence'
-import { daysUntil, nowIso } from '../dates.js'
+import { daysUntil, nowIso } from '@eden/shared/dates'
 import { garden } from '../garden/store.svelte.js'
 import { parseGrocery, parseStock } from './parse.js'
 import { seedData } from './seed.js'

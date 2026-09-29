@@ -4,7 +4,7 @@ status: draft
 summary: One consistent fictional dataset for every mockup: an owner, facts, stock by location, a captured haul, recipes, a grocery list, ideas and projects, a calendar week with layers, a weather week, workouts and a weight series, places and listings, daily lines, notifications, feed and audit entries.
 read-this-if: You are drawing a mockup or seeding an empty state with sample data.
 depends-on: [product/domains/README]
-updated: 2026-09-28
+updated: 2026-09-29
 ---
 
 ## The owner
@@ -72,6 +72,8 @@ The Phase 1 default layout, one list the mockup and the app both read (`gardenLa
 
 Austin week: Mon 31/22 °C clear, Tue 32/23 partly cloudy, **Wed 29/21 showers from 16:00**, Thu 27/19 clear, Fri 28/18 clear, Sat 30/19 clear, Sun 31/20 clear. Today's hours from 08:00 (`skyHours`, temperature and chance of rain): 08:00 22° 0 %, 09:00 23° 0 %, 10:00 25° 0 %, 11:00 26° 5 %, 12:00 27° 10 %, 13:00 28° 15 %, 14:00 29° 25 % cloudy, 15:00 29° 40 % cloudy, 16:00 27° 70 % rain, 17:00 26° 75 % rain, 18:00 25° 65 % rain, 19:00 24° 45 % drizzle. Today: sunrise 07:22, sunset 19:14, golden hour 18:35, moon waning gibbous 84 %. Alert: none. "Good day for": an early run before the showers. Rain-before-plans nudge: the Wednesday 17:30 workout session.
 
+The week shown starts on Monday; with the week start on Sunday (D-58) it runs from Sunday 09-27 (30/21 partly cloudy, `skySundayBefore`) to Saturday. Days before Wednesday are observed, not forecast. Details at 07:40 (`skyDetails`, metric): feels like 23°, humidity 64 %, dew point 15°, wind 14 km/h from SSE gusting 27, pressure 1014 hPa, visibility 16 km, cloud cover 20 %, rainfall today 4.2 mm, UV index 7. Air quality (`skyAirQuality`): US index 42, good; PM2.5 8.4, PM10 17, ozone 61, NO₂ 12 µg/m³. Allergens (`skyAllergens`): tree pollen low, grass pollen moderate, ragweed pollen high, mold moderate. Sources: Open-Meteo for the forecast and the air quality, the National Weather Service for alerts. Each day's detail is in `skyWeekDetail` (the chance of rain and its depth, the highest UV index, the strongest wind, sunrise and sunset). The moon is at 0.63 of its cycle (`skyToday.moonCycle`), which draws the glyph. Changing home, a search for "Austin" finds Austin in Texas, Minnesota and Nevada (`skyPlaceResults`).
+
 ## Almanac week
 
 Layers on: local, Google "Work" (T1), Google "Family" (T2, greyed for the Gardener), tasks, workout sessions, shop day, US and Japan holidays, sun and moon, weather.
@@ -110,7 +112,7 @@ Audit entry: 09-30 07:31, surface Hearth chat, model claude-sonnet, read `stock-
 
 ## Japanese screenshots
 
-Sidebar: 今日, 庭, 台所, 工房, 空, 暦, 活力, 聖域, 野原, 庭師, 設定. The daily line in Japanese: 「足るを知る」.
+Sidebar: 今日, 庭, 台所, 空, 工房, 暦, 活力, 聖域, 野原, 庭師, 設定. The daily line in Japanese: 「足るを知る」.
 
 ## Mirror in code
 

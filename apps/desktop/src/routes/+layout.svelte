@@ -14,6 +14,7 @@
 		ToastHost,
 		UiKitProvider,
 		domainGlyph,
+		iconFor,
 		type SidebarEntry,
 	} from '@eden/ui-kit'
 	import { checkForUpdate } from '@eden/shared/api/updater'
@@ -21,22 +22,48 @@
 	import { settings } from '@eden/shared/settings'
 	import CrashScreen from '$lib/components/CrashScreen.svelte'
 	import { manifests } from '$lib/domains'
-	import { weather } from '$lib/domains/weather/store.svelte'
-	import { formatTime } from '$lib/domains/dates'
+	import { weather } from '@eden/shared/weather'
+	import { formatTime } from '@eden/shared/dates'
+	import { detectOs, formatShortcut } from '@eden/shared/shortcuts'
 	import { useGlobalErrorHandler } from '$lib/hooks/useGlobalErrorHandler'
 	import SettingsSheet from '$lib/settings/SettingsSheet.svelte'
 	import { settingsUi } from '$lib/settings/settings-ui.svelte'
 
 	let { children } = $props()
 
-	const UPDATE_INTERVAL = 60 * 60 * 1000
+	// Shortcuts are written for the OS the window runs on, and not at all on mobile.
+	const os = detectOs(navigator.userAgent)
+	const keys = (key: string) => formatShortcut(key, { os, platform: 'desktop' })
 
-	// Today, Garden, then the enabled domains from their manifests, each its own group under a rule (D-55); the owner's
-	// order arrives with the Domains tab.
+	const UPDATE_INTERVAL = 60 * 60 * 1000
+	/** How often the shell asks the weather store whether its forecast is stale, so the sidebar glyph keeps up. */
+	const WEATHER_INTERVAL = 10 * 60 * 1000
+	const format = $derived({ lang: $locale ?? 'en', clock: settings.clock })
+	/** Sky's times are the place's (D-58). */
+	const skyFormat = $derived({ ...format, timeZone: weather.timeZone })
+
+	// Today; Garden, Gardener and Toolbench; then the enabled domains from their manifests, each group under a rule
+	// (D-64); the owner's order arrives with the Domains tab. The ⌘ positions count the places only: the Gardener has
+	// its own key.
+	const domains = $derived(manifests.filter((m) => m.id !== 'toolbench'))
+	const toolbench = $derived(manifests.filter((m) => m.id === 'toolbench'))
 	const hrefs = {
 		today: resolve('/today'),
 		garden: resolve('/garden'),
 	} as const
+
+	const position = $derived(
+		new Map(['today', 'garden', ...[...toolbench, ...domains].map((m) => m.id)].map((id, i) => [id, i + 1]))
+	)
+	const entry = (manifest: (typeof manifests)[number]): SidebarEntry => ({
+		id: manifest.id,
+		name: $t(manifest.name),
+		subtitle: $t(manifest.subtitle),
+		// Sky's glyph is live: it follows the current conditions (weather.md).
+		icon: manifest.id === 'weather' && weather.now ? iconFor(weather.now.condition, weather.now.night) : manifest.glyph,
+		shortcut: keys(String(position.get(manifest.id))),
+		href: manifest.routes.href,
+	})
 
 	const groups = $derived<SidebarEntry[][]>([
 		[
@@ -45,7 +72,7 @@
 				name: $t('shell.today'),
 				subtitle: $t('shell.todaySubtitle'),
 				icon: domainGlyph('today'),
-				shortcut: '⌘1',
+				shortcut: keys('1'),
 				href: hrefs.today,
 			},
 		],
@@ -55,32 +82,30 @@
 				name: $t('shell.garden'),
 				subtitle: $t('shell.gardenSubtitle'),
 				icon: domainGlyph('garden'),
-				shortcut: '⌘2',
+				shortcut: keys('2'),
 				href: hrefs.garden,
 			},
+			{
+				id: 'gardener',
+				name: $t('shell.gardener'),
+				subtitle: $t('shell.gardenerSubtitle'),
+				icon: domainGlyph('gardener'),
+				shortcut: keys('G'),
+			},
+			...toolbench.map(entry),
 		],
-		manifests.map((manifest, index) => ({
-			id: manifest.id,
-			name: $t(manifest.name),
-			subtitle: $t(manifest.subtitle),
-			icon: manifest.glyph,
-			shortcut: `⌘${index + 3}`,
-			href: manifest.routes.href,
-		})),
+		...(domains.length ? [domains.map(entry)] : []),
 	])
-	const items = $derived(groups.flat())
+	/** The places, in ⌘ order. */
+	const items = $derived(groups.flat().filter((item) => item.href))
 	const pinned = $derived<SidebarEntry[]>([
-		{
-			id: 'gardener',
-			name: $t('shell.gardener'),
-			subtitle: $t('shell.gardenerSubtitle'),
-			icon: domainGlyph('gardener'),
-		},
 		{
 			id: 'settings',
 			name: $t('shell.settings'),
 			subtitle: $t('shell.settingsSubtitle'),
 			icon: domainGlyph('settings'),
+			shortcut: keys(','),
+			action: true,
 		},
 	])
 	const current = $derived(page.route.id?.split('/')[1] || 'garden')
@@ -91,7 +116,7 @@
 		weather.offline && weather.lastGood
 			? {
 					message: $t('domains.weather.offline.banner', {
-						values: { time: formatTime(weather.lastGood, $locale ?? 'en') },
+						values: { time: formatTime(weather.lastGood, skyFormat) },
 					}),
 				}
 			: undefined
@@ -135,8 +160,11 @@
 			document.getElementById('splash')?.remove()
 			checkForUpdate().catch(() => null)
 			timer = setInterval(() => checkForUpdate().catch(() => null), UPDATE_INTERVAL)
+			void weather.load().catch(() => null)
 		})()
+		const skyTimer = setInterval(() => void weather.load().catch(() => null), WEATHER_INTERVAL)
 		return () => {
+			clearInterval(skyTimer)
 			cleanupErrors()
 			settings.dispose()
 			if (timer) clearInterval(timer)
@@ -187,10 +215,15 @@
 		grid-row: 1;
 		grid-column: 2;
 		overflow: auto;
-		padding: var(--ed-gutter);
+		display: flex;
+		flex-direction: column;
+		padding: var(--ed-gutter) var(--space-6);
 	}
+	/* The arrow is centred over the page header's glyph: each page insets itself by the gutter, and the arrow's box
+	   is wider than that glyph by the ring around it */
 	.content-back {
 		min-height: var(--ed-control);
+		padding-left: calc(var(--ed-gutter) - (var(--ed-control) - var(--icon-lg)) / 2);
 	}
 	:global(.bar) {
 		grid-row: 2;

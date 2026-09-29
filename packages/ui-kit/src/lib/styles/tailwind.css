@@ -46,6 +46,14 @@
 	--color-chart-axis: var(--chart-axis);
 	--color-chart-grid: var(--chart-grid);
 	--color-chart-label: var(--chart-label);
+	--color-level-1: var(--level-1);
+	--color-level-2: var(--level-2);
+	--color-level-3: var(--level-3);
+	--color-level-4: var(--level-4);
+	--color-level-5: var(--level-5);
+	--color-level-6: var(--level-6);
+	--color-moon-lit: var(--moon-lit);
+	--color-moon-shade: var(--moon-shade);
 	--color-brand: var(--brand-primary);
 	--font-display: var(--ed-font-display);
 	--font-sans: var(--ed-font-sans);
@@ -98,6 +106,9 @@
 	--text-data-lg: 28px;
 	--text-data-lg--line-height: 1.15;
 	--text-data-lg--font-weight: 500;
+	--text-data-md: 18px;
+	--text-data-md--line-height: 1.2;
+	--text-data-md--font-weight: 500;
 	--text-data: 14px;
 	--text-data--line-height: 21px;
 	--text-data--font-weight: 400;

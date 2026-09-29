@@ -44,7 +44,7 @@
 	}}
 />
 
-<!-- the nav ground and the current colours from the brand dial, with the leaf bar in the gutter (0 wide at plain) -->
+<!-- the nav ground and the current colours from the brand dial, with the leaf bar in the gutter at every level -->
 <Story name="Current" args={{ current: true }} {template} />
 
 <Story name="With subtitle" args={{ showSubtitle: true, current: true }} {template} />

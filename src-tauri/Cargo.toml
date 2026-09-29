@@ -30,6 +30,11 @@ devtools = ["tauri/devtools"]
 [build-dependencies]
 tauri-build = { version = "2.7", features = [] }
 
+# The linker for the Swift WeatherKit bridge (D-57), on Apple hosts only: build.rs links the package when the target is
+# macOS or iOS and does nothing anywhere else. Already in the tree through Tauri.
+[target.'cfg(target_vendor = "apple")'.build-dependencies]
+swift-rs = { version = "1.0", features = ["build"] }
+
 [dependencies]
 # 2.11 floor: `Builder::on_web_content_process_terminate` (webview crash recovery) landed in 2.11.
 tauri = { version = "2.12", features = [] }

@@ -5,3 +5,9 @@
 @import '@eden/ui-kit/base.css';
 @import '@eden/ui-kit/tailwind.css';
 @source '../../../packages/ui-kit/src/lib';
+
+/* The app is a fixed shell, not a page: no rubber-band bounce on the root scroller (inner scrollers keep theirs). */
+html,
+body {
+	overscroll-behavior: none;
+}

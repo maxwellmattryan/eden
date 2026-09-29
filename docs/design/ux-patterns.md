@@ -4,7 +4,7 @@ status: draft
 summary: The reusable interaction patterns every screen is built from: navigation, page anatomy, lists and cards, forms and quick-add, the Quick Log sheet, the Capture verification sheet, states, confirmation and risk patterns, Gardener surfaces, notifications, widgets, context menus, mobile adaptations, keyboard and focus.
 read-this-if: You are designing a screen or a component and want to reuse what exists.
 depends-on: [visual-language, product/substrate/shell, product/substrate/grants, product/substrate/ai]
-updated: 2026-09-28
+updated: 2026-09-29
 ---
 
 ## Navigation
@@ -13,7 +13,7 @@ The sidebar for domains, ⌘K for everything, a history stack with a quiet back 
 
 ## Page anatomy
 
-Header: the domain glyph, the themed name with its subtitle in `--text-tertiary`, the primary action on the right, a filter row beneath when the page is a list. Content: a list or grid on the left and a detail pane on the right on wide screens; the detail becomes a pushed view below 1100 pixels. Footer: none; the status bar is global.
+Header: the domain glyph, the themed name with its subtitle in `--text-tertiary`, the primary action on the right, a filter row beneath when the page is a list. The top right is also where a page's notices sit: what the owner should know before reading the page, such as a weather alert, each with what it is first, what it means beneath, and who said so quietly. Content: a list or grid on the left and a detail pane on the right on wide screens; the detail becomes a pushed view below 1100 pixels. Footer: none; the status bar is global.
 
 ## Lists, tables, cards
 

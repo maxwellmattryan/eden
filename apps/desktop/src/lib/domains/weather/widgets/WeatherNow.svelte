@@ -2,12 +2,13 @@
 	// The weather-now tile: the current reading, the same one the Sky page's Now block shows; offline, when it is from.
 	import { SkyGlyph, Stat, useStrings } from '@eden/ui-kit'
 	import { locale, t } from '@eden/shared/i18n'
-	import { formatTime } from '../../dates'
-	import { conditionLabel } from '../conditions'
-	import { weather } from '../store.svelte'
+	import { settings } from '@eden/shared/settings'
+	import { formatTime } from '@eden/shared/dates'
+	import { conditionLabel, weather } from '@eden/shared/weather'
 
 	const s = useStrings()
 	const lang = $derived($locale ?? 'en')
+	const format = $derived({ lang, clock: settings.clock, timeZone: weather.timeZone })
 </script>
 
 {#if weather.now}
@@ -19,7 +20,7 @@
 		/>
 	</div>
 	{#if weather.offline && weather.lastGood}
-		<p class="meta">{$t('garden.lastUpdated', { values: { time: formatTime(weather.lastGood, lang) } })}</p>
+		<p class="meta">{$t('garden.lastUpdated', { values: { time: formatTime(weather.lastGood, format) } })}</p>
 	{/if}
 {/if}
 

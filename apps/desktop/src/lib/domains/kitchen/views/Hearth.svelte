@@ -124,6 +124,7 @@
 
 <style>
 	.page {
+		flex: 1 0 auto;
 		display: flex;
 		flex-direction: column;
 		padding-bottom: var(--space-8);

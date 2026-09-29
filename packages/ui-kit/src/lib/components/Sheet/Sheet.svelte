@@ -2,11 +2,13 @@
 	// The modal base every sheet composes: a <dialog> opened with showModal(), so the browser makes the rest of the
 	// page inert, keeps focus inside, returns it on close and paints the scrim as ::backdrop. Escape arrives as the
 	// dialog's `cancel` event; a click on the scrim lands on the dialog element itself. The browser does not cycle Tab
-	// inside a modal dialog (focus can leave to its own chrome), so the panel also carries the focus trap; focus return
-	// stays native. `placement: 'auto'` is a bottom sheet on mobile and a centred sheet on desktop. Enter unfurls
-	// (scale .98 and fade); reduced motion fades only.
+	// inside a modal dialog (focus can leave to its own chrome), so the panel also carries the focus trap. Focus return
+	// stays native, but an opener that was clicked rather than tabbed to is blurred after it, so closing (Escape
+	// included) never lights a ring on it. `placement: 'auto'` is a bottom sheet on mobile and a centred sheet on
+	// desktop. Enter unfurls (scale .98 and fade); reduced motion fades only.
 	import type { Snippet } from 'svelte'
 	import type { HTMLDialogAttributes } from 'svelte/elements'
+	import { rememberOpener } from '../../internal/opener.js'
 	import { platformOf } from '../../internal/platform.js'
 	import { trapFocus } from '../../internal/trap-focus.js'
 
@@ -23,6 +25,9 @@
 		/** The accessible name, when no visible title is labelled through `labelledby`. */
 		label?: string
 		labelledby?: string
+		/** Where focus lands on open: the first focusable (an `autofocus` element wins), or the panel itself, so a
+		 * sheet that opens on navigation shows no ring until Tab is pressed. */
+		initialFocus?: 'first' | 'container'
 		/** When false, Escape and the scrim do nothing; the sheet closes only through `open`. */
 		dismissible?: boolean
 		/** Called after the sheet has closed, with why. */
@@ -37,6 +42,7 @@
 		size = 'md',
 		label,
 		labelledby,
+		initialFocus = 'first',
 		dismissible = true,
 		onclose,
 		header,
@@ -48,6 +54,7 @@
 
 	let dialog = $state<HTMLDialogElement>()
 	let reason: SheetCloseReason = 'api'
+	let settle: (() => void) | undefined
 	const resolved = $derived<Exclude<SheetPlacement, 'auto'>>(
 		placement === 'auto' ? (dialog && platformOf(dialog) === 'mobile' ? 'bottom' : 'center') : placement
 	)
@@ -56,9 +63,19 @@
 		// effect: imperative DOM. showModal() and close() follow `open`.
 		const el = dialog
 		if (!el) return
-		if (open && !el.open) el.showModal()
-		else if (!open && el.open) el.close()
+		if (open && !el.open) {
+			settle = rememberOpener()
+			el.showModal()
+		} else if (!open && el.open) {
+			el.close()
+			settleFocus()
+		}
 	})
+
+	function settleFocus() {
+		settle?.()
+		settle = undefined
+	}
 
 	// Escape is handled here, on the focused descendant's keydown, and `cancel` stays as the fallback for close requests
 	// that arrive another way (a back gesture through the close watcher).
@@ -77,6 +94,7 @@
 		open = false
 	}
 	function onclosed() {
+		settleFocus()
 		if (open) open = false
 		onclose?.(reason)
 		reason = 'api'
@@ -100,7 +118,7 @@
 	<div
 		class="ed-sheet-panel"
 		role="document"
-		{@attach trapFocus(() => ({ active: open, initial: 'first', returnFocus: false }))}
+		{@attach trapFocus(() => ({ active: open, initial: initialFocus, returnFocus: false }))}
 	>
 		{#if resolved === 'bottom'}<span class="ed-sheet-handle" aria-hidden="true"></span>{/if}
 		{#if header}<header class="ed-sheet-header">{@render header()}</header>{/if}
@@ -132,6 +150,9 @@
 		background: var(--ed-scrim, rgba(31, 42, 34, 0.32));
 	}
 	.ed-sheet-panel {
+		/* the grain layer (styles/base.css) is placed against the panel and blends with it alone */
+		position: relative;
+		isolation: isolate;
 		background: var(--surface-1);
 		border: 1px solid var(--ed-card-border);
 		border-radius: var(--ed-radius-sheet);
@@ -147,6 +168,10 @@
 		transition:
 			transform var(--ed-duration-panel) var(--ed-ease-out),
 			opacity var(--ed-duration-panel) var(--ed-ease-out);
+	}
+	/* The panel takes focus only from the trap (tabindex -1), never from Tab, so it draws no ring of its own. */
+	.ed-sheet-panel:focus {
+		outline: none;
 	}
 	.ed-sheet-header,
 	.ed-sheet-footer {

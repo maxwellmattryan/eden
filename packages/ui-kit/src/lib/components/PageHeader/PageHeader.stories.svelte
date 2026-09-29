@@ -1,15 +1,19 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
 	import { expect, fn } from 'storybook/test'
-	import { canvasOf } from '../../../storybook/play.js'
+	import { canvasOf, hasCanvas } from '../../../storybook/play.js'
 	import { domainGlyph } from '$lib/icons/domain-glyphs.js'
+	import Compass from '../Compass/Compass.svelte'
 	import PageHeader, { type PageHeaderAction } from './PageHeader.svelte'
 	import Chip from '../Chip/Chip.svelte'
 	import Segmented from '../Segmented/Segmented.svelte'
-	import { sidebar, sidebarJa } from '../../../stories/sample-data.js'
+	import Sketch from '../Sketch/Sketch.svelte'
+	import { skyField } from '../../sketches/sky-field.js'
+	import { sidebar, sidebarJa, skyMotif } from '../../../stories/sample-data.js'
 
 	const hearth = sidebar.items.find((item) => item.id === 'kitchen')!
 	const garden = sidebar.items.find((item) => item.id === 'garden')!
+	const sky = sidebar.items.find((item) => item.id === 'weather')!
 	const hearthJa = sidebarJa.items.find((item) => item.id === 'kitchen')!
 	const actions: PageHeaderAction[] = [
 		{ label: 'Capture a haul', icon: 'camera', onclick: fn() },
@@ -67,6 +71,55 @@
 	name="Japanese"
 	args={{ name: hearthJa.name, subtitle: hearthJa.subtitle, actions: [{ label: '追加' }], lang: 'ja' }}
 />
+
+<!-- A domain's motif behind the header (D-62): Sky's, the wind as a flow field; the name reads over it -->
+<Story
+	name="With a motif"
+	args={{ name: sky.name, subtitle: sky.subtitle, icon: domainGlyph('weather'), actions: [] }}
+	play={async ({ canvasElement }) => {
+		const canvas = canvasOf(canvasElement)
+		await expect(canvas.getByRole('heading', { level: 1, name: sky.name })).toBeVisible()
+		await expect(canvasElement.querySelector('.ed-page-header-motif canvas')).not.toBeNull()
+	}}
+>
+	{#snippet template(args)}
+		<PageHeader {...args}>
+			{#snippet motif()}
+				<Sketch sketch={skyField} params={skyMotif} />
+			{/snippet}
+			{#snippet filters()}
+				<Chip label="Home · Hyde Park" tone="outline" icon="map-pin" />
+			{/snippet}
+		</PageHeader>
+	{/snippet}
+</Story>
+
+<!-- The legend says what the motif shows, at the foot of its room; it is left out where the room is narrow -->
+<Story
+	name="With a legend"
+	args={{ name: sky.name, subtitle: sky.subtitle, icon: domainGlyph('weather'), actions: [] }}
+	parameters={{ platforms: ['desktop'] }}
+	play={async ({ canvasElement }) => {
+		if (!hasCanvas(canvasElement)) return
+		await expect(
+			canvasOf(canvasElement).getByRole('img', { name: 'Wind from SSE at 14 km/h. North is up.' })
+		).toBeVisible()
+	}}
+>
+	{#snippet template(args)}
+		<PageHeader {...args}>
+			{#snippet motif()}
+				<Sketch sketch={skyField} params={skyMotif} />
+			{/snippet}
+			{#snippet legend()}
+				<Compass bearing={337.5} label="Wind from SSE at 14 km/h. North is up." />
+			{/snippet}
+			{#snippet filters()}
+				<Chip label="Home · Hyde Park" tone="outline" icon="map-pin" />
+			{/snippet}
+		</PageHeader>
+	{/snippet}
+</Story>
 
 <Story name="Mobile" parameters={{ platforms: ['mobile'] }}>
 	{#snippet template(args)}

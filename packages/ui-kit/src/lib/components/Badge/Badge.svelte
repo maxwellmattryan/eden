@@ -15,6 +15,9 @@
 		| 'danger'
 		| 'neutral'
 
+	/** A step of the six-step scale from fine to hazardous: air quality, pollen, UV. */
+	export type BadgeLevel = 1 | 2 | 3 | 4 | 5 | 6
+
 	/** The glyph and the default word per kind; the word is a key into strings.access. */
 	const KINDS: Record<BadgeKind, { icon?: IconName; word?: keyof UiStrings['access'] }> = {
 		read: {},
@@ -43,8 +46,10 @@
 		kind?: BadgeKind
 		/** The word. Access kinds default to their word from strings; warning, danger and neutral need one. */
 		label?: string
+		/** A step of the six-step scale: a dot in the step's colour before the word, which still carries the meaning. */
+		level?: BadgeLevel
 	}
-	let { kind = 'neutral', label, class: className = '', ...rest }: Props = $props()
+	let { kind = 'neutral', label, level, class: className = '', ...rest }: Props = $props()
 
 	const s = useStrings()
 	const def = $derived(KINDS[kind])
@@ -53,6 +58,7 @@
 
 {#if kind !== 'read'}
 	<span class={['ed-badge', `ed-badge-${kind}`, className]} {...rest}>
+		{#if level}<span class="ed-badge-dot ed-badge-level-{level}" aria-hidden="true"></span>{/if}
 		{#if def.icon}<Icon name={def.icon} size="sm" class="ed-badge-icon" />{/if}
 		{#if text}<span class="ed-badge-text">{text}</span>{/if}
 	</span>
@@ -79,6 +85,31 @@
 		width: var(--space-3);
 		height: var(--space-3);
 		stroke-width: var(--icon-stroke);
+	}
+	/* The level's dot: colour beside the word, never instead of it */
+	.ed-badge-dot {
+		flex: none;
+		width: var(--space-2);
+		height: var(--space-2);
+		border-radius: var(--radius-full);
+	}
+	.ed-badge-level-1 {
+		background: var(--level-1);
+	}
+	.ed-badge-level-2 {
+		background: var(--level-2);
+	}
+	.ed-badge-level-3 {
+		background: var(--level-3);
+	}
+	.ed-badge-level-4 {
+		background: var(--level-4);
+	}
+	.ed-badge-level-5 {
+		background: var(--level-5);
+	}
+	.ed-badge-level-6 {
+		background: var(--level-6);
 	}
 	.ed-badge-write-draft,
 	.ed-badge-act-external,

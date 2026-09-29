@@ -13,13 +13,25 @@ export const themeSettings: readonly ThemeSetting[] = ['light', 'dark', 'system'
 export type FontSetting = 'default' | 'system'
 export const fontSettings: readonly FontSetting[] = ['default', 'system']
 
-/** Temperature units for Sky and the Garden's sky tile (D-27: units are a setting, not a fact). */
-export type TemperatureUnit = 'celsius' | 'fahrenheit'
-export const temperatureUnits: readonly TemperatureUnit[] = ['celsius', 'fahrenheit']
+/** The measurement system behind every temperature, speed, pressure, distance and rainfall (D-58). */
+export type MeasurementSystem = 'metric' | 'imperial'
+export const measurementSystems: readonly MeasurementSystem[] = ['metric', 'imperial']
+
+/** The day a week starts on, for every domain that shows one (D-58). */
+export type WeekStart = 'monday' | 'sunday'
+export const weekStarts: readonly WeekStart[] = ['monday', 'sunday']
+
+/** The clock every time is written on (D-58). */
+export type ClockFormat = '24h' | '12h'
+export const clockFormats: readonly ClockFormat[] = ['24h', '12h']
+
+/** The forecast provider the owner chose (D-56); WeatherKit is offered only where it can run (D-57). */
+export type WeatherProvider = 'open-meteo' | 'weatherkit'
+export const weatherProviders: readonly WeatherProvider[] = ['open-meteo', 'weatherkit']
 
 /**
  * The home place, as a setting until Places exist (D-38 makes it a Place of kind `home`): a label and the coordinates
- * Sky forecasts for. Only rounded coordinates ever leave the device.
+ * Sky forecasts for. Only rounded coordinates ever leave the device (D-60).
  */
 export interface HomePlace {
 	label: string

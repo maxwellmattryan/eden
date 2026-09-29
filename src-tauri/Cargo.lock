@@ -1045,6 +1045,7 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
+ "swift-rs",
  "sysinfo",
  "tauri",
  "tauri-build",

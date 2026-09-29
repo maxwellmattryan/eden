@@ -159,13 +159,97 @@ export const skyWeek: { day: string; hi: number; lo: number; condition: SkyCondi
 	{ day: 'Sat', hi: 30, lo: 19, condition: 'sunny' },
 	{ day: 'Sun', hi: 31, lo: 20, condition: 'sunny' },
 ]
+/** The Sunday before the sample week, observed: the first row of a week that starts on Sunday (D-58). */
+export const skySundayBefore: { day: string; hi: number; lo: number; condition: SkyCondition } = {
+	day: 'Sun',
+	hi: 30,
+	lo: 21,
+	condition: 'partly-cloudy',
+}
+/** Wednesday 07:40 in detail, in metric: what the forecast provider gives beyond the temperature. */
+export const skyDetails = {
+	feelsLike: 23,
+	/** Percent. */
+	humidity: 64,
+	dewPoint: 15,
+	/** km/h. */
+	wind: 14,
+	gust: 27,
+	windFrom: 'SSE',
+	/** hPa. */
+	pressure: 1014,
+	/** km. */
+	visibility: 16,
+	/** Percent. */
+	cloudCover: 20,
+	/** Today's rainfall, in mm. */
+	rainfall: 4.2,
+	/** Today's highest UV index. */
+	uv: 7,
+}
+export type SkyAirCategory = 'good' | 'moderate' | 'sensitive' | 'unhealthy' | 'very-unhealthy' | 'hazardous'
+/** The air at 07:40: the US index and the pollutants behind it, in µg/m³. */
+export const skyAirQuality: {
+	index: number
+	category: SkyAirCategory
+	pm25: number
+	pm10: number
+	ozone: number
+	no2: number
+} = { index: 42, category: 'good', pm25: 8.4, pm10: 17, ozone: 61, no2: 12 }
+export type SkyAllergenLevel = 'none' | 'low' | 'moderate' | 'high' | 'very-high'
+/** Austin at the end of September: ragweed at its peak, mold after the rain. */
+export const skyAllergens: { id: string; name: string; level: SkyAllergenLevel }[] = [
+	{ id: 'tree', name: 'Tree pollen', level: 'low' },
+	{ id: 'grass', name: 'Grass pollen', level: 'moderate' },
+	{ id: 'ragweed', name: 'Ragweed pollen', level: 'high' },
+	{ id: 'mold', name: 'Mold', level: 'moderate' },
+]
+/**
+ * Each day of the sample week in detail, by its short name, with the Sunday before: the date, the chance of rain and
+ * its depth in mm, the highest UV index, the strongest wind in km/h, and the light.
+ */
+export const skyWeekDetail: Record<
+	string,
+	{ date: string; precip: number; rain: number; uv: number; wind: number; sunrise: string; sunset: string }
+> = {
+	SunBefore: { date: '09-27', precip: 10, rain: 0, uv: 7, wind: 11, sunrise: '07:20', sunset: '19:18' },
+	Mon: { date: '09-28', precip: 0, rain: 0, uv: 8, wind: 12, sunrise: '07:21', sunset: '19:17' },
+	Tue: { date: '09-29', precip: 5, rain: 0, uv: 7, wind: 16, sunrise: '07:21', sunset: '19:15' },
+	Wed: { date: '09-30', precip: 75, rain: 4.2, uv: 7, wind: 27, sunrise: '07:22', sunset: '19:14' },
+	Thu: { date: '10-01', precip: 10, rain: 0, uv: 7, wind: 14, sunrise: '07:22', sunset: '19:13' },
+	Fri: { date: '10-02', precip: 0, rain: 0, uv: 7, wind: 9, sunrise: '07:23', sunset: '19:12' },
+	Sat: { date: '10-03', precip: 0, rain: 0, uv: 7, wind: 10, sunrise: '07:24', sunset: '19:10' },
+	Sun: { date: '10-04', precip: 5, rain: 0, uv: 6, wind: 13, sunrise: '07:24', sunset: '19:09' },
+}
+
+/** What a search for "Austin" finds when the home place is changed: a name, its region and country. */
+export const skyPlaceResults = [
+	{ id: 'austin-tx', name: 'Austin', region: 'Texas, United States' },
+	{ id: 'austin-mn', name: 'Austin', region: 'Minnesota, United States' },
+	{ id: 'austin-nv', name: 'Austin', region: 'Nevada, United States' },
+]
 export const skyToday = {
 	sunrise: '07:22',
 	sunset: '19:14',
 	goldenHour: '18:35',
 	moon: 'waning gibbous 84 %',
+	/** The phase by name and the share of the disc that is lit, for where the two are set apart. */
+	moonPhase: 'Waning gibbous',
+	moonLit: 84,
+	/** Where the moon is in its cycle (0 new, 0.5 full): what draws the glyph. */
+	moonCycle: 0.63,
 	goodFor: 'an early run before the showers',
 	lastGood: '07:40',
+}
+
+/** What the Sky motif draws, from the same Wednesday at 07:40: the wind from the south-south-east and the cloud. */
+export const skyMotif = {
+	windFrom: 157.5,
+	windSpeed: skyDetails.wind,
+	windGust: skyDetails.gust,
+	cloudCover: skyDetails.cloudCover,
+	precipitation: 0,
 }
 
 /** Daily weight in kg, 09-17 to 09-30; seven-day average 82.7; goal 80.0 by 12-31. */
@@ -234,10 +318,13 @@ export const integrations = [
 
 const sidebarGroups = [
 	[{ id: 'today', name: 'Today', subtitle: 'Tasks and routines', shortcut: '⌘1' }],
-	[{ id: 'garden', name: 'Garden', subtitle: 'Dashboard', shortcut: '⌘2' }],
 	[
-		{ id: 'kitchen', name: 'Hearth', subtitle: 'Food, recipes, pantry, groceries', shortcut: '⌘3' },
-		{ id: 'toolbench', name: 'Toolbench', subtitle: 'Ideas, projects, homelab, generative art', shortcut: '⌘4' },
+		{ id: 'garden', name: 'Garden', subtitle: 'Dashboard', shortcut: '⌘2' },
+		{ id: 'gardener', name: 'Gardener', subtitle: 'Ask, log, run', shortcut: '⌘G' },
+		{ id: 'toolbench', name: 'Toolbench', subtitle: 'Ideas, projects, homelab, generative art', shortcut: '⌘3' },
+	],
+	[
+		{ id: 'kitchen', name: 'Hearth', subtitle: 'Food, recipes, pantry, groceries', shortcut: '⌘4' },
 		{ id: 'weather', name: 'Sky', subtitle: 'Weather, forecasts, sun and moon', shortcut: '⌘5' },
 	],
 ]
@@ -245,18 +332,18 @@ const sidebarGroups = [
 export const sidebar = {
 	groups: sidebarGroups,
 	items: sidebarGroups.flat(),
-	pinned: [
-		{ id: 'gardener', name: 'Gardener', subtitle: 'Ask, log, run' },
-		{ id: 'settings', name: 'Settings', subtitle: 'Preferences' },
-	],
+	pinned: [{ id: 'settings', name: 'Settings', subtitle: 'Preferences', shortcut: '⌘,', action: true }],
 }
 
 const sidebarJaGroups = [
 	[{ id: 'today', name: '今日', subtitle: 'タスクと習慣' }],
-	[{ id: 'garden', name: '庭', subtitle: 'ダッシュボード' }],
+	[
+		{ id: 'garden', name: '庭', subtitle: 'ダッシュボード' },
+		{ id: 'gardener', name: '庭師', subtitle: '相談、記録、実行' },
+		{ id: 'toolbench', name: '工房', subtitle: 'アイデア、プロジェクト' },
+	],
 	[
 		{ id: 'kitchen', name: '台所', subtitle: '食材、レシピ、買い物' },
-		{ id: 'toolbench', name: '工房', subtitle: 'アイデア、プロジェクト' },
 		{ id: 'weather', name: '空', subtitle: '天気、日の出と月' },
 	],
 ]
@@ -264,10 +351,7 @@ const sidebarJaGroups = [
 export const sidebarJa = {
 	groups: sidebarJaGroups,
 	items: sidebarJaGroups.flat(),
-	pinned: [
-		{ id: 'gardener', name: '庭師', subtitle: '相談、記録、実行' },
-		{ id: 'settings', name: '設定', subtitle: '環境設定' },
-	],
+	pinned: [{ id: 'settings', name: '設定', subtitle: '環境設定', action: true }],
 }
 
 export const bottomTabs = [

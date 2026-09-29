@@ -141,9 +141,12 @@
 		box-shadow: var(--shadow-sheet);
 		opacity: 0;
 		transform: scale(0.98);
+		/* the panel stays in the top layer and on the page until it has faded, so it leaves the way it came */
 		transition:
 			opacity var(--ed-duration-panel) var(--ed-ease-out),
-			transform var(--ed-duration-panel) var(--ed-ease-out);
+			transform var(--ed-duration-panel) var(--ed-ease-out),
+			overlay var(--ed-duration-panel) allow-discrete,
+			display var(--ed-duration-panel) allow-discrete;
 	}
 	.ed-popover:focus-visible {
 		outline: 2px solid transparent;

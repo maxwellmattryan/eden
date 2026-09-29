@@ -1,6 +1,9 @@
 // Active severe-weather alerts from the National Weather Service (product/domains/weather.md, "Integrations"):
 // keyless, US only, one GET for the point. Open-Meteo carries no alerts. Any failure, including a point outside the
-// US, reads as no alerts, so the forecast never waits on this call.
+// US, reads as no alerts, so the forecast never waits on this call. The point is rounded like every coordinate that
+// leaves the device (D-60).
+import { rounded } from './coordinates.js'
+
 export type AlertSeverity = 'extreme' | 'severe' | 'moderate' | 'minor' | 'unknown'
 
 export interface WeatherAlert {
@@ -11,6 +14,12 @@ export interface WeatherAlert {
 	severity: AlertSeverity
 	/** When the alert ends, as an ISO timestamp, when the service says. */
 	ends?: string
+	/** When what it warns of begins. */
+	onset?: string
+	/** When it was issued. */
+	issued?: string
+	/** Who issued it: "NWS Austin/San Antonio TX". */
+	sender?: string
 }
 
 interface NwsFeature {
@@ -21,6 +30,9 @@ interface NwsFeature {
 		severity?: string
 		ends?: string | null
 		expires?: string | null
+		onset?: string | null
+		sent?: string | null
+		senderName?: string | null
 	}
 }
 
@@ -36,7 +48,7 @@ export async function fetchAlerts(latitude: number, longitude: number): Promise<
 	const controller = new AbortController()
 	const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
 	try {
-		const point = `${latitude.toFixed(3)},${longitude.toFixed(3)}`
+		const point = `${rounded(latitude)},${rounded(longitude)}`
 		const response = await fetch(`${ENDPOINT}?point=${point}`, {
 			signal: controller.signal,
 			headers: { Accept: 'application/geo+json' },
@@ -49,6 +61,9 @@ export async function fetchAlerts(latitude: number, longitude: number): Promise<
 			headline: feature.properties.headline ?? feature.properties.event ?? '',
 			severity: severityOf(feature.properties.severity),
 			ends: feature.properties.ends ?? feature.properties.expires ?? undefined,
+			onset: feature.properties.onset ?? undefined,
+			issued: feature.properties.sent ?? undefined,
+			sender: feature.properties.senderName ?? undefined,
 		}))
 	} catch {
 		return []

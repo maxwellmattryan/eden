@@ -54,7 +54,7 @@ Every doc in one table per layer: path, status, one-liner, size (S under 120 lin
 | product/domains/_template.md | draft | The ten-section domain template, plus stub and candidate templates | S | writing a domain doc |
 | product/domains/kitchen.md | draft | Hearth: stock by location, recipes from what you have, grocery lists, capture a haul | S | kitchen work |
 | product/domains/toolbench.md | draft | Toolbench: ideas, projects, homelab, generative-art studio, technical notes | S | ideas or projects |
-| product/domains/weather.md | draft | Sky: forecasts, alerts, sun and moon, the default Garden widget | S | weather or ephemeris |
+| product/domains/weather.md | draft | Sky: forecasts by a chosen provider, details, air quality, allergens, alerts, sun and moon, the default Garden widget | S | weather or ephemeris |
 | product/domains/calendar.md | draft | Almanac: Eden's own calendar with layers over Events, Google as a source | S | calendar work |
 | product/domains/fitness.md | draft | Vigor: workouts, gyms, body metrics, supplements, weight trend | S | fitness work |
 | product/domains/spirit.md | draft | Sanctuary: traditions, readings, values, the daily line, optional astrology | S | reflection features |
@@ -83,8 +83,8 @@ Every doc in one table per layer: path, status, one-liner, size (S under 120 lin
 | engineering/README.md | draft | Where engineering stands and the questions still open | S | starting engineering |
 | engineering/ui-kit.md | draft | The kit: location, exports, tokens pipeline, conventions, Storybook, gates | M | adding or consuming a component or token |
 | engineering/ui-kit-components.md | draft | Per-component contract: props, bindables, callbacks, snippets, stories | S | changing a component |
-| engineering/app-scaffold.md | draft | The two apps, the shared package and the crate: layout, platform features, commands, the domain module and its interim persistence, pre-paint, the placeholder identifier | M | building under apps/*, packages/shared or src-tauri |
-| engineering/release.md | draft | The owner's release checklist: bucket, updater key, Apple and iOS ad-hoc signing, Android keystore, Pages, the secrets, the tag flow | S | setting up release accounts or cutting a release |
+| engineering/app-scaffold.md | draft | The two apps, the shared package and the crate: layout, platform features, commands, the domain module and its interim persistence, Sky's providers and the WeatherKit bridge, pre-paint, the placeholder identifier | M | building under apps/*, packages/shared or src-tauri |
+| engineering/release.md | draft | The owner's release checklist: bucket, updater key, Apple and iOS ad-hoc signing, the WeatherKit capability, Android keystore, Pages, the secrets, the tag flow | S | setting up release accounts or cutting a release |
 
 ## Status legend
 

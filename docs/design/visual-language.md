@@ -4,7 +4,7 @@ status: draft
 summary: The token architecture extended from Crate, the light "morning garden" and dark "night forest" themes with their values, the accent set, semantic colours and the Gardener's two colours, typography, iconography, spacing, radius, elevation, motion, chart colours and accessibility targets.
 read-this-if: You are styling anything, building the theme, or drawing a mockup.
 depends-on: [brand]
-updated: 2026-09-28
+updated: 2026-09-29
 ---
 
 ## Token architecture
@@ -104,11 +104,15 @@ Four-pixel base; component padding 8, 12, 16; section gaps 24, 32. Radius: 6 for
 
 ## Motion
 
-Micro-interactions 150 ms, panels and sheets 220 ms, ease-out (`cubic-bezier(0.22, 1, 0.36, 1)`). Panels "unfurl": scale from 0.98 and fade. Growth is the only metaphorical motion: a completed task or a committed capture settles rather than pops. With reduced motion on, only opacity animates. The Breeze specks are the one exception to the no-loops rule (D-42): they play once, 700 ms, on an accepted proposal or a settled action, and render nothing under reduced motion. Hover on a filled control is an ink wash, never a new hue. A press compresses the control from the top with its bottom edge fixed, as if it sank into its hole (D-49); reduced motion removes the movement.
+Micro-interactions 150 ms, panels and sheets 220 ms, ease-out (`cubic-bezier(0.22, 1, 0.36, 1)`). Panels "unfurl": scale from 0.98 and fade. Growth is the only metaphorical motion: a completed task or a committed capture settles rather than pops. With reduced motion on, only opacity animates. The Breeze specks are an exception to the no-loops rule (D-42): they play once, 700 ms, on an accepted proposal or a settled action, and render nothing under reduced motion. A page header's motif is the other (D-62): it loops, at no more than thirty frames a second, and is a single still under reduced motion. Hover on a filled control is an ink wash, never a new hue. A press compresses the control from the top with its bottom edge fixed, as if it sank into its hole (D-49); reduced motion removes the movement.
 
 ## Charts
 
 Numeric widgets (weight trend, later Orchard) use the accent for the primary series, `--text-tertiary` for averages and goal lines, and at most three categorical series from the accent set (Clay, Sky, Marigold). Axes in `--stroke`, labels in `--text-secondary`, no gridlines heavier than `--stroke-subtle`.
+
+Figures are set in the data styles: `data-lg` (28) for a widget's headline, `data-md` (18) for one figure among several in a card, `data` (14) and `data-sm` (13) in rows.
+
+A reading on a scale from fine to hazardous (the air quality index, pollen, the UV index) uses the six level colours, `level-1` to `level-6`: green, amber, orange, red, purple, maroon, each with a light and a dark value in `tokens.json`. They are graphic colours for bands, dots and markers, never text, and the word for the level is always beside them. The moon glyph has its own pair, `moon-lit` and `moon-shade`, so its lit face is the bright one in both themes.
 
 ## Accessibility targets
 

@@ -252,6 +252,19 @@ function themeCss() {
 	return out
 }
 
+// The grain's offsets within its tile, one per step of the loop: far apart, so no step reads as a slide of the last.
+const GRAIN_STEPS = [
+	[0, 0],
+	[-97, 143],
+	[61, -188],
+	[-211, -52],
+	[134, 89],
+	[-38, -229],
+	[177, 203],
+	[-154, 34],
+	[23, -117],
+	[-226, 171],
+]
 // ---- base.css
 function baseCss() {
 	let out = banner('the brand, platform and density dials, and the rules every surface shares')
@@ -331,16 +344,31 @@ function baseCss() {
 	])
 	out += block('::selection', ['background: var(--brand-muted)', 'color: var(--text-primary)'])
 	out +=
-		'\n/* Paper grain at lush (D-42): a fixed layer between the page colour and the content, never over text at a legible opacity. .ed-canvas frames paint their own. */\n'
+		'\n/* Paper grain at lush (D-61): a fixed layer over the whole page, overlay blended so one mid-grey tile reads in both themes without shifting colour, and at an opacity that leaves text crisp. It ignores the pointer. The tile is raw desaturated noise, never pushed for contrast, which is what keeps it fine (D-63), and it jumps to a new offset about eight times a second (D-63), which reads as fresh grain. .ed-canvas frames paint their own. */\n'
 	out += block('body::before, .ed-canvas::before', [
 		'content: ""',
 		'position: fixed',
 		'inset: 0',
-		'z-index: -1',
+		'z-index: var(--ed-z-grain)',
 		'pointer-events: none',
 		'background-image: var(--ed-grain)',
 		'opacity: var(--ed-grain-opacity)',
-		'mix-blend-mode: multiply',
+		'mix-blend-mode: overlay',
+		'animation: var(--ed-grain-motion)',
+	])
+	out +=
+		'\n/* The top layer paints above every z-index, so each surface that lives there carries the grain itself: the sheet panel (the dialog around it is a transparent box over the scrim), and the popover, menu and tooltip. */\n'
+	out += block('.ed-sheet-panel::after, [popover]::after', [
+		'content: ""',
+		'position: absolute',
+		'inset: 0',
+		'z-index: var(--ed-z-grain)',
+		'pointer-events: none',
+		'border-radius: inherit',
+		'background-image: var(--ed-grain)',
+		'opacity: var(--ed-grain-opacity)',
+		'mix-blend-mode: overlay',
+		'animation: var(--ed-grain-motion)',
 	])
 	out += block('.ed-canvas', [
 		'position: relative',
@@ -349,18 +377,18 @@ function baseCss() {
 		'color: var(--text-primary)',
 	])
 	out += block('.ed-canvas::before', ['position: absolute'])
-	out += block(
-		'[data-theme="dark"] body::before, [data-theme="dark"] .ed-canvas::before, [data-theme="dark"].ed-canvas::before',
-		['mix-blend-mode: screen']
-	)
+	out += `@keyframes ed-grain {\n${GRAIN_STEPS.map(([x, y], i) => `\t${i * (100 / GRAIN_STEPS.length)}% { background-position: ${x}px ${y}px; }\n`).join('')}}\n`
 	out +=
-		'\n/* Reduced motion: colour fades stay, movement goes, and a press no longer moves the control. Last, so it wins over the dials. */\n'
+		'\n/* Reduced motion: colour fades stay, movement goes, the grain holds still and a press no longer moves the control. Last, so it wins over the dials. */\n'
 	out += `@media (prefers-reduced-motion: reduce) {\n${block('\t:root, [data-relief]', [
 		...T.motion.reducedMotion.map((n) => `--ed-${n}: 0ms`),
 		'--ed-press-scale: 1',
 	])
 		.replace(/\n\t/g, '\n\t\t')
-		.replace(/\n}/, '\n\t}')}}\n`
+		.replace(
+			/\n}/,
+			'\n\t}'
+		)}\tbody::before, .ed-canvas::before, .ed-sheet-panel::after, [popover]::after {\n\t\tanimation: none;\n\t}\n}\n`
 	out += '\n/* Visually hidden, for text that only assistive technology needs */\n'
 	out += block('.ed-sr-only', [
 		'position: absolute',

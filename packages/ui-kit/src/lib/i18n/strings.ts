@@ -9,6 +9,8 @@ export interface UiStrings {
 	confirm: string
 	done: string
 	dismiss: string
+	/** The cross on a notice, named after what it dismisses. */
+	dismissNamed: (name: string) => string
 	discard: string
 	commit: string
 	close: string
@@ -115,7 +117,7 @@ export interface UiStrings {
 	sidebar: {
 		/** The domain nav's accessible name. */
 		label: string
-		/** The pinned list's accessible name: Gardener and Settings. */
+		/** The pinned list's accessible name: Settings. */
 		pinned: string
 	}
 	tabBar: {
@@ -140,6 +142,10 @@ export interface UiStrings {
 	}
 	sparkline: (count: number, latest: string) => string
 	reference: (value: string) => string
+	compass: {
+		/** The letter at the compass's north point. */
+		north: string
+	}
 	iconButton: {
 		/** The accessible name of a bell with a badge: the label and its unread count. */
 		withCount: (label: string, count: number) => string
@@ -164,6 +170,7 @@ export const defaultStrings: UiStrings = {
 	confirm: 'Confirm',
 	done: 'Done',
 	dismiss: 'Dismiss',
+	dismissNamed: (name) => `Dismiss ${name}`,
 	discard: 'Discard',
 	commit: 'Commit',
 	close: 'Close',
@@ -259,7 +266,7 @@ export const defaultStrings: UiStrings = {
 	},
 	sidebar: {
 		label: 'Domains',
-		pinned: 'Gardener and settings',
+		pinned: 'Settings',
 	},
 	tabBar: {
 		label: 'Sections',
@@ -281,6 +288,7 @@ export const defaultStrings: UiStrings = {
 	},
 	sparkline: (count, latest) => `${count} values, latest ${latest}`,
 	reference: (value) => `reference ${value}`,
+	compass: { north: 'N' },
 	iconButton: {
 		withCount: (label, count) => `${label}, ${count} unread`,
 	},

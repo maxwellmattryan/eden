@@ -1,7 +1,7 @@
 <script module lang="ts">
 	import type { IconName } from '../../icons/icons.js'
 
-	/** One entry of the domain nav or of the pinned pair at the bottom. */
+	/** One entry of the nav's groups or of the pinned list at the bottom. */
 	export interface SidebarEntry {
 		/** The plain id (kitchen, gardener): what `current` holds and `onselect` receives. */
 		id: string
@@ -15,15 +15,18 @@
 		shortcut?: string
 		/** A URL when the entry is a link; without one the item is a button. */
 		href?: string
+		/** An action rather than a place (Settings opens a sheet): it reports through `onselect` and never becomes current. */
+		action?: boolean
 	}
 </script>
 
 <script lang="ts">
 	// The app mark and wordmark at the head when the app passes its name (D-55); then the groups top to bottom with a
-	// rule between each (Today, Garden, then the domains in the owner's order); then Gardener and Settings pinned at
-	// the bottom. Subtitles and shortcuts are off by default. The whole nav is one tab stop: arrows, Home and End and
-	// typing a name move focus through `roving` across every group; Enter or a click makes an item current. There is
-	// no sidebar on mobile: BottomTabBar instead.
+	// rule between each (Today; Garden, Gardener and Toolbench; then the domains in the owner's order); then Settings
+	// pinned at the bottom (D-64). Subtitles and shortcuts are off by default, except the pinned list, which always shows
+	// its keys. The whole nav is one tab stop: arrows, Home and End and typing a name move focus through `roving` across
+	// every group; Enter or a click makes an item current, unless the entry is an action. There is no sidebar on
+	// mobile: BottomTabBar instead.
 	import type { HTMLAttributes } from 'svelte/elements'
 	import { useStrings } from '../../i18n/context.js'
 	import { roving } from '../../internal/roving.js'
@@ -32,11 +35,11 @@
 	import Wordmark from '../Wordmark/Wordmark.svelte'
 
 	type Props = Omit<HTMLAttributes<HTMLElement>, 'children' | 'onselect'> & {
-		/** The nav's groups top to bottom, a rule between each: Today, Garden, then the enabled domains in order. */
+		/** The nav's groups top to bottom, a rule between each: Today, the Garden's group, then the enabled domains. */
 		groups: SidebarEntry[][]
 		/** The app's name, lowercase, from the locale: shows the mark and the wordmark at the head. */
 		brand?: string
-		/** Gardener and Settings, pinned at the bottom. */
+		/** Settings, pinned at the bottom; its shortcut always shows. */
 		pinned?: SidebarEntry[]
 		/** Shows each subtitle beneath its name (the onboarding default, until the owner turns it off). */
 		subtitles?: boolean
@@ -46,7 +49,7 @@
 		current?: string
 		/** The nav's accessible name; defaults to the strings' "Domains". */
 		label?: string
-		/** Called with the id after a click or Enter makes an entry current. */
+		/** Called with the id after a click or Enter on an entry, current or an action. */
 		onselect?: (id: string) => void
 	}
 	let {
@@ -64,21 +67,21 @@
 
 	const s = useStrings()
 
-	function pick(id: string) {
-		current = id
-		onselect?.(id)
+	function pick(item: SidebarEntry) {
+		if (!item.action) current = item.id
+		onselect?.(item.id)
 	}
 </script>
 
-{#snippet entry(item: SidebarEntry)}
+{#snippet entry({ action, ...item }: SidebarEntry, keys = shortcuts)}
 	<li>
 		<SidebarItem
 			{...item}
-			current={item.id === current}
+			current={!action && item.id === current}
 			showSubtitle={subtitles}
-			showShortcut={shortcuts}
+			showShortcut={keys}
 			data-sidebar-item
-			onclick={() => pick(item.id)}
+			onclick={() => pick({ action, ...item })}
 		/>
 	</li>
 {/snippet}
@@ -105,7 +108,7 @@
 	</div>
 	{#if pinned.length}
 		<ul class="ed-sidebar-list ed-sidebar-pinned" aria-label={s.sidebar.pinned}>
-			{#each pinned as item (item.id)}{@render entry(item)}{/each}
+			{#each pinned as item (item.id)}{@render entry(item, true)}{/each}
 		</ul>
 	{/if}
 </nav>

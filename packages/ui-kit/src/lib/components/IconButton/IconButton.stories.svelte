@@ -54,10 +54,11 @@
 	}}
 />
 
-<!-- md follows the platform control; sm stays 28 for rows and the status bar -->
+<!-- md follows the platform control; sm stays 28 for rows and the status bar; xs is a hint beside a label -->
 <Story name="Sizes">
 	{#snippet template(args)}
 		<div class="row">
+			<IconButton {...args} icon="info" label="About humidity" size="xs" />
 			<IconButton {...args} icon="ellipsis" label="Actions" size="sm" />
 			<IconButton {...args} icon="x" label="Remove" size="sm" />
 			<IconButton {...args} icon="bell" label="Inbox" size="md" count={128} />

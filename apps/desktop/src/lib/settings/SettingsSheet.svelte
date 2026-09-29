@@ -1,18 +1,23 @@
 <script lang="ts">
 	// The settings modal (product/substrate/settings-utilities.md): a centred kit Sheet with a tab rail on the left
 	// and the tab's panel on the right. The rail is one tab stop (arrows, Home and End) and deep-linkable by tab id
-	// through `settingsUi.show(tab)`. Three tabs are real; the other eight say they are not built yet.
-	import { Sheet } from '@eden/ui-kit'
+	// through `settingsUi.show(tab)`. Four tabs are real; the other seven say they are not built yet. Focus lands on
+	// the sheet, not the rail, so no tab wears a ring until Tab is pressed. The frame follows the measured height of
+	// the content over the panel duration, so a taller tab grows the sheet instead of snapping it.
+	import { Icon, Sheet } from '@eden/ui-kit'
 	import { t } from '@eden/shared/i18n'
-	import { settingsTabs, settingsUi, type SettingsTabId } from './settings-ui.svelte'
+	import { settingsTabIcons, settingsTabs, settingsUi, type SettingsTabId } from './settings-ui.svelte'
 	import AboutTab from './tabs/AboutTab.svelte'
 	import AppearanceTab from './tabs/AppearanceTab.svelte'
 	import GeneralTab from './tabs/GeneralTab.svelte'
+	import IntegrationsTab from './tabs/IntegrationsTab.svelte'
 	import PlaceholderTab from './tabs/PlaceholderTab.svelte'
 
 	const uid = $props.id()
 	const titleId = `${uid}-title`
 	let rail = $state<HTMLElement>()
+	// 0 while the sheet is closed (the dialog is not rendered), which leaves the frame at its natural height
+	let height = $state(0)
 
 	function move(from: SettingsTabId, delta: number) {
 		const index = settingsTabs.indexOf(from)
@@ -31,38 +36,43 @@
 	}
 </script>
 
-<Sheet bind:open={settingsUi.open} placement="center" size="lg" labelledby={titleId}>
+<Sheet bind:open={settingsUi.open} placement="center" size="lg" labelledby={titleId} initialFocus="container">
 	{#snippet header()}
 		<h2 id={titleId} class="title">{$t('settings.title')}</h2>
 	{/snippet}
-	<div class="settings">
-		<nav class="rail" aria-label={$t('settings.title')} bind:this={rail}>
-			{#each settingsTabs as tab (tab)}
-				<button
-					type="button"
-					class="rail-item"
-					data-tab={tab}
-					aria-current={settingsUi.tab === tab ? 'page' : undefined}
-					tabindex={settingsUi.tab === tab ? 0 : -1}
-					onclick={() => (settingsUi.tab = tab)}
-					onkeydown={(e) => onkeydown(e, tab)}
-				>
-					{$t(`settings.tabs.${tab}`)}
-				</button>
-			{/each}
-		</nav>
-		<section class="panel" aria-labelledby="{uid}-{settingsUi.tab}">
-			<h3 id="{uid}-{settingsUi.tab}" class="panel-title">{$t(`settings.tabs.${settingsUi.tab}`)}</h3>
-			{#if settingsUi.tab === 'general'}
-				<GeneralTab />
-			{:else if settingsUi.tab === 'appearance'}
-				<AppearanceTab />
-			{:else if settingsUi.tab === 'about'}
-				<AboutTab />
-			{:else}
-				<PlaceholderTab tab={settingsUi.tab} />
-			{/if}
-		</section>
+	<div class="frame" style:height={height ? `${height}px` : undefined}>
+		<div class="settings" bind:offsetHeight={height}>
+			<nav class="rail" aria-label={$t('settings.title')} bind:this={rail}>
+				{#each settingsTabs as tab (tab)}
+					<button
+						type="button"
+						class="rail-item"
+						data-tab={tab}
+						aria-current={settingsUi.tab === tab ? 'page' : undefined}
+						tabindex={settingsUi.tab === tab ? 0 : -1}
+						onclick={() => (settingsUi.tab = tab)}
+						onkeydown={(e) => onkeydown(e, tab)}
+					>
+						<Icon name={settingsTabIcons[tab]} size="sm" />
+						<span>{$t(`settings.tabs.${tab}`)}</span>
+					</button>
+				{/each}
+			</nav>
+			<section class="panel" aria-labelledby="{uid}-{settingsUi.tab}">
+				<h3 id="{uid}-{settingsUi.tab}" class="panel-title">{$t(`settings.tabs.${settingsUi.tab}`)}</h3>
+				{#if settingsUi.tab === 'general'}
+					<GeneralTab />
+				{:else if settingsUi.tab === 'appearance'}
+					<AppearanceTab />
+				{:else if settingsUi.tab === 'integrations'}
+					<IntegrationsTab />
+				{:else if settingsUi.tab === 'about'}
+					<AboutTab />
+				{:else}
+					<PlaceholderTab tab={settingsUi.tab} />
+				{/if}
+			</section>
+		</div>
 	</div>
 </Sheet>
 
@@ -71,6 +81,21 @@
 		margin: 0;
 		font: var(--ed-t-title-lg);
 		color: var(--text-primary);
+	}
+	/* Clipping the frame would cut the focus rings at its edge, so it takes the ring's reach as padding and gives it
+	   back as margin, as the sheet's own body does. */
+	.frame {
+		--ring-room: calc(var(--focus-ring-offset) + var(--focus-ring-width));
+		box-sizing: content-box;
+		overflow: hidden;
+		padding: var(--ring-room);
+		margin: calc(-1 * var(--ring-room));
+		transition: height var(--ed-duration-panel) var(--ed-ease-out);
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.frame {
+			transition: none;
+		}
 	}
 	.settings {
 		display: grid;
@@ -86,7 +111,9 @@
 		padding-right: 12px;
 	}
 	.rail-item {
-		display: block;
+		display: flex;
+		align-items: center;
+		gap: 8px;
 		width: 100%;
 		text-align: left;
 		border: 0;

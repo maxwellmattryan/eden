@@ -3,7 +3,7 @@ import { goto } from '$app/navigation'
 import { resolve } from '$app/paths'
 import { domainGlyph } from '@eden/ui-kit'
 import type { DomainManifest } from '../manifest.js'
-import { weather } from './store.svelte.js'
+import { weather } from '@eden/shared/weather'
 import SunAndMoon from './widgets/SunAndMoon.svelte'
 import WeatherNow from './widgets/WeatherNow.svelte'
 

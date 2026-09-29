@@ -76,8 +76,19 @@
 		"target",
 		"route",
 		"book-open",
-		"shrub",
-		"sunrise"
+		"user-round",
+		"sunrise",
+		"sunset",
+		"thermometer",
+		"droplets",
+		"gauge",
+		"umbrella",
+		"palette",
+		"layout-grid",
+		"shield",
+		"plug",
+		"keyboard",
+		"terminal"
 	],
 	"domains": {
 		"kitchen": "cooking-pot",
@@ -95,9 +106,9 @@
 		"library": "book-open"
 	},
 	"shell": {
-		"garden": "shrub",
+		"garden": "sprout",
 		"today": "sunrise",
-		"gardener": "sprout",
+		"gardener": "user-round",
 		"council": "circle-dashed",
 		"vault": "lock",
 		"settings": "settings"

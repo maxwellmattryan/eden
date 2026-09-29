@@ -287,17 +287,195 @@
 			"precip": "{value} %",
 			"moonLine": "{phase} {percent} %",
 			"moonPhase": {
-				"new": "new moon",
-				"waxing-crescent": "waxing crescent",
-				"first-quarter": "first quarter",
-				"waxing-gibbous": "waxing gibbous",
-				"full": "full moon",
-				"waning-gibbous": "waning gibbous",
-				"last-quarter": "last quarter",
-				"waning-crescent": "waning crescent"
+				"new": "New moon",
+				"waxing-crescent": "Waxing crescent",
+				"first-quarter": "First quarter",
+				"waxing-gibbous": "Waxing gibbous",
+				"full": "Full moon",
+				"waning-gibbous": "Waning gibbous",
+				"last-quarter": "Last quarter",
+				"waning-crescent": "Waning crescent"
+			},
+			"details": {
+				"title": "Details",
+				"feelsLike": "Feels like",
+				"humidity": "Humidity",
+				"dewPoint": "Dew point",
+				"wind": "Wind",
+				"gusts": "Gusts",
+				"uv": "UV index",
+				"rainfall": "Rainfall today",
+				"cloudCover": "Cloud cover",
+				"pressure": "Pressure",
+				"visibility": "Visibility"
+			},
+			"value": {
+				"degrees": "{value}°",
+				"percent": "{value} %",
+				"measure": "{value} {unit}",
+				"wind": "{value} {unit} {direction}",
+				"concentration": "{value} µg/m³"
+			},
+			"units": {
+				"kmh": "km/h",
+				"mph": "mph",
+				"hpa": "hPa",
+				"inhg": "inHg",
+				"km": "km",
+				"mi": "mi",
+				"mm": "mm",
+				"in": "in"
+			},
+			"compass": {
+				"N": "N",
+				"NNE": "NNE",
+				"NE": "NE",
+				"ENE": "ENE",
+				"E": "E",
+				"ESE": "ESE",
+				"SE": "SE",
+				"SSE": "SSE",
+				"S": "S",
+				"SSW": "SSW",
+				"SW": "SW",
+				"WSW": "WSW",
+				"W": "W",
+				"WNW": "WNW",
+				"NW": "NW",
+				"NNW": "NNW"
+			},
+			"uvCategory": {
+				"low": "Low",
+				"moderate": "Moderate",
+				"high": "High",
+				"very-high": "Very high",
+				"extreme": "Extreme"
+			},
+			"airQuality": {
+				"title": "Air quality",
+				"usAqi": "US AQI",
+				"europeanAqi": "European AQI",
+				"pm25": "PM2.5",
+				"pm10": "PM10",
+				"ozone": "Ozone",
+				"no2": "NO₂",
+				"category": {
+					"good": "Good",
+					"moderate": "Moderate",
+					"sensitive": "Unhealthy for sensitive groups",
+					"unhealthy": "Unhealthy",
+					"very-unhealthy": "Very unhealthy",
+					"hazardous": "Hazardous"
+				},
+				"unavailable": "No air quality source covers this place yet.",
+				"failed": "Couldn't reach {source}."
+			},
+			"allergens": {
+				"title": "Pollen and mold",
+				"kind": {
+					"tree": "Tree pollen",
+					"alder": "Alder pollen",
+					"birch": "Birch pollen",
+					"olive": "Olive pollen",
+					"grass": "Grass pollen",
+					"weed": "Weed pollen",
+					"mugwort": "Mugwort pollen",
+					"ragweed": "Ragweed pollen",
+					"mold": "Mold"
+				},
+				"level": {
+					"none": "None",
+					"low": "Low",
+					"moderate": "Moderate",
+					"high": "High",
+					"very-high": "Very high"
+				},
+				"unavailable": "No pollen or mold source covers this place yet.",
+				"failed": "Couldn't reach {source}."
+			},
+			"observed": "Observed",
+			"noData": "No data",
+			"fallback": "Couldn't reach {provider}. Showing {fallback}'s forecast instead.",
+			"sources": {
+				"label": "Sources",
+				"forecast": "Forecast by {name}",
+				"airQuality": "Air quality by {name}",
+				"allergens": "Pollen by {name}",
+				"alerts": "Alerts by the National Weather Service",
+				"legal": "Data sources"
+			},
+			"hint": {
+				"about": "About {name}",
+				"feelsLike": "What the air feels like on skin. Wind strips heat away and humid air slows sweat from evaporating, so it can differ from the thermometer.",
+				"humidity": "Relative humidity: the water vapour in the air as a percentage of the most it can hold at this temperature. Warm air can hold more, so the same percentage means more moisture on a hot day.",
+				"dewPoint": "A temperature, not a percentage: cool the air to this point and its moisture condenses into dew. It measures the moisture actually in the air. From about 18 °C (65 °F) the air feels muggy.",
+				"uv": "The strength of the sun's skin-burning ultraviolet light at today's peak, on the World Health Organization's scale. From 3 up, protection is advised. Thin cloud lets most of it through.",
+				"pressure": "The weight of the air above, adjusted to sea level so places at different heights compare. The average is about 1013 hPa (29.92 inHg); falling pressure often brings wind and rain.",
+				"visibility": "The farthest distance at which a large dark object can be seen against the sky. Below 1 km (0.6 mi) it counts as fog.",
+				"pm25": "Fine particles under 2.5 micrometres, from smoke and exhaust. Small enough to reach deep into the lungs.",
+				"pm10": "Particles under 10 micrometres: dust, pollen and mold spores.",
+				"ozone": "A gas sunlight makes from pollution. It irritates the airways, most on hot afternoons.",
+				"no2": "Nitrogen dioxide, mostly from traffic and burning fuel. It irritates the airways.",
+				"wind": "The sustained speed, and the direction the wind blows from: a south wind comes from the south.",
+				"gusts": "Short bursts above the sustained speed, lasting a few seconds. They are often strongest around showers and thunderstorms.",
+				"rainfall": "The depth of rain over the whole day. One millimetre is one litre of water on every square metre.",
+				"cloudCover": "The share of the sky covered by cloud. Clear nights cool faster, because cloud holds in the ground's heat.",
+				"hours": "The percentage is the chance of rain or snow falling here during that hour.",
+				"aboutHours": "About the hours",
+				"aqi": "The US index runs from 0 to 500 and follows whichever pollutant is worst. Up to 50 is good; above 100, sensitive groups should take care."
+			},
+			"trend": {
+				"label": "Temperature from {from} to {to}, between {low}° and {high}°"
+			},
+			"sunArc": {
+				"before": "The sun rises at {sunrise} and sets at {sunset}.",
+				"up": "The sun is up. It rose at {sunrise} and sets at {sunset}.",
+				"after": "The sun set at {sunset}."
+			},
+			"scale": "{name} {value}, {category}",
+			"place": {
+				"change": "Change home…",
+				"title": "Change home",
+				"find": "Find a place",
+				"placeholder": "A city or a town",
+				"helper": "Only the name you type is sent, to Open-Meteo.",
+				"results": "Places",
+				"result": "{name} · {region}",
+				"none": "No place by that name.",
+				"failed": "Couldn't reach {source}.",
+				"searching": "Searching…"
+			},
+			"motif": {
+				"wind": "Wind from {from} at {speed} {unit}. North is up.",
+				"hint": "North is up, and the streaks run the way the wind blows, faster as it strengthens. It is one reading for {place}, not a map, so the drawing has no scale."
+			},
+			"alerts": {
+				"label": "Weather alerts"
+			},
+			"alert": {
+				"from": "From {start} until {end}.",
+				"until": "Until {end}.",
+				"starts": "From {start}.",
+				"issued": "{sender} · {time}",
+				"issuedAt": "Issued {time}"
+			},
+			"weekStrip": "Daily forecast",
+			"todayMark": "Today",
+			"moonLit": "{percent} % lit",
+			"fact": {
+				"rain": "Rain",
+				"uv": "Highest UV index",
+				"wind": "Strongest wind",
+				"light": "Sunrise and sunset"
+			},
+			"factValue": {
+				"rain": "{chance} % · {amount}",
+				"uv": "UV {value}",
+				"light": "{from} – {to}",
+				"low": "/ {value}°"
 			},
 			"offline": {
-				"message": "Couldn't reach Open-Meteo.",
+				"message": "Couldn't reach {provider}.",
 				"lastGood": "Showing the forecast from {time}.",
 				"banner": "Offline. Showing the forecast from {time}."
 			}
@@ -323,10 +501,18 @@
 			"languageHelp": "Changes take effect at once.",
 			"english": "English",
 			"japanese": "日本語",
-			"units": "Temperature",
-			"unitsHelp": "For forecasts and the Garden's sky tile.",
-			"celsius": "°C",
-			"fahrenheit": "°F"
+			"measurement": "Units",
+			"measurementHelp": "For temperature, wind, pressure, distance and rainfall.",
+			"metric": "Metric",
+			"imperial": "Imperial",
+			"weekStart": "Week starts on",
+			"weekStartHelp": "Every week Eden shows begins on this day.",
+			"monday": "Monday",
+			"sunday": "Sunday",
+			"clock": "Clock",
+			"clockHelp": "How every time is written.",
+			"clock24": "24-hour",
+			"clock12": "12-hour"
 		},
 		"appearance": {
 			"theme": "Theme",
@@ -334,6 +520,12 @@
 			"dark": "Dark",
 			"system": "System",
 			"accent": "Accent",
+			"brand": "Brand level",
+			"brandLevels": {
+				"lush": "Lush",
+				"tended": "Tended",
+				"plain": "Plain"
+			},
 			"font": "Font",
 			"fontDefault": "Default",
 			"fontSystem": "System",
@@ -365,6 +557,12 @@
 			"updateAvailable": "{version} is available.",
 			"updateFailed": "Could not check for updates.",
 			"updatesNotAvailable": "Updates are checked from the installed app."
+		},
+		"integrations": {
+			"weatherProvider": "Weather provider",
+			"weatherProviderHelp": "Where Sky's forecast comes from. If it can't be reached, Open-Meteo stands in.",
+			"weatherSources": "Sky's sources",
+			"weatherSourcesHelp": "What Sky draws on. Only rounded coordinates are sent."
 		},
 		"placeholder": {
 			"title": "Not built yet",

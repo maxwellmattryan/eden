@@ -4,7 +4,7 @@ status: draft
 summary: The sensitivity tiers T0–T3 and what each allows for storage, sync, AI and export; what never leaves the device; what third parties receive; the owner's controls; a one-screen threat model.
 read-this-if: Anything you are designing touches personal data, an external service, or the Gardener.
 depends-on: [decisions]
-updated: 2026-09-27
+updated: 2026-09-29
 ---
 
 ## Principles (Phase 1)
@@ -33,7 +33,7 @@ Tiers attach to resources in `substrate/registry.md`:
 ## What never leaves the device
 
 - T3 content, except through the three audited doors in `substrate/data.md`: share-sheet export after biometric auth, the passphrase-encrypted export bundle, and end-to-end encrypted vault sync from Phase 3.
-- Precise coordinates. AI and weather providers receive city-level coordinates unless a precise-location grant exists for that subject.
+- Precise coordinates. AI and weather providers receive city-level coordinates (D-60) unless a precise-location grant exists for that subject.
 - The workspace database itself.
 - A Capture photo, until the owner sees which provider will receive it and confirms in the verification sheet (D-29).
 
