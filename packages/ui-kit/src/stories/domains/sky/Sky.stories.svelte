@@ -4,7 +4,7 @@
 	import { expect, fn, within } from 'storybook/test'
 	import { canvasOf, hasCanvas } from '../../../storybook/play.js'
 	import { defaultStrings } from '$lib/i18n/strings.js'
-	import { sidebar, skyHours, skyToday, skyWeek } from '../../sample-data.js'
+	import { sidebar, skyAirQuality, skyAllergens, skyHours, skyToday, skyWeek } from '../../sample-data.js'
 	import Sky from './Sky.svelte'
 
 	const strings = defaultStrings
@@ -19,11 +19,11 @@
 			docs: {
 				description: {
 					component:
-						'The Sky view (product/domains/weather.md), mocked from kit components under D-54. The header’s glyph is live and the location chip opens a Menu over home and the saved venues. Beneath: the now block with the temperature and the day’s range, the one active alert as a Banner, twelve hours from 08:00 in a strip that scrolls sideways (a named tab stop), with the showers arriving at 16:00, the week as a List, and the sun and moon card. Offline, an InlineError names the last good forecast and the status bar carries the banner; the numbers stay. At night the glyph turns to a moon.',
+						'The Sky view (product/domains/weather.md), mocked from kit components under D-54. The header’s glyph is live and the location chip opens a Menu over home and the saved venues. Beneath: the now block with the temperature and the day’s range, the one active alert as a Banner, twelve hours from 08:00 in a strip that scrolls sideways (a named tab stop), with the showers arriving at 16:00, the details as tiles, the calendar week as a List from the week start with today marked and the days before it observed (D-58), the air quality and the pollen and mold cards, the sun and moon card, and the sources’ attribution. The page is the same whatever the provider (D-56): Apple Weather changes the attribution line only, and a failed provider adds the fallback note. Offline, an InlineError names the last good forecast and the status bar carries the banner; the numbers stay. At night the glyph turns to a moon.',
 				},
 			},
 		},
-		args: { onretry: fn(), onlocation: fn(), onopentoday: fn(), onnavigate: fn() },
+		args: { onretry: fn(), onlocation: fn(), onopentoday: fn(), onnavigate: fn(), onsources: fn() },
 	})
 </script>
 
@@ -51,8 +51,22 @@
 		await expect(within(hours).getAllByRole('listitem')).toHaveLength(skyHours.length)
 		await expect(canvas.getByRole('grid', { name: 'This week' })).toBeVisible()
 		await expect(canvas.getAllByRole('row')).toHaveLength(skyWeek.length)
+		const rows = canvas.getAllByRole('row')
+		await expect(rows[0]).toHaveTextContent('Monday')
+		await expect(rows[0]).toHaveTextContent('Observed')
+		await expect(rows[2]).toHaveTextContent('Wednesday, today')
+		await expect(rows[2]).not.toHaveTextContent('Observed')
+		const details = canvas.getByRole('region', { name: 'Details' })
+		await expect(within(details).getByText('Humidity')).toBeVisible()
+		await expect(within(details).getByText('UV index')).toBeVisible()
+		const air = canvas.getByRole('region', { name: 'Air quality' })
+		await expect(within(air).getByText(String(skyAirQuality.index))).toBeVisible()
+		await expect(within(air).getByText('Good')).toBeVisible()
+		const allergens = canvas.getByRole('region', { name: 'Pollen and mold' })
+		for (const allergen of skyAllergens) await expect(within(allergens).getByText(allergen.name)).toBeVisible()
 		await expect(canvas.getByRole('region', { name: 'Sun and moon' })).toBeVisible()
 		await expect(canvas.getByText(skyToday.sunrise)).toBeVisible()
+		await expect(canvas.getByText('Forecast by Open-Meteo.')).toBeVisible()
 	}}
 />
 
@@ -84,5 +98,83 @@
 		const canvas = canvasOf(canvasElement)
 		await expect(canvas.getByText('Clear night')).toBeVisible()
 		await expect(canvas.getAllByRole('img', { name: strings.sky.clearNight }).length).toBeGreaterThan(0)
+	}}
+/>
+
+<!-- The week from Sunday (D-58): the Sunday before is the first row, observed, and today is the fourth -->
+<Story
+	name="Week from Sunday"
+	{template}
+	args={{ weekStart: 'sunday' }}
+	play={async ({ canvasElement }) => {
+		if (!hasCanvas(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		const rows = canvas.getAllByRole('row')
+		await expect(rows).toHaveLength(7)
+		await expect(rows[0]).toHaveTextContent('Sunday')
+		await expect(rows[0]).toHaveTextContent('Observed')
+		await expect(rows[3]).toHaveTextContent('Wednesday, today')
+		await expect(rows[6]).toHaveTextContent('Saturday')
+	}}
+/>
+
+<!-- The 12-hour clock (D-58): the strip, the alert, the week's note and the light all follow it -->
+<Story
+	name="Twelve-hour clock"
+	{template}
+	args={{ clock: '12h' }}
+	play={async ({ canvasElement }) => {
+		if (!hasCanvas(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		const hours = canvas.getByRole('region', { name: 'Hours' })
+		await expect(within(hours).getByText('8 AM')).toBeVisible()
+		await expect(within(hours).getByText('4 PM')).toBeVisible()
+		await expect(canvas.getByRole('alert')).toHaveTextContent('Showers from 4 PM. Your 5:30 PM session')
+		await expect(canvas.getByText('7:22 AM')).toBeVisible()
+		await expect(canvas.getByText('7:14 PM')).toBeVisible()
+	}}
+/>
+
+<!-- Apple Weather as the provider (D-57): the same page, with Apple's mark and its legal link in the attribution -->
+<Story
+	name="Apple Weather"
+	{template}
+	args={{ provider: 'weatherkit' }}
+	play={async ({ canvasElement, args }) => {
+		if (!hasCanvas(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		await expect(canvas.getByRole('region', { name: 'Details' })).toBeVisible()
+		await expect(canvas.getByRole('region', { name: 'Air quality' })).toBeVisible()
+		await expect(canvas.getAllByRole('row')).toHaveLength(7)
+		await expect(canvas.getByText('Apple Weather')).toBeVisible()
+		await expect(canvas.queryByText('Forecast by Open-Meteo.')).toBeNull()
+		canvas.getByRole('button', { name: 'Data sources' }).click()
+		await expect(args.onsources).toHaveBeenCalledTimes(1)
+	}}
+/>
+
+<!-- Apple Weather could not answer: Open-Meteo stands in, a note says so, and the attribution is Open-Meteo's -->
+<Story
+	name="Fallback"
+	{template}
+	args={{ provider: 'weatherkit', fallback: true }}
+	play={async ({ canvasElement }) => {
+		if (!hasCanvas(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		await expect(canvas.getByText("Couldn't reach Apple Weather. Showing Open-Meteo's forecast instead.")).toBeVisible()
+		await expect(canvas.getByText('Forecast by Open-Meteo.')).toBeVisible()
+	}}
+/>
+
+<!-- No allergen source covers the place (D-59): the block stays and says so -->
+<Story
+	name="Allergens unavailable"
+	{template}
+	args={{ allergens: 'unavailable' }}
+	play={async ({ canvasElement }) => {
+		if (!hasCanvas(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		const allergens = canvas.getByRole('region', { name: 'Pollen and mold' })
+		await expect(within(allergens).getByText('No pollen or mold source covers this place yet.')).toBeVisible()
 	}}
 />

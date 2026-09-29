@@ -159,6 +159,52 @@ export const skyWeek: { day: string; hi: number; lo: number; condition: SkyCondi
 	{ day: 'Sat', hi: 30, lo: 19, condition: 'sunny' },
 	{ day: 'Sun', hi: 31, lo: 20, condition: 'sunny' },
 ]
+/** The Sunday before the sample week, observed: the first row of a week that starts on Sunday (D-58). */
+export const skySundayBefore: { day: string; hi: number; lo: number; condition: SkyCondition } = {
+	day: 'Sun',
+	hi: 30,
+	lo: 21,
+	condition: 'partly-cloudy',
+}
+/** Wednesday 07:40 in detail, in metric: what the forecast provider gives beyond the temperature. */
+export const skyDetails = {
+	feelsLike: 23,
+	/** Percent. */
+	humidity: 64,
+	dewPoint: 15,
+	/** km/h. */
+	wind: 14,
+	gust: 27,
+	windFrom: 'SSE',
+	/** hPa. */
+	pressure: 1014,
+	/** km. */
+	visibility: 16,
+	/** Percent. */
+	cloudCover: 20,
+	/** Today's rainfall, in mm. */
+	rainfall: 4.2,
+	/** Today's highest UV index. */
+	uv: 7,
+}
+export type SkyAirCategory = 'good' | 'moderate' | 'sensitive' | 'unhealthy' | 'very-unhealthy' | 'hazardous'
+/** The air at 07:40: the US index and the pollutants behind it, in µg/m³. */
+export const skyAirQuality: {
+	index: number
+	category: SkyAirCategory
+	pm25: number
+	pm10: number
+	ozone: number
+	no2: number
+} = { index: 42, category: 'good', pm25: 8.4, pm10: 17, ozone: 61, no2: 12 }
+export type SkyAllergenLevel = 'none' | 'low' | 'moderate' | 'high' | 'very-high'
+/** Austin at the end of September: ragweed at its peak, mold after the rain. */
+export const skyAllergens: { id: string; name: string; level: SkyAllergenLevel }[] = [
+	{ id: 'tree', name: 'Tree pollen', level: 'low' },
+	{ id: 'grass', name: 'Grass pollen', level: 'moderate' },
+	{ id: 'ragweed', name: 'Ragweed pollen', level: 'high' },
+	{ id: 'mold', name: 'Mold', level: 'moderate' },
+]
 export const skyToday = {
 	sunrise: '07:22',
 	sunset: '19:14',

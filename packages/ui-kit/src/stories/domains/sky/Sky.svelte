@@ -1,10 +1,14 @@
 <script lang="ts">
-	// The Sky view (product/domains/weather.md, "Surfaces"): now, the next hours, the week, sun and moon, the one active
-	// alert, and a location switcher over home and the saved venues. The header's glyph is live: it follows the
-	// current condition and turns to a moon after sunset. Offline, an InlineError names the last good forecast and the
-	// status bar carries the banner; the numbers stay, since a mirror is still worth reading.
+	// The Sky view (product/domains/weather.md, "Surfaces"): now, the next hours, the details, the calendar week, the
+	// air and the allergens, sun and moon, the one active alert, and a location switcher over home and the saved
+	// venues. The header's glyph is live: it follows the current condition and turns to a moon after sunset. Offline,
+	// an InlineError names the last good forecast and the status bar carries the banner; the numbers stay, since a
+	// mirror is still worth reading. The page is the same whatever the provider (D-56): only the attribution line and,
+	// when the chosen provider failed, the fallback note differ.
 	import {
+		Badge,
 		Banner,
+		Button,
 		Chip,
 		InlineError,
 		List,
@@ -13,25 +17,61 @@
 		SkyGlyph,
 		Stat,
 		iconFor,
+		type BadgeKind,
 		type ListRowData,
 		type MenuItem,
 		type SkyCondition,
 	} from '$lib/index.js'
 	import type { StatusBarBanner } from '$lib/components/StatusBar/StatusBar.svelte'
 	import AppFrame from '../_frame/AppFrame.svelte'
-	import { sidebar, skyHours, skyToday, skyWeek } from '../../sample-data.js'
+	import {
+		sidebar,
+		skyAirQuality,
+		skyAllergens,
+		skyDetails,
+		skyHours,
+		skySundayBefore,
+		skyToday,
+		skyWeek,
+		type SkyAirCategory,
+		type SkyAllergenLevel,
+	} from '../../sample-data.js'
 
 	type Props = {
 		/** No provider reachable: the InlineError and the status-bar banner, the last good forecast still shown. */
 		offline?: boolean
 		/** After sunset: the glyph turns to a moon and the now block reads the evening. */
 		night?: boolean
+		/** The day the week starts on (D-58): the rows run from it, seven of them, today marked wherever it falls. */
+		weekStart?: 'monday' | 'sunday'
+		/** The clock every time on the page is written on (D-58). */
+		clock?: '24h' | '12h'
+		/** The forecast provider (D-56): it changes the attribution line and nothing else. */
+		provider?: 'open-meteo' | 'weatherkit'
+		/** The chosen provider could not answer and Open-Meteo stood in (D-57): a note above the forecast. */
+		fallback?: boolean
+		/** No allergen source covers the place (D-59): the block says so rather than disappearing. */
+		allergens?: 'available' | 'unavailable'
+		onsources?: () => void
 		onretry?: () => void | Promise<unknown>
 		onlocation?: (item: MenuItem) => void
 		onopentoday?: () => void
 		onnavigate?: (id: string) => void
 	}
-	let { offline = false, night = false, onretry, onlocation, onopentoday, onnavigate }: Props = $props()
+	let {
+		offline = false,
+		night = false,
+		weekStart = 'monday',
+		clock = '24h',
+		provider = 'open-meteo',
+		fallback = false,
+		allergens = 'available',
+		onsources,
+		onretry,
+		onlocation,
+		onopentoday,
+		onnavigate,
+	}: Props = $props()
 
 	const uid = $props.id()
 	const sky = sidebar.items.find((entry) => entry.id === 'weather')!
@@ -63,29 +103,80 @@
 		{ id: 'cosmic', label: 'Cosmic Coffee', icon: 'map-pin' },
 		{ id: 'zilker', label: 'Zilker Park', icon: 'map-pin' },
 	]
-	const todayIndex = 2
-	const today = skyWeek[todayIndex]!
-	const alert = 'Showers from 16:00. Your 17:30 session may get wet.'
+	const PROVIDER = { 'open-meteo': 'Open-Meteo', weatherkit: 'Apple Weather' } as const
+	const AIR: Record<SkyAirCategory, { label: string; kind: BadgeKind }> = {
+		good: { label: 'Good', kind: 'neutral' },
+		moderate: { label: 'Moderate', kind: 'neutral' },
+		sensitive: { label: 'Unhealthy for sensitive groups', kind: 'danger' },
+		unhealthy: { label: 'Unhealthy', kind: 'danger' },
+		'very-unhealthy': { label: 'Very unhealthy', kind: 'danger' },
+		hazardous: { label: 'Hazardous', kind: 'danger' },
+	}
+	const LEVEL: Record<SkyAllergenLevel, { label: string; kind: BadgeKind }> = {
+		none: { label: 'None', kind: 'neutral' },
+		low: { label: 'Low', kind: 'neutral' },
+		moderate: { label: 'Moderate', kind: 'neutral' },
+		high: { label: 'High', kind: 'danger' },
+		'very-high': { label: 'Very high', kind: 'danger' },
+	}
+	/** Wednesday, wherever the week start puts it. */
+	const TODAY = 'Wed'
+	const today = skyWeek.find((day) => day.day === TODAY)!
 	/** The scrolling strip's name: a scroll region is a tab stop, and a tab stop needs a name. */
 	const HOURS_STRIP = 'Hourly forecast'
 
+	/** A sample time (`HH:MM`) on the owner's clock; a strip's hour drops its minutes on the 12-hour clock. */
+	function onClock(time: string, short = false): string {
+		if (clock === '24h') return time
+		const [hour = 0, minute = 0] = time.split(':').map(Number)
+		const suffix = hour < 12 ? 'AM' : 'PM'
+		const h = hour % 12 === 0 ? 12 : hour % 12
+		return short ? `${h} ${suffix}` : `${h}:${String(minute).padStart(2, '0')} ${suffix}`
+	}
+
+	const alert = $derived(`Showers from ${onClock('16:00', true)}. Your ${onClock('17:30')} session may get wet.`)
 	/** Now: 07:40 reads the first hour of the strip; after sunset the evening's last one under a clear sky. */
 	const condition = $derived<SkyCondition>(night ? 'sunny' : skyHours[0]!.condition)
 	const temp = $derived(night ? skyHours[skyHours.length - 1]!.temp : skyHours[0]!.temp)
 	const label = $derived(night ? 'Clear night' : CONDITION[condition])
 	const banner = $derived<StatusBarBanner | undefined>(
-		offline ? { message: `Offline. Showing the forecast from ${skyToday.lastGood}.` } : undefined
+		offline ? { message: `Offline. Showing the forecast from ${onClock(skyToday.lastGood)}.` } : undefined
 	)
+	/** The calendar week from the start day: Monday to Sunday, or the Sunday before to Saturday. */
+	const days = $derived(weekStart === 'sunday' ? [skySundayBefore, ...skyWeek.slice(0, 6)] : skyWeek)
+	const todayIndex = $derived(days.findIndex((day) => day.day === TODAY))
 	const week = $derived<ListRowData[]>(
-		skyWeek.map((day, i) => ({
-			id: day.day,
-			primary: i === todayIndex ? `${DAYS[day.day]}, today` : DAYS[day.day]!,
-			secondary: day.note ? `${CONDITION[day.condition]}, ${day.note}` : CONDITION[day.condition],
-			icon: iconFor(day.condition),
-			meta: `${day.hi}° / ${day.lo}°`,
-			metaWarn: i === todayIndex,
-		}))
+		days.map((day, i) => {
+			const note = 'note' in day && day.note ? day.note.replace('16:00', onClock('16:00', true)) : undefined
+			return {
+				id: `${i}-${day.day}`,
+				primary: i === todayIndex ? `${DAYS[day.day]}, today` : DAYS[day.day]!,
+				secondary: note ? `${CONDITION[day.condition]}, ${note}` : CONDITION[day.condition],
+				badges: i < todayIndex ? [{ kind: 'neutral' as const, label: 'Observed' }] : undefined,
+				icon: iconFor(day.condition),
+				meta: `${day.hi}° / ${day.lo}°`,
+				metaWarn: i === todayIndex,
+			}
+		})
 	)
+	const details = $derived([
+		{ id: 'feels', label: 'Feels like', value: `${skyDetails.feelsLike}°` },
+		{ id: 'humidity', label: 'Humidity', value: `${skyDetails.humidity} %` },
+		{ id: 'dew', label: 'Dew point', value: `${skyDetails.dewPoint}°` },
+		{ id: 'wind', label: 'Wind', value: `${skyDetails.wind} km/h ${skyDetails.windFrom}` },
+		{ id: 'gust', label: 'Gusts', value: `${skyDetails.gust} km/h` },
+		{ id: 'uv', label: 'UV index', value: `${skyDetails.uv}`, note: 'High' },
+		{ id: 'rain', label: 'Rainfall today', value: `${skyDetails.rainfall} mm` },
+		{ id: 'cloud', label: 'Cloud cover', value: `${skyDetails.cloudCover} %` },
+		{ id: 'pressure', label: 'Pressure', value: `${skyDetails.pressure} hPa` },
+		{ id: 'visibility', label: 'Visibility', value: `${skyDetails.visibility} km` },
+	])
+	const pollutants = [
+		{ id: 'pm25', label: 'PM2.5', value: skyAirQuality.pm25 },
+		{ id: 'pm10', label: 'PM10', value: skyAirQuality.pm10 },
+		{ id: 'ozone', label: 'Ozone', value: skyAirQuality.ozone },
+		{ id: 'no2', label: 'NO₂', value: skyAirQuality.no2 },
+	]
 
 	let anchor = $state<HTMLElement>()
 	let open = $state(false)
@@ -114,9 +205,18 @@
 				{#if offline}
 					<div class="area-error">
 						<InlineError
-							message="Couldn't reach Open-Meteo."
-							lastGood="Showing the forecast from {skyToday.lastGood}."
+							message="Couldn't reach {PROVIDER[provider]}."
+							lastGood="Showing the forecast from {onClock(skyToday.lastGood)}."
 							{onretry}
+						/>
+					</div>
+				{/if}
+				{#if fallback}
+					<div class="area-fallback">
+						<Banner
+							tone="info"
+							message="Couldn't reach Apple Weather. Showing Open-Meteo's forecast instead."
+							action={{ label: 'Retry', onclick: onretry }}
 						/>
 					</div>
 				{/if}
@@ -148,7 +248,7 @@
 					<ol class="hours-list" tabindex="0" aria-label={HOURS_STRIP}>
 						{#each skyHours as hour (hour.id)}
 							<li class="hour" class:hour-wet={hour.precip >= 50}>
-								<span class="hour-time">{hour.time}</span>
+								<span class="hour-time">{onClock(hour.time, true)}</span>
 								<SkyGlyph condition={hour.condition} size="md" class="hour-glyph" />
 								<span class="mono">{hour.temp}°</span>
 								<span class="hour-precip">{hour.precip} %</span>
@@ -157,23 +257,77 @@
 					</ol>
 				</section>
 
+				<section class="details card" aria-labelledby="{uid}-details">
+					<h2 class="section-title" id="{uid}-details">Details</h2>
+					<dl class="tiles">
+						{#each details as detail (detail.id)}
+							<div class="tile">
+								<dt>{detail.label}</dt>
+								<dd>
+									<span class="mono">{detail.value}</span>
+									{#if detail.note}<span class="tile-note">{detail.note}</span>{/if}
+								</dd>
+							</div>
+						{/each}
+					</dl>
+				</section>
+
 				<div class="week">
 					<List header="This week" rows={week} />
 				</div>
+
+				<section class="air card" aria-labelledby="{uid}-air">
+					<h2 class="section-title" id="{uid}-air">Air quality</h2>
+					<div class="air-row">
+						<Stat value={String(skyAirQuality.index)} unit="US AQI" />
+						<Badge kind={AIR[skyAirQuality.category].kind} label={AIR[skyAirQuality.category].label} />
+					</div>
+					<dl class="fields">
+						{#each pollutants as pollutant (pollutant.id)}
+							<dt>{pollutant.label}</dt>
+							<dd class="mono">{pollutant.value} µg/m³</dd>
+						{/each}
+					</dl>
+				</section>
+
+				<section class="allergens card" aria-labelledby="{uid}-allergens">
+					<h2 class="section-title" id="{uid}-allergens">Pollen and mold</h2>
+					{#if allergens === 'available'}
+						<dl class="fields">
+							{#each skyAllergens as allergen (allergen.id)}
+								<dt>{allergen.name}</dt>
+								<dd><Badge kind={LEVEL[allergen.level].kind} label={LEVEL[allergen.level].label} /></dd>
+							{/each}
+						</dl>
+					{:else}
+						<p class="quiet">No pollen or mold source covers this place yet.</p>
+					{/if}
+				</section>
 
 				<section class="sun card" aria-labelledby="{uid}-sun">
 					<h2 class="section-title" id="{uid}-sun">Sun and moon</h2>
 					<dl class="fields">
 						<dt>Sunrise</dt>
-						<dd class="mono">{skyToday.sunrise}</dd>
+						<dd class="mono">{onClock(skyToday.sunrise)}</dd>
 						<dt>Sunset</dt>
-						<dd class="mono">{skyToday.sunset}</dd>
+						<dd class="mono">{onClock(skyToday.sunset)}</dd>
 						<dt>Golden hour</dt>
-						<dd class="mono">{skyToday.goldenHour}</dd>
+						<dd class="mono">{onClock(skyToday.goldenHour)}</dd>
 						<dt>Moon</dt>
 						<dd>{skyToday.moon}</dd>
 					</dl>
 				</section>
+
+				<footer class="sources" aria-label="Sources">
+					{#if provider === 'weatherkit' && !fallback}
+						<!-- Apple's mark and its legal link, as WeatherKit requires; the app draws the mark Apple supplies -->
+						<p class="sources-line"><span class="sources-mark">Apple Weather</span></p>
+						<Button variant="quiet" size="md" label="Data sources" iconRight="external-link" onclick={onsources} />
+					{:else}
+						<p class="sources-line">Forecast by Open-Meteo.</p>
+					{/if}
+					<p class="sources-line">Air quality by Open-Meteo and CAMS. Alerts by the National Weather Service.</p>
+				</footer>
 			</div>
 		</div>
 	{/snippet}
@@ -188,21 +342,45 @@
 	.anchor {
 		display: inline-flex;
 	}
-	/* One column on the phone; on desktop the forecast on the left, the alert and the light on the right */
+	/* One column on the phone; on desktop the forecast on the left, and the alert, the light, the air and the
+	   allergens stacked on the right, the stack spanning the rows the forecast fills */
 	.body {
 		display: grid;
-		grid-template-areas: 'error' 'now' 'alert' 'hours' 'week' 'sun';
+		grid-template-areas: 'error' 'fallback' 'now' 'alert' 'hours' 'details' 'air' 'allergens' 'week' 'sun' 'sources';
 		gap: var(--space-4);
 		padding: 0 var(--ed-gutter);
 	}
 	.body-wide {
 		grid-template-columns: minmax(0, 1fr) var(--sheet-sm);
-		grid-template-areas: 'error error' 'now alert' 'hours sun' 'week sun' 'week .';
+		grid-template-areas:
+			'error error'
+			'fallback fallback'
+			'now alert'
+			'hours sun'
+			'details air'
+			'week allergens'
+			'sources sources';
 		gap: var(--space-6);
 		align-items: start;
 	}
 	.area-error {
 		grid-area: error;
+	}
+	.area-fallback {
+		grid-area: fallback;
+		min-width: 0;
+	}
+	.details {
+		grid-area: details;
+	}
+	.air {
+		grid-area: air;
+	}
+	.allergens {
+		grid-area: allergens;
+	}
+	.sources {
+		grid-area: sources;
 	}
 	.now {
 		grid-area: now;
@@ -221,13 +399,15 @@
 	.sun {
 		grid-area: sun;
 	}
-	/* The alert reads whole: the strip wraps its sentence rather than trimming it */
-	.alert :global(.ed-banner-inline) {
+	/* The alert and the note read whole: the strip wraps its sentence rather than trimming it */
+	.alert :global(.ed-banner-inline),
+	.area-fallback :global(.ed-banner-inline) {
 		display: flex;
 		width: 100%;
 		padding-block: var(--space-1);
 	}
-	.alert :global(.ed-banner-message) {
+	.alert :global(.ed-banner-message),
+	.area-fallback :global(.ed-banner-message) {
 		white-space: normal;
 	}
 
@@ -335,6 +515,56 @@
 		letter-spacing: var(--ed-t-data-sm-tracking);
 		font-variant-numeric: tabular-nums;
 		color: var(--text-secondary);
+	}
+
+	/* Details: tiles that fill the row, a label over its figure */
+	.tiles {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(calc(var(--space-8) * 3), 1fr));
+		gap: var(--space-4);
+		margin: 0;
+	}
+	.tile {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-1);
+		min-width: 0;
+	}
+	.tile dt {
+		font: var(--ed-t-body-sm);
+		letter-spacing: var(--ed-t-body-sm-tracking);
+		color: var(--text-secondary);
+	}
+	.tile dd {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: var(--space-2);
+		margin: 0;
+	}
+	.tile-note,
+	.quiet,
+	.sources-line {
+		margin: 0;
+		font: var(--ed-t-body-sm);
+		letter-spacing: var(--ed-t-body-sm-tracking);
+		color: var(--text-secondary);
+	}
+	.air-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--space-3);
+	}
+	.sources {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--space-1) var(--space-3);
+	}
+	.sources-mark {
+		font-weight: 600;
+		color: var(--text-primary);
 	}
 
 	.fields {
