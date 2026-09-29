@@ -212,10 +212,13 @@
 		grid-row: 1;
 		grid-column: 2;
 		overflow: auto;
-		padding: var(--ed-gutter);
+		padding: var(--ed-gutter) var(--space-6);
 	}
+	/* The arrow is centred over the page header's glyph: each page insets itself by the gutter, and the arrow's box
+	   is wider than that glyph by the ring around it */
 	.content-back {
 		min-height: var(--ed-control);
+		padding-left: calc(var(--ed-gutter) - (var(--ed-control) - var(--icon-lg)) / 2);
 	}
 	:global(.bar) {
 		grid-row: 2;
