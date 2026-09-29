@@ -11,6 +11,7 @@
 		Breeze,
 		Button,
 		Chip,
+		Compass,
 		Field,
 		Icon,
 		IconButton,
@@ -130,6 +131,8 @@
 		{ id: 'change', label: 'Change home…', icon: 'search' },
 	]
 	const AQI_STOPS = [50, 100, 150, 200, 300, 500]
+	const MOTIF_HINT =
+		'North is up, and the streaks run the way the wind blows, faster as it strengthens. It is one reading for Hyde Park, not a map, so the drawing has no scale.'
 	const HOURS_HINT = 'The percentage is the chance of rain or snow falling here during that hour.'
 	const AQI_HINT =
 		'The US index runs from 0 to 500 and follows whichever pollutant is worst. Up to 50 is good; above 100, sensitive groups should take care.'
@@ -400,6 +403,15 @@
 				<!-- the page's one live thing (D-62): the wind as it blows -->
 				{#snippet motif()}
 					<Sketch sketch={skyField} params={motifParams} />
+				{/snippet}
+				<!-- which way the streaks run, north up: a compass and nothing written. From the south-south-east, so the
+				     needle points north-north-west -->
+				{#snippet legend()}
+					<Compass
+						bearing={(motifParams.windFrom + 180) % 360}
+						label="Wind from {skyDetails.windFrom} at {motifParams.windSpeed} km/h. North is up."
+						tooltip={MOTIF_HINT}
+					/>
 				{/snippet}
 				{#snippet filters()}
 					<span class="anchor" bind:this={anchor}>

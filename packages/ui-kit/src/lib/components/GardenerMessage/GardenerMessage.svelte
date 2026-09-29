@@ -5,6 +5,7 @@
 	// children (tool and proposal cards) follow the text inside the same bubble.
 	import type { Snippet } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
+	import { domainGlyph } from '../../icons/domain-glyphs.js'
 	import Icon from '../../icons/Icon.svelte'
 	import { useStrings } from '../../i18n/context.js'
 
@@ -32,7 +33,7 @@
 	{...rest}
 >
 	{#if !owner}
-		<p class="ed-msg-name" id="{uid}-name"><Icon name="sprout" size="sm" />{speaker}</p>
+		<p class="ed-msg-name" id="{uid}-name"><Icon name={domainGlyph('gardener')} size="sm" />{speaker}</p>
 	{/if}
 	<!-- keyed by index: the paragraphs are a plain string list, and a streaming reply grows the last one in place -->
 	{#each paragraphs as paragraph, i (i)}

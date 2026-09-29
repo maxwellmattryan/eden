@@ -54,6 +54,9 @@
 		aside?: Snippet
 		/** The domain's motif, in the room the header leaves empty beside the name (D-62): a `Sketch`. Decoration only. */
 		motif?: Snippet
+		/** What the motif is showing, in a quiet line at the foot of its room: which way, how much. Left out when the
+		 * room is too narrow to hold it clear of the filters. */
+		legend?: Snippet
 	}
 	let {
 		name,
@@ -65,6 +68,7 @@
 		filters,
 		aside,
 		motif,
+		legend,
 		class: className = '',
 		...rest
 	}: Props = $props()
@@ -79,12 +83,16 @@
 	let filtersRow = $state<HTMLElement>()
 	let actionsRow = $state<HTMLElement>()
 	let asideColumn = $state<HTMLElement>()
-	let room = $state<{ start: number; end: number | null }>({ start: 0, end: null })
+	let room = $state<{ start: number; end: number | null; width: number }>({ start: 0, end: null, width: 0 })
+	/** The least room, in px, in which a legend stands clear of what is on the left. */
+	const LEGEND_ROOM = 280
 	const place = measure(() => {
 		if (!root) return
 		const ends = [title, filtersRow].map((el) => (el ? el.offsetLeft + el.offsetWidth : 0))
 		const begins = [actionsRow, asideColumn].flatMap((el) => (el ? [el.offsetLeft] : []))
-		room = { start: Math.max(...ends), end: begins.length ? root.clientWidth - Math.min(...begins) : null }
+		const start = Math.max(...ends)
+		const end = begins.length ? root.clientWidth - Math.min(...begins) : null
+		room = { start, end, width: root.clientWidth - start - (end ?? 0) }
 	})
 </script>
 
@@ -102,6 +110,15 @@
 		>
 			{@render motif()}
 		</div>
+		{#if legend && room.width >= LEGEND_ROOM}
+			<div
+				class="ed-page-header-legend"
+				data-tertiary
+				style:--ed-page-header-motif-end={room.end == null ? undefined : `${room.end}px`}
+			>
+				{@render legend()}
+			</div>
+		{/if}
 	{/if}
 	<div class="ed-page-header-row">
 		{#if back}<BackButton {onback} breadcrumb={typeof back === 'string' ? back : undefined} />{/if}
@@ -180,6 +197,19 @@
 				transparent
 			);
 		mask-composite: intersect;
+	}
+	/* The legend stands at the foot of the motif's room, on the line of the filters, clear of the feathering */
+	.ed-page-header-legend {
+		position: absolute;
+		inset-block-end: var(--space-4);
+		inset-inline-end: calc(var(--ed-page-header-motif-end, var(--ed-gutter) - var(--space-4)) + var(--space-4));
+		display: flex;
+		align-items: center;
+		gap: var(--space-1);
+		min-height: var(--space-6);
+		font: var(--ed-t-caption);
+		letter-spacing: var(--ed-t-caption-tracking);
+		color: var(--text-tertiary);
 	}
 	.ed-page-header-row {
 		display: flex;

@@ -142,6 +142,10 @@ export interface UiStrings {
 	}
 	sparkline: (count: number, latest: string) => string
 	reference: (value: string) => string
+	compass: {
+		/** The letter at the compass's north point. */
+		north: string
+	}
 	iconButton: {
 		/** The accessible name of a bell with a badge: the label and its unread count. */
 		withCount: (label: string, count: number) => string
@@ -284,6 +288,7 @@ export const defaultStrings: UiStrings = {
 	},
 	sparkline: (count, latest) => `${count} values, latest ${latest}`,
 	reference: (value) => `reference ${value}`,
+	compass: { north: 'N' },
 	iconButton: {
 		withCount: (label, count) => `${label}, ${count} unread`,
 	},

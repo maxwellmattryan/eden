@@ -42,8 +42,9 @@
 	/** Sky's times are the place's (D-58). */
 	const skyFormat = $derived({ ...format, timeZone: weather.timeZone })
 
-	// Today, Garden, the enabled domains from their manifests, then Toolbench, each group under a rule (D-55); the
-	// owner's order arrives with the Domains tab.
+	// Today; Garden, Gardener and Toolbench; then the enabled domains from their manifests, each group under a rule
+	// (D-64); the owner's order arrives with the Domains tab. The ⌘ positions count the places only: the Gardener has
+	// its own key.
 	const domains = $derived(manifests.filter((m) => m.id !== 'toolbench'))
 	const toolbench = $derived(manifests.filter((m) => m.id === 'toolbench'))
 	const hrefs = {
@@ -52,7 +53,7 @@
 	} as const
 
 	const position = $derived(
-		new Map(['today', 'garden', ...[...domains, ...toolbench].map((m) => m.id)].map((id, i) => [id, i + 1]))
+		new Map(['today', 'garden', ...[...toolbench, ...domains].map((m) => m.id)].map((id, i) => [id, i + 1]))
 	)
 	const entry = (manifest: (typeof manifests)[number]): SidebarEntry => ({
 		id: manifest.id,
@@ -84,25 +85,27 @@
 				shortcut: keys('2'),
 				href: hrefs.garden,
 			},
+			{
+				id: 'gardener',
+				name: $t('shell.gardener'),
+				subtitle: $t('shell.gardenerSubtitle'),
+				icon: domainGlyph('gardener'),
+				shortcut: keys('G'),
+			},
+			...toolbench.map(entry),
 		],
-		domains.map(entry),
-		...(toolbench.length ? [toolbench.map(entry)] : []),
+		...(domains.length ? [domains.map(entry)] : []),
 	])
-	const items = $derived(groups.flat())
+	/** The places, in ⌘ order. */
+	const items = $derived(groups.flat().filter((item) => item.href))
 	const pinned = $derived<SidebarEntry[]>([
-		{
-			id: 'gardener',
-			name: $t('shell.gardener'),
-			subtitle: $t('shell.gardenerSubtitle'),
-			icon: domainGlyph('gardener'),
-			shortcut: keys('G'),
-		},
 		{
 			id: 'settings',
 			name: $t('shell.settings'),
 			subtitle: $t('shell.settingsSubtitle'),
 			icon: domainGlyph('settings'),
 			shortcut: keys(','),
+			action: true,
 		},
 	])
 	const current = $derived(page.route.id?.split('/')[1] || 'garden')

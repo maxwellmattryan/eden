@@ -58,6 +58,10 @@
 		await expect(now).toBeVisible()
 		// the reading, which the chart's side may repeat as one of its figures
 		await expect(within(now).getAllByText(`${skyHours[0]!.temp}°`)[0]).toBeVisible()
+		// the motif's legend, where the header has room for it: on the desktop
+		if (canvas.queryByRole('contentinfo', { name: strings.statusBar.label })) {
+			await expect(canvas.getByRole('img', { name: 'Wind from SSE at 14 km/h. North is up.' })).toBeVisible()
+		}
 		// the alert waits behind its button
 		await expect(canvas.getByRole('button', { name: /^Weather alerts/ })).toHaveAttribute('aria-expanded', 'false')
 		await expect(canvas.queryByRole('alert')).toBeNull()

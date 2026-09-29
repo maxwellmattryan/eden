@@ -15,7 +15,7 @@ updated: 2026-09-29
 
 ## Sidebar (Phase 1)
 
-The app mark and wordmark at the head, then Today, Garden and the enabled domains in the owner's order as three groups under rules, then Gardener and Settings pinned at the bottom (D-55). Each domain shows its glyph, themed name and plain subtitle; the subtitle collapses to a tooltip once the owner turns it off (D-2). Domains can be reordered by drag and hidden without being disabled (`substrate/domain-manifest.md`). Badges are rare: unread inbox count on the bell, nothing on domains by default.
+The app mark and wordmark at the head, then three groups under rules: Today; Garden, Gardener and Toolbench; the enabled domains in the owner's order. Settings is pinned at the bottom and opens its sheet without becoming the current item (D-55, D-64). Each domain shows its glyph, themed name and plain subtitle; the subtitle collapses to a tooltip once the owner turns it off (D-2). Domains can be reordered by drag and hidden without being disabled (`substrate/domain-manifest.md`). Badges are rare: unread inbox count on the bell, nothing on domains by default.
 
 ## The Garden (Phase 1)
 

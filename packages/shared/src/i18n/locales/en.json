@@ -445,6 +445,10 @@
 				"failed": "Couldn't reach {source}.",
 				"searching": "Searching…"
 			},
+			"motif": {
+				"wind": "Wind from {from} at {speed} {unit}. North is up.",
+				"hint": "North is up, and the streaks run the way the wind blows, faster as it strengthens. It is one reading for {place}, not a map, so the drawing has no scale."
+			},
 			"alerts": {
 				"label": "Weather alerts"
 			},

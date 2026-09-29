@@ -14,6 +14,7 @@
 		Breeze,
 		Button,
 		Chip,
+		Compass,
 		EmptyState,
 		Field,
 		Icon,
@@ -186,6 +187,22 @@
 				}
 			: undefined
 	)
+	/** What the motif shows, for its compass: the way the wind blows to, and the reading in a sentence. */
+	const wind = $derived.by(() => {
+		if (!now) return undefined
+		const { value, unit } = speed(now.windSpeed, settings.measurement)
+		const values = {
+			speed: value,
+			unit: $t(`domains.weather.units.${unit}`),
+			from: $t(`domains.weather.compass.${compass(now.windDirection)}`),
+			place: settings.home.label,
+		}
+		return {
+			bearing: (now.windDirection + 180) % 360,
+			label: $t('domains.weather.motif.wind', { values }),
+			hint: $t('domains.weather.motif.hint', { values }),
+		}
+	})
 	// The sun moves with the clock, not with the forecast: the minute is read here and the readings stay the mirror's.
 	const MINUTE_MS = 60 * 1000
 	let clock = $state(Date.now())
@@ -485,6 +502,10 @@
 		<!-- the page's one live thing: the wind as it reads now -->
 		{#snippet motif()}
 			{#if field}<Sketch sketch={skyField} params={field} />{/if}
+		{/snippet}
+		<!-- which way the streaks run, north up: a compass and nothing written -->
+		{#snippet legend()}
+			{#if wind}<Compass bearing={wind.bearing} label={wind.label} tooltip={wind.hint} />{/if}
 		{/snippet}
 		{#snippet filters()}
 			<span class="anchor" bind:this={anchor}>
@@ -1125,7 +1146,7 @@
 	}
 	.quiet,
 	.source {
-		margin: 0;
+		margin: 0 0 var(--space-4);
 		font: var(--ed-t-body-sm);
 		letter-spacing: var(--ed-t-body-sm-tracking);
 		color: var(--text-secondary);

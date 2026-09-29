@@ -1,8 +1,9 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
 	import { expect, fn } from 'storybook/test'
-	import { canvasOf } from '../../../storybook/play.js'
+	import { canvasOf, hasCanvas } from '../../../storybook/play.js'
 	import { domainGlyph } from '$lib/icons/domain-glyphs.js'
+	import Compass from '../Compass/Compass.svelte'
 	import PageHeader, { type PageHeaderAction } from './PageHeader.svelte'
 	import Chip from '../Chip/Chip.svelte'
 	import Segmented from '../Segmented/Segmented.svelte'
@@ -85,6 +86,33 @@
 		<PageHeader {...args}>
 			{#snippet motif()}
 				<Sketch sketch={skyField} params={skyMotif} />
+			{/snippet}
+			{#snippet filters()}
+				<Chip label="Home · Hyde Park" tone="outline" icon="map-pin" />
+			{/snippet}
+		</PageHeader>
+	{/snippet}
+</Story>
+
+<!-- The legend says what the motif shows, at the foot of its room; it is left out where the room is narrow -->
+<Story
+	name="With a legend"
+	args={{ name: sky.name, subtitle: sky.subtitle, icon: domainGlyph('weather'), actions: [] }}
+	parameters={{ platforms: ['desktop'] }}
+	play={async ({ canvasElement }) => {
+		if (!hasCanvas(canvasElement)) return
+		await expect(
+			canvasOf(canvasElement).getByRole('img', { name: 'Wind from SSE at 14 km/h. North is up.' })
+		).toBeVisible()
+	}}
+>
+	{#snippet template(args)}
+		<PageHeader {...args}>
+			{#snippet motif()}
+				<Sketch sketch={skyField} params={skyMotif} />
+			{/snippet}
+			{#snippet legend()}
+				<Compass bearing={337.5} label="Wind from SSE at 14 km/h. North is up." />
 			{/snippet}
 			{#snippet filters()}
 				<Chip label="Home · Hyde Park" tone="outline" icon="map-pin" />

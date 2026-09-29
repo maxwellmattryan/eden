@@ -51,7 +51,7 @@ Never-do list: never sends coordinates finer than city level (D-60) to a model o
 
 ## 6. Surfaces
 
-**Desktop views (Phase 1)**: the Sky view with now, hours, the week, details, air quality, allergens, sun and moon, active alerts behind a button in the header that shows only while one is active (a popover lists them, and each can be dismissed for as long as it is issued), the sources' attribution, the header's motif (D-62: the wind now as a flow field), the sun on its wave in the now block, and a location switcher over home and saved venues, with "Change home", a search by name, until Places exist (D-38).
+**Desktop views (Phase 1)**: the Sky view with now, hours, the week, details, air quality, allergens, sun and moon, active alerts behind a button in the header that shows only while one is active (a popover lists them, and each can be dismissed for as long as it is issued), the sources' attribution, the header's motif (D-62: the wind now as a flow field, north up, with a small compass at its foot whose needle points the way the wind blows and whose tooltip says it is one reading for the place, not a map), the sun on its wave in the now block, and a location switcher over home and saved venues, with "Change home", a search by name, until Places exist (D-38).
 
 **Mobile (Phase 2)**: the same view as a tab candidate; Sky is pinned by default.
 
