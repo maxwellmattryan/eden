@@ -31,7 +31,7 @@
 	</div>
 {/snippet}
 
-<!-- The mark and wordmark at the head; Today, a rule, Garden, a rule, then Hearth, Toolbench, Sky; Gardener and Settings pinned. One tab stop across the groups: arrows, Home, End and typing move focus; Enter selects -->
+<!-- The mark and wordmark at the head; Today, a rule, Garden, a rule, then Hearth and Sky, a rule, Toolbench; Gardener and Settings pinned. One tab stop across the groups: arrows, Home, End and typing move focus; Enter selects -->
 <Story
 	name="Phase-1 sidebar"
 	{template}
@@ -40,6 +40,8 @@
 		const canvas = canvasOf(canvasElement)
 		await userEvent.tab()
 		await expect(canvas.getByRole('button', { name: 'Hearth' })).toHaveFocus()
+		await userEvent.keyboard('{ArrowDown}')
+		await expect(canvas.getByRole('button', { name: 'Sky' })).toHaveFocus()
 		await userEvent.keyboard('{ArrowDown}')
 		const toolbench = canvas.getByRole('button', { name: 'Toolbench' })
 		await expect(toolbench).toHaveFocus()

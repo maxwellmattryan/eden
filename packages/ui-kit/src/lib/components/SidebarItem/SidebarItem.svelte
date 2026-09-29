@@ -58,7 +58,8 @@
 		<span class="ed-side-name">{name}</span>
 		{#if showSubtitle && subtitle}<span class="ed-side-sub" data-tertiary>{subtitle}</span>{/if}
 	</span>
-	{#if showShortcut && shortcut}<kbd class="ed-side-key" data-tertiary>{shortcut}</kbd>{/if}
+	<!-- hidden from the accessible name, which stays the entry's own name -->
+	{#if showShortcut && shortcut}<kbd class="ed-side-key" data-tertiary aria-hidden="true">{shortcut}</kbd>{/if}
 {/snippet}
 
 {#if href}
