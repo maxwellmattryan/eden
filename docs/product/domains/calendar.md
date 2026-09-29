@@ -4,7 +4,7 @@ status: draft
 summary: Eden's own calendar over the Event primitive, with a layer stack of event filters and day annotations (holidays, sun and moon, weather, astrology); Google Calendar is a read-only source in Phase 2. Id `calendar`, Phase 2.
 read-this-if: You are working on calendar views, layers, holidays, Google Calendar, or anything that puts something on a date.
 depends-on: [substrate/registry, substrate/primitives, substrate/integrations, domains/weather, substrate/shell, substrate/ai]
-updated: 2026-09-27
+updated: 2026-09-29
 ---
 
 ## 1. Purpose
@@ -89,7 +89,7 @@ Connections are per device (D-37): a calendar granted on the desktop shows "gran
 
 ## 9. Settings
 
-Default view, week start, work hours shading, holiday countries (US and Japan by default), default reminder, layer defaults, Google calendars selected with a per-calendar tier.
+Default view, week start (from General, D-58), work hours shading, holiday countries (US and Japan by default), default reminder, layer defaults, Google calendars selected with a per-calendar tier.
 
 ## 10. Non-goals and open questions
 

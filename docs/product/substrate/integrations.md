@@ -4,7 +4,7 @@ status: draft
 summary: The connector lifecycle, the catalog of every external service Eden will talk to with its phase and default access, per-device connections and their visible states, secrets, status surfaces, and failure handling.
 read-this-if: You are adding or designing anything that talks to a service outside the device.
 depends-on: [grants, privacy]
-updated: 2026-09-27
+updated: 2026-09-29
 ---
 
 ## Lifecycle
@@ -18,11 +18,13 @@ updated: 2026-09-27
 | Anthropic, OpenAI, Google AI (bring your own key) | Gardener | API key, T3, per device | n/a | 1 |
 | Ollama (desktop only) | Gardener | local URL | n/a | 2 |
 | Open-Meteo | Sky | none | read | 1 |
+| Open-Meteo Air Quality | Sky | none | read | 1 |
 | NWS alerts (US) | Sky | none | read | 1 |
 | bundled holiday dataset | Almanac | none | n/a | 2 |
 | Google Calendar | Almanac | OAuth | read, per calendar | 2 (write 3) |
 | ICS subscriptions | Almanac | URL | read | later |
-| Apple WeatherKit | Sky | key | read | later |
+| Apple WeatherKit (macOS and iOS, D-57) | Sky | the app's entitlement | read | 1 |
+| AccuWeather (D-59) | Sky | API key, T3, per device | read | later |
 | map tiles, places provider, listings providers (OQ-4) | Meadow | key | read | 3 |
 | device location (precise) | Sky, Meadow | OS | per device | 3; Sky uses the home Place until then |
 | camera | Hearth, Toolbench | OS | per device | 1 |

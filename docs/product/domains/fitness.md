@@ -4,7 +4,7 @@ status: draft
 summary: Workouts and templates, an exercise library, gyms, goals, body metrics with a weight trend, supplements and doses, and a training schedule as routines. Owns the body until Wellspring exists. Id `fitness`, Phase 2.
 read-this-if: You are working on workouts, body metrics, weight logging, gyms or supplements.
 depends-on: [substrate/registry, substrate/primitives, substrate/tasks, substrate/grants, substrate/shell, substrate/ai]
-updated: 2026-09-27
+updated: 2026-09-29
 ---
 
 ## 1. Purpose
@@ -95,7 +95,7 @@ Intents: none.
 
 ## 9. Settings
 
-Units, week start, default rest timer, exercise library filters, current goal, Quick Log defaults, whether the weight widget shows on the Garden.
+Units and week start (from General, D-58), default rest timer, exercise library filters, current goal, Quick Log defaults, whether the weight widget shows on the Garden.
 
 ## 10. Non-goals and open questions
 

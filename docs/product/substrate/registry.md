@@ -4,7 +4,7 @@ status: draft
 summary: The single list of every resource a grant, a declared read or an audit entry can name: fact types, entity types and primitive kinds, each with an owner, a tier and a phase.
 read-this-if: You are declaring what an AI tool reads, writing a grant, adding an entity or a kind, or checking who owns a resource.
 depends-on: [privacy]
-updated: 2026-09-27
+updated: 2026-09-29
 ---
 
 ## Rules
@@ -92,6 +92,8 @@ updated: 2026-09-27
 | `forecast` | entity | T0 | mirror |
 | `alert` | entity | T0 | mirror |
 | `ephemeris` | entity | T0 | computed on-device |
+| `air-quality` | entity | T0 | mirror |
+| `allergens` | entity | T0 | mirror |
 
 ## Almanac (`calendar`), Phase 2
 

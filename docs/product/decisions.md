@@ -4,7 +4,7 @@ status: draft
 summary: Everything settled (D-n) and everything open (OQ-n), with ids the other docs cite. Entries are never deleted; a superseded decision stays with a note.
 read-this-if: You are about to make a design choice, or a doc cites an id you need to resolve.
 depends-on: []
-updated: 2026-09-28
+updated: 2026-09-29
 ---
 
 ## How to use this doc
@@ -41,7 +41,7 @@ Cite ids; never restate. To settle an open question, add a `D-n` entry and mark 
 | D-24 | Entity ids are domain-free ULIDs behind `eden://<type>/<ulid>`. (Its "central type registry" is superseded by the single resource registry, D-35.) |
 | D-25 | Safety filters for allergies and medical restrictions are deterministic, local, and applied to model output. Onboarding requests the T2 grants Phase 1 flows need. |
 | D-26 | Phase 1 redaction is tier-based field exclusion plus a deterministic scrub of emails, phone numbers and account-like numbers. No pseudonymization. |
-| D-27 | Units, timezone and work hours are settings, not facts. |
+| D-27 | Units, timezone and work hours are settings, not facts. (Which settings, and that they are global, is D-58.) |
 | D-28 | Google Calendar is read-only in Phase 2. Write, with recurrence exceptions, lands in Phase 3. |
 | D-29 | On-device models are desktop-only. Mobile capture uses on-device OCR and barcode scanning, and cloud vision under grant. |
 | D-30 | Primitive tiers follow the owning domain's kind, not the primitive type. The Vault holds T3 attachment kinds only. |
@@ -70,6 +70,11 @@ Cite ids; never restate. To settle an open question, add a `D-n` entry and mark 
 | D-53 | Shared frontend code is a workspace package `packages/shared` (`@eden/shared`) consumed from source like the kit, with i18n `en`/`ja` on svelte-i18n and `en.json` as the source of truth. |
 | D-54 | Domain mockups live in the kit's Storybook under `Domains/<Domain>/<Page>` in `packages/ui-kit/src/stories/domains/`, never exported; an approved mockup is implemented in `apps/*` and the story stays as the reference. |
 | D-55 | The desktop sidebar has a head and groups. The app mark and the lowercase wordmark (display-md) sit centred at its top, the one place in the chrome besides the splash and About that carries them. Below, the nav runs Today, a rule, Garden, a rule, then the domains, so ⌘1 is Today and ⌘2 Garden; Gardener and Settings stay pinned at the bottom. The current item's ground fades in and its leaf bar settles from the middle; reduced motion keeps only the fade. The mobile tab order is unchanged. |
+| D-56 | The weather provider is the owner's choice, behind a provider-neutral forecast model. Open-Meteo is the keyless default on every platform, Apple's included. Sky looks and behaves the same whatever the provider: the model holds only what Open-Meteo can supply, and the provider changes the source and the attribution line, nothing else. Where a provider cannot run, its choice is absent rather than disabled. (Promoted from OQ-15.) |
+| D-57 | WeatherKit is reached through Apple's native framework on macOS and iOS, under the app's entitlement, never through the REST API with credentials the owner would have to enter. A WeatherKit failure falls back to Open-Meteo with a visible note and leaves the setting alone. The minimum systems rise to macOS 13 and iOS 16 for it. |
+| D-58 | Week start (Monday or Sunday; default Monday), clock (24-hour or 12-hour; default 24-hour) and measurement system (metric or imperial; default metric) are global settings in General that every domain reads; no domain keeps its own. The measurement system replaces the temperature-only unit and drives temperature, wind, pressure, distance and rainfall together. A domain shows a week as the calendar week from the start day, and the times of a place in that place's timezone. |
+| D-59 | Air quality and allergens are supplementary sources beside the forecast provider, each a swappable slot with its own mirror, fetch time and failure state, so a failed supplement never blocks the forecast. The defaults are keyless (Open-Meteo Air Quality; Open-Meteo pollen where it has coverage); a slot with no source for a place reads "unavailable". Keyed sources (AccuWeather first, for pollen and mold) arrive later as further entries in the same slots, with their key in the OS keychain. |
+| D-60 | Coordinates leave the device rounded to two decimals, about one kilometre, for every provider and model unless a precise-location grant exists. This is what "city level" and "rounded coordinates" mean wherever the docs say them. |
 
 ## Open questions
 
@@ -89,7 +94,7 @@ Cite ids; never restate. To settle an open question, add a `D-n` entry and mark 
 | OQ-12 | Vault and sync passphrase UX and recovery. | Passphrase set on first sync, recovery key shown once, no server escrow. |
 | OQ-13 | Reuse "Greenhouse" for the experimental area in Settings → Domains where candidate domains and plugins are tried before being planted? | Yes. |
 | OQ-14 | Holiday dataset source and licensing. | Bundle an open dataset; user selects countries; US and Japan default. |
-| OQ-15 | Weather provider. | Open-Meteo as the keyless default; WeatherKit later. |
+| OQ-15 | Promoted to D-56. | |
 | OQ-16 | Which astrology computations run locally versus via a provider? | Local ephemeris for sun, moon and transits; horoscope text from a provider only under grant. |
 | OQ-17 | Free-text pseudonymization with re-identification, if ever. | Not before Phase 3, and only with a measured leak rate. |
 | OQ-18 | Re-tune the light accents for contrast before the accent picker ships? | Yes. No picker for now; the kit keeps `data-accent`, the `accents` union and a computed `--on-brand` per accent, so the picker is one settings row once the light values are re-tuned. |
