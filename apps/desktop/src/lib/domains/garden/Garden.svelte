@@ -7,13 +7,15 @@
 	import { resolve } from '$app/paths'
 	import { EmptyState, Icon, PageHeader, Widget, WidgetGrid, domainGlyph, type WidgetAction } from '@eden/ui-kit'
 	import { locale, t } from '@eden/shared/i18n'
+	import { settings } from '@eden/shared/settings'
 	import { manifestFor, manifests } from '$lib/domains'
 	import { undoToast } from '$lib/shell/undo'
 	import { garden } from './store.svelte'
-	import { formatDate, formatTime, formatWeekday, nowIso, relativeDay } from '../dates'
+	import { formatDate, formatTime, formatWeekday, nowIso, relativeDay } from '@eden/shared/dates'
 	import { layout, shellTiles, type GardenTile } from './layout'
 
 	const lang = $derived($locale ?? 'en')
+	const format = $derived({ lang, clock: settings.clock })
 	const subtitle = $derived(formatDate(nowIso(), lang))
 
 	/** The quick-nav tiles: Today, then the enabled domains in order. */
@@ -59,7 +61,7 @@
 	)
 
 	function whenOf(at: string): string {
-		const time = formatTime(at, lang)
+		const time = formatTime(at, format)
 		const day = relativeDay(at)
 		if (day === 'today') return time
 		if (day === 'yesterday') return $t('garden.feed.yesterday', { values: { time } })

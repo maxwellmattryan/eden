@@ -4,7 +4,7 @@ status: draft
 summary: The two apps and the crate they share: the workspace layout, what each package owns, the platform features, the commands, the domain module on each side and the interim persistence behind it, the pre-paint mechanism, and the placeholder identifier.
 read-this-if: You are building anything under apps/*, packages/shared or src-tauri, or wiring a domain into the shell.
 depends-on: [engineering/ui-kit, product/substrate/shell, product/substrate/settings-utilities]
-updated: 2026-09-28
+updated: 2026-09-29
 ---
 
 ## Layout
@@ -15,7 +15,7 @@ One Yarn 1 workspace, one Rust crate, ported from Crate (D-43, D-51, D-53):
 |---|---|---|
 | `apps/desktop` | `@eden/desktop` | the desktop frontend: SvelteKit in SPA mode (adapter-static, `ssr = false`), the sidebar shell, the settings sheet |
 | `apps/mobile` | `@eden/mobile` | the mobile frontend: the same stack with the bottom tab bar and sheets, no sidebar |
-| `packages/shared` | `@eden/shared` | what both frontends share: `api` (the Tauri command wrappers behind an `isTauri()` guard), `settings` (the `$state` class behind the root attributes), `stores` (crash), `i18n` (svelte-i18n, `en` and `ja`, `en.json` the source of truth) and `types` |
+| `packages/shared` | `@eden/shared` | what both frontends share: `api` (the Tauri command wrappers behind an `isTauri()` guard), `settings` (the `$state` class behind the root attributes), `stores` (crash), `i18n` (svelte-i18n, `en` and `ja`, `en.json` the source of truth), `dates` (the pure date and time formatters, which take the language, the clock and a timezone; D-58) and `types`. Its pure modules are unit-tested with Vitest in Node (`src/**/*.test.ts`); a tested module never imports a rune module |
 | `packages/ui-kit` | `@eden/ui-kit` | the design system (`engineering/ui-kit.md`) |
 | `src-tauri` | `eden-app`, lib `eden_lib` | the one Rust crate, with the cargo features `desktop` and `mobile` as equals and no default feature (D-51): `tauri ios|android` cannot pass `--no-default-features`, so a desktop default would leak desktop-only plugins into the mobile build |
 | `web` | | the static download page for GitHub Pages (`engineering/release.md`) |
@@ -72,7 +72,7 @@ A desktop domain module is laid out as:
 |---|---|
 | `manifest.ts` | the `DomainManifest` (`src/lib/domains/manifest.ts`): id, the name and subtitle keys, the glyph, the route id with its resolved href and its tab ids (a tab is an optional route parameter, `/kitchen/[[tab]]`), the Garden widgets (size, title and prompt keys, body component, `hasData()`), the quick actions. The seed of the manifest as code (`product/substrate/domain-manifest.md`); the shell composes the sidebar, the quick-nav row and the widget grid from `src/lib/domains/index.ts` and nothing else |
 | `store.svelte.ts` | the store: a `$state` class with the domain's records, its `$derived` lists and one method per write, each returning an `undo` the page turns into the toast (`src/lib/shell/undo.ts`) |
-| `seed.ts` | fills the store from `@eden/ui-kit/sample-data`, behind the empty state's "Add sample data" link; the dataset's dates are shifted onto the real calendar (`src/lib/domains/dates.ts`) |
+| `seed.ts` | fills the store from `@eden/ui-kit/sample-data`, behind the empty state's "Add sample data" link; the dataset's dates are shifted onto the real calendar (`@eden/shared/dates`) |
 | `views/` | the page and its tabs, ported from the approved mockup |
 | `widgets/` | the Garden tile bodies, on `src/lib/shell/WidgetRows.svelte` |
 
@@ -92,7 +92,7 @@ Under Tauri it calls `load_domain_document` and `save_domain_document` (`src-tau
 
 ## External services
 
-Sky fetches from the webview with `fetch`: Open-Meteo for the forecast and the National Weather Service for alerts, both keyless (`product/domains/weather.md`, OQ-15). Their origins are the only external entries in the CSP's `connect-src` in `src-tauri/tauri.conf.json`; the overlays do not override `security`, so one entry covers every channel. The last good forecast is a mirror in the `weather` document (D-32). The home place and the temperature units are settings in `@eden/shared` (`settings.home`, `settings.units`; D-27, D-38) until Places and onboarding exist; the forecast is fetched in Celsius and converted for display.
+Sky fetches from the webview with `fetch`: Open-Meteo for the forecast and the National Weather Service for alerts, both keyless (`product/domains/weather.md`, OQ-15). Their origins are the only external entries in the CSP's `connect-src` in `src-tauri/tauri.conf.json`; the overlays do not override `security`, so one entry covers every channel. The last good forecast is a mirror in the `weather` document (D-32). The home place is a setting in `@eden/shared` (`settings.home`; D-38) until Places and onboarding exist. The measurement system, the week start and the clock are General settings there too (`settings.measurement`, `settings.weekStart`, `settings.clock`; D-58); the forecast is fetched in Celsius and converted for display.
 
 ## Pre-paint
 

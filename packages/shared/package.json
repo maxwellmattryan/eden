@@ -10,11 +10,14 @@
 		"./stores": "./src/stores/index.ts",
 		"./settings": "./src/settings/index.ts",
 		"./persistence": "./src/persistence/index.ts",
+		"./dates": "./src/dates/index.ts",
 		"./i18n": "./src/i18n/index.ts",
 		"./types": "./src/types/index.ts"
 	},
 	"scripts": {
-		"check": "svelte-check --tsconfig ./tsconfig.json"
+		"check": "svelte-check --tsconfig ./tsconfig.json",
+		"test": "vitest run",
+		"test:watch": "vitest"
 	},
 	"dependencies": {
 		"@tauri-apps/api": "2.12.0",
@@ -39,6 +42,7 @@
 		"@tauri-apps/plugin-updater": "2.13.0",
 		"svelte": "5.57.1",
 		"svelte-check": "4.7.6",
-		"typescript": "5.9.3"
+		"typescript": "5.9.3",
+		"vitest": "4.1.11"
 	}
 }

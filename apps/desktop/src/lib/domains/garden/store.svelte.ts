@@ -2,7 +2,7 @@
 // appends to. Entries hold a locale key and its values rather than a sentence, so the feed reads in whichever locale
 // is current. Persisted as the `garden` document.
 import { load, save } from '@eden/shared/persistence'
-import { nowIso } from '../dates.js'
+import { nowIso } from '@eden/shared/dates'
 
 export interface FeedEntry {
 	id: string

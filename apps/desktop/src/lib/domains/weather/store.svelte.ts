@@ -6,7 +6,7 @@ import type { SkyCondition } from '@eden/ui-kit'
 import { load, save } from '@eden/shared/persistence'
 import { settings } from '@eden/shared/settings'
 import type { HomePlace } from '@eden/shared/types'
-import { nowIso } from '../dates.js'
+import { nowIso } from '@eden/shared/dates'
 import { clockOf, goldenHourOf, moonAt, type Moon } from './ephemeris.js'
 import { fetchAlerts, type WeatherAlert } from './nws.js'
 import { OfflineError, conditionFor, fetchForecast, type OpenMeteoForecast } from './open-meteo.js'
@@ -131,7 +131,7 @@ export class WeatherStore {
 
 	/** A temperature in the owner's units, rounded, from the Celsius the mirror holds. */
 	temperature(celsius: number): number {
-		return Math.round(settings.units === 'fahrenheit' ? (celsius * 9) / 5 + 32 : celsius)
+		return Math.round(settings.measurement === 'imperial' ? (celsius * 9) / 5 + 32 : celsius)
 	}
 
 	#reading: Promise<void> | null = null

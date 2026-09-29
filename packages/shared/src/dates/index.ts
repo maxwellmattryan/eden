@@ -1,6 +1,16 @@
-// Date helpers the domain stores and pages share. They live in a plain module so the rune modules never hold a Date
-// (svelte/prefer-svelte-reactivity), and so the sample dataset's dates, which are relative to its own "today"
-// (design/sample-data.md: Wednesday 2026-09-30), can be shifted onto the real calendar when the data is seeded.
+// Date helpers both apps' domain stores and pages share. They live in a plain module so the rune modules never hold a
+// Date (svelte/prefer-svelte-reactivity), and so the sample dataset's dates, which are relative to its own "today"
+// (design/sample-data.md: Wednesday 2026-09-30), can be shifted onto the real calendar when the data is seeded. The
+// module is pure: the language, the clock (D-58) and, for the times of a place, its timezone arrive as a `DateFormat`.
+import type { ClockFormat } from '../types/index.js'
+
+/** How a date or a time is written: the locale, the owner's clock and, when it is not the device's, the timezone. */
+export interface DateFormat {
+	lang: string
+	clock: ClockFormat
+	/** An IANA timezone; the device's when absent. */
+	timeZone?: string
+}
 
 /** The sample dataset's "today". */
 export const SAMPLE_TODAY = '2026-09-30'
@@ -52,9 +62,21 @@ export function shiftSampleDate(sample: string): string {
 	return daysFromToday(offset)
 }
 
-/** `HH:MM` in the locale, 24-hour. */
-export function formatTime(iso: string, lang: string): string {
-	return new Intl.DateTimeFormat(lang, { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso))
+/** The time of an instant on the owner's clock: `18:05`, or `6:05 PM`. `h23` keeps midnight from reading `24:00`. */
+export function formatTime(iso: string | number, format: DateFormat): string {
+	const options: Intl.DateTimeFormatOptions =
+		format.clock === '12h'
+			? { hour: 'numeric', minute: '2-digit', hourCycle: 'h12' }
+			: { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }
+	return new Intl.DateTimeFormat(format.lang, { ...options, timeZone: format.timeZone }).format(new Date(iso))
+}
+
+/** The hour alone, for a strip of hours: `18`, or `6 PM`. */
+export function formatHour(iso: string | number, format: DateFormat): string {
+	if (format.clock === '24h') return formatTime(iso, format)
+	return new Intl.DateTimeFormat(format.lang, { hour: 'numeric', hourCycle: 'h12', timeZone: format.timeZone }).format(
+		new Date(iso)
+	)
 }
 
 /** `MM-DD`, the short form the sample data and the lists use, the same in every locale. */
@@ -63,14 +85,14 @@ export function formatDay(isoDate: string): string {
 }
 
 /** `MM-DD HH:MM` for a timestamp, the form a source line or a shop day takes in a list. */
-export function formatDayTime(iso: string, lang: string): string {
-	return `${formatDay(iso)} ${formatTime(iso, lang)}`
+export function formatDayTime(iso: string, format: DateFormat): string {
+	return `${formatDay(iso)} ${formatTime(iso, format)}`
 }
 
 /** `Sat 10-03 10:00`: the weekday, the day and the time of an event. */
-export function formatEventTime(iso: string, lang: string): string {
-	const weekday = new Intl.DateTimeFormat(lang, { weekday: 'short' }).format(new Date(iso))
-	return `${weekday} ${formatDayTime(iso, lang)}`
+export function formatEventTime(iso: string, format: DateFormat): string {
+	const weekday = new Intl.DateTimeFormat(format.lang, { weekday: 'short' }).format(new Date(iso))
+	return `${weekday} ${formatDayTime(iso, format)}`
 }
 
 /** A sample timestamp (`MM-DD HH:MM`) shifted like `shiftSampleDate`, keeping its time of day. */
@@ -79,9 +101,14 @@ export function shiftSampleDateTime(sample: string): string {
 	return `${shiftSampleDate(day ?? sample)}T${time ?? '12:00'}:00`
 }
 
-/** The full weekday name. */
+/** The full weekday name of an instant or a local ISO date. */
 export function formatWeekday(iso: string, lang: string): string {
 	return new Intl.DateTimeFormat(lang, { weekday: 'long' }).format(new Date(iso))
+}
+
+/** The full weekday name of a calendar date (`YYYY-MM-DD`), whatever timezone the device is in. */
+export function formatWeekdayOf(isoDate: string, lang: string): string {
+	return new Intl.DateTimeFormat(lang, { weekday: 'long', timeZone: 'UTC' }).format(new Date(`${isoDate}T12:00:00Z`))
 }
 
 /** The full date line for a page subtitle: "Wednesday 30 September". */

@@ -2,7 +2,7 @@
 // projects, one `toolbench` document. Every write snapshots first and hands back an undo for the toast (D-12) and
 // lands in the Garden feed. The brainstorm thread renders stored messages only; the Gardener arrives with its substrate.
 import { load, save } from '@eden/shared/persistence'
-import { daysSince, nowIso } from '../dates.js'
+import { daysSince, nowIso } from '@eden/shared/dates'
 import { garden } from '../garden/store.svelte.js'
 import { parseIdea } from './parse.js'
 import { seedData } from './seed.js'

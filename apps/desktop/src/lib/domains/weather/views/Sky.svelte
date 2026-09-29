@@ -20,13 +20,14 @@
 	} from '@eden/ui-kit'
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
-	import { formatTime, formatWeekday } from '../../dates'
+	import { formatTime, formatWeekday } from '@eden/shared/dates'
 	import { conditionLabel } from '../conditions'
 	import { weather } from '../store.svelte'
 
 	const uid = $props.id()
 	const s = useStrings()
 	const lang = $derived($locale ?? 'en')
+	const format = $derived({ lang, clock: settings.clock })
 
 	const places = $derived<MenuItem[]>([
 		{ id: 'home', label: $t('domains.weather.home', { values: { label: settings.home.label } }), icon: 'house' },
@@ -36,7 +37,7 @@
 
 	const now = $derived(weather.now)
 	const headerIcon = $derived(now ? iconFor(now.condition, now.night) : iconFor('partly-cloudy'))
-	const lastGood = $derived(weather.lastGood ? formatTime(weather.lastGood, lang) : undefined)
+	const lastGood = $derived(weather.lastGood ? formatTime(weather.lastGood, format) : undefined)
 	const week = $derived<ListRowData[]>(
 		weather.week.map((day, i) => {
 			const weekday = formatWeekday(`${day.date}T12:00:00`, lang)

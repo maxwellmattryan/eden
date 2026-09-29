@@ -4,8 +4,9 @@
 	// stock); a checked row is struck through and stays until Clear checked.
 	import { Chip, EmptyState, List, QuickAdd, type ListRowData, type MenuItem } from '@eden/ui-kit'
 	import { locale, t } from '@eden/shared/i18n'
+	import { settings } from '@eden/shared/settings'
 	import { undoToast } from '$lib/shell/undo'
-	import { formatEventTime } from '../../dates'
+	import { formatEventTime } from '@eden/shared/dates'
 	import { kitchen, type GroceryItem } from '../store.svelte'
 
 	type Props = {
@@ -18,6 +19,7 @@
 
 	const uid = $props.id()
 	const lang = $derived($locale ?? 'en')
+	const format = $derived({ lang, clock: settings.clock })
 
 	const originLabel = (item: GroceryItem) => {
 		const origin = $t(`domains.kitchen.grocery.origin.${item.origin === 'low-stock' ? 'lowStock' : item.origin}`)
@@ -86,7 +88,7 @@
 				<header class="store-head">
 					<h2 class="store-title" id="{uid}-{group.store}">{group.store}</h2>
 					{#if kitchen.grocery.shopDay}
-						<Chip label={formatEventTime(kitchen.grocery.shopDay, lang)} icon="calendar" tone="outline" />
+						<Chip label={formatEventTime(kitchen.grocery.shopDay, format)} icon="calendar" tone="outline" />
 					{/if}
 					<span class="store-count">
 						{$t('domains.kitchen.grocery.checked', { values: { checked: group.checked, total: group.items.length } })}

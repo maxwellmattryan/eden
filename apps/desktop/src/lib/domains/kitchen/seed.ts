@@ -1,7 +1,7 @@
 // The sample dataset (design/sample-data.md, "Hearth") mapped into the store's shapes. Dates shift with the real
 // calendar so the seeded stock reads as the mockup does: spinach expires tomorrow, the haul came in yesterday.
 import { grocery, haul, recipes, stock } from '@eden/ui-kit/sample-data'
-import { shiftSampleDate, shiftSampleDateTime } from '../dates.js'
+import { shiftSampleDate, shiftSampleDateTime } from '@eden/shared/dates'
 import type { GroceryItem, GroceryOrigin, KitchenData, StockItem } from './store.svelte.js'
 
 const CATEGORY: Partial<Record<string, string>> = {

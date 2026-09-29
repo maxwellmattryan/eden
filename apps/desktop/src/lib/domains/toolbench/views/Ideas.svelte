@@ -17,7 +17,7 @@
 	} from '@eden/ui-kit'
 	import { t } from '@eden/shared/i18n'
 	import { undoToast } from '$lib/shell/undo'
-	import { formatDay } from '../../dates'
+	import { formatDay } from '@eden/shared/dates'
 	import { ideaChips } from '../parse'
 	import { IDEA_STATUSES, RESURFACE_DAYS, toolbench, type Idea, type IdeaStatus } from '../store.svelte'
 

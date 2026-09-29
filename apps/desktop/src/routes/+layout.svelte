@@ -22,7 +22,7 @@
 	import CrashScreen from '$lib/components/CrashScreen.svelte'
 	import { manifests } from '$lib/domains'
 	import { weather } from '$lib/domains/weather/store.svelte'
-	import { formatTime } from '$lib/domains/dates'
+	import { formatTime } from '@eden/shared/dates'
 	import { useGlobalErrorHandler } from '$lib/hooks/useGlobalErrorHandler'
 	import SettingsSheet from '$lib/settings/SettingsSheet.svelte'
 	import { settingsUi } from '$lib/settings/settings-ui.svelte'
@@ -30,6 +30,7 @@
 	let { children } = $props()
 
 	const UPDATE_INTERVAL = 60 * 60 * 1000
+	const format = $derived({ lang: $locale ?? 'en', clock: settings.clock })
 
 	// Today, Garden, then the enabled domains from their manifests, each its own group under a rule (D-55); the owner's
 	// order arrives with the Domains tab.
@@ -91,7 +92,7 @@
 		weather.offline && weather.lastGood
 			? {
 					message: $t('domains.weather.offline.banner', {
-						values: { time: formatTime(weather.lastGood, $locale ?? 'en') },
+						values: { time: formatTime(weather.lastGood, format) },
 					}),
 				}
 			: undefined

@@ -323,10 +323,18 @@
 			"languageHelp": "すぐに反映されます。",
 			"english": "English",
 			"japanese": "日本語",
-			"units": "気温の単位",
-			"unitsHelp": "天気予報と庭の空のタイルに使います。",
-			"celsius": "°C",
-			"fahrenheit": "°F"
+			"measurement": "単位",
+			"measurementHelp": "気温、風、気圧、距離、雨量に使います。",
+			"metric": "メートル法",
+			"imperial": "ヤード・ポンド法",
+			"weekStart": "週の始まり",
+			"weekStartHelp": "Edenが表示する週はこの曜日から始まります。",
+			"monday": "月曜日",
+			"sunday": "日曜日",
+			"clock": "時刻の表示",
+			"clockHelp": "すべての時刻の書き方です。",
+			"clock24": "24時間",
+			"clock12": "12時間"
 		},
 		"appearance": {
 			"theme": "テーマ",

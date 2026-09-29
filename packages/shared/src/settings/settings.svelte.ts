@@ -1,28 +1,35 @@
 // The owner's appearance and language choices as one $state class, shared by both apps. It reads and writes the same
-// localStorage keys the kit's pre-paint script reads (`storageKeys`), plus two of its own, so the first frame after a
+// localStorage keys the kit's pre-paint script reads (`storageKeys`), plus its own, so the first frame after a
 // relaunch already carries the choice and `apply()` only has to keep <html> in step afterwards. "system" is resolved
 // here and re-resolved while the OS theme changes, only while the choice is still "system".
 import { accents, densities, storageKeys, themes, type Accent, type Density, type Theme } from '@eden/ui-kit/tokens'
 import { setLanguage as setI18nLanguage } from '../i18n/index.js'
 import {
 	DEFAULT_HOME,
+	clockFormats,
 	fontSettings,
 	languages,
-	temperatureUnits,
+	measurementSystems,
 	themeSettings,
+	weekStarts,
+	type ClockFormat,
 	type FontSetting,
 	type HomePlace,
 	type Language,
-	type TemperatureUnit,
+	type MeasurementSystem,
 	type ThemeSetting,
+	type WeekStart,
 } from '../types/index.js'
+import { measurementFrom } from './migrate.js'
 
 /** Every key the settings persist: the kit's five plus the app's own. */
 export const storage = {
 	...storageKeys,
 	language: 'eden:language',
 	subtitles: 'eden:subtitles',
-	units: 'eden:units',
+	measurement: 'eden:measurement',
+	weekStart: 'eden:week-start',
+	clock: 'eden:clock',
 	home: 'eden:home',
 } as const
 
@@ -43,6 +50,9 @@ function write(key: string, value: string | null) {
 		// no storage: the choice lives for this session only
 	}
 }
+
+/** The temperature-only setting the measurement system replaced; read once to carry the choice over, then removed. */
+const LEGACY_UNITS = 'eden:units'
 
 function oneOf<T extends string>(value: string | null, allowed: readonly T[], fallback: T): T {
 	return value !== null && (allowed as readonly string[]).includes(value) ? (value as T) : fallback
@@ -75,8 +85,12 @@ export class Settings {
 	density = $state<Density>('comfortable')
 	subtitles = $state(true)
 	language = $state<Language>('en')
-	/** Temperature units for Sky (D-27). */
-	units = $state<TemperatureUnit>('celsius')
+	/** Metric or imperial, for every measurement a domain shows (D-58). */
+	measurement = $state<MeasurementSystem>('metric')
+	/** The day a week starts on (D-58). */
+	weekStart = $state<WeekStart>('monday')
+	/** The clock every time is written on (D-58). */
+	clock = $state<ClockFormat>('24h')
 	/** The home place Sky forecasts for, until Places exist (D-38). */
 	home = $state<HomePlace>(DEFAULT_HOME)
 	/** The theme on <html>: the choice, or what "system" resolves to right now. */
@@ -97,7 +111,9 @@ export class Settings {
 		this.density = oneOf(read(storage.density), densities, 'comfortable')
 		this.subtitles = read(storage.subtitles) !== 'off'
 		this.language = oneOf(read(storage.language), languages, this.systemLanguage())
-		this.units = oneOf(read(storage.units), temperatureUnits, 'celsius')
+		this.measurement = this.#readMeasurement()
+		this.weekStart = oneOf(read(storage.weekStart), weekStarts, 'monday')
+		this.clock = oneOf(read(storage.clock), clockFormats, '24h')
 		this.home = readHome()
 		this.resolvedTheme = this.resolveTheme(this.theme)
 		this.apply()
@@ -105,6 +121,17 @@ export class Settings {
 			this.#media = window.matchMedia('(prefers-color-scheme: dark)')
 			this.#media.addEventListener('change', this.#onMediaChange)
 		}
+	}
+
+	/** The measurement system, carrying a Fahrenheit choice over from the setting it replaced. */
+	#readMeasurement(): MeasurementSystem {
+		const legacy = read(LEGACY_UNITS)
+		const measurement = measurementFrom(read(storage.measurement), legacy)
+		if (legacy !== null) {
+			write(storage.measurement, measurement === 'metric' ? null : measurement)
+			write(LEGACY_UNITS, null)
+		}
+		return measurement
 	}
 
 	/** Stops following the OS theme. */
@@ -168,9 +195,19 @@ export class Settings {
 		write(storage.subtitles, on ? 'on' : 'off')
 	}
 
-	setUnits(units: TemperatureUnit) {
-		this.units = oneOf(units, temperatureUnits, 'celsius')
-		write(storage.units, this.units === 'celsius' ? null : this.units)
+	setMeasurement(measurement: MeasurementSystem) {
+		this.measurement = oneOf(measurement, measurementSystems, 'metric')
+		write(storage.measurement, this.measurement === 'metric' ? null : this.measurement)
+	}
+
+	setWeekStart(weekStart: WeekStart) {
+		this.weekStart = oneOf(weekStart, weekStarts, 'monday')
+		write(storage.weekStart, this.weekStart === 'monday' ? null : this.weekStart)
+	}
+
+	setClock(clock: ClockFormat) {
+		this.clock = oneOf(clock, clockFormats, '24h')
+		write(storage.clock, this.clock === '24h' ? null : this.clock)
 	}
 
 	setHome(home: HomePlace) {

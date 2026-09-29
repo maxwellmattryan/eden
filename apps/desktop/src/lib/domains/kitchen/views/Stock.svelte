@@ -15,8 +15,9 @@
 		type MenuItem,
 	} from '@eden/ui-kit'
 	import { locale, t } from '@eden/shared/i18n'
+	import { settings } from '@eden/shared/settings'
 	import { undoToast } from '$lib/shell/undo'
-	import { formatDay, formatDayTime } from '../../dates'
+	import { formatDay, formatDayTime } from '@eden/shared/dates'
 	import { LOCATIONS, kitchen, type StockItem, type StockLocation } from '../store.svelte'
 
 	type Props = {
@@ -33,6 +34,7 @@
 
 	const uid = $props.id()
 	const lang = $derived($locale ?? 'en')
+	const format = $derived({ lang, clock: settings.clock })
 	const locationLabel = (location: StockLocation) => $t(`domains.kitchen.stock.locations.${location}`)
 	const quantity = (item: StockItem) => (item.unit ? `${item.qty} ${item.unit}` : item.qty)
 
@@ -149,7 +151,7 @@
 					<dt>{$t('domains.kitchen.stock.detail.source')}</dt>
 					<dd>
 						<Badge kind="origin" label={$t(`domains.kitchen.stock.source.${detail.source}`)} />
-						<span class="mono">{formatDayTime(detail.sourcedAt, lang)}</span>
+						<span class="mono">{formatDayTime(detail.sourcedAt, format)}</span>
 					</dd>
 					{#if detail.lowStock}
 						<dt>{$t('domains.kitchen.stock.detail.threshold')}</dt>

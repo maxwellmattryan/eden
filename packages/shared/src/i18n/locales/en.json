@@ -323,10 +323,18 @@
 			"languageHelp": "Changes take effect at once.",
 			"english": "English",
 			"japanese": "日本語",
-			"units": "Temperature",
-			"unitsHelp": "For forecasts and the Garden's sky tile.",
-			"celsius": "°C",
-			"fahrenheit": "°F"
+			"measurement": "Units",
+			"measurementHelp": "For temperature, wind, pressure, distance and rainfall.",
+			"metric": "Metric",
+			"imperial": "Imperial",
+			"weekStart": "Week starts on",
+			"weekStartHelp": "Every week Eden shows begins on this day.",
+			"monday": "Monday",
+			"sunday": "Sunday",
+			"clock": "Clock",
+			"clockHelp": "How every time is written.",
+			"clock24": "24-hour",
+			"clock12": "12-hour"
 		},
 		"appearance": {
 			"theme": "Theme",
