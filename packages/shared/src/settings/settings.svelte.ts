@@ -11,6 +11,7 @@ import {
 	languages,
 	measurementSystems,
 	themeSettings,
+	weatherProviders,
 	weekStarts,
 	type ClockFormat,
 	type FontSetting,
@@ -18,6 +19,7 @@ import {
 	type Language,
 	type MeasurementSystem,
 	type ThemeSetting,
+	type WeatherProvider,
 	type WeekStart,
 } from '../types/index.js'
 import { measurementFrom } from './migrate.js'
@@ -30,6 +32,7 @@ export const storage = {
 	measurement: 'eden:measurement',
 	weekStart: 'eden:week-start',
 	clock: 'eden:clock',
+	weatherProvider: 'eden:weather-provider',
 	home: 'eden:home',
 } as const
 
@@ -91,6 +94,8 @@ export class Settings {
 	weekStart = $state<WeekStart>('monday')
 	/** The clock every time is written on (D-58). */
 	clock = $state<ClockFormat>('24h')
+	/** The forecast provider Sky asks first (D-56). */
+	weatherProvider = $state<WeatherProvider>('open-meteo')
 	/** The home place Sky forecasts for, until Places exist (D-38). */
 	home = $state<HomePlace>(DEFAULT_HOME)
 	/** The theme on <html>: the choice, or what "system" resolves to right now. */
@@ -114,6 +119,7 @@ export class Settings {
 		this.measurement = this.#readMeasurement()
 		this.weekStart = oneOf(read(storage.weekStart), weekStarts, 'monday')
 		this.clock = oneOf(read(storage.clock), clockFormats, '24h')
+		this.weatherProvider = oneOf(read(storage.weatherProvider), weatherProviders, 'open-meteo')
 		this.home = readHome()
 		this.resolvedTheme = this.resolveTheme(this.theme)
 		this.apply()
@@ -208,6 +214,11 @@ export class Settings {
 	setClock(clock: ClockFormat) {
 		this.clock = oneOf(clock, clockFormats, '24h')
 		write(storage.clock, this.clock === '24h' ? null : this.clock)
+	}
+
+	setWeatherProvider(provider: WeatherProvider) {
+		this.weatherProvider = oneOf(provider, weatherProviders, 'open-meteo')
+		write(storage.weatherProvider, this.weatherProvider === 'open-meteo' ? null : this.weatherProvider)
 	}
 
 	setHome(home: HomePlace) {

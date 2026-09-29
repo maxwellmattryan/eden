@@ -1,6 +1,6 @@
 // The light and the moon, computed on-device (product/domains/weather.md: `ephemeris` is computed locally and never
 // fetched). Sunrise and sunset come with the forecast's daily block; the golden hour is approximated as the forty
-// minutes before sunset (the sample's 19:14 sunset and 18:35 golden hour), not a solar-altitude solve. The moon's
+// minutes before sunset (the sample's 19:14 sunset and 18:35 golden hour), counted on the instant, not a solar-altitude solve. The moon's
 // phase is the synodic month counted from the new moon of 2000-01-06 18:14 UTC, good to about a percent.
 
 export type MoonPhase =
@@ -43,15 +43,7 @@ function phaseOf(cycle: number): MoonPhase {
 	return 'waning-crescent'
 }
 
-/** `HH:MM` from a naive local ISO timestamp such as Open-Meteo's `2026-09-30T07:22`. */
-export function clockOf(localIso: string): string {
-	return localIso.slice(11, 16)
-}
-
-/** The golden hour, forty minutes before sunset, as `HH:MM`. */
-export function goldenHourOf(sunsetLocalIso: string): string {
-	const [hours, minutes] = clockOf(sunsetLocalIso).split(':').map(Number)
-	const total = (hours ?? 0) * 60 + (minutes ?? 0) - GOLDEN_MINUTES
-	const wrapped = ((total % 1440) + 1440) % 1440
-	return `${String(Math.floor(wrapped / 60)).padStart(2, '0')}:${String(wrapped % 60).padStart(2, '0')}`
+/** The golden hour, forty minutes before sunset, as an instant. */
+export function goldenHourOf(sunset: number): number {
+	return sunset - GOLDEN_MINUTES * 60 * 1000
 }

@@ -21,7 +21,7 @@
 	import { settings } from '@eden/shared/settings'
 	import CrashScreen from '$lib/components/CrashScreen.svelte'
 	import { manifests } from '$lib/domains'
-	import { weather } from '$lib/domains/weather/store.svelte'
+	import { weather } from '@eden/shared/weather'
 	import { formatTime } from '@eden/shared/dates'
 	import { useGlobalErrorHandler } from '$lib/hooks/useGlobalErrorHandler'
 	import SettingsSheet from '$lib/settings/SettingsSheet.svelte'
@@ -31,6 +31,8 @@
 
 	const UPDATE_INTERVAL = 60 * 60 * 1000
 	const format = $derived({ lang: $locale ?? 'en', clock: settings.clock })
+	/** Sky's times are the place's (D-58). */
+	const skyFormat = $derived({ ...format, timeZone: weather.timeZone })
 
 	// Today, Garden, then the enabled domains from their manifests, each its own group under a rule (D-55); the owner's
 	// order arrives with the Domains tab.
@@ -92,7 +94,7 @@
 		weather.offline && weather.lastGood
 			? {
 					message: $t('domains.weather.offline.banner', {
-						values: { time: formatTime(weather.lastGood, format) },
+						values: { time: formatTime(weather.lastGood, skyFormat) },
 					}),
 				}
 			: undefined

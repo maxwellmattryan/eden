@@ -4,12 +4,11 @@
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { formatTime } from '@eden/shared/dates'
-	import { conditionLabel } from '../conditions'
-	import { weather } from '../store.svelte'
+	import { conditionLabel, weather } from '@eden/shared/weather'
 
 	const s = useStrings()
 	const lang = $derived($locale ?? 'en')
-	const format = $derived({ lang, clock: settings.clock })
+	const format = $derived({ lang, clock: settings.clock, timeZone: weather.timeZone })
 </script>
 
 {#if weather.now}

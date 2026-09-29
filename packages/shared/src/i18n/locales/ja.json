@@ -296,8 +296,116 @@
 				"last-quarter": "下弦",
 				"waning-crescent": "有明"
 			},
+			"details": {
+				"title": "詳細",
+				"feelsLike": "体感温度",
+				"humidity": "湿度",
+				"dewPoint": "露点",
+				"wind": "風",
+				"gusts": "突風",
+				"uv": "UV指数",
+				"rainfall": "今日の雨量",
+				"cloudCover": "雲量",
+				"pressure": "気圧",
+				"visibility": "視程"
+			},
+			"value": {
+				"degrees": "{value}°",
+				"percent": "{value} %",
+				"measure": "{value} {unit}",
+				"wind": "{direction} {value} {unit}",
+				"concentration": "{value} µg/m³"
+			},
+			"units": {
+				"kmh": "km/h",
+				"mph": "mph",
+				"hpa": "hPa",
+				"inhg": "inHg",
+				"km": "km",
+				"mi": "mi",
+				"mm": "mm",
+				"in": "in"
+			},
+			"compass": {
+				"N": "北",
+				"NNE": "北北東",
+				"NE": "北東",
+				"ENE": "東北東",
+				"E": "東",
+				"ESE": "東南東",
+				"SE": "南東",
+				"SSE": "南南東",
+				"S": "南",
+				"SSW": "南南西",
+				"SW": "南西",
+				"WSW": "西南西",
+				"W": "西",
+				"WNW": "西北西",
+				"NW": "北西",
+				"NNW": "北北西"
+			},
+			"uvCategory": {
+				"low": "弱い",
+				"moderate": "中程度",
+				"high": "強い",
+				"very-high": "非常に強い",
+				"extreme": "極端に強い"
+			},
+			"airQuality": {
+				"title": "大気質",
+				"usAqi": "米国AQI",
+				"europeanAqi": "欧州AQI",
+				"pm25": "PM2.5",
+				"pm10": "PM10",
+				"ozone": "オゾン",
+				"no2": "NO₂",
+				"category": {
+					"good": "良好",
+					"moderate": "普通",
+					"sensitive": "敏感な人に不健康",
+					"unhealthy": "不健康",
+					"very-unhealthy": "非常に不健康",
+					"hazardous": "危険"
+				},
+				"unavailable": "この場所の大気質を提供する情報源はまだありません。",
+				"failed": "{source} に接続できませんでした。"
+			},
+			"allergens": {
+				"title": "花粉とカビ",
+				"kind": {
+					"tree": "樹木の花粉",
+					"alder": "ハンノキの花粉",
+					"birch": "シラカバの花粉",
+					"olive": "オリーブの花粉",
+					"grass": "イネ科の花粉",
+					"weed": "雑草の花粉",
+					"mugwort": "ヨモギの花粉",
+					"ragweed": "ブタクサの花粉",
+					"mold": "カビ"
+				},
+				"level": {
+					"none": "なし",
+					"low": "少ない",
+					"moderate": "やや多い",
+					"high": "多い",
+					"very-high": "非常に多い"
+				},
+				"unavailable": "この場所の花粉やカビを提供する情報源はまだありません。",
+				"failed": "{source} に接続できませんでした。"
+			},
+			"observed": "実測",
+			"noData": "データなし",
+			"fallback": "{provider} に接続できませんでした。代わりに {fallback} の予報を表示しています。",
+			"sources": {
+				"label": "情報源",
+				"forecast": "予報: {name}",
+				"airQuality": "大気質: {name}",
+				"allergens": "花粉: {name}",
+				"alerts": "警報: 米国国立気象局",
+				"legal": "データの提供元"
+			},
 			"offline": {
-				"message": "Open-Meteo に接続できませんでした。",
+				"message": "{provider} に接続できませんでした。",
 				"lastGood": "{time} の予報を表示しています。",
 				"banner": "オフライン。{time} の予報を表示しています。"
 			}

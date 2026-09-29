@@ -296,8 +296,116 @@
 				"last-quarter": "last quarter",
 				"waning-crescent": "waning crescent"
 			},
+			"details": {
+				"title": "Details",
+				"feelsLike": "Feels like",
+				"humidity": "Humidity",
+				"dewPoint": "Dew point",
+				"wind": "Wind",
+				"gusts": "Gusts",
+				"uv": "UV index",
+				"rainfall": "Rainfall today",
+				"cloudCover": "Cloud cover",
+				"pressure": "Pressure",
+				"visibility": "Visibility"
+			},
+			"value": {
+				"degrees": "{value}°",
+				"percent": "{value} %",
+				"measure": "{value} {unit}",
+				"wind": "{value} {unit} {direction}",
+				"concentration": "{value} µg/m³"
+			},
+			"units": {
+				"kmh": "km/h",
+				"mph": "mph",
+				"hpa": "hPa",
+				"inhg": "inHg",
+				"km": "km",
+				"mi": "mi",
+				"mm": "mm",
+				"in": "in"
+			},
+			"compass": {
+				"N": "N",
+				"NNE": "NNE",
+				"NE": "NE",
+				"ENE": "ENE",
+				"E": "E",
+				"ESE": "ESE",
+				"SE": "SE",
+				"SSE": "SSE",
+				"S": "S",
+				"SSW": "SSW",
+				"SW": "SW",
+				"WSW": "WSW",
+				"W": "W",
+				"WNW": "WNW",
+				"NW": "NW",
+				"NNW": "NNW"
+			},
+			"uvCategory": {
+				"low": "Low",
+				"moderate": "Moderate",
+				"high": "High",
+				"very-high": "Very high",
+				"extreme": "Extreme"
+			},
+			"airQuality": {
+				"title": "Air quality",
+				"usAqi": "US AQI",
+				"europeanAqi": "European AQI",
+				"pm25": "PM2.5",
+				"pm10": "PM10",
+				"ozone": "Ozone",
+				"no2": "NO₂",
+				"category": {
+					"good": "Good",
+					"moderate": "Moderate",
+					"sensitive": "Unhealthy for sensitive groups",
+					"unhealthy": "Unhealthy",
+					"very-unhealthy": "Very unhealthy",
+					"hazardous": "Hazardous"
+				},
+				"unavailable": "No air quality source covers this place yet.",
+				"failed": "Couldn't reach {source}."
+			},
+			"allergens": {
+				"title": "Pollen and mold",
+				"kind": {
+					"tree": "Tree pollen",
+					"alder": "Alder pollen",
+					"birch": "Birch pollen",
+					"olive": "Olive pollen",
+					"grass": "Grass pollen",
+					"weed": "Weed pollen",
+					"mugwort": "Mugwort pollen",
+					"ragweed": "Ragweed pollen",
+					"mold": "Mold"
+				},
+				"level": {
+					"none": "None",
+					"low": "Low",
+					"moderate": "Moderate",
+					"high": "High",
+					"very-high": "Very high"
+				},
+				"unavailable": "No pollen or mold source covers this place yet.",
+				"failed": "Couldn't reach {source}."
+			},
+			"observed": "Observed",
+			"noData": "No data",
+			"fallback": "Couldn't reach {provider}. Showing {fallback}'s forecast instead.",
+			"sources": {
+				"label": "Sources",
+				"forecast": "Forecast by {name}.",
+				"airQuality": "Air quality by {name}.",
+				"allergens": "Pollen by {name}.",
+				"alerts": "Alerts by the National Weather Service.",
+				"legal": "Data sources"
+			},
 			"offline": {
-				"message": "Couldn't reach Open-Meteo.",
+				"message": "Couldn't reach {provider}.",
 				"lastGood": "Showing the forecast from {time}.",
 				"banner": "Offline. Showing the forecast from {time}."
 			}
