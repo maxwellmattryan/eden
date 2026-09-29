@@ -4,7 +4,7 @@ A personal digital garden: one desktop and mobile app that assists its owner acr
 
 ## Status
 
-Product and design documents only. No application code yet. The app will be built with Svelte 5, Tauri 2 and Tailwind 4 on a scaffold ported from [Crate](https://github.com/maxwellmattryan/crate).
+The docs, the UI kit, and the desktop and mobile scaffolds on Svelte 5, Tauri 2 and Tailwind 4, ported from [Crate](https://github.com/maxwellmattryan/crate): the shell, settings, i18n, the updater and CI/CD run; the domains are mocked in Storybook and not yet built.
 
 ## Start here
 
@@ -17,12 +17,21 @@ Product and design documents only. No application code yet. The app will be buil
 
 ```
 eden/
-├── docs/CONVENTIONS.md  conventions, doc header, rules
+├── apps/
+│   ├── desktop/         the desktop frontend (SvelteKit SPA the Tauri shell loads)
+│   └── mobile/          the mobile frontend
+├── packages/
+│   ├── ui-kit/          @eden/ui-kit: tokens, themes, fonts, icons, components, Storybook
+│   └── shared/          @eden/shared: Tauri API wrappers, settings, crash store, i18n, types
+├── src-tauri/           the one Rust crate (features desktop and mobile), configs, capabilities, icons
+├── web/                 the static download page (GitHub Pages)
+├── scripts/             version bump, changelog, tag, iOS signing
 ├── docs/
-│   ├── INDEX.md       the map
-│   ├── product/       vision, glossary, decisions, roadmap, substrate/, domains/
-│   ├── design/        brand, visual language, UX patterns, screens, sample data
-│   └── engineering/   written after product and design
+│   ├── CONVENTIONS.md   conventions, doc header, rules
+│   ├── INDEX.md         the map
+│   ├── product/         vision, glossary, decisions, roadmap, substrate/, domains/
+│   ├── design/          brand, visual language, UX patterns, screens, sample data
+│   └── engineering/     the kit, the app scaffold, the release flow
 └── README.md
 ```
 
