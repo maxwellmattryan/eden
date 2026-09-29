@@ -37,7 +37,7 @@
 	type Props = Omit<HTMLAttributes<HTMLElement>, 'children' | 'onselect'> & {
 		/** The nav's groups top to bottom, a rule between each: Today, the Garden's group, then the enabled domains. */
 		groups: SidebarEntry[][]
-		/** The app's name, lowercase, from the locale: shows the mark and the wordmark at the head. */
+		/** The app's name as the locale writes it (D-66): shows the mark and the wordmark at the head. */
 		brand?: string
 		/** Settings, pinned at the bottom; its shortcut always shows. */
 		pinned?: SidebarEntry[]

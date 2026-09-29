@@ -1,7 +1,7 @@
 ---
 title: Brand
 status: draft
-summary: The name and what it means, the metaphor policy, voice and tone with examples, motifs and their limits, the app icon direction, the domain glyph family with a concept per domain, and the splash screen.
+summary: The name and what it means, the metaphor policy, voice and tone with examples, motifs and their limits, the app icon, the domain glyph family with a concept per domain, and the splash screen.
 read-this-if: You are making any visual or copy decision, or naming anything the owner will see.
 depends-on: [product/glossary]
 updated: 2026-09-29
@@ -32,11 +32,15 @@ The Gardener never refers to itself as an AI model in conversation, never claims
 
 ## Motifs and their limits
 
-Leaf and vine linework, a single unfurling frond, paper grain, the light of morning and the dark of a forest at night. Used only in empty states, the splash, onboarding and the app icon. Never as wallpaper, never behind text, never animated in loops. Two exceptions (D-42): paper grain overlays the whole page at the `lush` brand level (D-61), at an opacity that never competes with text, and flickers as film grain does (D-63), still under reduced motion, and the Breeze specks play once on an accepted proposal or a settled action and never loop. A third (D-62): a domain's page header may carry a live motif in the room beside its name, drawn from the domain's own readings. No florals, no pastel pink, no cursive.
+Leaf and vine linework, weathered stone, a single unfurling frond, paper grain, the light of morning and the dark of a forest at night. Used only in empty states, the splash, onboarding and the app icon. Never as wallpaper, never behind text, never animated in loops. Two exceptions (D-42): paper grain overlays the whole page at the `lush` brand level (D-61), at an opacity that never competes with text, and flickers as film grain does (D-63), still under reduced motion, and the Breeze specks play once on an accepted proposal or a settled action and never loop. A third (D-62): a domain's page header may carry a live motif in the room beside its name, drawn from the domain's own readings. No florals, no pastel pink, no cursive.
 
 ## App icon and logo
 
-A single fern frond unfurling inside a rounded square: moss green on warm paper for light, fern green on night forest for dark, with a small firefly point of gold near the tip in the dark variant. The wordmark is the display face, Newsreader (D-39), lowercase "eden", used only on the splash, in About, and beside the mark at the head of the desktop sidebar (D-55). Until the icon is drawn the kit's `AppMark` traces the placeholder in `src-tauri/icons/src`, the one place to swap.
+A doorway into the garden (D-65): a trilithon of weathered stone overgrown by two vines. The vines are near mirrors, never exact ones, and the stone is cracked and chipped a little; the imperfection is the point, so neither is tidied. The app icon sets it in a rounded square, paper ink on moss green, at nine tenths of the size that would fill the square, so it has room at the edges; the staging and dev channels keep the drawing and change the ground, to ochre and to rust. In the app the mark stands alone, with no square and no ground: the drawing in the brand colour, following the theme and the accent, with the surface behind it showing through the joints and the cracks.
+
+The wordmark is the name as it is written, "Eden" with its capital (D-66), in the display face, Newsreader (D-39). It is never set in lowercase. The mark and the wordmark appear together on the splash, in About, and at the head of the desktop sidebar (D-55), and nowhere else in the chrome.
+
+The drawing is `app-mark.svg` beside the kit's `AppMark`, which draws the same paths; a test holds the two together. The 1024-pixel masters in `src-tauri/icons/src` are that drawing set in the square on each channel's ground, and the icon sets beside them come from `tauri icon`, with the ground as `--ios-color` so the iOS icon fills its square. Changing the mark means changing the drawing, the component, the masters and the sets in one change.
 
 ## The domain glyph family (D-17)
 
@@ -66,7 +70,7 @@ One family, drawn on Lucide's 24-pixel grid with a 2-pixel stroke, round caps an
 
 ## Splash screen
 
-The wordmark, one daily line in the display serif with its source in small text, and nothing else. Shown for at most 1.2 seconds or until the workspace opens. The line comes from Sanctuary when it is enabled; otherwise from a neutral bundled set, such as "Tend what you can reach." and "Small, daily, enough." The splash never shows a spinner.
+The app mark above the wordmark, one daily line in the display serif with its source in small text, and nothing else. Shown for at most 1.2 seconds or until the workspace opens. The line comes from Sanctuary when it is enabled; otherwise from a neutral bundled set, such as "Tend what you can reach." and "Small, daily, enough." The splash never shows a spinner.
 
 ## Named things
 

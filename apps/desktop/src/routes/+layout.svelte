@@ -176,14 +176,7 @@
 
 <UiKitProvider strings={uiKitStrings($locale)}>
 	<div class="shell">
-		<Sidebar
-			{groups}
-			{pinned}
-			brand={$t('app.name').toLowerCase()}
-			subtitles={settings.subtitles}
-			{current}
-			{onselect}
-		/>
+		<Sidebar {groups} {pinned} brand={$t('app.name')} subtitles={settings.subtitles} {current} {onselect} />
 		<main class="content">
 			<div class="content-back"><BackButton {onback} /></div>
 			{@render children()}

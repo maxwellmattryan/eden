@@ -119,7 +119,7 @@
 
 <div class={['app', `app-${mode}`]} bind:this={root}>
 	{#if mode === 'desktop'}
-		<Sidebar {groups} {pinned} brand="eden" subtitles {current} onselect={select} />
+		<Sidebar {groups} {pinned} brand="Eden" subtitles {current} onselect={select} />
 		<main class="app-main">
 			{#if back}
 				<div class="app-back"><BackButton breadcrumb={back} onback={onback ?? (() => {})} /></div>

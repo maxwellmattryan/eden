@@ -12,9 +12,19 @@
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
-		<!-- The splash (docs/design/brand.md): the wordmark and the version on the page surface, painted before any
-		     JavaScript runs and removed by the layout once the app has mounted. Colours and faces come from the kit's
-		     variables, which the blocking stylesheets define; no font is fetched from anywhere. -->
+		<!-- The splash (docs/design/brand.md): the app mark, the wordmark and the version on the page surface, painted
+		     before any JavaScript runs and removed by the layout once the app has mounted. Colours and faces come from
+		     the kit's variables, which the blocking stylesheets define; no font is fetched from anywhere. The mark is
+		     the kit's drawing, inlined by src/hooks.server.ts, in the brand colour. -->
+		<style>
+			#splash .ed-app-mark {
+				width: 120px;
+				height: 120px;
+			}
+			#splash .ed-app-mark-ink {
+				fill: var(--brand-primary);
+			}
+		</style>
 		<div
 			id="splash"
 			aria-hidden="true"
@@ -31,7 +41,8 @@
 				color: var(--text-primary);
 			"
 		>
-			<span style="font: var(--ed-t-display-xl); letter-spacing: var(--ed-t-display-xl-tracking)">eden</span>
+			%eden.mark%
+			<span style="font: var(--ed-t-display-xl); letter-spacing: var(--ed-t-display-xl-tracking)">Eden</span>
 			<span style="font: var(--ed-t-caption); color: var(--text-secondary)">v%sveltekit.env.PUBLIC_APP_VERSION%</span>
 		</div>
 		<div style="display: contents">%sveltekit.body%</div>

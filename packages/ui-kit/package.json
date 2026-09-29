@@ -16,6 +16,7 @@
 		"./base.css": "./src/lib/styles/base.css",
 		"./tailwind.css": "./src/lib/styles/tailwind.css",
 		"./prepaint.js": "./src/lib/styles/prepaint.js",
+		"./app-mark.svg": "./src/lib/components/AppMark/app-mark.svg",
 		"./tokens": {
 			"types": "./src/lib/tokens/index.ts",
 			"default": "./src/lib/tokens/index.ts"

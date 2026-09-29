@@ -10,7 +10,7 @@
 		title: 'Components/Brand/Wordmark',
 		component: Wordmark,
 		tags: ['autodocs'],
-		args: { name: 'eden' },
+		args: { name: 'Eden' },
 	})
 </script>
 

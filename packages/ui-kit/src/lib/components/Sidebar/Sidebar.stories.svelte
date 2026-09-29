@@ -18,7 +18,7 @@
 		title: 'Components/Shell/Sidebar',
 		component: Sidebar,
 		tags: ['autodocs'],
-		args: { groups, pinned, brand: 'eden', current: 'kitchen', subtitles: false, shortcuts: false, onselect: fn() },
+		args: { groups, pinned, brand: 'Eden', current: 'kitchen', subtitles: false, shortcuts: false, onselect: fn() },
 		parameters: { platforms: ['desktop'] },
 	})
 </script>

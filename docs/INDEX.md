@@ -70,7 +70,7 @@ Every doc in one table per layer: path, status, one-liner, size (S under 120 lin
 
 | path | status | one-liner | size | load when |
 |---|---|---|---|---|
-| design/brand.md | draft | Name, metaphor policy, voice and tone, motifs, the domain glyph family, splash | S | any visual or copy decision |
+| design/brand.md | draft | Name, metaphor policy, voice and tone, motifs, the app icon, the domain glyph family, splash | S | any visual or copy decision |
 | design/visual-language.md | draft | Tokens, light and dark themes, accents, type, icons, spacing, motion, a11y | S | styling anything |
 | design/ux-patterns.md | draft | Navigation, forms, Quick Log, Capture sheet, states, AI surfaces, confirmations | S | designing a screen |
 | design/screens.md | draft | Screen inventory with must-show, actions, states, and mockup order | S | mockups |
