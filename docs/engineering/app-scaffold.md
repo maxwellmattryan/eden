@@ -1,7 +1,7 @@
 ---
 title: App scaffold
 status: draft
-summary: The two apps and the crate they share: the workspace layout, what each package owns, the platform features, the commands, where a domain's code goes on each side, the pre-paint mechanism, and the placeholder identifier.
+summary: The two apps and the crate they share: the workspace layout, what each package owns, the platform features, the commands, the domain module on each side and the interim persistence behind it, the pre-paint mechanism, and the placeholder identifier.
 read-this-if: You are building anything under apps/*, packages/shared or src-tauri, or wiring a domain into the shell.
 depends-on: [engineering/ui-kit, product/substrate/shell, product/substrate/settings-utilities]
 updated: 2026-09-28
@@ -65,6 +65,30 @@ Rust is stable, pinned by `rust-toolchain.toml` (channel, `rustfmt`, `clippy` an
 | Rust | `src-tauri/src/domains/<id>/` | models, services and commands; `src/domains/mod.rs` lists them |
 
 Ids are the plain domain ids (`kitchen`, not Hearth). The display name and subtitle are locale strings (`domains.<id>.name`, `domains.<id>.subtitle`); the glyph comes from `domainGlyph(id)`.
+
+A desktop domain module is laid out as:
+
+| file | holds |
+|---|---|
+| `manifest.ts` | the `DomainManifest` (`src/lib/domains/manifest.ts`): id, the name and subtitle keys, the glyph, the route and its tab ids, the Garden widgets (size, title and prompt keys, body component, `hasData()`), the quick actions. The seed of the manifest as code (`product/substrate/domain-manifest.md`); the shell composes the sidebar, the quick-nav row and the widget grid from `src/lib/domains/index.ts` and nothing else |
+| `<id>.svelte.ts` | the store: a `$state` class with the domain's records, its `$derived` lists and one method per write, each returning an `undo` the page turns into the toast (`src/lib/shell/undo.ts`) |
+| `seed.ts` | fills the store from `@eden/ui-kit/sample-data`, behind the empty state's "Add sample data" link |
+| `views/` | the page and its tabs, ported from the approved mockup |
+| `widgets/` | the Garden tile bodies, on `src/lib/shell/WidgetRows.svelte` |
+
+The route under `src/routes/<id>/` renders the view and loads the store on mount.
+
+## Persistence
+
+There is no data layer yet (`product/substrate/data.md`). Until it lands every store persists through one adapter, `@eden/shared/persistence`, whose whole surface is:
+
+```ts
+interface DomainDocument<T> { version: number; data: T }
+load<T>(domain: string): Promise<DomainDocument<T> | null>   // null when missing or unreadable; never throws
+save<T>(domain: string, document: DomainDocument<T>): Promise<void>   // rejects when nothing could be written
+```
+
+Under Tauri it calls `load_domain_document` and `save_domain_document` (`src-tauri/src/domains/documents.rs`), which keep one JSON document per domain at `<app data dir>/domains/<id>.json` and write atomically (to `<id>.json.tmp`, then a rename); ids must match `^[a-z][a-z0-9-]*$`. In a plain browser (`yarn dev:web`) the document lives in localStorage under `eden:domain:<id>`. The store owns the document's shape and bumps `version` when it changes. The data layer replaces this module alone; the stores keep calling `load` and `save`.
 
 ## Pre-paint
 

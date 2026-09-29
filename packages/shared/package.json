@@ -9,6 +9,7 @@
 		"./api/updater": "./src/api/updater.ts",
 		"./stores": "./src/stores/index.ts",
 		"./settings": "./src/settings/index.ts",
+		"./persistence": "./src/persistence/index.ts",
 		"./i18n": "./src/i18n/index.ts",
 		"./types": "./src/types/index.ts"
 	},

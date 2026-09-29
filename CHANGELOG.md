@@ -9,4 +9,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The interim domain document store: one JSON document per domain under the app data directory through `load_domain_document` and `save_domain_document`, localStorage in the browser, behind `@eden/shared/persistence`; the domain manifest seed the shell composes from
 - The desktop and mobile app scaffolds on the UI kit: the sidebar shell with the five Phase 1 routes, the settings sheet with General, Appearance and About, the bottom tab bar on mobile, English and Japanese, the channel-guarded updater, diagnostics and the crash screen

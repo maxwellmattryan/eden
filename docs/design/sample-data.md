@@ -114,4 +114,4 @@ Sidebar: 今日, 庭, 台所, 工房, 空, 暦, 活力, 聖域, 野原, 庭師, 
 
 ## Mirror in code
 
-The dataset is mirrored as `packages/ui-kit/src/stories/sample-data.ts`, typed for the kit's stories. Change both together.
+The dataset is mirrored as `packages/ui-kit/src/stories/sample-data.ts`, typed for the kit's stories and exported as `@eden/ui-kit/sample-data` so the apps' empty states can seed from it. Change both together.

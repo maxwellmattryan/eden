@@ -25,6 +25,10 @@
 			"types": "./src/lib/icons/icons.ts",
 			"default": "./src/lib/icons/icons.ts"
 		},
+		"./sample-data": {
+			"types": "./src/stories/sample-data.ts",
+			"default": "./src/stories/sample-data.ts"
+		},
 		"./fonts/*": "./src/lib/fonts/*"
 	},
 	"sideEffects": [

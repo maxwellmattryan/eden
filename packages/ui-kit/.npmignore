@@ -1,10 +1,14 @@
 # What the package publishes: the built dist, the source under src/lib (consumed from source in the workspace),
-# README and package.json. Stories, tests and the gallery-only faces stay out.
+# README and package.json. Stories, tests and the gallery-only faces stay out, except the sample dataset, which the
+# apps' "Add sample data" links seed from (`@eden/ui-kit/sample-data`).
 /*
 !/dist
 !/src
 /src/*
 !/src/lib
+!/src/stories
+/src/stories/*
+!/src/stories/sample-data.ts
 /src/lib/**/*.stories.svelte
 /src/lib/**/*.test.ts
 /src/lib/**/*.test.mjs

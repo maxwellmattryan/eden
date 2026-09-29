@@ -9,7 +9,9 @@ pub enum EdenError {
     #[error("Tauri error: {0}")]
     Tauri(#[from] tauri::Error),
 
-    #[allow(dead_code)]
+    #[error("JSON error: {0}")]
+    Json(#[from] serde_json::Error),
+
     #[error("Invalid operation: {0}")]
     InvalidOperation(String),
 

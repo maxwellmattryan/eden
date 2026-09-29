@@ -112,6 +112,8 @@ pub fn run() {
             commands::diagnostics::get_diagnostics_report,
             commands::diagnostics::clear_diagnostic_entries,
             commands::diagnostics::log_error,
+            domains::documents::load_domain_document,
+            domains::documents::save_domain_document,
         ])
         .setup(|app| {
             let app_data_dir = app
