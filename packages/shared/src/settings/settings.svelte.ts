@@ -5,11 +5,15 @@
 import { accents, densities, storageKeys, themes, type Accent, type Density, type Theme } from '@eden/ui-kit/tokens'
 import { setLanguage as setI18nLanguage } from '../i18n/index.js'
 import {
+	DEFAULT_HOME,
 	fontSettings,
 	languages,
+	temperatureUnits,
 	themeSettings,
 	type FontSetting,
+	type HomePlace,
 	type Language,
+	type TemperatureUnit,
 	type ThemeSetting,
 } from '../types/index.js'
 
@@ -18,6 +22,8 @@ export const storage = {
 	...storageKeys,
 	language: 'eden:language',
 	subtitles: 'eden:subtitles',
+	units: 'eden:units',
+	home: 'eden:home',
 } as const
 
 function read(key: string): string | null {
@@ -42,6 +48,26 @@ function oneOf<T extends string>(value: string | null, allowed: readonly T[], fa
 	return value !== null && (allowed as readonly string[]).includes(value) ? (value as T) : fallback
 }
 
+function isHome(value: unknown): value is HomePlace {
+	const place = value as HomePlace | null
+	return (
+		typeof place === 'object' &&
+		place !== null &&
+		typeof place.label === 'string' &&
+		Number.isFinite(place.latitude) &&
+		Number.isFinite(place.longitude)
+	)
+}
+
+function readHome(): HomePlace {
+	try {
+		const parsed: unknown = JSON.parse(read(storage.home) ?? 'null')
+		return isHome(parsed) ? parsed : DEFAULT_HOME
+	} catch {
+		return DEFAULT_HOME
+	}
+}
+
 export class Settings {
 	theme = $state<ThemeSetting>('system')
 	accent = $state<Accent>('moss')
@@ -49,6 +75,10 @@ export class Settings {
 	density = $state<Density>('comfortable')
 	subtitles = $state(true)
 	language = $state<Language>('en')
+	/** Temperature units for Sky (D-27). */
+	units = $state<TemperatureUnit>('celsius')
+	/** The home place Sky forecasts for, until Places exist (D-38). */
+	home = $state<HomePlace>(DEFAULT_HOME)
 	/** The theme on <html>: the choice, or what "system" resolves to right now. */
 	resolvedTheme = $state<Theme>('light')
 
@@ -67,6 +97,8 @@ export class Settings {
 		this.density = oneOf(read(storage.density), densities, 'comfortable')
 		this.subtitles = read(storage.subtitles) !== 'off'
 		this.language = oneOf(read(storage.language), languages, this.systemLanguage())
+		this.units = oneOf(read(storage.units), temperatureUnits, 'celsius')
+		this.home = readHome()
 		this.resolvedTheme = this.resolveTheme(this.theme)
 		this.apply()
 		if (typeof window !== 'undefined' && window.matchMedia && !this.#media) {
@@ -134,6 +166,16 @@ export class Settings {
 	setSubtitles(on: boolean) {
 		this.subtitles = on
 		write(storage.subtitles, on ? 'on' : 'off')
+	}
+
+	setUnits(units: TemperatureUnit) {
+		this.units = oneOf(units, temperatureUnits, 'celsius')
+		write(storage.units, this.units === 'celsius' ? null : this.units)
+	}
+
+	setHome(home: HomePlace) {
+		this.home = isHome(home) ? home : DEFAULT_HOME
+		write(storage.home, JSON.stringify(this.home))
 	}
 
 	async setLanguage(language: Language) {

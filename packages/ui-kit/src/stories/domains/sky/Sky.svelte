@@ -66,6 +66,8 @@
 	const todayIndex = 2
 	const today = skyWeek[todayIndex]!
 	const alert = 'Showers from 16:00. Your 17:30 session may get wet.'
+	/** The scrolling strip's name: a scroll region is a tab stop, and a tab stop needs a name. */
+	const HOURS_STRIP = 'Hourly forecast'
 
 	/** Now: 07:40 reads the first hour of the strip; after sunset the evening's last one under a clear sky. */
 	const condition = $derived<SkyCondition>(night ? 'sunny' : skyHours[0]!.condition)
@@ -141,7 +143,9 @@
 
 				<section class="hours" aria-labelledby="{uid}-hours">
 					<h2 class="section-title" id="{uid}-hours">Hours</h2>
-					<ol class="hours-list">
+					<!-- a scroll region is a tab stop so the keyboard reaches what it hides (axe scrollable-region-focusable) -->
+					<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+					<ol class="hours-list" tabindex="0" aria-label={HOURS_STRIP}>
 						{#each skyHours as hour (hour.id)}
 							<li class="hour" class:hour-wet={hour.precip >= 50}>
 								<span class="hour-time">{hour.time}</span>
@@ -284,22 +288,30 @@
 		font-variant-numeric: tabular-nums;
 	}
 
-	/* Hours: twelve cells in a row where they fit, two rows of six on the phone; never a scroll region */
+	/* Hours: one row of cells that scrolls sideways, a tab stop with a name so the keyboard reaches what it hides */
 	.hours {
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-2);
 	}
 	.hours-list {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(calc(var(--space-8) + var(--space-6)), 1fr));
+		display: flex;
 		gap: var(--space-2);
 		margin: 0;
-		padding: 0;
+		padding: 0 0 var(--space-1);
 		list-style: none;
+		overflow-x: auto;
+		scroll-snap-type: x proximity;
+		scrollbar-width: thin;
+	}
+	.hours-list:focus-visible {
+		outline: 2px solid transparent;
+		box-shadow: var(--focus-ring);
+		border-radius: var(--ed-radius-control);
 	}
 	.hour {
 		display: flex;
+		flex: 0 0 calc(var(--space-8) + var(--space-6));
 		flex-direction: column;
 		align-items: center;
 		gap: var(--space-1);
@@ -309,6 +321,7 @@
 		border: 1px solid var(--ed-card-border);
 		border-radius: var(--ed-radius-control);
 		background: var(--surface-1);
+		scroll-snap-align: start;
 	}
 	.hour-wet {
 		background: var(--surface-2);

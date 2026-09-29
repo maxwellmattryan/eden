@@ -47,7 +47,7 @@ Each screen below lists: id, platform, purpose, must show, primary actions, stat
 | `toolbench-lab` | desktop | devices | device rows with services and routine status | add device | | the two devices |
 | `toolbench-studio` | desktop | render gallery | grid of renders, sketch detail with seed and parameters | | empty | weather-field |
 | `toolbench-notes` | both | technical notes | search-first list, Markdown detail | add | | |
-| `sky`, mocked as `Domains/Sky/Sky` | both | weather | now, hours, days, sun and moon, alerts, location switcher | | offline (last updated), night | the Austin week, `skyHours` |
+| `sky`, mocked as `Domains/Sky/Sky`, built in `apps/desktop` | both | weather | now, hours, days, sun and moon, alerts, location switcher | | offline (last updated), night | the Austin week, `skyHours` |
 | `almanac-month` | desktop | the almanac | month grid with layer glyphs and legend, layer panel | create, toggle layer | no sources | the week's layers |
 | `almanac-week` | desktop | the week | timeline with Events by kind colour, task markers | | | |
 | `almanac-agenda` | both | the list | days with Events and annotations | | | |

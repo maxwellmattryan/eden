@@ -19,7 +19,7 @@
 			docs: {
 				description: {
 					component:
-						'The Sky view (product/domains/weather.md), mocked from kit components under D-54. The header’s glyph is live and the location chip opens a Menu over home and the saved venues. Beneath: the now block with the temperature and the day’s range, the one active alert as a Banner, twelve hours from 08:00 with the showers arriving at 16:00, the week as a List, and the sun and moon card. Offline, an InlineError names the last good forecast and the status bar carries the banner; the numbers stay. At night the glyph turns to a moon.',
+						'The Sky view (product/domains/weather.md), mocked from kit components under D-54. The header’s glyph is live and the location chip opens a Menu over home and the saved venues. Beneath: the now block with the temperature and the day’s range, the one active alert as a Banner, twelve hours from 08:00 in a strip that scrolls sideways (a named tab stop), with the showers arriving at 16:00, the week as a List, and the sun and moon card. Offline, an InlineError names the last good forecast and the status bar carries the banner; the numbers stay. At night the glyph turns to a moon.',
 				},
 			},
 		},
@@ -47,6 +47,7 @@
 		await expect(canvas.getByRole('alert')).toHaveTextContent('Showers from 16:00')
 		const hours = canvas.getByRole('region', { name: 'Hours' })
 		await expect(hours).toBeVisible()
+		await expect(within(hours).getByRole('list', { name: 'Hourly forecast' })).toHaveAttribute('tabindex', '0')
 		await expect(within(hours).getAllByRole('listitem')).toHaveLength(skyHours.length)
 		await expect(canvas.getByRole('grid', { name: 'This week' })).toBeVisible()
 		await expect(canvas.getAllByRole('row')).toHaveLength(skyWeek.length)

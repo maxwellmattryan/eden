@@ -192,7 +192,38 @@
 		},
 		"weather": {
 			"name": "空",
-			"subtitle": "天気、日の出と月"
+			"subtitle": "天気、日の出と月",
+			"now": "今",
+			"hours": "時間ごと",
+			"hoursStrip": "時間ごとの予報",
+			"week": "今週",
+			"sunAndMoon": "太陽と月",
+			"sunrise": "日の出",
+			"sunset": "日の入り",
+			"goldenHour": "ゴールデンアワー",
+			"moon": "月",
+			"location": "場所",
+			"home": "自宅 · {label}",
+			"today": "{day}（今日）",
+			"high": "最高 {value}°",
+			"low": "最低 {value}°",
+			"precip": "{value} %",
+			"moonLine": "{phase} {percent} %",
+			"moonPhase": {
+				"new": "新月",
+				"waxing-crescent": "三日月",
+				"first-quarter": "上弦",
+				"waxing-gibbous": "十三夜",
+				"full": "満月",
+				"waning-gibbous": "十六夜",
+				"last-quarter": "下弦",
+				"waning-crescent": "有明"
+			},
+			"offline": {
+				"message": "Open-Meteo に接続できませんでした。",
+				"lastGood": "{time} の予報を表示しています。",
+				"banner": "オフライン。{time} の予報を表示しています。"
+			}
 		}
 	},
 	"settings": {
@@ -214,7 +245,11 @@
 			"language": "言語",
 			"languageHelp": "すぐに反映されます。",
 			"english": "English",
-			"japanese": "日本語"
+			"japanese": "日本語",
+			"units": "気温の単位",
+			"unitsHelp": "天気予報と庭の空のタイルに使います。",
+			"celsius": "°C",
+			"fahrenheit": "°F"
 		},
 		"appearance": {
 			"theme": "テーマ",
@@ -348,6 +383,20 @@
 		"tabBar": {
 			"label": "セクション",
 			"withBadge": "{0}、{1} 件の新着"
+		},
+		"sky": {
+			"sunny": "晴れ",
+			"clearNight": "快晴の夜",
+			"partlyCloudy": "晴れ時々曇り",
+			"cloudy": "曇り",
+			"fog": "霧",
+			"drizzle": "霧雨",
+			"rain": "雨",
+			"thunderstorm": "雷雨",
+			"snow": "雪",
+			"hail": "雹",
+			"wind": "強風",
+			"tornado": "竜巻"
 		}
 	}
 }

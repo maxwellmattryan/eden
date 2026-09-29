@@ -192,7 +192,38 @@
 		},
 		"weather": {
 			"name": "Sky",
-			"subtitle": "Weather, forecasts, sun and moon"
+			"subtitle": "Weather, forecasts, sun and moon",
+			"now": "Now",
+			"hours": "Hours",
+			"hoursStrip": "Hourly forecast",
+			"week": "This week",
+			"sunAndMoon": "Sun and moon",
+			"sunrise": "Sunrise",
+			"sunset": "Sunset",
+			"goldenHour": "Golden hour",
+			"moon": "Moon",
+			"location": "Location",
+			"home": "Home · {label}",
+			"today": "{day}, today",
+			"high": "H {value}°",
+			"low": "L {value}°",
+			"precip": "{value} %",
+			"moonLine": "{phase} {percent} %",
+			"moonPhase": {
+				"new": "new moon",
+				"waxing-crescent": "waxing crescent",
+				"first-quarter": "first quarter",
+				"waxing-gibbous": "waxing gibbous",
+				"full": "full moon",
+				"waning-gibbous": "waning gibbous",
+				"last-quarter": "last quarter",
+				"waning-crescent": "waning crescent"
+			},
+			"offline": {
+				"message": "Couldn't reach Open-Meteo.",
+				"lastGood": "Showing the forecast from {time}.",
+				"banner": "Offline. Showing the forecast from {time}."
+			}
 		}
 	},
 	"settings": {
@@ -214,7 +245,11 @@
 			"language": "Language",
 			"languageHelp": "Changes take effect at once.",
 			"english": "English",
-			"japanese": "日本語"
+			"japanese": "日本語",
+			"units": "Temperature",
+			"unitsHelp": "For forecasts and the Garden's sky tile.",
+			"celsius": "°C",
+			"fahrenheit": "°F"
 		},
 		"appearance": {
 			"theme": "Theme",

@@ -34,7 +34,7 @@ The apps and the shared package depend on the kit by exact version and consume e
 | dev port | 1420 (HMR 1421 when `TAURI_DEV_HOST` is set) | 1421 (HMR 1430) |
 | shell | `Sidebar`, `BackButton`, `StatusBar`, the settings `Sheet` with a tab rail | `BottomTabBar` pinned to the bottom, More, an Appearance-only settings sheet |
 
-The five Phase 1 routes exist on both: `garden`, `today`, `kitchen`, `toolbench`, `weather` (mobile has `more` instead of `toolbench`, which lives behind it). A route renders its `PageHeader` and `EmptyState` from the locale until its approved mockup is implemented (D-54); on desktop the Garden and Hearth (Stock and Grocery; Recipes and Tips are empty states) are built, and each story stays its reference.
+The five Phase 1 routes exist on both: `garden`, `today`, `kitchen`, `toolbench`, `weather` (mobile has `more` instead of `toolbench`, which lives behind it). A route renders its `PageHeader` and `EmptyState` from the locale until its approved mockup is implemented (D-54); on desktop the Garden, Hearth (Stock and Grocery; Recipes and Tips are empty states) and Sky are built, and each story stays its reference.
 
 ## Commands
 
@@ -89,6 +89,10 @@ save<T>(domain: string, document: DomainDocument<T>): Promise<void>   // rejects
 ```
 
 Under Tauri it calls `load_domain_document` and `save_domain_document` (`src-tauri/src/domains/documents.rs`), which keep one JSON document per domain at `<app data dir>/domains/<id>.json` and write atomically (to `<id>.json.tmp`, then a rename); ids must match `^[a-z][a-z0-9-]*$`. In a plain browser (`yarn dev:web`) the document lives in localStorage under `eden:domain:<id>`. The store owns the document's shape and bumps `version` when it changes. The data layer replaces this module alone; the stores keep calling `load` and `save`.
+
+## External services
+
+Sky fetches from the webview with `fetch`: Open-Meteo for the forecast and the National Weather Service for alerts, both keyless (`product/domains/weather.md`, OQ-15). Their origins are the only external entries in the CSP's `connect-src` in `src-tauri/tauri.conf.json`; the overlays do not override `security`, so one entry covers every channel. The last good forecast is a mirror in the `weather` document (D-32). The home place and the temperature units are settings in `@eden/shared` (`settings.home`, `settings.units`; D-27, D-38) until Places and onboarding exist; the forecast is fetched in Celsius and converted for display.
 
 ## Pre-paint
 

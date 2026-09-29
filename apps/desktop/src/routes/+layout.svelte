@@ -21,6 +21,8 @@
 	import { settings } from '@eden/shared/settings'
 	import CrashScreen from '$lib/components/CrashScreen.svelte'
 	import { manifests } from '$lib/domains'
+	import { weather } from '$lib/domains/weather/store.svelte'
+	import { formatTime } from '$lib/domains/dates'
 	import { useGlobalErrorHandler } from '$lib/hooks/useGlobalErrorHandler'
 	import SettingsSheet from '$lib/settings/SettingsSheet.svelte'
 	import { settingsUi } from '$lib/settings/settings-ui.svelte'
@@ -82,6 +84,18 @@
 		},
 	])
 	const current = $derived(page.route.id?.split('/')[1] || 'garden')
+
+	// Offline: the banner takes the sync line's place while the forecast is a mirror from an earlier fetch
+	// (product/substrate/shell.md, "Global states").
+	const banner = $derived(
+		weather.offline && weather.lastGood
+			? {
+					message: $t('domains.weather.offline.banner', {
+						values: { time: formatTime(weather.lastGood, $locale ?? 'en') },
+					}),
+				}
+			: undefined
+	)
 
 	// How far the in-app history goes: the back arrow shows only when there is somewhere to go (shell.md).
 	let depth = $state(0)
@@ -149,6 +163,7 @@
 		<StatusBar
 			class="bar"
 			sync={$t('shell.sync.local')}
+			{banner}
 			integrations={[]}
 			gardener={{ label: $t('shell.gardener'), noKey: true }}
 			inbox={[]}
