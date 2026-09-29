@@ -5,7 +5,7 @@
 	import { sidebar } from '../../../stories/sample-data.js'
 	import BackButton from './BackButton.svelte'
 
-	const hearth = sidebar.items[2]!
+	const hearth = sidebar.items.find((item) => item.id === 'kitchen')!
 
 	const { Story } = defineMeta({
 		title: 'Components/Actions/BackButton',

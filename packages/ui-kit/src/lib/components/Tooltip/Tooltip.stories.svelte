@@ -11,7 +11,7 @@
 	import Tooltip from './Tooltip.svelte'
 	import { tooltip } from './tooltip.js'
 
-	const hearth = sidebar.items[2]!
+	const hearth = sidebar.items.find((item) => item.id === 'kitchen')!
 
 	const { Story } = defineMeta({
 		title: 'Components/Overlays/Tooltip',

@@ -142,16 +142,43 @@
 		/* what the header holds is placed against it, and so is the motif's room */
 		position: relative;
 	}
-	/* The motif keeps a breath from what stands either side of it, and the gutter from the page's edge */
+	/* The motif's room runs a little past what it shows: from the very end of what stands on the left, through the
+	   gutter to the header's edge, and above the header's top, so the feathering falls outside the streaks a reader
+	   sees. Only its faintest part comes near the name. Never below the foot, where the page's cards begin. */
 	.ed-page-header-motif {
 		position: absolute;
-		inset-block: 0;
-		inset-inline-start: calc(var(--ed-page-header-motif-start, 0px) + var(--space-4));
-		inset-inline-end: calc(var(--ed-page-header-motif-end, var(--ed-gutter) - var(--space-4)) + var(--space-4));
+		inset-block: calc(-1 * var(--space-6)) 0;
+		inset-inline-start: var(--ed-page-header-motif-start, 0px);
+		inset-inline-end: var(--ed-page-header-motif-end, 0px);
 		pointer-events: none;
+		/* Feathered on every side, so no line says where the room begins: each edge eases in over its feather rather
+		   than ramping, and the foot fades into the page as it did */
+		--ed-page-header-motif-side: calc(var(--space-8) * 3);
+		--ed-page-header-motif-top: calc(var(--space-8) + var(--space-6));
 		mask-image:
-			linear-gradient(to right, transparent, black calc(var(--space-8) * 2)),
-			linear-gradient(to bottom, black 70%, transparent);
+			linear-gradient(
+				to right,
+				transparent,
+				rgb(0 0 0 / 0.1) calc(var(--ed-page-header-motif-side) * 0.3),
+				rgb(0 0 0 / 0.5) calc(var(--ed-page-header-motif-side) * 0.6),
+				rgb(0 0 0 / 0.88) calc(var(--ed-page-header-motif-side) * 0.85),
+				black var(--ed-page-header-motif-side),
+				black calc(100% - var(--ed-page-header-motif-side)),
+				rgb(0 0 0 / 0.88) calc(100% - var(--ed-page-header-motif-side) * 0.85),
+				rgb(0 0 0 / 0.5) calc(100% - var(--ed-page-header-motif-side) * 0.6),
+				rgb(0 0 0 / 0.1) calc(100% - var(--ed-page-header-motif-side) * 0.3),
+				transparent
+			),
+			linear-gradient(
+				to bottom,
+				transparent,
+				rgb(0 0 0 / 0.1) calc(var(--ed-page-header-motif-top) * 0.3),
+				rgb(0 0 0 / 0.5) calc(var(--ed-page-header-motif-top) * 0.6),
+				rgb(0 0 0 / 0.88) calc(var(--ed-page-header-motif-top) * 0.85),
+				black var(--ed-page-header-motif-top),
+				black 75%,
+				transparent
+			);
 		mask-composite: intersect;
 	}
 	.ed-page-header-row {

@@ -117,7 +117,7 @@ export interface UiStrings {
 	sidebar: {
 		/** The domain nav's accessible name. */
 		label: string
-		/** The pinned list's accessible name: Gardener and Settings. */
+		/** The pinned list's accessible name: Settings. */
 		pinned: string
 	}
 	tabBar: {
@@ -262,7 +262,7 @@ export const defaultStrings: UiStrings = {
 	},
 	sidebar: {
 		label: 'Domains',
-		pinned: 'Gardener and settings',
+		pinned: 'Settings',
 	},
 	tabBar: {
 		label: 'Sections',
