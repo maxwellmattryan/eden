@@ -17,6 +17,8 @@ export interface Moon {
 	phase: MoonPhase
 	/** The lit fraction, 0 to 100. */
 	illumination: number
+	/** Where the moon is in its cycle: 0 new, 0.5 full. What draws the glyph. */
+	cycle: number
 }
 
 const SYNODIC_DAYS = 29.530588853
@@ -29,7 +31,7 @@ export function moonAt(when: number = Date.now()): Moon {
 	const days = (when - KNOWN_NEW_MOON) / DAY_MS
 	const cycle = (((days / SYNODIC_DAYS) % 1) + 1) % 1
 	const illumination = Math.round(50 * (1 - Math.cos(2 * Math.PI * cycle)))
-	return { phase: phaseOf(cycle), illumination }
+	return { phase: phaseOf(cycle), illumination, cycle: Math.round(cycle * 1000) / 1000 }
 }
 
 function phaseOf(cycle: number): MoonPhase {

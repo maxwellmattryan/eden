@@ -14,6 +14,7 @@
 		ToastHost,
 		UiKitProvider,
 		domainGlyph,
+		iconFor,
 		type SidebarEntry,
 	} from '@eden/ui-kit'
 	import { checkForUpdate } from '@eden/shared/api/updater'
@@ -23,23 +24,45 @@
 	import { manifests } from '$lib/domains'
 	import { weather } from '@eden/shared/weather'
 	import { formatTime } from '@eden/shared/dates'
+	import { detectOs, formatShortcut } from '@eden/shared/shortcuts'
 	import { useGlobalErrorHandler } from '$lib/hooks/useGlobalErrorHandler'
 	import SettingsSheet from '$lib/settings/SettingsSheet.svelte'
 	import { settingsUi } from '$lib/settings/settings-ui.svelte'
 
 	let { children } = $props()
 
+	// Shortcuts are written for the OS the window runs on, and not at all on mobile.
+	const os = detectOs(navigator.userAgent)
+	const keys = (key: string) => formatShortcut(key, { os, platform: 'desktop' })
+
 	const UPDATE_INTERVAL = 60 * 60 * 1000
+	/** How often the shell asks the weather store whether its forecast is stale, so the sidebar glyph keeps up. */
+	const WEATHER_INTERVAL = 10 * 60 * 1000
 	const format = $derived({ lang: $locale ?? 'en', clock: settings.clock })
 	/** Sky's times are the place's (D-58). */
 	const skyFormat = $derived({ ...format, timeZone: weather.timeZone })
 
-	// Today, Garden, then the enabled domains from their manifests, each its own group under a rule (D-55); the owner's
-	// order arrives with the Domains tab.
+	// Today, Garden, the enabled domains from their manifests, then Toolbench, each group under a rule (D-55); the
+	// owner's order arrives with the Domains tab.
+	const domains = $derived(manifests.filter((m) => m.id !== 'toolbench'))
+	const toolbench = $derived(manifests.filter((m) => m.id === 'toolbench'))
 	const hrefs = {
 		today: resolve('/today'),
 		garden: resolve('/garden'),
 	} as const
+
+	const position = $derived(
+		new Map(['today', 'garden', ...[...domains, ...toolbench].map((m) => m.id)].map((id, i) => [id, i + 1]))
+	)
+	const entry = (manifest: (typeof manifests)[number]): SidebarEntry => ({
+		id: manifest.id,
+		name: $t(manifest.name),
+		subtitle: $t(manifest.subtitle),
+		// Sky's glyph is live: it follows the current conditions (weather.md).
+		icon: manifest.id === 'weather' && weather.now ? iconFor(weather.now.condition, weather.now.night) : manifest.glyph,
+		shortcut: keys(String(position.get(manifest.id))),
+		href: manifest.routes.href,
+	})
 
 	const groups = $derived<SidebarEntry[][]>([
 		[
@@ -48,7 +71,7 @@
 				name: $t('shell.today'),
 				subtitle: $t('shell.todaySubtitle'),
 				icon: domainGlyph('today'),
-				shortcut: '⌘1',
+				shortcut: keys('1'),
 				href: hrefs.today,
 			},
 		],
@@ -58,18 +81,12 @@
 				name: $t('shell.garden'),
 				subtitle: $t('shell.gardenSubtitle'),
 				icon: domainGlyph('garden'),
-				shortcut: '⌘2',
+				shortcut: keys('2'),
 				href: hrefs.garden,
 			},
 		],
-		manifests.map((manifest, index) => ({
-			id: manifest.id,
-			name: $t(manifest.name),
-			subtitle: $t(manifest.subtitle),
-			icon: manifest.glyph,
-			shortcut: `⌘${index + 3}`,
-			href: manifest.routes.href,
-		})),
+		domains.map(entry),
+		...(toolbench.length ? [toolbench.map(entry)] : []),
 	])
 	const items = $derived(groups.flat())
 	const pinned = $derived<SidebarEntry[]>([
@@ -78,12 +95,14 @@
 			name: $t('shell.gardener'),
 			subtitle: $t('shell.gardenerSubtitle'),
 			icon: domainGlyph('gardener'),
+			shortcut: keys('G'),
 		},
 		{
 			id: 'settings',
 			name: $t('shell.settings'),
 			subtitle: $t('shell.settingsSubtitle'),
 			icon: domainGlyph('settings'),
+			shortcut: keys(','),
 		},
 	])
 	const current = $derived(page.route.id?.split('/')[1] || 'garden')
@@ -138,8 +157,11 @@
 			document.getElementById('splash')?.remove()
 			checkForUpdate().catch(() => null)
 			timer = setInterval(() => checkForUpdate().catch(() => null), UPDATE_INTERVAL)
+			void weather.load().catch(() => null)
 		})()
+		const skyTimer = setInterval(() => void weather.load().catch(() => null), WEATHER_INTERVAL)
 		return () => {
+			clearInterval(skyTimer)
 			cleanupErrors()
 			settings.dispose()
 			if (timer) clearInterval(timer)

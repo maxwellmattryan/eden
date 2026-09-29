@@ -21,7 +21,10 @@
 	// The top of every domain page (docs/design/ux-patterns.md, "Page anatomy"): the quiet back arrow when there is
 	// somewhere to go, the domain glyph at icon-lg, the themed name in display-lg with the brand rule under it where the
 	// brand dial sets one, its plain subtitle in caption, the actions on the right (the first is the primary) and a filter
-	// row beneath when the page is a list. On mobile the actions wrap under the name. Never a second row of buttons.
+	// row beneath when the page is a list. The top right is also where a page's notices sit (`aside`): what the owner
+	// should know before reading the page, such as a weather alert. It stands beside the name and the filters together,
+	// so a notice of a few lines never makes the header taller than they are. On mobile the actions and the aside
+	// wrap under the name. Never a second row of buttons.
 	import type { Snippet } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
 	import Icon from '../../icons/Icon.svelte'
@@ -43,6 +46,8 @@
 		actions?: PageHeaderAction[]
 		/** The row beneath: a Segmented for tabs inside the domain, filter chips. */
 		filters?: Snippet
+		/** The top right of the page: its notices, such as an alert. Beside the actions, or alone. */
+		aside?: Snippet
 	}
 	let {
 		name,
@@ -52,6 +57,7 @@
 		onback,
 		actions = [],
 		filters,
+		aside,
 		class: className = '',
 		...rest
 	}: Props = $props()
@@ -61,7 +67,11 @@
 	const stacked = $derived(root ? platformOf(root) === 'mobile' : false)
 </script>
 
-<header class={['ed-page-header', { 'ed-page-header-stacked': stacked }, className]} bind:this={root} {...rest}>
+<header
+	class={['ed-page-header', { 'ed-page-header-stacked': stacked, 'ed-page-header-with-aside': !!aside }, className]}
+	bind:this={root}
+	{...rest}
+>
 	<div class="ed-page-header-row">
 		{#if back}<BackButton {onback} breadcrumb={typeof back === 'string' ? back : undefined} />{/if}
 		{#if icon}<Icon name={icon} size="lg" class="ed-page-header-glyph" />{/if}
@@ -84,14 +94,15 @@
 		{/if}
 	</div>
 	{#if filters}<div class="ed-page-header-filters">{@render filters()}</div>{/if}
+	{#if aside}<div class="ed-page-header-aside">{@render aside()}</div>{/if}
 </header>
 
 <style>
 	.ed-page-header {
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-4);
-		padding: var(--space-6) var(--ed-gutter) var(--space-4);
+		gap: var(--space-3);
+		padding: var(--space-4) var(--ed-gutter) var(--space-4);
 		color: var(--text-primary);
 	}
 	.ed-page-header-row {
@@ -130,6 +141,28 @@
 		gap: var(--space-2);
 		margin-left: auto;
 	}
+	/* With an aside the header is two columns: the name and the filters on the left, the notices on the right
+	   beside them both, so the header is as tall as the taller side and no taller */
+	.ed-page-header-with-aside {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, var(--sheet-sm));
+		grid-template-areas: 'row aside' 'filters aside';
+		align-items: start;
+		column-gap: var(--space-6);
+	}
+	.ed-page-header-with-aside .ed-page-header-row {
+		grid-area: row;
+	}
+	.ed-page-header-with-aside .ed-page-header-filters {
+		grid-area: filters;
+	}
+	.ed-page-header-aside {
+		grid-area: aside;
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+		min-width: 0;
+	}
 	.ed-page-header-filters {
 		display: flex;
 		flex-wrap: wrap;
@@ -139,6 +172,10 @@
 	/* mobile: the actions wrap under the name, never a second row of buttons in the header */
 	.ed-page-header-stacked .ed-page-header-row {
 		flex-wrap: wrap;
+	}
+	.ed-page-header-stacked.ed-page-header-with-aside {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-areas: 'row' 'aside' 'filters';
 	}
 	.ed-page-header-stacked .ed-page-header-actions {
 		flex-basis: 100%;

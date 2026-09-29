@@ -14,6 +14,12 @@ export interface WeatherAlert {
 	severity: AlertSeverity
 	/** When the alert ends, as an ISO timestamp, when the service says. */
 	ends?: string
+	/** When what it warns of begins. */
+	onset?: string
+	/** When it was issued. */
+	issued?: string
+	/** Who issued it: "NWS Austin/San Antonio TX". */
+	sender?: string
 }
 
 interface NwsFeature {
@@ -24,6 +30,9 @@ interface NwsFeature {
 		severity?: string
 		ends?: string | null
 		expires?: string | null
+		onset?: string | null
+		sent?: string | null
+		senderName?: string | null
 	}
 }
 
@@ -52,6 +61,9 @@ export async function fetchAlerts(latitude: number, longitude: number): Promise<
 			headline: feature.properties.headline ?? feature.properties.event ?? '',
 			severity: severityOf(feature.properties.severity),
 			ends: feature.properties.ends ?? feature.properties.expires ?? undefined,
+			onset: feature.properties.onset ?? undefined,
+			issued: feature.properties.sent ?? undefined,
+			sender: feature.properties.senderName ?? undefined,
 		}))
 	} catch {
 		return []

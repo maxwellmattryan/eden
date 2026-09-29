@@ -40,6 +40,7 @@ export interface WeatherKitResponse {
 		precipChance: number
 		precipAmount: number
 		uvMax: number
+		windMax?: number | null
 		sunrise: number | null
 		sunset: number | null
 	}[]
@@ -117,6 +118,7 @@ export function normalizeWeatherKit(raw: WeatherKitResponse): Forecast {
 			precipChance: observed ? null : Math.round(day.precipChance),
 			precipAmount: day.precipAmount,
 			uvMax: day.uvMax,
+			windMax: day.windMax ?? null,
 			sunrise: day.sunrise,
 			sunset: day.sunset,
 			observed,

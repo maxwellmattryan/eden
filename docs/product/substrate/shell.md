@@ -4,7 +4,7 @@ status: draft
 summary: The frame everything sits in: layout regions, the sidebar, the Garden dashboard and its widgets, the command palette, navigation history and the back affordance, the status bar, Quick Log surfaces, the notification center, mobile structure, keyboard model and global states.
 read-this-if: You are designing navigation, layout, the dashboard, or anything that appears on every screen.
 depends-on: [domain-manifest, tasks, signals-notifications]
-updated: 2026-09-28
+updated: 2026-09-29
 ---
 
 ## Layout regions
@@ -53,7 +53,7 @@ Tabs: Garden, Today, and two domains the owner pins (Hearth and Sky by default),
 
 ## Keyboard model (Phase 1 defaults, customisable in Phase 2)
 
-⌘K palette, ⌘1–9 sidebar positions, ⌘, settings, ⌘J Gardener panel, ⌘N create in the current domain, ⌘⇧L Quick Log, ⌘[ and ⌘] back and forward, Esc closes the top-most sheet. Customisation lives in Settings → Shortcuts.
+⌘K palette, ⌘1–9 sidebar positions, ⌘, settings, ⌘G Gardener panel, ⌘N create in the current domain, ⌘⇧L Quick Log, ⌘[ and ⌘] back and forward, Esc closes the top-most sheet. Customisation lives in Settings → Shortcuts.
 
 ## Global states
 

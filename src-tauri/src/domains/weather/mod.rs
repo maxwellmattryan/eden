@@ -97,6 +97,7 @@ struct Day {
     precip_chance: f64,
     precip_amount: f64,
     uv_max: f64,
+    wind_max: Option<f64>,
     sunrise: Option<f64>,
     sunset: Option<f64>,
 }

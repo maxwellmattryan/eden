@@ -257,6 +257,9 @@
 	--ed-t-data-lg: 500 28px/1.15 var(--ed-font-mono);
 	--ed-t-data-lg-opsz: normal;
 	--ed-t-data-lg-tracking: normal;
+	--ed-t-data-md: 500 18px/1.2 var(--ed-font-mono);
+	--ed-t-data-md-opsz: normal;
+	--ed-t-data-md-tracking: normal;
 	--ed-t-data: 400 14px/21px var(--ed-font-mono);
 	--ed-t-data-opsz: normal;
 	--ed-t-data-tracking: normal;
@@ -284,7 +287,7 @@
 [data-accent="fern"] {
 	--brand-primary: #3e8e5e;
 	--brand-hover: color-mix(in srgb, #3e8e5e 85%, var(--ed-hover-ink));
-	--brand-muted: color-mix(in srgb, #3e8e5e 18%, #ffffff);
+	--brand-muted: color-mix(in srgb, #3e8e5e 18%, var(--surface-1));
 	--on-brand: #ffffff;
 }
 [data-theme="dark"][data-accent="fern"], [data-theme="dark"] [data-accent="fern"] {
@@ -296,7 +299,7 @@
 [data-accent="sage"] {
 	--brand-primary: #6f8f7c;
 	--brand-hover: color-mix(in srgb, #6f8f7c 85%, var(--ed-hover-ink));
-	--brand-muted: color-mix(in srgb, #6f8f7c 18%, #ffffff);
+	--brand-muted: color-mix(in srgb, #6f8f7c 18%, var(--surface-1));
 	--on-brand: #1f2a22;
 }
 [data-theme="dark"][data-accent="sage"], [data-theme="dark"] [data-accent="sage"] {
@@ -308,7 +311,7 @@
 [data-accent="clay"] {
 	--brand-primary: #b5644a;
 	--brand-hover: color-mix(in srgb, #b5644a 85%, var(--ed-hover-ink));
-	--brand-muted: color-mix(in srgb, #b5644a 18%, #ffffff);
+	--brand-muted: color-mix(in srgb, #b5644a 18%, var(--surface-1));
 	--on-brand: #ffffff;
 }
 [data-theme="dark"][data-accent="clay"], [data-theme="dark"] [data-accent="clay"] {
@@ -320,7 +323,7 @@
 [data-accent="marigold"] {
 	--brand-primary: #c98a2e;
 	--brand-hover: color-mix(in srgb, #c98a2e 85%, var(--ed-hover-ink));
-	--brand-muted: color-mix(in srgb, #c98a2e 18%, #ffffff);
+	--brand-muted: color-mix(in srgb, #c98a2e 18%, var(--surface-1));
 	--on-brand: #1f2a22;
 }
 [data-theme="dark"][data-accent="marigold"], [data-theme="dark"] [data-accent="marigold"] {
@@ -332,7 +335,7 @@
 [data-accent="lavender"] {
 	--brand-primary: #7b6fae;
 	--brand-hover: color-mix(in srgb, #7b6fae 85%, var(--ed-hover-ink));
-	--brand-muted: color-mix(in srgb, #7b6fae 18%, #ffffff);
+	--brand-muted: color-mix(in srgb, #7b6fae 18%, var(--surface-1));
 	--on-brand: #ffffff;
 }
 [data-theme="dark"][data-accent="lavender"], [data-theme="dark"] [data-accent="lavender"] {
@@ -344,7 +347,7 @@
 [data-accent="plum"] {
 	--brand-primary: #7a4b72;
 	--brand-hover: color-mix(in srgb, #7a4b72 85%, var(--ed-hover-ink));
-	--brand-muted: color-mix(in srgb, #7a4b72 18%, #ffffff);
+	--brand-muted: color-mix(in srgb, #7a4b72 18%, var(--surface-1));
 	--on-brand: #ffffff;
 }
 [data-theme="dark"][data-accent="plum"], [data-theme="dark"] [data-accent="plum"] {
@@ -356,7 +359,7 @@
 [data-accent="sky"] {
 	--brand-primary: #4a82a6;
 	--brand-hover: color-mix(in srgb, #4a82a6 85%, var(--ed-hover-ink));
-	--brand-muted: color-mix(in srgb, #4a82a6 18%, #ffffff);
+	--brand-muted: color-mix(in srgb, #4a82a6 18%, var(--surface-1));
 	--on-brand: #ffffff;
 }
 [data-theme="dark"][data-accent="sky"], [data-theme="dark"] [data-accent="sky"] {
@@ -368,7 +371,7 @@
 [data-accent="slate"] {
 	--brand-primary: #5b6b78;
 	--brand-hover: color-mix(in srgb, #5b6b78 85%, var(--ed-hover-ink));
-	--brand-muted: color-mix(in srgb, #5b6b78 18%, #ffffff);
+	--brand-muted: color-mix(in srgb, #5b6b78 18%, var(--surface-1));
 	--on-brand: #ffffff;
 }
 [data-theme="dark"][data-accent="slate"], [data-theme="dark"] [data-accent="slate"] {
@@ -380,7 +383,7 @@
 [data-accent="rose"] {
 	--brand-primary: #b3606f;
 	--brand-hover: color-mix(in srgb, #b3606f 85%, var(--ed-hover-ink));
-	--brand-muted: color-mix(in srgb, #b3606f 18%, #ffffff);
+	--brand-muted: color-mix(in srgb, #b3606f 18%, var(--surface-1));
 	--on-brand: #ffffff;
 }
 [data-theme="dark"][data-accent="rose"], [data-theme="dark"] [data-accent="rose"] {
@@ -465,6 +468,11 @@
 	font: var(--ed-t-data-lg);
 	letter-spacing: var(--ed-t-data-lg-tracking, normal);
 	font-variation-settings: var(--ed-t-data-lg-opsz, normal);
+}
+.ed-t-data-md {
+	font: var(--ed-t-data-md);
+	letter-spacing: var(--ed-t-data-md-tracking, normal);
+	font-variation-settings: var(--ed-t-data-md-opsz, normal);
 }
 .ed-t-data {
 	font: var(--ed-t-data);

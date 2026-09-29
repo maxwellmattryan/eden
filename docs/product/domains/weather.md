@@ -51,7 +51,7 @@ Never-do list: never sends coordinates finer than city level (D-60) to a model o
 
 ## 6. Surfaces
 
-**Desktop views (Phase 1)**: the Sky view with now, hours, the week, details, air quality, allergens, sun and moon, active alerts, the sources' attribution, and a location switcher over home and saved venues.
+**Desktop views (Phase 1)**: the Sky view with now, hours, the week, details, air quality, allergens, sun and moon, active alerts, the sources' attribution, and a location switcher over home and saved venues, with "Change home", a search by name, until Places exist (D-38).
 
 **Mobile (Phase 2)**: the same view as a tab candidate; Sky is pinned by default.
 
@@ -84,6 +84,7 @@ Intents: none.
 | Open-Meteo | 1 | none needed | rounded coordinates | hourly and daily forecast, the past days of the week |
 | Open-Meteo Air Quality | 1 | none needed | rounded coordinates | air quality index and pollutants; pollen where covered (Europe) |
 | NWS alerts | 1 | none needed | rounded coordinates | active alerts (US) |
+| Open-Meteo Geocoding | 1 | none needed | the place name the owner types, the language | places by name, to change home |
 | device location, precise | 3 | per device | | coordinates for a travelling forecast |
 | Apple WeatherKit (macOS, iOS) | 1 | the app's entitlement (D-57) | rounded coordinates | forecast |
 | AccuWeather | later | key | rounded coordinates | pollen and mold |

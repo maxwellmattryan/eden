@@ -63,6 +63,8 @@ export interface DayReading {
 	/** mm over the day. */
 	precipAmount: number
 	uvMax: number | null
+	/** The day's strongest sustained wind, km/h. */
+	windMax: number | null
 	sunrise: number | null
 	sunset: number | null
 	/** The day had passed when the forecast was fetched: these are what happened, not what was expected. */

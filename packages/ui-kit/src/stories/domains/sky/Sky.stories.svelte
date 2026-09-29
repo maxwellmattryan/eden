@@ -8,6 +8,11 @@
 	import Sky from './Sky.svelte'
 
 	const strings = defaultStrings
+	/** The week's day cells, without the facts listed inside them. */
+	const days = (canvas: ReturnType<typeof canvasOf>) =>
+		within(canvas.getByRole('list', { name: 'Daily forecast' }))
+			.getAllByRole('listitem')
+			.filter((item) => item.classList.contains('day'))
 	const sky = sidebar.items.find((entry) => entry.id === 'weather')!
 	const offline = `Offline. Showing the forecast from ${skyToday.lastGood}.`
 
@@ -19,7 +24,7 @@
 			docs: {
 				description: {
 					component:
-						'The Sky view (product/domains/weather.md), mocked from kit components under D-54. The header’s glyph is live and the location chip opens a Menu over home and the saved venues. Beneath: the now block with the temperature and the day’s range, the one active alert as a Banner, twelve hours from 08:00 in a strip that scrolls sideways (a named tab stop), with the showers arriving at 16:00, the details as tiles, the calendar week as a List from the week start with today marked and the days before it observed (D-58), the air quality and the pollen and mold cards, the sun and moon card, and the sources’ attribution. The page is the same whatever the provider (D-56): Apple Weather changes the attribution line only, and a failed provider adds the fallback note. Offline, an InlineError names the last good forecast and the status bar carries the banner; the numbers stay. At night the glyph turns to a moon.',
+						'The Sky view (product/domains/weather.md), mocked from kit components under D-54. The header’s glyph is live and the location chip opens a Menu over home and the saved venues. Beneath: the now block with the temperature and the day’s range, the one active alert as a Banner, twelve hours from 08:00 in a strip that scrolls sideways (a named tab stop), with the showers arriving at 16:00, the details as tiles, the calendar week as a strip across the page from the week start, a day to a column with its rain, UV, wind and light, with today marked and the days before it observed (D-58), the air quality and the pollen and mold cards, the sun and moon card, and the sources’ attribution. The page is the same whatever the provider (D-56): Apple Weather changes the attribution line only, and a failed provider adds the fallback note. Offline, an InlineError names the last good forecast and the status bar carries the banner; the numbers stay. At night the glyph turns to a moon.',
 				},
 			},
 		},
@@ -43,19 +48,27 @@
 		await expect(canvas.getByRole('button', { name: 'Home · Hyde Park' })).toHaveAttribute('aria-expanded', 'false')
 		const now = canvas.getByRole('region', { name: 'Now' })
 		await expect(now).toBeVisible()
-		await expect(within(now).getByText(`${skyHours[0]!.temp}°`)).toBeVisible()
+		// the reading, which the chart's side may repeat as one of its figures
+		await expect(within(now).getAllByText(`${skyHours[0]!.temp}°`)[0]).toBeVisible()
 		await expect(canvas.getByRole('alert')).toHaveTextContent('Showers from 16:00')
+		await expect(canvas.getByRole('alert')).toHaveTextContent('Your 17:30 session may get wet.')
 		const hours = canvas.getByRole('region', { name: 'Hours' })
 		await expect(hours).toBeVisible()
 		await expect(within(hours).getByRole('list', { name: 'Hourly forecast' })).toHaveAttribute('tabindex', '0')
 		await expect(within(hours).getAllByRole('listitem')).toHaveLength(skyHours.length)
-		await expect(canvas.getByRole('grid', { name: 'This week' })).toBeVisible()
-		await expect(canvas.getAllByRole('row')).toHaveLength(skyWeek.length)
-		const rows = canvas.getAllByRole('row')
-		await expect(rows[0]).toHaveTextContent('Monday')
+		await expect(canvas.getByRole('region', { name: 'This week' })).toBeVisible()
+		const week = canvas.getByRole('list', { name: 'Daily forecast' })
+		await expect(week).toHaveAttribute('tabindex', '0')
+		const rows = days(canvas)
+		await expect(rows).toHaveLength(skyWeek.length)
+		await expect(rows[0]).toHaveTextContent('Mon')
 		await expect(rows[0]).toHaveTextContent('Observed')
-		await expect(rows[2]).toHaveTextContent('Wednesday, today')
+		await expect(rows[2]).toHaveTextContent('Wed')
+		await expect(rows[2]).toHaveTextContent('Today')
+		await expect(rows[2]).toHaveAttribute('aria-current', 'date')
 		await expect(rows[2]).not.toHaveTextContent('Observed')
+		await expect(within(rows[2]!).getByRole('img', { name: 'Strongest wind' })).toBeVisible()
+		await expect(canvas.getByText('Waning gibbous')).toBeVisible()
 		const details = canvas.getByRole('region', { name: 'Details' })
 		await expect(within(details).getByText('Humidity')).toBeVisible()
 		await expect(within(details).getByText('UV index')).toBeVisible()
@@ -70,9 +83,10 @@
 		await expect(
 			within(air).getByRole('img', { name: `US air quality index ${skyAirQuality.index}, Good` })
 		).toBeVisible()
-		await expect(within(details).getByRole('button', { name: 'About Humidity' })).toBeVisible()
+		await expect(within(details).getAllByRole('button', { name: /^About / })).toHaveLength(10)
+		await expect(within(hours).getByRole('button', { name: 'About the hours' })).toBeVisible()
 		await expect(within(air).getByRole('button', { name: 'About Ozone' })).toBeVisible()
-		await expect(within(now).getByRole('img', { name: /Temperature over the next 12 hours/ })).toBeVisible()
+		await expect(await within(now).findByRole('img', { name: /^Temperature from 08:00 to 19:00/ })).toBeVisible()
 	}}
 />
 
@@ -115,12 +129,13 @@
 	play={async ({ canvasElement }) => {
 		if (!hasCanvas(canvasElement)) return
 		const canvas = canvasOf(canvasElement)
-		const rows = canvas.getAllByRole('row')
+		const rows = days(canvas)
 		await expect(rows).toHaveLength(7)
-		await expect(rows[0]).toHaveTextContent('Sunday')
+		await expect(rows[0]).toHaveTextContent('Sun')
 		await expect(rows[0]).toHaveTextContent('Observed')
-		await expect(rows[3]).toHaveTextContent('Wednesday, today')
-		await expect(rows[6]).toHaveTextContent('Saturday')
+		await expect(rows[3]).toHaveTextContent('Wed')
+		await expect(rows[3]).toHaveTextContent('Today')
+		await expect(rows[6]).toHaveTextContent('Sat')
 	}}
 />
 
@@ -135,7 +150,8 @@
 		const hours = canvas.getByRole('region', { name: 'Hours' })
 		await expect(within(hours).getByText('8 AM')).toBeVisible()
 		await expect(within(hours).getByText('4 PM')).toBeVisible()
-		await expect(canvas.getByRole('alert')).toHaveTextContent('Showers from 4 PM. Your 5:30 PM session')
+		await expect(canvas.getByRole('alert')).toHaveTextContent('Showers from 4 PM')
+		await expect(canvas.getByRole('alert')).toHaveTextContent('Your 5:30 PM session')
 		await expect(canvas.getByText('7:22 AM')).toBeVisible()
 		await expect(canvas.getByText('7:14 PM')).toBeVisible()
 	}}
@@ -151,7 +167,7 @@
 		const canvas = canvasOf(canvasElement)
 		await expect(canvas.getByRole('region', { name: 'Details' })).toBeVisible()
 		await expect(canvas.getByRole('region', { name: 'Air quality' })).toBeVisible()
-		await expect(canvas.getAllByRole('row')).toHaveLength(7)
+		await expect(days(canvas)).toHaveLength(7)
 		await expect(canvas.getByText('Apple Weather')).toBeVisible()
 		await expect(canvas.queryByText('Forecast by Open-Meteo')).toBeNull()
 		canvas.getByRole('button', { name: 'Data sources' }).click()

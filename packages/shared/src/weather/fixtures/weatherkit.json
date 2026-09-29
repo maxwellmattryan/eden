@@ -253,7 +253,8 @@
 			"precipAmount": 0.0,
 			"uvMax": 7,
 			"sunrise": 1790166000000,
-			"sunset": 1790209572000
+			"sunset": 1790209572000,
+			"windMax": 14.2
 		},
 		{
 			"time": 1790226000000,
@@ -264,7 +265,8 @@
 			"precipAmount": 0.0,
 			"uvMax": 7,
 			"sunrise": 1790252433000,
-			"sunset": 1790295896000
+			"sunset": 1790295896000,
+			"windMax": 11.1
 		},
 		{
 			"time": 1790312400000,
@@ -275,7 +277,8 @@
 			"precipAmount": 0.0,
 			"uvMax": 7,
 			"sunrise": 1790338867000,
-			"sunset": 1790382220000
+			"sunset": 1790382220000,
+			"windMax": 11.2
 		},
 		{
 			"time": 1790398800000,
@@ -286,7 +289,8 @@
 			"precipAmount": 0.0,
 			"uvMax": 6,
 			"sunrise": 1790425301000,
-			"sunset": 1790468544000
+			"sunset": 1790468544000,
+			"windMax": 10.7
 		},
 		{
 			"time": 1790485200000,
@@ -297,7 +301,8 @@
 			"precipAmount": 0.0,
 			"uvMax": 7,
 			"sunrise": 1790511735000,
-			"sunset": 1790554868000
+			"sunset": 1790554868000,
+			"windMax": 12.8
 		},
 		{
 			"time": 1790571600000,
@@ -308,7 +313,8 @@
 			"precipAmount": 0.0,
 			"uvMax": 7,
 			"sunrise": 1790598169000,
-			"sunset": 1790641192000
+			"sunset": 1790641192000,
+			"windMax": 15.5
 		},
 		{
 			"time": 1790658000000,
@@ -319,7 +325,8 @@
 			"precipAmount": 0.0,
 			"uvMax": 7,
 			"sunrise": 1790684603000,
-			"sunset": 1790727517000
+			"sunset": 1790727517000,
+			"windMax": 19.8
 		},
 		{
 			"time": 1790744400000,
@@ -330,7 +337,8 @@
 			"precipAmount": 0.0,
 			"uvMax": 6,
 			"sunrise": 1790771038000,
-			"sunset": 1790813841000
+			"sunset": 1790813841000,
+			"windMax": 22.1
 		},
 		{
 			"time": 1790830800000,
@@ -341,7 +349,8 @@
 			"precipAmount": 30.83,
 			"uvMax": 6,
 			"sunrise": 1790857473000,
-			"sunset": 1790900167000
+			"sunset": 1790900167000,
+			"windMax": 19.2
 		},
 		{
 			"time": 1790917200000,
@@ -352,7 +361,8 @@
 			"precipAmount": 12.1,
 			"uvMax": 5,
 			"sunrise": 1790943908000,
-			"sunset": 1790986493000
+			"sunset": 1790986493000,
+			"windMax": 13.4
 		},
 		{
 			"time": 1791003600000,
@@ -363,7 +373,8 @@
 			"precipAmount": 2.6,
 			"uvMax": 5,
 			"sunrise": 1791030343000,
-			"sunset": 1791072819000
+			"sunset": 1791072819000,
+			"windMax": 16.8
 		},
 		{
 			"time": 1791090000000,
@@ -374,7 +385,8 @@
 			"precipAmount": 0.0,
 			"uvMax": 5,
 			"sunrise": 1791116779000,
-			"sunset": 1791159146000
+			"sunset": 1791159146000,
+			"windMax": 22.3
 		},
 		{
 			"time": 1791176400000,
@@ -385,7 +397,8 @@
 			"precipAmount": 0.0,
 			"uvMax": 5,
 			"sunrise": 1791203215000,
-			"sunset": 1791245475000
+			"sunset": 1791245475000,
+			"windMax": 20.7
 		}
 	],
 	"attribution": {

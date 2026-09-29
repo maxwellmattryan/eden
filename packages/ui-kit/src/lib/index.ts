@@ -34,6 +34,7 @@ export { default as Toggle } from './components/Toggle/Toggle.svelte'
 export { default as Skeleton } from './components/Skeleton/Skeleton.svelte'
 export { default as Stat } from './components/Stat/Stat.svelte'
 export { default as Sparkline } from './components/Sparkline/Sparkline.svelte'
+export { default as TrendChart } from './components/TrendChart/TrendChart.svelte'
 
 // Brand
 export { default as DailyLine } from './components/DailyLine/DailyLine.svelte'
@@ -63,6 +64,8 @@ export { default as ToastHost } from './toast/ToastHost.svelte'
 export { default as InlineError } from './components/InlineError/InlineError.svelte'
 export { default as EmptyState } from './components/EmptyState/EmptyState.svelte'
 export { default as Banner } from './components/Banner/Banner.svelte'
+export { default as Notice } from './components/Notice/Notice.svelte'
+export type { NoticeTone } from './components/Notice/Notice.svelte'
 export type { BannerPlacement, BannerTone } from './components/Banner/Banner.svelte'
 
 // Inputs, data and the Garden

@@ -21,7 +21,7 @@ export type Density = (typeof densities)[number]
 export const reliefs = ["raised", "flat"] as const
 export type Relief = (typeof reliefs)[number]
 
-export const typeStyleNames = ["display-xl", "display-lg", "display-md", "display-sm", "voice", "daily-line", "daily-line-lg", "body-lg", "body", "body-sm", "label", "title", "title-lg", "caption", "data-lg", "data", "data-sm", "code"] as const
+export const typeStyleNames = ["display-xl", "display-lg", "display-md", "display-sm", "voice", "daily-line", "daily-line-lg", "body-lg", "body", "body-sm", "label", "title", "title-lg", "caption", "data-lg", "data-md", "data", "data-sm", "code"] as const
 export type TypeStyle = (typeof typeStyleNames)[number]
 
 export const colorTokenNames = ["surface-0", "surface-1", "surface-2", "surface-3", "text-primary", "text-secondary", "text-tertiary", "stroke", "stroke-subtle", "stroke-hover", "brand-primary", "brand-hover", "brand-muted", "on-brand", "ai", "ai-muted", "honey", "honey-muted", "on-honey", "on-ai", "danger", "on-danger", "warning", "info", "success", "accent-moss", "accent-fern", "accent-sage", "accent-clay", "accent-marigold", "accent-lavender", "accent-plum", "accent-sky", "accent-slate", "accent-rose", "chart-primary", "chart-reference", "chart-series-2", "chart-series-3", "chart-series-4", "chart-axis", "chart-grid", "chart-label", "level-1", "level-2", "level-3", "level-4", "level-5", "level-6", "moon-lit", "moon-shade"] as const
@@ -279,6 +279,14 @@ export const typeStyles = {
 		"weight": 500,
 		"sample": "82.4",
 		"usage": "The value in the Quick Log sheet, the headline metric in a widget, the budget meter's figure."
+	},
+	"data-md": {
+		"family": "mono",
+		"size": 18,
+		"lineHeight": 1.2,
+		"weight": 500,
+		"sample": "1011",
+		"usage": "A figure among several in a card: a reading in Sky's details, a pollutant. Smaller than the card's headline, larger than its label."
 	},
 	"data": {
 		"family": "mono",

@@ -21,7 +21,7 @@
 <script lang="ts">
 	// The app mark and wordmark at the head when the app passes its name (D-55); then the groups top to bottom with a
 	// rule between each (Today, Garden, then the domains in the owner's order); then Gardener and Settings pinned at
-	// the bottom. Subtitles and shortcuts are off by default. The whole nav is one tab stop: arrows, Home and End and
+	// the bottom. Subtitles and shortcuts are off by default, except the pinned pair, which always shows its keys. The whole nav is one tab stop: arrows, Home and End and
 	// typing a name move focus through `roving` across every group; Enter or a click makes an item current. There is
 	// no sidebar on mobile: BottomTabBar instead.
 	import type { HTMLAttributes } from 'svelte/elements'
@@ -36,7 +36,7 @@
 		groups: SidebarEntry[][]
 		/** The app's name, lowercase, from the locale: shows the mark and the wordmark at the head. */
 		brand?: string
-		/** Gardener and Settings, pinned at the bottom. */
+		/** Gardener and Settings, pinned at the bottom; their shortcuts always show. */
 		pinned?: SidebarEntry[]
 		/** Shows each subtitle beneath its name (the onboarding default, until the owner turns it off). */
 		subtitles?: boolean
@@ -70,13 +70,13 @@
 	}
 </script>
 
-{#snippet entry(item: SidebarEntry)}
+{#snippet entry(item: SidebarEntry, keys = shortcuts)}
 	<li>
 		<SidebarItem
 			{...item}
 			current={item.id === current}
 			showSubtitle={subtitles}
-			showShortcut={shortcuts}
+			showShortcut={keys}
 			data-sidebar-item
 			onclick={() => pick(item.id)}
 		/>
@@ -105,7 +105,7 @@
 	</div>
 	{#if pinned.length}
 		<ul class="ed-sidebar-list ed-sidebar-pinned" aria-label={s.sidebar.pinned}>
-			{#each pinned as item (item.id)}{@render entry(item)}{/each}
+			{#each pinned as item (item.id)}{@render entry(item, true)}{/each}
 		</ul>
 	{/if}
 </nav>

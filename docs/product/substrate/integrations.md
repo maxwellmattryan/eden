@@ -19,6 +19,7 @@ updated: 2026-09-29
 | Ollama (desktop only) | Gardener | local URL | n/a | 2 |
 | Open-Meteo | Sky | none | read | 1 |
 | Open-Meteo Air Quality | Sky | none | read | 1 |
+| Open-Meteo Geocoding | Sky | none | read | 1 |
 | NWS alerts (US) | Sky | none | read | 1 |
 | bundled holiday dataset | Almanac | none | n/a | 2 |
 | Google Calendar | Almanac | OAuth | read, per calendar | 2 (write 3) |

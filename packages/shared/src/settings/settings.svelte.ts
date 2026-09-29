@@ -2,7 +2,17 @@
 // localStorage keys the kit's pre-paint script reads (`storageKeys`), plus its own, so the first frame after a
 // relaunch already carries the choice and `apply()` only has to keep <html> in step afterwards. "system" is resolved
 // here and re-resolved while the OS theme changes, only while the choice is still "system".
-import { accents, densities, storageKeys, themes, type Accent, type Density, type Theme } from '@eden/ui-kit/tokens'
+import {
+	accents,
+	brandLevels,
+	densities,
+	storageKeys,
+	themes,
+	type Accent,
+	type BrandLevel,
+	type Density,
+	type Theme,
+} from '@eden/ui-kit/tokens'
 import { setLanguage as setI18nLanguage } from '../i18n/index.js'
 import {
 	DEFAULT_HOME,
@@ -84,6 +94,8 @@ function readHome(): HomePlace {
 export class Settings {
 	theme = $state<ThemeSetting>('system')
 	accent = $state<Accent>('moss')
+	/** Temporary: the brand dial, offered only until the design settles on one level. */
+	brand = $state<BrandLevel>('lush')
 	font = $state<FontSetting>('default')
 	density = $state<Density>('comfortable')
 	subtitles = $state(true)
@@ -112,6 +124,7 @@ export class Settings {
 	load() {
 		this.theme = oneOf(read(storage.theme), themeSettings, 'system')
 		this.accent = oneOf(read(storage.accent), accents, 'moss')
+		this.brand = oneOf(read(storage.brand), brandLevels, 'lush')
 		this.font = oneOf(read(storage.font), fontSettings, 'default')
 		this.density = oneOf(read(storage.density), densities, 'comfortable')
 		this.subtitles = read(storage.subtitles) !== 'off'
@@ -165,6 +178,8 @@ export class Settings {
 		const root = document.documentElement
 		root.setAttribute('data-theme', this.resolvedTheme)
 		root.setAttribute('data-accent', this.accent)
+		if (this.brand === 'lush') root.removeAttribute('data-brand')
+		else root.setAttribute('data-brand', this.brand)
 		if (this.font === 'default') root.removeAttribute('data-font')
 		else root.setAttribute('data-font', this.font)
 		if (this.density === 'compact') root.setAttribute('data-density', 'compact')
@@ -181,6 +196,12 @@ export class Settings {
 	setAccent(accent: Accent) {
 		this.accent = oneOf(accent, accents, 'moss')
 		write(storage.accent, this.accent)
+		this.apply()
+	}
+
+	setBrand(brand: BrandLevel) {
+		this.brand = oneOf(brand, brandLevels, 'lush')
+		write(storage.brand, this.brand === 'lush' ? null : this.brand)
 		this.apply()
 	}
 

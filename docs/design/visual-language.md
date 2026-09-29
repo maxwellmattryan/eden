@@ -110,6 +110,8 @@ Micro-interactions 150 ms, panels and sheets 220 ms, ease-out (`cubic-bezier(0.2
 
 Numeric widgets (weight trend, later Orchard) use the accent for the primary series, `--text-tertiary` for averages and goal lines, and at most three categorical series from the accent set (Clay, Sky, Marigold). Axes in `--stroke`, labels in `--text-secondary`, no gridlines heavier than `--stroke-subtle`.
 
+Figures are set in the data styles: `data-lg` (28) for a widget's headline, `data-md` (18) for one figure among several in a card, `data` (14) and `data-sm` (13) in rows.
+
 A reading on a scale from fine to hazardous (the air quality index, pollen, the UV index) uses the six level colours, `level-1` to `level-6`: green, amber, orange, red, purple, maroon, each with a light and a dark value in `tokens.json`. They are graphic colours for bands, dots and markers, never text, and the word for the level is always beside them. The moon glyph has its own pair, `moon-lit` and `moon-shade`, so its lit face is the bright one in both themes.
 
 ## Accessibility targets

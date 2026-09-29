@@ -205,6 +205,24 @@ export const skyAllergens: { id: string; name: string; level: SkyAllergenLevel }
 	{ id: 'ragweed', name: 'Ragweed pollen', level: 'high' },
 	{ id: 'mold', name: 'Mold', level: 'moderate' },
 ]
+/**
+ * Each day of the sample week in detail, by its short name, with the Sunday before: the date, the chance of rain and
+ * its depth in mm, the highest UV index, the strongest wind in km/h, and the light.
+ */
+export const skyWeekDetail: Record<
+	string,
+	{ date: string; precip: number; rain: number; uv: number; wind: number; sunrise: string; sunset: string }
+> = {
+	SunBefore: { date: '09-27', precip: 10, rain: 0, uv: 7, wind: 11, sunrise: '07:20', sunset: '19:18' },
+	Mon: { date: '09-28', precip: 0, rain: 0, uv: 8, wind: 12, sunrise: '07:21', sunset: '19:17' },
+	Tue: { date: '09-29', precip: 5, rain: 0, uv: 7, wind: 16, sunrise: '07:21', sunset: '19:15' },
+	Wed: { date: '09-30', precip: 75, rain: 4.2, uv: 7, wind: 27, sunrise: '07:22', sunset: '19:14' },
+	Thu: { date: '10-01', precip: 10, rain: 0, uv: 7, wind: 14, sunrise: '07:22', sunset: '19:13' },
+	Fri: { date: '10-02', precip: 0, rain: 0, uv: 7, wind: 9, sunrise: '07:23', sunset: '19:12' },
+	Sat: { date: '10-03', precip: 0, rain: 0, uv: 7, wind: 10, sunrise: '07:24', sunset: '19:10' },
+	Sun: { date: '10-04', precip: 5, rain: 0, uv: 6, wind: 13, sunrise: '07:24', sunset: '19:09' },
+}
+
 /** What a search for "Austin" finds when the home place is changed: a name, its region and country. */
 export const skyPlaceResults = [
 	{ id: 'austin-tx', name: 'Austin', region: 'Texas, United States' },
@@ -216,6 +234,9 @@ export const skyToday = {
 	sunset: '19:14',
 	goldenHour: '18:35',
 	moon: 'waning gibbous 84 %',
+	/** The phase by name and the share of the disc that is lit, for where the two are set apart. */
+	moonPhase: 'Waning gibbous',
+	moonLit: 84,
 	/** Where the moon is in its cycle (0 new, 0.5 full): what draws the glyph. */
 	moonCycle: 0.63,
 	goodFor: 'an early run before the showers',
@@ -291,17 +312,17 @@ const sidebarGroups = [
 	[{ id: 'garden', name: 'Garden', subtitle: 'Dashboard', shortcut: '⌘2' }],
 	[
 		{ id: 'kitchen', name: 'Hearth', subtitle: 'Food, recipes, pantry, groceries', shortcut: '⌘3' },
-		{ id: 'toolbench', name: 'Toolbench', subtitle: 'Ideas, projects, homelab, generative art', shortcut: '⌘4' },
-		{ id: 'weather', name: 'Sky', subtitle: 'Weather, forecasts, sun and moon', shortcut: '⌘5' },
+		{ id: 'weather', name: 'Sky', subtitle: 'Weather, forecasts, sun and moon', shortcut: '⌘4' },
 	],
+	[{ id: 'toolbench', name: 'Toolbench', subtitle: 'Ideas, projects, homelab, generative art', shortcut: '⌘5' }],
 ]
 
 export const sidebar = {
 	groups: sidebarGroups,
 	items: sidebarGroups.flat(),
 	pinned: [
-		{ id: 'gardener', name: 'Gardener', subtitle: 'Ask, log, run' },
-		{ id: 'settings', name: 'Settings', subtitle: 'Preferences' },
+		{ id: 'gardener', name: 'Gardener', subtitle: 'Ask, log, run', shortcut: '⌘G' },
+		{ id: 'settings', name: 'Settings', subtitle: 'Preferences', shortcut: '⌘,' },
 	],
 }
 
@@ -310,9 +331,9 @@ const sidebarJaGroups = [
 	[{ id: 'garden', name: '庭', subtitle: 'ダッシュボード' }],
 	[
 		{ id: 'kitchen', name: '台所', subtitle: '食材、レシピ、買い物' },
-		{ id: 'toolbench', name: '工房', subtitle: 'アイデア、プロジェクト' },
 		{ id: 'weather', name: '空', subtitle: '天気、日の出と月' },
 	],
+	[{ id: 'toolbench', name: '工房', subtitle: 'アイデア、プロジェクト' }],
 ]
 
 export const sidebarJa = {

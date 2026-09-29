@@ -44,17 +44,17 @@ WCAG 2 ratios measured on the token values. "text" needs 4.5:1, "large" and "non
 | accent | as text on surface-0 | as text on surface-1 | fill under on-brand | hover on surface-0 | text-primary on muted |
 |---|---|---|---|---|---|
 | moss (default) `#4f7a5a` | 4.47:1 ⚠ | 4.20:1 ⚠ | `#ffffff` 4.93:1 | `#43684d` 5.73:1 | `#dce8dd` 11.77:1 |
-| fern `#3e8e5e` | 3.64:1 ⚠ | 3.42:1 ⚠ | `#ffffff` 4.01:1 ⚠ | `#397f55` 4.39:1 ⚠ | `#dcebe2` 12.05:1 |
-| sage `#6f8f7c` | 3.23:1 ⚠ | 3.03:1 ⚠ | `#1f2a22` 4.17:1 ⚠ | `#63806e` 3.94:1 ⚠ | `#e5ebe7` 12.30:1 |
-| clay `#b5644a` | 3.90:1 ⚠ | 3.66:1 ⚠ | `#ffffff` 4.30:1 ⚠ | `#9f5b44` 4.70:1 | `#f2e3de` 11.91:1 |
-| marigold `#c98a2e` | 2.66:1 ⚠ | 2.50:1 ⚠ | `#1f2a22` 5.07:1 | `#b07c2c` 3.31:1 ⚠ | `#f5ead9` 12.50:1 |
-| lavender `#7b6fae` | 4.03:1 ⚠ | 3.79:1 ⚠ | `#ffffff` 4.44:1 ⚠ | `#6d6599` 4.80:1 | `#e7e5f0` 11.94:1 |
-| plum `#7a4b72` | 6.20:1 | 5.82:1 | `#ffffff` 6.82:1 | `#6c4666` 7.05:1 | `#e7dfe6` 11.39:1 |
-| sky `#4a82a6` | 3.79:1 ⚠ | 3.55:1 ⚠ | `#ffffff` 4.17:1 ⚠ | `#447592` 4.53:1 | `#dee9ef` 12.04:1 |
-| slate `#5b6b78` | 4.99:1 | 4.69:1 | `#ffffff` 5.50:1 | `#52616b` 5.81:1 | `#e1e4e7` 11.65:1 |
-| rose `#b3606f` | 3.96:1 ⚠ | 3.71:1 ⚠ | `#ffffff` 4.36:1 ⚠ | `#9d5863` 4.76:1 | `#f1e2e5` 11.86:1 |
+| fern `#3e8e5e` | 3.64:1 ⚠ | 3.42:1 ⚠ | `#ffffff` 4.01:1 ⚠ | `#397f55` 4.39:1 ⚠ | `#cfdccb` 10.44:1 |
+| sage `#6f8f7c` | 3.23:1 ⚠ | 3.03:1 ⚠ | `#1f2a22` 4.17:1 ⚠ | `#63806e` 3.94:1 ⚠ | `#d8dcd0` 10.67:1 |
+| clay `#b5644a` | 3.90:1 ⚠ | 3.66:1 ⚠ | `#ffffff` 4.30:1 ⚠ | `#9f5b44` 4.70:1 | `#e5d4c7` 10.32:1 |
+| marigold `#c98a2e` | 2.66:1 ⚠ | 2.50:1 ⚠ | `#1f2a22` 5.07:1 | `#b07c2c` 3.31:1 ⚠ | `#e8dbc2` 10.86:1 |
+| lavender `#7b6fae` | 4.03:1 ⚠ | 3.79:1 ⚠ | `#ffffff` 4.44:1 ⚠ | `#6d6599` 4.80:1 | `#dad6d9` 10.34:1 |
+| plum `#7a4b72` | 6.20:1 | 5.82:1 | `#ffffff` 6.82:1 | `#6c4666` 7.05:1 | `#dad0cf` 9.84:1 |
+| sky `#4a82a6` | 3.79:1 ⚠ | 3.55:1 ⚠ | `#ffffff` 4.17:1 ⚠ | `#447592` 4.53:1 | `#d1dad8` 10.43:1 |
+| slate `#5b6b78` | 4.99:1 | 4.69:1 | `#ffffff` 5.50:1 | `#52616b` 5.81:1 | `#d4d6d0` 10.14:1 |
+| rose `#b3606f` | 3.96:1 ⚠ | 3.71:1 ⚠ | `#ffffff` 4.36:1 ⚠ | `#9d5863` 4.76:1 | `#e4d4ce` 10.34:1 |
 
-If moss followed the derivation rule instead of its hand-tuned tokens it would get hover `#486e52` (tuned `#43684d`) and muted `#dfe7e1` (tuned `#dce8dd`).
+If moss followed the derivation rule instead of its hand-tuned tokens it would get hover `#486e52` (tuned `#43684d`) and muted `#d2d8ca` (tuned `#dce8dd`).
 
 ## Night forest (`dark`)
 

@@ -19,8 +19,8 @@
 		count?: number
 		/** The floating + on mobile. */
 		fab?: boolean
-		/** md is the platform control (32 desktop, 44 mobile); sm is the 28 px variant for rows and the status bar. */
-		size?: 'sm' | 'md'
+		/** md is the platform control (32 desktop, 44 mobile); sm is the 28 px variant for rows and the status bar; xs is a hint beside a label, no taller than its line. */
+		size?: 'xs' | 'sm' | 'md'
 		/** The pressed look while the popover it opened is showing; pass `aria-expanded` alongside it. */
 		active?: boolean
 		/** A real toggle: its state, exposed as aria-pressed. Leave undefined for a plain button. */
@@ -56,7 +56,7 @@
 	{@attach attachTooltip(() => tip)}
 	{...rest}
 >
-	<Icon name={icon} size={fab ? 'lg' : 'md'} />
+	<Icon name={icon} size={fab ? 'lg' : size === 'xs' ? 'sm' : 'md'} />
 	{#if count}<span class="ed-icon-btn-count" aria-hidden="true">{count}</span>{/if}
 </button>
 
@@ -87,6 +87,16 @@
 	.ed-icon-btn-sm {
 		width: calc(var(--control-height) - var(--space-1));
 		height: calc(var(--control-height) - var(--space-1));
+	}
+	/* xs sits in a line of small text, a hint beside a label: no taller than the line, its glyph a little under the
+	   small icon so it reads as a mark on the label and not a control of its own weight */
+	.ed-icon-btn-xs {
+		width: calc(var(--icon-sm) + var(--space-1));
+		height: calc(var(--icon-sm) + var(--space-1));
+	}
+	.ed-icon-btn-xs :global(svg) {
+		width: calc(var(--icon-sm) - 2px);
+		height: calc(var(--icon-sm) - 2px);
 	}
 	/* Hover steps onto surface-2; the pressed look, a real toggle and the press itself onto surface-3 */
 	.ed-icon-btn:not(:disabled):hover {

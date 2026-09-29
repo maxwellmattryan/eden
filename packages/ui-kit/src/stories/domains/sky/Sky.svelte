@@ -15,18 +15,17 @@
 		IconButton,
 		InlineError,
 		LevelScale,
-		List,
 		Menu,
 		MoonGlyph,
+		Notice,
 		PageHeader,
 		Sheet,
 		SkyGlyph,
-		Sparkline,
 		Stat,
+		TrendChart,
 		iconFor,
 		type BadgeLevel,
 		type IconName,
-		type ListRowData,
 		type MenuItem,
 		type SkyCondition,
 	} from '$lib/index.js'
@@ -42,6 +41,7 @@
 		skySundayBefore,
 		skyToday,
 		skyWeek,
+		skyWeekDetail,
 		type SkyAirCategory,
 		type SkyAllergenLevel,
 	} from '../../sample-data.js'
@@ -119,6 +119,9 @@
 		{ id: 'change', label: 'Change home…', icon: 'search' },
 	]
 	const AQI_STOPS = [50, 100, 150, 200, 300, 500]
+	const HOURS_HINT = 'The percentage is the chance of rain or snow falling here during that hour.'
+	const AQI_HINT =
+		'The US index runs from 0 to 500 and follows whichever pollutant is worst. Up to 50 is good; above 100, sensitive groups should take care.'
 	const PROVIDER = { 'open-meteo': 'Open-Meteo', weatherkit: 'Apple Weather' } as const
 	/** Each category's word and its step on the six-step scale: the dot's colour beside the word. */
 	const AIR: Record<SkyAirCategory, { label: string; level: BadgeLevel }> = {
@@ -151,7 +154,10 @@
 		return short ? `${h} ${suffix}` : `${h}:${String(minute).padStart(2, '0')} ${suffix}`
 	}
 
-	const alert = $derived(`Showers from ${onClock('16:00', true)}. Your ${onClock('17:30')} session may get wet.`)
+	const alert = $derived({
+		title: `Showers from ${onClock('16:00', true)}`,
+		detail: `Your ${onClock('17:30')} session may get wet.`,
+	})
 	/** Now: 07:40 reads the first hour of the strip; after sunset the evening's last one under a clear sky. */
 	const condition = $derived<SkyCondition>(night ? 'sunny' : skyHours[0]!.condition)
 	const temp = $derived(night ? skyHours[skyHours.length - 1]!.temp : skyHours[0]!.temp)
@@ -162,17 +168,38 @@
 	/** The calendar week from the start day: Monday to Sunday, or the Sunday before to Saturday. */
 	const days = $derived(weekStart === 'sunday' ? [skySundayBefore, ...skyWeek.slice(0, 6)] : skyWeek)
 	const todayIndex = $derived(days.findIndex((day) => day.day === TODAY))
-	const week = $derived<ListRowData[]>(
+	/** Each day of the calendar week with everything the forecast says of it. */
+	const week = $derived(
 		days.map((day, i) => {
-			const note = 'note' in day && day.note ? day.note.replace('16:00', onClock('16:00', true)) : undefined
+			const detail = skyWeekDetail[day === skySundayBefore ? 'SunBefore' : day.day]!
 			return {
 				id: `${i}-${day.day}`,
-				primary: i === todayIndex ? `${DAYS[day.day]}, today` : DAYS[day.day]!,
-				secondary: note ? `${CONDITION[day.condition]}, ${note}` : CONDITION[day.condition],
-				badges: i < todayIndex ? [{ kind: 'neutral' as const, label: 'Observed' }] : undefined,
-				icon: iconFor(day.condition),
-				meta: `${day.hi}° / ${day.lo}°`,
-				metaWarn: i === todayIndex,
+				name: day.day,
+				full: DAYS[day.day]!,
+				date: detail.date.slice(3),
+				today: i === todayIndex,
+				observed: i < todayIndex,
+				condition: day.condition,
+				label: CONDITION[day.condition],
+				hi: day.hi,
+				lo: day.lo,
+				facts: [
+					{
+						id: 'rain',
+						icon: 'umbrella' as const,
+						name: 'Rain',
+						// a day that has passed has no chance left to give, only what fell
+						value: i < todayIndex ? `${detail.rain} mm` : `${detail.precip} % · ${detail.rain} mm`,
+					},
+					{ id: 'uv', icon: 'sun' as const, name: 'Highest UV index', value: `UV ${detail.uv}` },
+					{ id: 'wind', icon: 'wind' as const, name: 'Strongest wind', value: `${detail.wind} km/h` },
+					{
+						id: 'light',
+						icon: 'sunrise' as const,
+						name: 'Sunrise and sunset',
+						value: `${onClock(detail.sunrise)} – ${onClock(detail.sunset)}`,
+					},
+				],
 			}
 		})
 	)
@@ -181,6 +208,8 @@
 		label: string
 		icon: IconName
 		value: string
+		/** What the figure is measured in, beside it and quieter. */
+		unit?: string
 		/** A level's word and step beside the figure: the UV index's category. */
 		level?: { label: string; level: BadgeLevel }
 		/** What the figure is, in a sentence: the hint beside the label. */
@@ -192,47 +221,78 @@
 			label: 'Feels like',
 			icon: 'thermometer',
 			value: `${skyDetails.feelsLike}°`,
-			hint: 'How the air feels on skin once humidity and wind are counted.',
+			hint: 'What the air feels like on skin. Wind strips heat away and humid air slows sweat from evaporating, so it can differ from the thermometer.',
 		},
 		{
 			id: 'humidity',
 			label: 'Humidity',
 			icon: 'droplets',
-			value: `${skyDetails.humidity} %`,
-			hint: 'The water vapour in the air, as a share of the most it could hold at this temperature.',
+			value: `${skyDetails.humidity}`,
+			unit: '%',
+			hint: 'Relative humidity: the water vapour in the air as a percentage of the most it can hold at this temperature. Warm air can hold more, so the same percentage means more moisture on a hot day.',
 		},
 		{
 			id: 'dew',
 			label: 'Dew point',
 			icon: 'droplet',
 			value: `${skyDetails.dewPoint}°`,
-			hint: 'The temperature at which dew forms. The higher it is, the muggier the air feels.',
+			hint: 'A temperature, not a percentage: cool the air to this point and its moisture condenses into dew. It measures the moisture actually in the air. From about 18 °C (65 °F) the air feels muggy.',
 		},
-		{ id: 'wind', label: 'Wind', icon: 'wind', value: `${skyDetails.wind} km/h ${skyDetails.windFrom}` },
-		{ id: 'gust', label: 'Gusts', icon: 'wind', value: `${skyDetails.gust} km/h` },
+		{
+			id: 'wind',
+			label: 'Wind',
+			icon: 'wind',
+			value: `${skyDetails.wind}`,
+			unit: `km/h ${skyDetails.windFrom}`,
+			hint: 'The sustained speed, and the direction the wind blows from: a south wind comes from the south.',
+		},
+		{
+			id: 'gust',
+			label: 'Gusts',
+			icon: 'wind',
+			value: `${skyDetails.gust}`,
+			unit: 'km/h',
+			hint: 'Short bursts above the sustained speed, lasting a few seconds. They are often strongest around showers and thunderstorms.',
+		},
 		{
 			id: 'uv',
 			label: 'UV index',
 			icon: 'sun',
 			value: `${skyDetails.uv}`,
 			level: { label: 'High', level: 3 },
-			hint: 'The strength of the sun\u2019s ultraviolet light at its peak today. From 3 up, skin wants protection.',
+			hint: 'The strength of the sun\u2019s skin-burning ultraviolet light at today\u2019s peak, on the World Health Organization\u2019s scale. From 3 up, protection is advised. Thin cloud lets most of it through.',
 		},
-		{ id: 'rain', label: 'Rainfall today', icon: 'umbrella', value: `${skyDetails.rainfall} mm` },
-		{ id: 'cloud', label: 'Cloud cover', icon: 'cloud', value: `${skyDetails.cloudCover} %` },
+		{
+			id: 'rain',
+			label: 'Rainfall today',
+			icon: 'umbrella',
+			value: `${skyDetails.rainfall}`,
+			unit: 'mm',
+			hint: 'The depth of rain over the whole day. One millimetre is one litre of water on every square metre.',
+		},
+		{
+			id: 'cloud',
+			label: 'Cloud cover',
+			icon: 'cloud',
+			value: `${skyDetails.cloudCover}`,
+			unit: '%',
+			hint: 'The share of the sky covered by cloud. Clear nights cool faster, because cloud holds in the ground\u2019s heat.',
+		},
 		{
 			id: 'pressure',
 			label: 'Pressure',
 			icon: 'gauge',
-			value: `${skyDetails.pressure} hPa`,
-			hint: 'The weight of the air, at sea level. Falling pressure often brings unsettled weather.',
+			value: `${skyDetails.pressure}`,
+			unit: 'hPa',
+			hint: 'The weight of the air above, adjusted to sea level so places at different heights compare. The average is about 1013 hPa (29.92 inHg); falling pressure often brings wind and rain.',
 		},
 		{
 			id: 'visibility',
 			label: 'Visibility',
 			icon: 'eye',
-			value: `${skyDetails.visibility} km`,
-			hint: 'How far you can see clearly. Fog, rain and haze shorten it.',
+			value: `${skyDetails.visibility}`,
+			unit: 'km',
+			hint: 'The farthest distance at which a large dark object can be seen against the sky. Below 1 km (0.6 mi) it counts as fog.',
 		},
 	])
 	const pollutants = [
@@ -275,6 +335,9 @@
 		{ id: 'alerts', icon: 'triangle-alert', text: 'Alerts by the National Weather Service' },
 	])
 	const temps = skyHours.map((hour) => hour.temp)
+	const trendLabel = $derived(
+		`Temperature from ${onClock(skyHours[0]!.time, true)} to ${onClock(skyHours.at(-1)!.time, true)}, between ${Math.min(...temps)}° and ${Math.max(...temps)}°`
+	)
 
 	let anchor = $state<HTMLElement>()
 	let open = $state(false)
@@ -305,9 +368,18 @@
 					</span>
 					<Menu bind:open {anchor} align="start" label="Location" items={places} onselect={choose} />
 				{/snippet}
+				<!-- the top right is the page's notices: the alert, what it is first and what it touches beneath -->
+				{#snippet aside()}
+					<Notice
+						tone="warning"
+						title={alert.title}
+						detail={alert.detail}
+						action={{ label: 'Open Today', onclick: onopentoday }}
+					/>
+				{/snippet}
 			</PageHeader>
 
-			<div class={['body', { 'body-wide': platform === 'desktop' }]}>
+			<div class="body">
 				{#if offline}
 					<div class="area-error">
 						<InlineError
@@ -327,132 +399,170 @@
 					</div>
 				{/if}
 
-				<section class="now card" aria-labelledby="{uid}-now">
-					<h2 class="section-title" id="{uid}-now">Now</h2>
-					<div class="now-split">
-						<div class="now-row">
-							<SkyGlyph {condition} {night} size="lg" class="now-glyph" />
-							<div class="now-text">
-								<Stat value="{temp}°" unit={label} />
-								<p class="now-line">
-									<span class="mono">H {today.hi}°</span>
-									<span class="mono">L {today.lo}°</span>
-									{#if today.note}<span>{today.note}</span>{/if}
-								</p>
+				<div class={['cols', { 'cols-wide': platform === 'desktop' }]}>
+					<div class="col col-main">
+						<section class="now card" aria-labelledby="{uid}-now">
+							<h2 class="section-title" id="{uid}-now">Now</h2>
+							<div class="now-split">
+								<div class="now-row">
+									<SkyGlyph {condition} {night} size="lg" class="now-glyph" />
+									<div class="now-text">
+										<Stat value="{temp}°" unit={label} />
+										<p class="now-line">
+											<span class="mono">H {today.hi}°</span>
+											<span class="mono">L {today.lo}°</span>
+											{#if today.note}<span>{today.note}</span>{/if}
+										</p>
+									</div>
+								</div>
+								<!-- the day's shape beside the reading: where the temperature goes over the hours the strip shows -->
+								<div class="now-trend">
+									<TrendChart
+										step={10}
+										height={144}
+										values={temps}
+										labels={skyHours.map((hour) =>
+											Number(hour.time.slice(0, 2)) % 3 === 0 ? onClock(hour.time, true) : ''
+										)}
+										format={(value) => `${value}°`}
+										label={trendLabel}
+									/>
+								</div>
 							</div>
-						</div>
-						<!-- the day's shape beside the reading: where the temperature goes over the hours the strip shows -->
-						<div class="now-trend">
-							<Sparkline
-								values={temps}
-								height={56}
-								label="Temperature over the next {temps.length} hours, from {temps[0]}° to {temps.at(-1)}°"
-								legend="Next {temps.length} hours"
-							/>
-						</div>
-					</div>
-					<p class="voice">Good day for {skyToday.goodFor}.</p>
-				</section>
+							<p class="voice">Good day for {skyToday.goodFor}.</p>
+						</section>
 
-				<div class="alert">
-					<Banner tone="warning" message={alert} action={{ label: 'Open Today', onclick: onopentoday }} />
+						<section class="hours" aria-labelledby="{uid}-hours">
+							<h2 class="section-title" id="{uid}-hours">
+								Hours
+								<IconButton icon="info" size="xs" label="About the hours" tooltip={HOURS_HINT} />
+							</h2>
+							<!-- a scroll region is a tab stop so the keyboard reaches what it hides (axe scrollable-region-focusable) -->
+							<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+							<ol class="hours-list" tabindex="0" aria-label={HOURS_STRIP}>
+								{#each skyHours as hour (hour.id)}
+									<li class="hour" class:hour-wet={hour.precip >= 50}>
+										<span class="hour-time">{onClock(hour.time, true)}</span>
+										<SkyGlyph condition={hour.condition} size="md" class="hour-glyph" />
+										<span class="mono">{hour.temp}°</span>
+										<span class="hour-precip">{hour.precip} %</span>
+									</li>
+								{/each}
+							</ol>
+						</section>
+
+						<section class="details card" aria-labelledby="{uid}-details">
+							<h2 class="section-title" id="{uid}-details">Details</h2>
+							<dl class="tiles">
+								{#each details as detail (detail.id)}
+									<div class="tile">
+										<dt>
+											<Icon name={detail.icon} size="sm" class="tile-icon" />
+											{detail.label}
+											{#if detail.hint}
+												<IconButton icon="info" size="xs" label="About {detail.label}" tooltip={detail.hint} />
+											{/if}
+										</dt>
+										<dd>
+											<Stat size="md" value={detail.value} unit={detail.unit} />
+											{#if detail.level}
+												<Badge kind="neutral" level={detail.level.level} label={detail.level.label} />
+											{/if}
+										</dd>
+									</div>
+								{/each}
+							</dl>
+						</section>
+					</div>
+
+					<div class="col col-side">
+						<section class="sun card" aria-labelledby="{uid}-sun">
+							<h2 class="section-title" id="{uid}-sun">Sun and moon</h2>
+							<dl class="light">
+								{#each light as row (row.id)}
+									<div class="light-row">
+										<dt><Icon name={row.icon} class="light-icon" />{row.label}</dt>
+										<dd class="mono">{row.value}</dd>
+									</div>
+								{/each}
+								<div class="light-row">
+									<dt><MoonGlyph cycle={skyToday.moonCycle} size="md" />Moon</dt>
+									<dd>{skyToday.moonPhase} <span class="quiet">{skyToday.moonLit} % lit</span></dd>
+								</div>
+							</dl>
+						</section>
+
+						<section class="air card" aria-labelledby="{uid}-air">
+							<h2 class="section-title" id="{uid}-air">Air quality</h2>
+							<div class="air-row">
+								<Stat value={String(skyAirQuality.index)} unit="US AQI" />
+								<IconButton icon="info" size="xs" label="About the US AQI" tooltip={AQI_HINT} />
+								<Badge
+									kind="neutral"
+									level={AIR[skyAirQuality.category].level}
+									label={AIR[skyAirQuality.category].label}
+								/>
+							</div>
+							<LevelScale
+								value={skyAirQuality.index}
+								stops={AQI_STOPS}
+								label="US air quality index {skyAirQuality.index}, {AIR[skyAirQuality.category].label}"
+							/>
+							<dl class="fields pollutants">
+								{#each pollutants as pollutant (pollutant.id)}
+									<dt>
+										{pollutant.label}
+										<IconButton icon="info" size="xs" label="About {pollutant.label}" tooltip={pollutant.hint} />
+									</dt>
+									<dd><Stat size="sm" value={String(pollutant.value)} unit="µg/m³" /></dd>
+								{/each}
+							</dl>
+						</section>
+
+						<section class="allergens card" aria-labelledby="{uid}-allergens">
+							<h2 class="section-title" id="{uid}-allergens">Pollen and mold</h2>
+							{#if allergens === 'available'}
+								<dl class="fields">
+									{#each skyAllergens as allergen (allergen.id)}
+										<dt>{allergen.name}</dt>
+										<dd>
+											<Badge kind="neutral" level={LEVEL[allergen.level].level} label={LEVEL[allergen.level].label} />
+										</dd>
+									{/each}
+								</dl>
+							{:else}
+								<p class="quiet">No pollen or mold source covers this place yet.</p>
+							{/if}
+						</section>
+					</div>
 				</div>
 
-				<section class="hours" aria-labelledby="{uid}-hours">
-					<h2 class="section-title" id="{uid}-hours">Hours</h2>
+				<section class="week" aria-labelledby="{uid}-week">
+					<h2 class="section-title" id="{uid}-week">This week</h2>
 					<!-- a scroll region is a tab stop so the keyboard reaches what it hides (axe scrollable-region-focusable) -->
 					<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-					<ol class="hours-list" tabindex="0" aria-label={HOURS_STRIP}>
-						{#each skyHours as hour (hour.id)}
-							<li class="hour" class:hour-wet={hour.precip >= 50}>
-								<span class="hour-time">{onClock(hour.time, true)}</span>
-								<SkyGlyph condition={hour.condition} size="md" class="hour-glyph" />
-								<span class="mono">{hour.temp}°</span>
-								<span class="hour-precip">{hour.precip} %</span>
+					<ol class="days" tabindex="0" aria-label="Daily forecast">
+						{#each week as day (day.id)}
+							<li class="day" class:day-today={day.today} aria-current={day.today ? 'date' : undefined}>
+								<p class="day-head">
+									<span class="day-name" title={day.full}>{day.name}</span>
+									<span class="day-date">{day.date}</span>
+									{#if day.today}<Badge kind="neutral" label="Today" />{/if}
+									{#if day.observed}<Badge kind="neutral" label="Observed" />{/if}
+								</p>
+								<div class="day-sky">
+									<SkyGlyph condition={day.condition} size="md" class="day-glyph" />
+									<span class="day-label">{day.label}</span>
+								</div>
+								<Stat size="md" value="{day.hi}°" unit="/ {day.lo}°" />
+								<ul class="day-facts">
+									{#each day.facts as fact (fact.id)}
+										<li><Icon name={fact.icon} size="sm" label={fact.name} class="day-icon" />{fact.value}</li>
+									{/each}
+								</ul>
 							</li>
 						{/each}
 					</ol>
-				</section>
-
-				<section class="details card" aria-labelledby="{uid}-details">
-					<h2 class="section-title" id="{uid}-details">Details</h2>
-					<dl class="tiles">
-						{#each details as detail (detail.id)}
-							<div class="tile">
-								<dt>
-									<Icon name={detail.icon} size="sm" class="tile-icon" />
-									{detail.label}
-									{#if detail.hint}
-										<IconButton icon="info" size="sm" label="About {detail.label}" tooltip={detail.hint} />
-									{/if}
-								</dt>
-								<dd>
-									<span class="mono">{detail.value}</span>
-									{#if detail.level}
-										<Badge kind="neutral" level={detail.level.level} label={detail.level.label} />
-									{/if}
-								</dd>
-							</div>
-						{/each}
-					</dl>
-				</section>
-
-				<div class="week">
-					<List header="This week" rows={week} />
-				</div>
-
-				<section class="air card" aria-labelledby="{uid}-air">
-					<h2 class="section-title" id="{uid}-air">Air quality</h2>
-					<div class="air-row">
-						<Stat value={String(skyAirQuality.index)} unit="US AQI" />
-						<Badge kind="neutral" level={AIR[skyAirQuality.category].level} label={AIR[skyAirQuality.category].label} />
-					</div>
-					<LevelScale
-						value={skyAirQuality.index}
-						stops={AQI_STOPS}
-						label="US air quality index {skyAirQuality.index}, {AIR[skyAirQuality.category].label}"
-					/>
-					<dl class="fields">
-						{#each pollutants as pollutant (pollutant.id)}
-							<dt>
-								{pollutant.label}
-								<IconButton icon="info" size="sm" label="About {pollutant.label}" tooltip={pollutant.hint} />
-							</dt>
-							<dd class="mono">{pollutant.value} µg/m³</dd>
-						{/each}
-					</dl>
-				</section>
-
-				<section class="allergens card" aria-labelledby="{uid}-allergens">
-					<h2 class="section-title" id="{uid}-allergens">Pollen and mold</h2>
-					{#if allergens === 'available'}
-						<dl class="fields">
-							{#each skyAllergens as allergen (allergen.id)}
-								<dt>{allergen.name}</dt>
-								<dd>
-									<Badge kind="neutral" level={LEVEL[allergen.level].level} label={LEVEL[allergen.level].label} />
-								</dd>
-							{/each}
-						</dl>
-					{:else}
-						<p class="quiet">No pollen or mold source covers this place yet.</p>
-					{/if}
-				</section>
-
-				<section class="sun card" aria-labelledby="{uid}-sun">
-					<h2 class="section-title" id="{uid}-sun">Sun and moon</h2>
-					<dl class="light">
-						{#each light as row (row.id)}
-							<div class="light-row">
-								<dt><Icon name={row.icon} class="light-icon" />{row.label}</dt>
-								<dd class="mono">{row.value}</dd>
-							</div>
-						{/each}
-						<div class="light-row">
-							<dt><MoonGlyph cycle={skyToday.moonCycle} size="md" />Moon</dt>
-							<dd>{skyToday.moon}</dd>
-						</div>
-					</dl>
 				</section>
 
 				<footer class="sources" aria-label="Sources">
@@ -501,79 +611,56 @@
 </AppFrame>
 
 <style>
+	/* The page fills its region, so the sources keep to its foot with the room above them, not beneath */
 	.page {
 		display: flex;
 		flex-direction: column;
-		padding-bottom: var(--space-8);
+		box-sizing: border-box;
+		min-height: 100%;
 	}
 	.anchor {
 		display: inline-flex;
 	}
-	/* One column on the phone; on desktop the forecast on the left, and the alert, the light, the air and the
-	   allergens stacked on the right, the stack spanning the rows the forecast fills */
 	.body {
-		display: grid;
-		grid-template-areas: 'error' 'fallback' 'now' 'alert' 'hours' 'details' 'air' 'allergens' 'week' 'sun' 'sources';
-		gap: var(--space-4);
+		display: flex;
+		flex: 1 0 auto;
+		flex-direction: column;
+		gap: var(--space-6);
 		padding: 0 var(--ed-gutter);
 	}
-	.body-wide {
-		grid-template-columns: minmax(0, 1fr) var(--sheet-sm);
-		grid-template-areas:
-			'error error'
-			'fallback fallback'
-			'now alert'
-			'hours sun'
-			'details air'
-			'week allergens'
-			'sources sources';
+	/* Two columns that fill on their own and end on one line: the forecast on the left, and the light, the air and
+	   the allergens on the right. On a phone they are one column, in reading order. */
+	.cols {
+		display: flex;
+		flex-direction: column;
 		gap: var(--space-6);
-		align-items: start;
-	}
-	.area-error {
-		grid-area: error;
-	}
-	.area-fallback {
-		grid-area: fallback;
 		min-width: 0;
 	}
-	.details {
-		grid-area: details;
+	.cols-wide {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) var(--sheet-sm);
 	}
-	.air {
-		grid-area: air;
+	.col {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-6);
+		min-width: 0;
 	}
-	.allergens {
-		grid-area: allergens;
+	.cols-wide .col > :last-child {
+		flex: 1 0 auto;
 	}
-	.sources {
-		grid-area: sources;
-	}
-	.now {
-		grid-area: now;
-	}
-	.alert {
-		grid-area: alert;
+	.area-fallback {
 		min-width: 0;
 	}
 	.hours {
-		grid-area: hours;
 		min-width: 0;
 	}
-	.week {
-		grid-area: week;
-	}
-	.sun {
-		grid-area: sun;
-	}
 	/* The alert and the note read whole: the strip wraps its sentence rather than trimming it */
-	.alert :global(.ed-banner-inline),
 	.area-fallback :global(.ed-banner-inline) {
 		display: flex;
 		width: 100%;
 		padding-block: var(--space-1);
 	}
-	.alert :global(.ed-banner-message),
 	.area-fallback :global(.ed-banner-message) {
 		white-space: normal;
 	}
@@ -590,6 +677,9 @@
 		box-shadow: var(--shadow-card);
 	}
 	.section-title {
+		display: flex;
+		align-items: center;
+		gap: var(--space-1);
 		margin: 0;
 		font: var(--ed-t-title);
 		letter-spacing: var(--ed-t-title-tracking);
@@ -604,7 +694,7 @@
 		gap: var(--space-4) var(--space-6);
 	}
 	.now-trend {
-		flex: 1 1 calc(var(--space-8) * 6);
+		flex: 1 1 calc(var(--space-8) * 8);
 		min-width: 0;
 	}
 	.now-row {
@@ -711,6 +801,9 @@
 		gap: var(--space-1);
 		min-width: 0;
 	}
+	.tile :global(.tile-icon) {
+		margin-inline-end: var(--space-1);
+	}
 	.tile :global(.tile-icon),
 	.light :global(.light-icon) {
 		flex: none;
@@ -720,7 +813,7 @@
 	.fields dt {
 		display: flex;
 		align-items: center;
-		gap: var(--space-1);
+		gap: 2px;
 		min-height: var(--space-6);
 		white-space: nowrap;
 	}
@@ -799,13 +892,21 @@
 		flex-direction: column;
 		gap: var(--space-4);
 	}
+	/* The pollutants two abreast: a name and its figure, twice a row */
+	.fields.pollutants {
+		grid-template-columns: repeat(2, auto minmax(0, 1fr));
+		gap: var(--space-1) var(--space-3);
+	}
 	.air-row {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
 		gap: var(--space-3);
 	}
+	/* The sources close the page: pushed to its foot, a breath below the week */
 	.sources {
+		margin-top: auto;
+		padding-block: var(--space-6) var(--space-4);
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
@@ -814,6 +915,98 @@
 	.sources-mark {
 		font-weight: 600;
 		color: var(--text-primary);
+	}
+
+	/* The week: one surface across the page, a day to a column, read along like the hours */
+	.week {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+		min-width: 0;
+	}
+	.days {
+		display: flex;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		overflow-x: auto;
+		scroll-snap-type: x proximity;
+		scrollbar-width: thin;
+		border: 1px solid var(--ed-card-border);
+		border-radius: var(--ed-radius-card);
+		background: var(--surface-1);
+		box-shadow: var(--shadow-card);
+	}
+	.days:focus-visible {
+		outline: 2px solid transparent;
+		box-shadow: var(--focus-ring);
+	}
+	.day {
+		display: flex;
+		flex: 1 0 calc(var(--space-8) * 4.5);
+		flex-direction: column;
+		gap: var(--space-2);
+		box-sizing: border-box;
+		min-width: 0;
+		padding: var(--space-3);
+		scroll-snap-align: start;
+	}
+	.day + .day {
+		border-inline-start: 1px solid var(--stroke-subtle);
+	}
+	.day-today {
+		background: var(--surface-2);
+	}
+	.day-head {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		margin: 0;
+		min-height: var(--space-6);
+		font: var(--ed-t-body);
+		letter-spacing: var(--ed-t-body-tracking);
+	}
+	.day-name {
+		font-weight: 600;
+	}
+	.day-date {
+		font: var(--ed-t-data-sm);
+		color: var(--text-secondary);
+	}
+	/* The day's mark, today or observed, keeps to the end of the line so the names stay in one column */
+	.day-head :global(.ed-badge) {
+		margin-inline-start: auto;
+	}
+	.day-sky {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		font: var(--ed-t-body-sm);
+		letter-spacing: var(--ed-t-body-sm-tracking);
+		color: var(--text-secondary);
+	}
+	.day :global(.day-glyph),
+	.day :global(.day-icon) {
+		flex: none;
+		color: var(--text-secondary);
+	}
+	.day-facts {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-1);
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		font: var(--ed-t-data-sm);
+		letter-spacing: var(--ed-t-data-sm-tracking);
+		font-variant-numeric: tabular-nums;
+		color: var(--text-secondary);
+	}
+	.day-facts li {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		white-space: nowrap;
 	}
 
 	.fields {

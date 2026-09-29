@@ -46,6 +46,7 @@ export interface OpenMeteoResponse {
 		precipitation_probability_max: (number | null)[]
 		precipitation_sum: (number | null)[]
 		uv_index_max: (number | null)[]
+		wind_speed_10m_max?: (number | null)[]
 	}
 }
 
@@ -84,6 +85,7 @@ export function forecastUrl({ place, pastDays, forecastDays }: ForecastRequest):
 			'precipitation_probability_max',
 			'precipitation_sum',
 			'uv_index_max',
+			'wind_speed_10m_max',
 		].join(','),
 		timezone: 'auto',
 		timeformat: 'unixtime',
@@ -147,6 +149,7 @@ export function normalizeOpenMeteo(raw: OpenMeteoResponse): Forecast {
 			precipChance: observed ? null : (raw.daily.precipitation_probability_max[i] ?? null),
 			precipAmount: raw.daily.precipitation_sum[i] ?? 0,
 			uvMax: raw.daily.uv_index_max[i] ?? null,
+			windMax: raw.daily.wind_speed_10m_max?.[i] ?? null,
 			sunrise: ms(raw.daily.sunrise[i]),
 			sunset: ms(raw.daily.sunset[i]),
 			observed,

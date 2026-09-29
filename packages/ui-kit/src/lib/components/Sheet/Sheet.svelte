@@ -2,11 +2,13 @@
 	// The modal base every sheet composes: a <dialog> opened with showModal(), so the browser makes the rest of the
 	// page inert, keeps focus inside, returns it on close and paints the scrim as ::backdrop. Escape arrives as the
 	// dialog's `cancel` event; a click on the scrim lands on the dialog element itself. The browser does not cycle Tab
-	// inside a modal dialog (focus can leave to its own chrome), so the panel also carries the focus trap; focus return
-	// stays native. `placement: 'auto'` is a bottom sheet on mobile and a centred sheet on desktop. Enter unfurls
-	// (scale .98 and fade); reduced motion fades only.
+	// inside a modal dialog (focus can leave to its own chrome), so the panel also carries the focus trap. Focus return
+	// stays native, but an opener that was clicked rather than tabbed to is blurred after it, so closing (Escape
+	// included) never lights a ring on it. `placement: 'auto'` is a bottom sheet on mobile and a centred sheet on
+	// desktop. Enter unfurls (scale .98 and fade); reduced motion fades only.
 	import type { Snippet } from 'svelte'
 	import type { HTMLDialogAttributes } from 'svelte/elements'
+	import { rememberOpener } from '../../internal/opener.js'
 	import { platformOf } from '../../internal/platform.js'
 	import { trapFocus } from '../../internal/trap-focus.js'
 
@@ -52,6 +54,7 @@
 
 	let dialog = $state<HTMLDialogElement>()
 	let reason: SheetCloseReason = 'api'
+	let settle: (() => void) | undefined
 	const resolved = $derived<Exclude<SheetPlacement, 'auto'>>(
 		placement === 'auto' ? (dialog && platformOf(dialog) === 'mobile' ? 'bottom' : 'center') : placement
 	)
@@ -60,9 +63,19 @@
 		// effect: imperative DOM. showModal() and close() follow `open`.
 		const el = dialog
 		if (!el) return
-		if (open && !el.open) el.showModal()
-		else if (!open && el.open) el.close()
+		if (open && !el.open) {
+			settle = rememberOpener()
+			el.showModal()
+		} else if (!open && el.open) {
+			el.close()
+			settleFocus()
+		}
 	})
+
+	function settleFocus() {
+		settle?.()
+		settle = undefined
+	}
 
 	// Escape is handled here, on the focused descendant's keydown, and `cancel` stays as the fallback for close requests
 	// that arrive another way (a back gesture through the close watcher).
@@ -81,6 +94,7 @@
 		open = false
 	}
 	function onclosed() {
+		settleFocus()
 		if (open) open = false
 		onclose?.(reason)
 		reason = 'api'

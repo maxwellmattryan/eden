@@ -64,10 +64,10 @@
 	--ed-secondary-bg: var(--surface-1);
 	--ed-secondary-border: var(--stroke);
 	--ed-chip-accent-border: transparent;
-	--ed-nav-current-bg: var(--surface-3);
+	--ed-nav-current-bg: color-mix(in srgb, var(--brand-primary) 12%, var(--surface-1));
 	--ed-nav-current-fg: var(--text-primary);
 	--ed-nav-current-glyph: var(--text-primary);
-	--ed-nav-bar: 0px;
+	--ed-nav-bar: 3px;
 	--ed-grain: none;
 	--ed-grain-opacity: 0;
 	--ed-motif-size: 48px;

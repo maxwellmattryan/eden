@@ -3,7 +3,7 @@
 	// subtitles, otherwise as the item's tooltip (D-2); the ⌘ position only when asked. An <a> when it has somewhere to
 	// go, else a <button>, so the browser handles Enter, middle-click and history for a link and nothing prevents a
 	// default. The current item sits on the nav ground the brand dial sets, its glyph and name in the dial's current
-	// colours, with the leaf bar beside it in the nav's gutter (0 wide at plain). Becoming current fades the ground in
+	// colours, with the leaf bar beside it in the nav's gutter at every brand level. Becoming current fades the ground in
 	// and grows the bar from its middle; reduced motion keeps only the fade.
 	import type { HTMLAttributes } from 'svelte/elements'
 	import type { IconName } from '../../icons/icons.js'
@@ -125,7 +125,7 @@
 		color: var(--ed-nav-current-fg);
 		transition-duration: var(--ed-duration-panel);
 	}
-	/* the leaf bar: a short accent bar in the nav's gutter beside the current item, 0 wide at plain. Always drawn and
+	/* the leaf bar: a short accent bar in the nav's gutter beside the current item, at every brand level. Always drawn and
 	   hidden, so it can fade in and settle to full height as the item becomes current; settle is 0 under reduced motion */
 	.ed-side-item::before {
 		content: '';

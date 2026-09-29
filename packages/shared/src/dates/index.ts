@@ -71,6 +71,23 @@ export function formatTime(iso: string | number, format: DateFormat): string {
 	return new Intl.DateTimeFormat(format.lang, { ...options, timeZone: format.timeZone }).format(new Date(iso))
 }
 
+/** The hour of the day of an instant, 0 to 23, in the timezone given (the device's when absent). */
+export function hourOfDay(iso: string | number, timeZone?: string): number {
+	const hour = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hourCycle: 'h23', timeZone }).format(new Date(iso))
+	return Number(hour) % 24
+}
+
+/** A day and a time, for a moment worth naming whole: `Wed 30 Sep, 19:00`, in the timezone given. */
+export function formatMoment(iso: string | number, format: DateFormat): string {
+	const day = new Intl.DateTimeFormat(format.lang, {
+		weekday: 'short',
+		day: 'numeric',
+		month: 'short',
+		timeZone: format.timeZone,
+	}).format(new Date(iso))
+	return `${day}, ${formatTime(iso, format)}`
+}
+
 /** The hour alone, for a strip of hours: `18`, or `6 PM`. */
 export function formatHour(iso: string | number, format: DateFormat): string {
 	if (format.clock === '24h') return formatTime(iso, format)
@@ -106,9 +123,14 @@ export function formatWeekday(iso: string, lang: string): string {
 	return new Intl.DateTimeFormat(lang, { weekday: 'long' }).format(new Date(iso))
 }
 
-/** The full weekday name of a calendar date (`YYYY-MM-DD`), whatever timezone the device is in. */
-export function formatWeekdayOf(isoDate: string, lang: string): string {
-	return new Intl.DateTimeFormat(lang, { weekday: 'long', timeZone: 'UTC' }).format(new Date(`${isoDate}T12:00:00Z`))
+/** The weekday name of a calendar date (`YYYY-MM-DD`), full or short, whatever timezone the device is in. */
+export function formatWeekdayOf(isoDate: string, lang: string, style: 'long' | 'short' = 'long'): string {
+	return new Intl.DateTimeFormat(lang, { weekday: style, timeZone: 'UTC' }).format(new Date(`${isoDate}T12:00:00Z`))
+}
+
+/** The day of the month of a calendar date (`YYYY-MM-DD`): `30`. */
+export function dayOfMonth(isoDate: string): number {
+	return Number(isoDate.slice(8, 10))
 }
 
 /** The full date line for a page subtitle: "Wednesday 30 September". */

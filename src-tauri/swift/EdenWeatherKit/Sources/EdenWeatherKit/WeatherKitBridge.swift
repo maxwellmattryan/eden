@@ -41,6 +41,7 @@ private struct Day: Encodable {
     var precipChance: Double
     var precipAmount: Double
     var uvMax: Double
+    var windMax: Double?
     var sunrise: Double?
     var sunset: Double?
 }
@@ -89,6 +90,7 @@ private func reading(of day: DayWeather) -> Day {
         precipChance: day.precipitationChance * 100,
         precipAmount: day.precipitationAmount.converted(to: .millimeters).value,
         uvMax: Double(day.uvIndex.value),
+        windMax: kmh(day.wind.speed),
         sunrise: day.sun.sunrise.map(ms),
         sunset: day.sun.sunset.map(ms)
     )

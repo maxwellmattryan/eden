@@ -8,7 +8,7 @@
 	type Props = Omit<SVGAttributes<SVGSVGElement>, 'aria-label'> & {
 		/** Where the moon is in its cycle: 0 new, 0.25 first quarter, 0.5 full, 0.75 last quarter. */
 		cycle: number
-		/** sm sits in a line of text, md in a row, lg heads a card. */
+		/** The icon sizes, so the moon lines up with the glyphs beside it: sm 16, md 20, lg 24. */
 		size?: 'sm' | 'md' | 'lg'
 		/** The accessible name; without one the glyph is hidden from assistive technology. */
 		label?: string
@@ -40,16 +40,16 @@
 		vertical-align: middle;
 	}
 	.ed-moon-sm {
-		width: var(--space-4);
-		height: var(--space-4);
+		width: var(--icon-sm);
+		height: var(--icon-sm);
 	}
 	.ed-moon-md {
-		width: var(--space-6);
-		height: var(--space-6);
+		width: var(--icon-md);
+		height: var(--icon-md);
 	}
 	.ed-moon-lg {
-		width: var(--space-8);
-		height: var(--space-8);
+		width: var(--icon-lg);
+		height: var(--icon-lg);
 	}
 	.ed-moon-disc {
 		fill: var(--moon-shade);

@@ -15,6 +15,10 @@
 		$t('settings.appearance.system'),
 	])
 	const fontItems = $derived([$t('settings.appearance.fontDefault'), $t('settings.appearance.fontSystem')])
+	// Temporary: the brand dial, lushest first, until the design settles on one level.
+	const brandOrder = ['lush', 'tended', 'plain'] as const
+	const brandItems = $derived(brandOrder.map((level) => $t(`settings.appearance.brandLevels.${level}`)))
+	const brandIndex = $derived(Math.max(0, brandOrder.indexOf(settings.brand)))
 	const themeIndex = $derived(Math.max(0, themeSettings.indexOf(settings.theme)))
 	const fontIndex = $derived(Math.max(0, fontSettings.indexOf(settings.font)))
 	const accentRows = $derived(accents.map((id: Accent) => ({ id, label: $t(`settings.appearance.accents.${id}`) })))
@@ -43,6 +47,15 @@
 			/>
 		{/each}
 	</div>
+</SettingsRow>
+
+<SettingsRow label={$t('settings.appearance.brand')}>
+	<Segmented
+		items={brandItems}
+		selected={brandIndex}
+		label={$t('settings.appearance.brand')}
+		onchange={(index) => settings.setBrand(brandOrder[index] ?? 'lush')}
+	/>
 </SettingsRow>
 
 <SettingsRow label={$t('settings.appearance.font')}>
