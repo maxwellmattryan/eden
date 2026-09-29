@@ -1,7 +1,7 @@
 ---
 title: App scaffold
 status: draft
-summary: The two apps and the crate they share: the workspace layout, what each package owns, the platform features, the commands, the domain module on each side and the interim persistence behind it, the pre-paint mechanism, and the placeholder identifier.
+summary: The two apps and the crate they share: the workspace layout, what each package owns, the platform features, the commands, the domain module on each side, where its data lives, the pre-paint mechanism, and the placeholder identifier.
 read-this-if: You are building anything under apps/*, packages/shared or src-tauri, or wiring a domain into the shell.
 depends-on: [engineering/ui-kit, product/substrate/shell, product/substrate/settings-utilities]
 updated: 2026-09-29
@@ -15,7 +15,7 @@ One Yarn 1 workspace, one Rust crate, ported from Crate (D-43, D-51, D-53):
 |---|---|---|
 | `apps/desktop` | `@eden/desktop` | the desktop frontend: SvelteKit in SPA mode (adapter-static, `ssr = false`), the sidebar shell, the settings sheet |
 | `apps/mobile` | `@eden/mobile` | the mobile frontend: the same stack with the bottom tab bar and sheets, no sidebar |
-| `packages/shared` | `@eden/shared` | what both frontends share: `api` (the Tauri command wrappers behind an `isTauri()` guard), `settings` (the `$state` class behind the root attributes), `stores` (crash), `i18n` (svelte-i18n, `en` and `ja`, `en.json` the source of truth), `dates` (the pure date and time formatters, which take the language, the clock and a timezone; D-58), `weather` (Sky's model, providers and store) and `types`. Its pure modules are unit-tested with Vitest in Node (`src/**/*.test.ts`); a tested module never imports a rune module |
+| `packages/shared` | `@eden/shared` | what both frontends share: `api` (the Tauri command wrappers behind an `isTauri()` guard), `settings` (the `$state` class behind the root attributes), `stores` (crash, splash), `data` (the data layer for the apps, `engineering/data-layer.md`), `domains/<id>` (a domain's shapes, their rows and their formats, as plain modules), `persistence` (the document store), `splash` (the splash's markup and stylesheet), `i18n` (svelte-i18n, `en` and `ja`, `en.json` the source of truth), `dates` (the pure date and time formatters, which take the language, the clock and a timezone; D-58), `weather` (Sky's model, providers and store) and `types`. Its pure modules are unit-tested with Vitest in Node (`src/**/*.test.ts`); a tested module never imports a rune module |
 | `packages/ui-kit` | `@eden/ui-kit` | the design system (`engineering/ui-kit.md`) |
 | `src-tauri` | `eden-app`, lib `eden_lib` | the one Rust crate, with the cargo features `desktop` and `mobile` as equals and no default feature (D-51): `tauri ios|android` cannot pass `--no-default-features`, so a desktop default would leak desktop-only plugins into the mobile build |
 | `web` | | the static download page for GitHub Pages (`engineering/release.md`) |
@@ -50,7 +50,7 @@ From the root (`package.json`):
 | `yarn build:production`, `yarn build:staging` | `tauri build` with the channel overlay |
 | `yarn build:ios:adhoc`, `yarn build:android:apk` | the mobile bundles |
 | `yarn check` | svelte-check for the kit, `@eden/shared`, desktop and mobile, plus the kit's CSS lint |
-| `yarn check:cargo`, `yarn lint:rust`, `yarn format:rust[:check]` | `cargo check`, clippy `-D warnings` and `cargo fmt`: the desktop feature on the host, the mobile feature against the iOS target (a desktop host would try to resolve the desktop capability against plugins the mobile feature does not compile). Rust stays out of `yarn format` and `yarn lint` so the Node CI job needs no toolchain |
+| `yarn check:cargo`, `yarn lint:rust`, `yarn format:rust[:check]`, `yarn test:rust` | `cargo check`, clippy `-D warnings`, `cargo fmt` and the crate's tests (desktop feature): the desktop feature on the host, the mobile feature against the iOS target (a desktop host would try to resolve the desktop capability against plugins the mobile feature does not compile). Rust stays out of `yarn format` and `yarn lint` so the Node CI job needs no toolchain |
 | `yarn bump`, `yarn changelog:prepare|graduate`, `./scripts/tag.sh` | the release flow (`engineering/release.md`) |
 
 Rust is stable, pinned by `rust-toolchain.toml` (channel, `rustfmt`, `clippy` and the five targets); `cargo` installs the missing pieces on first use.
@@ -62,7 +62,7 @@ Rust is stable, pinned by `rust-toolchain.toml` (channel, `rustfmt`, `clippy` an
 | desktop | `apps/desktop/src/lib/domains/<id>/` | views, stores and compositions; the route in `src/routes/<id>/` stays thin |
 | mobile | `apps/mobile/src/lib/domains/<id>/` | the same for the mobile surfaces |
 | shared | `packages/shared/src/` | only what both apps use: API wrappers, types, i18n keys under `domains.<id>.*` |
-| Rust | `src-tauri/src/domains/<id>/` | models, services and commands; `src/domains/mod.rs` lists them |
+| Rust | `src-tauri/src/domains/<id>/` | what a domain needs of the crate beyond its rows (Sky's WeatherKit bridge); `src/domains/mod.rs` lists them. A domain's rows need no Rust: they go through the data layer's commands |
 
 Ids are the plain domain ids (`kitchen`, not Hearth). The display name and subtitle are locale strings (`domains.<id>.name`, `domains.<id>.subtitle`); the glyph comes from `domainGlyph(id)`.
 
@@ -70,8 +70,8 @@ A desktop domain module is laid out as:
 
 | file | holds |
 |---|---|
-| `manifest.ts` | the `DomainManifest` (`src/lib/domains/manifest.ts`): id, the name and subtitle keys, the glyph, the route id with its resolved href and its tab ids (a tab is an optional route parameter, `/kitchen/[[tab]]`), the Garden widgets (size, title and prompt keys, body component, `hasData()`), the quick actions. The seed of the manifest as code (`product/substrate/domain-manifest.md`); the shell composes the sidebar, the quick-nav row and the widget grid from `src/lib/domains/index.ts` and nothing else |
-| `store.svelte.ts` | the store: a `$state` class with the domain's records, its `$derived` lists and one method per write, each returning an `undo` the page turns into the toast (`src/lib/shell/undo.ts`) |
+| `manifest.ts` | the `DomainManifest` (`src/lib/domains/manifest.ts`): id, the name and subtitle keys, the glyph, the route id with its resolved href and its tab ids (a tab is an optional route parameter, `/kitchen/[[tab]]`), the Garden widgets (size, title and prompt keys, body component, `hasData()`), the quick actions, and `load`, `reload`, `seed` and `extras` (what the domain adds to its export bundle; a domain that declares it can be exported on its own). The seed of the manifest as code (`product/substrate/domain-manifest.md`); the shell composes the sidebar, the quick-nav row and the widget grid from `src/lib/domains/index.ts` and nothing else |
+| `store.svelte.ts` | the store: a `$state` class with the domain's records as read from its rows, its `$derived` lists and one method per write, each returning an `undo` the page turns into the toast (`src/lib/shell/undo.ts`); `engineering/data-layer.md`, "A store on rows" |
 | `seed.ts` | fills the store from `@eden/ui-kit/sample-data`, behind the empty state's "Add sample data" link; the dataset's dates are shifted onto the real calendar (`@eden/shared/dates`) |
 | `views/` | the page and its tabs, ported from the approved mockup |
 | `widgets/` | the Garden tile bodies, on `src/lib/shell/WidgetRows.svelte` |
@@ -80,15 +80,19 @@ The route under `src/routes/<id>/` renders the view and loads the store on mount
 
 ## Persistence
 
-There is no data layer yet (`product/substrate/data.md`). Until it lands every store persists through one adapter, `@eden/shared/persistence`, whose whole surface is:
+The owner's data is in the workspace database, behind the data layer (`engineering/data-layer.md`): a store reads its rows through `@eden/shared/data` and sends each write as a command. Hearth and Toolbench are on it.
+
+What stays on this device and out of every export is kept by the document store, `@eden/shared/persistence`: the Garden's feed until signals exist, and Sky's mirror.
 
 ```ts
 interface DomainDocument<T> { version: number; data: T }
 load<T>(domain: string): Promise<DomainDocument<T> | null>   // null when missing or unreadable; never throws
+read<T>(domain: string): Promise<DomainDocument<T> | null>   // null when missing; rejects when it cannot be read
 save<T>(domain: string, document: DomainDocument<T>): Promise<void>   // rejects when nothing could be written
+remove(domain: string): Promise<void>
 ```
 
-Under Tauri it calls `load_domain_document` and `save_domain_document` (`src-tauri/src/domains/documents.rs`), which keep one JSON document per domain at `<app data dir>/domains/<id>.json` and write atomically (to `<id>.json.tmp`, then a rename); ids must match `^[a-z][a-z0-9-]*$`. In a plain browser (`yarn dev:web`) the document lives in localStorage under `eden:domain:<id>`. The store owns the document's shape and bumps `version` when it changes. The data layer replaces this module alone; the stores keep calling `load` and `save`.
+Under Tauri it calls `load_domain_document`, `save_domain_document` and `remove_domain_document` (`src-tauri/src/domains/documents.rs`), which keep one JSON document per domain at `<app data dir>/domains/<id>.json` and write atomically (to `<id>.json.tmp`, then a rename); ids must match `^[a-z][a-z0-9-]*$`. In a plain browser (`yarn dev:web`) the document lives in localStorage under `eden:domain:<id>`. The store owns the document's shape and bumps `version` when it changes. A domain that moved to the data layer has its old document imported once and removed (`engineering/data-layer.md`, "The one-time import").
 
 ## External services
 
@@ -102,7 +106,7 @@ The shared `settings` class owns the same keys afterwards (`storage` in `package
 
 ## Splash and crashes
 
-The desktop `app.html` paints the wordmark and the version (`%sveltekit.env.PUBLIC_APP_VERSION%`, stamped by `vite.config.ts` from the root `package.json` and `EDEN_ENV`) on the page surface before any script; the layout removes it once i18n is ready. Three layers catch errors, as in Crate (`product/substrate/settings-utilities.md`): `hooks.client.ts` draws a fallback card for an error before the layout mounts, coloured from the kit's resolved tokens; `useGlobalErrorHandler()` logs to diagnostics and sets the crash store; `CrashScreen` renders it. The Rust side writes panics to `eden-crash.log` in the temp dir and keeps the last hundred diagnostics entries in memory.
+Both apps paint a splash, twice, as Crate does. The static copy is in `app.html` before any script: `hooks.server.ts` replaces `%eden.splash%` with `splashMarkup()` from `@eden/shared/splash`, which is the app mark (the kit's `app-mark.svg`) in the brand colour, the wordmark in the display face and the version (`PUBLIC_APP_VERSION`, stamped by `vite.config.ts` from the root `package.json` and `EDEN_ENV`), with a stylesheet of its own. That stylesheet is self-contained because in dev the app's stylesheet is injected by script, so the kit's variables do not exist on the first frame: every colour is resolved from the kit's tokens and keyed on the `data-theme` and `data-accent` the pre-paint script has set, the two faces are declared with the URLs Vite resolves, and `<html>` takes the page surface so nothing white shows. The Svelte copy is each app's `SplashScreen`, which wears the same classes, removes the static copy when the layout mounts and fades out over 400 ms once `dismissSplash()` (`@eden/shared/stores`) is called, which the layout does when settings and i18n are ready and never before the splash has been up for a second; the shell fades in under it. The app icons are per channel (`src-tauri/icons/{dev,staging,prod}`, from the masters in `icons/src`; `design/brand.md`); the generated `gen/apple` project carries a copy of the prod iOS set, which regenerating the project replaces with Tauri's default. Three layers catch errors, as in Crate (`product/substrate/settings-utilities.md`): `hooks.client.ts` catches an error before the layout mounts and mounts `CrashCard`, the same component `CrashScreen` renders, so the two look alike by construction (it imports `app.css` itself, so the tokens are applied by then, and draws a plain card by hand only if the component cannot be loaded); `useGlobalErrorHandler()` logs to diagnostics and sets the crash store; `CrashScreen` renders it. The Rust side writes panics to `eden-crash.log` in the temp dir and keeps the last hundred diagnostics entries in memory.
 
 ## The identifier is a placeholder
 

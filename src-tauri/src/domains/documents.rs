@@ -1,7 +1,9 @@
-//! The domain document store: one JSON document per domain at `<app_data_dir>/domains/<id>.json`, the interim
-//! persistence behind `@eden/shared/persistence` until the data layer lands (docs/product/substrate/data.md). The
-//! frontend owns each document's shape and version; this side reads and writes it whole, and writes atomically (to
-//! `<id>.json.tmp`, then a rename) so a crash mid-write never leaves a truncated document behind.
+//! The domain document store: one JSON document per domain at `<app_data_dir>/domains/<id>.json`, behind
+//! `@eden/shared/persistence`. It holds what stays on this device and out of every export: the Garden's feed until
+//! signals exist, and Sky's mirror. The owner's data lives in the workspace database (docs/engineering/data-layer.md);
+//! a domain that moved there has its old document imported once and removed. The frontend owns each document's
+//! shape and version; this side reads and writes it whole, and writes atomically (to `<id>.json.tmp`, then a
+//! rename) so a crash mid-write never leaves a truncated document behind.
 use std::path::PathBuf;
 
 use tauri::{AppHandle, Manager};
@@ -39,6 +41,16 @@ pub async fn load_domain_document(
         Ok(bytes) => Ok(Some(serde_json::from_slice(&bytes)?)),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
         Err(e) => Err(e.into()),
+    }
+}
+
+/// Removes the domain's document, once its contents are in the workspace database. Removing one that is not there
+/// changes nothing.
+#[tauri::command]
+pub async fn remove_domain_document(app: AppHandle, domain: String) -> Result<()> {
+    match std::fs::remove_file(document_path(&app, &domain)?) {
+        Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(e.into()),
+        _ => Ok(()),
     }
 }
 

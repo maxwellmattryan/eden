@@ -156,7 +156,7 @@ export const typeStyles = {
 		"opsz": 36,
 		"tracking": "-0.01em",
 		"sample": "Garden",
-		"usage": "The one title on a full-height screen: onboarding steps, the splash wordmark at 'eden'."
+		"usage": "The one title on a full-height screen: onboarding steps, the splash wordmark at 'Eden'."
 	},
 	"display-lg": {
 		"family": "display",

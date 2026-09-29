@@ -70,7 +70,7 @@ Every doc in one table per layer: path, status, one-liner, size (S under 120 lin
 
 | path | status | one-liner | size | load when |
 |---|---|---|---|---|
-| design/brand.md | draft | Name, metaphor policy, voice and tone, motifs, the domain glyph family, splash | S | any visual or copy decision |
+| design/brand.md | draft | Name, metaphor policy, voice and tone, motifs, the app icon, the domain glyph family, splash | S | any visual or copy decision |
 | design/visual-language.md | draft | Tokens, light and dark themes, accents, type, icons, spacing, motion, a11y | S | styling anything |
 | design/ux-patterns.md | draft | Navigation, forms, Quick Log, Capture sheet, states, AI surfaces, confirmations | S | designing a screen |
 | design/screens.md | draft | Screen inventory with must-show, actions, states, and mockup order | S | mockups |
@@ -83,7 +83,8 @@ Every doc in one table per layer: path, status, one-liner, size (S under 120 lin
 | engineering/README.md | draft | Where engineering stands and the questions still open | S | starting engineering |
 | engineering/ui-kit.md | draft | The kit: location, exports, tokens pipeline, conventions, Storybook, gates | M | adding or consuming a component or token |
 | engineering/ui-kit-components.md | draft | Per-component contract: props, bindables, callbacks, snippets, stories | S | changing a component |
-| engineering/app-scaffold.md | draft | The two apps, the shared package and the crate: layout, platform features, commands, the domain module and its interim persistence, Sky's providers and the WeatherKit bridge, pre-paint, the placeholder identifier | M | building under apps/*, packages/shared or src-tauri |
+| engineering/app-scaffold.md | draft | The two apps, the shared package and the crate: layout, platform features, commands, the domain module and where its data lives, Sky's providers and the WeatherKit bridge, pre-paint, the placeholder identifier | M | building under apps/*, packages/shared or src-tauri |
+| engineering/data-layer.md | draft | The workspace database and everything over it: the SQLCipher file and its key per platform, the schema, migrations, stamps and ids, the IPC boundary command by command, the frontend module and its browser fallback, a store on rows, the export bundle, the import, testing | M | reading or writing the owner's data from Rust or from an app, adding a table, a command or an entity type, moving a store onto rows, touching export or import |
 | engineering/release.md | draft | The owner's release checklist: bucket, updater key, Apple and iOS ad-hoc signing, the WeatherKit capability, Android keystore, Pages, the secrets, the tag flow | S | setting up release accounts or cutting a release |
 
 ## Status legend

@@ -33,6 +33,7 @@
 		"lint:fix": "eslint --cache --fix \"**/*.{ts,js,mjs,svelte}\"",
 		"lint:rust": "cargo clippy --manifest-path src-tauri/Cargo.toml --features desktop -- -D warnings && cargo clippy --manifest-path src-tauri/Cargo.toml --target aarch64-apple-ios --no-default-features --features mobile -- -D warnings",
 		"test": "yarn workspace @eden/ui-kit run test && yarn workspace @eden/shared run test",
+		"test:rust": "cargo test --manifest-path src-tauri/Cargo.toml --features desktop",
 		"storybook": "yarn workspace @eden/ui-kit storybook",
 		"storybook:build": "yarn workspace @eden/ui-kit build-storybook",
 		"tokens": "yarn workspace @eden/ui-kit tokens",

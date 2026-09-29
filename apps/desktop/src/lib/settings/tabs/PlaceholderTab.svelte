@@ -1,5 +1,5 @@
 <script lang="ts">
-	// The eight tabs that arrive with their substrate: the tab's name and one sentence, no motif.
+	// The tabs that arrive with their substrate: the tab's name and one sentence, no motif.
 	import { EmptyState } from '@eden/ui-kit'
 	import { t } from '@eden/shared/i18n'
 	import type { SettingsTabId } from '../settings-ui.svelte'

@@ -1,12 +1,14 @@
 <script lang="ts">
 	// The desktop shell (product/substrate/shell.md): the sidebar on the left, the content with its back affordance,
 	// the status bar along the bottom, and the overlays (toast, settings, crash) on top. It mounts the shared pieces
-	// once: settings, i18n, the global error handler, the hourly update check.
+	// once: settings, i18n, the global error handler, the hourly update check. The splash covers it until they are
+	// ready, then fades out as the shell fades in.
 	import '../app.css'
 	import { onMount } from 'svelte'
 	import { afterNavigate, goto } from '$app/navigation'
 	import { resolve } from '$app/paths'
 	import { page } from '$app/state'
+	import { env } from '$env/dynamic/public'
 	import {
 		BackButton,
 		Sidebar,
@@ -20,7 +22,9 @@
 	import { checkForUpdate } from '@eden/shared/api/updater'
 	import { initializeI18n, locale, t, uiKitStrings } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
+	import { dismissSplash, splashVisible } from '@eden/shared/stores'
 	import CrashScreen from '$lib/components/CrashScreen.svelte'
+	import SplashScreen from '$lib/components/SplashScreen.svelte'
 	import { manifests } from '$lib/domains'
 	import { weather } from '@eden/shared/weather'
 	import { formatTime } from '@eden/shared/dates'
@@ -157,7 +161,7 @@
 		;(async () => {
 			settings.load()
 			await initializeI18n(settings.language)
-			document.getElementById('splash')?.remove()
+			void dismissSplash()
 			checkForUpdate().catch(() => null)
 			timer = setInterval(() => checkForUpdate().catch(() => null), UPDATE_INTERVAL)
 			void weather.load().catch(() => null)
@@ -174,16 +178,11 @@
 
 <svelte:window {onkeydown} />
 
+<SplashScreen show={$splashVisible} version={env.PUBLIC_APP_VERSION ?? ''} />
+
 <UiKitProvider strings={uiKitStrings($locale)}>
-	<div class="shell">
-		<Sidebar
-			{groups}
-			{pinned}
-			brand={$t('app.name').toLowerCase()}
-			subtitles={settings.subtitles}
-			{current}
-			{onselect}
-		/>
+	<div class={['shell', $splashVisible && 'shell-waiting']}>
+		<Sidebar {groups} {pinned} brand={$t('app.name')} subtitles={settings.subtitles} {current} {onselect} />
 		<main class="content">
 			<div class="content-back"><BackButton {onback} /></div>
 			{@render children()}
@@ -210,6 +209,12 @@
 		grid-template-rows: minmax(0, 1fr) auto;
 		height: 100dvh;
 		background: var(--surface-0);
+		transition: opacity var(--ed-duration-settle) var(--ed-ease-out);
+	}
+	/* Under the splash the shell is laid out but neither seen nor reachable */
+	.shell-waiting {
+		opacity: 0;
+		pointer-events: none;
 	}
 	.content {
 		grid-row: 1;
@@ -217,7 +222,7 @@
 		overflow: auto;
 		display: flex;
 		flex-direction: column;
-		padding: var(--ed-gutter) var(--space-6);
+		padding: var(--ed-gutter) var(--space-4);
 	}
 	/* The arrow is centred over the page header's glyph: each page insets itself by the gutter, and the arrow's box
 	   is wider than that glyph by the ring around it */

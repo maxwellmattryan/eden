@@ -1,7 +1,7 @@
 <script lang="ts">
 	// The settings modal (product/substrate/settings-utilities.md): a centred kit Sheet with a tab rail on the left
 	// and the tab's panel on the right. The rail is one tab stop (arrows, Home and End) and deep-linkable by tab id
-	// through `settingsUi.show(tab)`. Four tabs are real; the other seven say they are not built yet. Focus lands on
+	// through `settingsUi.show(tab)`. Five tabs are real; the other six say they are not built yet. Focus lands on
 	// the sheet, not the rail, so no tab wears a ring until Tab is pressed. The frame follows the measured height of
 	// the content over the panel duration, so a taller tab grows the sheet instead of snapping it.
 	import { Icon, Sheet } from '@eden/ui-kit'
@@ -12,6 +12,7 @@
 	import GeneralTab from './tabs/GeneralTab.svelte'
 	import IntegrationsTab from './tabs/IntegrationsTab.svelte'
 	import PlaceholderTab from './tabs/PlaceholderTab.svelte'
+	import SyncTab from './tabs/SyncTab.svelte'
 
 	const uid = $props.id()
 	const titleId = `${uid}-title`
@@ -66,6 +67,8 @@
 					<AppearanceTab />
 				{:else if settingsUi.tab === 'integrations'}
 					<IntegrationsTab />
+				{:else if settingsUi.tab === 'sync'}
+					<SyncTab />
 				{:else if settingsUi.tab === 'about'}
 					<AboutTab />
 				{:else}

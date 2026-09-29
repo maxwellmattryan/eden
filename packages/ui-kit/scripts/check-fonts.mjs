@@ -1,5 +1,6 @@
 // Prints each shipped font's axes and coverage and fails when a file is missing, lacks the axes the type styles rely on,
-// or is subsetted below Latin-1 + Latin Extended-A + the punctuation the copy uses. Gallery alternates are reported only.
+// carries vertical metrics other than the ones tokens.json declares for it (WebKit ignores ascent-override and
+// descent-override, so the file itself must hold them), or is subsetted below Latin-1 + Latin Extended-A + the punctuation the copy uses. Gallery alternates are reported only.
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -50,8 +51,17 @@ for (const [group, fonts] of [
 		const extA = extendedA.filter((cp) => set.has(cp)).length
 		const missingAxes = (axesRequired[f.family] ?? []).filter((a) => !axes.includes(a))
 		const size = Math.round(readFileSync(path).length / 1024)
+		const units = (percent) => Math.round((parseFloat(percent) / 100) * font.unitsPerEm)
+		const metricsOff =
+			f.metrics &&
+			(font.hhea.ascent !== units(f.metrics.ascentOverride) ||
+				font.hhea.descent !== -units(f.metrics.descentOverride) ||
+				font.hhea.lineGap !== units(f.metrics.lineGapOverride))
 		let verdict = 'ok'
-		if (group === 'shipped' && (missing.length || missingAxes.length)) {
+		if (group === 'shipped' && metricsOff) {
+			verdict = `FAIL: hhea ${font.hhea.ascent}/${font.hhea.descent}/${font.hhea.lineGap} is not the declared metrics`
+			failures++
+		} else if (group === 'shipped' && (missing.length || missingAxes.length)) {
 			verdict = 'FAIL'
 			failures++
 		}

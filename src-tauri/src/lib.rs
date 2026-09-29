@@ -3,10 +3,12 @@
 //! the diagnostics service and exposes the commands the frontends call.
 
 mod commands;
+mod db;
 mod domains;
 mod error;
 mod models;
 mod services;
+mod substrate;
 // Updater acceptance rule: desktop-only at runtime, but its pure logic is unit-tested flagless.
 #[cfg(any(feature = "desktop", test))]
 mod updater;
@@ -14,6 +16,7 @@ mod updater;
 use tauri::Manager;
 
 use services::DiagnosticsService;
+use substrate::Workspace;
 
 /// Panics go to `eden-crash.log` in the temp dir and through `log`: on Windows a release build hides the console, and on
 /// mobile the default hook's stderr is discarded, so without this a startup panic is invisible.
@@ -112,8 +115,35 @@ pub fn run() {
             commands::diagnostics::get_diagnostics_report,
             commands::diagnostics::clear_diagnostic_entries,
             commands::diagnostics::log_error,
+            commands::data::create_entity,
+            commands::data::update_entity,
+            commands::data::query_entities,
+            commands::data::delete_rows,
+            commands::data::restore_rows,
+            commands::data::apply_batch,
+            commands::data::link,
+            commands::data::unlink,
+            commands::data::query_links,
+            commands::data::get_row,
+            commands::data::snapshot,
+            commands::data::create_task,
+            commands::data::create_event,
+            commands::data::create_place,
+            commands::data::attach,
+            commands::data::update_task,
+            commands::data::update_event,
+            commands::data::update_place,
+            commands::data::update_attachment,
+            commands::data::query_tasks,
+            commands::data::query_events,
+            commands::data::query_places,
+            commands::data::query_attachments,
+            commands::data::export_bundle,
+            commands::data::inspect_bundle,
+            commands::data::import_bundle,
             domains::documents::load_domain_document,
             domains::documents::save_domain_document,
+            domains::documents::remove_domain_document,
             domains::weather::weatherkit_status,
             domains::weather::weatherkit_forecast,
         ])
@@ -125,12 +155,25 @@ pub fn run() {
             std::fs::create_dir_all(&app_data_dir)?;
             log::info!("Data directory: {app_data_dir:?}");
 
+            // Without its data the app is of no use, so a workspace that will not open stops the launch.
+            let workspace = Workspace::open(&app_data_dir).map_err(|e| {
+                log::error!("Fatal: failed to open the workspace: {e}");
+                e
+            })?;
+            app.manage(workspace);
             app.manage(DiagnosticsService::new(app_data_dir));
             Ok(())
         })
-        .run(context)
+        .build(context)
         .unwrap_or_else(|e| {
             log::error!("Fatal: failed to run the Tauri application: {e}");
             std::process::exit(1);
+        })
+        .run(|handle, event| {
+            if let tauri::RunEvent::Exit = event {
+                if let Some(workspace) = handle.try_state::<Workspace>() {
+                    workspace.close();
+                }
+            }
         });
 }

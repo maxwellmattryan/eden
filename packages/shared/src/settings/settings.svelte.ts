@@ -247,6 +247,31 @@ export class Settings {
 		write(storage.home, JSON.stringify(this.home))
 	}
 
+	/** The choices as they are stored, by name: what an export bundle carries. A choice left at its default is absent. */
+	snapshot(): Record<string, string> {
+		const values: Record<string, string> = {}
+		for (const [name, key] of Object.entries(storage)) {
+			const value = read(key)
+			if (value !== null) values[name] = value
+		}
+		return values
+	}
+
+	/**
+	 * Takes the choices of a bundle in place of the ones here. A name it does not know is ignored; a value that is not
+	 * one of the choices falls back to the default when it is read, as a stored one would.
+	 */
+	async restore(values: unknown) {
+		if (typeof values !== 'object' || values === null) return
+		const given = values as Record<string, unknown>
+		for (const [name, key] of Object.entries(storage)) {
+			const value = given[name]
+			write(key, typeof value === 'string' ? value : null)
+		}
+		this.load()
+		await setI18nLanguage(this.language)
+	}
+
 	async setLanguage(language: Language) {
 		this.language = oneOf(language, languages, 'en')
 		write(storage.language, this.language)

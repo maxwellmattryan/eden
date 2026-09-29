@@ -1,7 +1,7 @@
 <script lang="ts">
-	// About: the wordmark, version and channel from the Rust side, the data directory, and a manual update check
+	// About: the app mark and the wordmark, version and channel from the Rust side, the data directory, and a manual update check
 	// whose result arrives as a toast (product/substrate/settings-utilities.md).
-	import { Button, Wordmark, toast } from '@eden/ui-kit'
+	import { AppMark, Button, Wordmark, toast } from '@eden/ui-kit'
 	import { getAppInfo, isTauri } from '@eden/shared/api'
 	import { checkForUpdate } from '@eden/shared/api/updater'
 	import { t } from '@eden/shared/i18n'
@@ -39,7 +39,10 @@
 </script>
 
 <div class="about">
-	<Wordmark name={$t('app.name').toLowerCase()} />
+	<div class="about-brand">
+		<AppMark class="about-mark" />
+		<Wordmark name={$t('app.name')} />
+	</div>
 	<dl class="about-facts">
 		<dt>{$t('settings.about.version')}</dt>
 		<dd>{info?.version ?? '…'}</dd>
@@ -63,6 +66,15 @@
 		display: grid;
 		gap: 20px;
 		justify-items: start;
+	}
+	.about-brand {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+	}
+	.about-brand :global(.about-mark) {
+		width: 64px;
+		height: 64px;
 	}
 	.about-facts {
 		display: grid;

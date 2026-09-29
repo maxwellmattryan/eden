@@ -1,0 +1,174 @@
+//! The schema, as an append-only list of migrations.
+//!
+//! **Append only.** A migration that has shipped is never edited, reordered or removed: a change is a new entry at the
+//! end. Each runs exactly once, in order, in its own transaction (`run_migrations`). The version of a migration is its
+//! position in the list, starting at 1.
+//!
+//! Conventions (docs/engineering/data-layer.md, "Schema"):
+//! - Stamps (`created_at`, `updated_at`, `deleted_at`) are hybrid logical clock stamps as fixed-width hex text, so
+//!   text order is clock order. `updated_at` is the row's version; a delete sets `deleted_at` to the same stamp.
+//! - Booleans are `INTEGER` 0 or 1. Times the owner sees (`due`, `start_at`) are ISO 8601 text.
+//! - No foreign keys between data tables: an import inserts rows in any order and the code validates.
+
+pub fn get_migrations() -> Vec<&'static str> {
+    vec![
+        // Migration 1: the device's own state, the entities table, the four primitives and links. The local calendar
+        // source is seeded at a fixed id with the lowest stamp, so every device has the same row and any edit wins.
+        r#"
+        CREATE TABLE meta (
+            key   TEXT PRIMARY KEY NOT NULL,
+            value TEXT NOT NULL
+        ) WITHOUT ROWID;
+
+        CREATE TABLE entities (
+            id          TEXT PRIMARY KEY NOT NULL CHECK (length(id) = 26),
+            type        TEXT NOT NULL,
+            payload     TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(payload)),
+            created_at  TEXT NOT NULL,
+            updated_at  TEXT NOT NULL,
+            deleted_at  TEXT,
+            mirror      INTEGER NOT NULL DEFAULT 0 CHECK (mirror IN (0, 1)),
+            source      TEXT,
+            external_id TEXT,
+            snapshot    TEXT CHECK (snapshot IS NULL OR json_valid(snapshot)),
+            CHECK ((source IS NULL) = (external_id IS NULL)),
+            CHECK (mirror = 0 OR source IS NOT NULL)
+        );
+        CREATE INDEX entities_type_live ON entities (type, id) WHERE deleted_at IS NULL;
+        CREATE UNIQUE INDEX entities_mirror_key ON entities (type, source, external_id) WHERE mirror = 1;
+        CREATE UNIQUE INDEX entities_overlay_key ON entities (type, source, external_id)
+            WHERE mirror = 0 AND source IS NOT NULL AND deleted_at IS NULL;
+
+        CREATE TABLE tasks (
+            id           TEXT PRIMARY KEY NOT NULL CHECK (length(id) = 26),
+            kind         TEXT NOT NULL,
+            title        TEXT NOT NULL,
+            notes        TEXT,
+            due          TEXT,
+            priority     TEXT NOT NULL DEFAULT 'none' CHECK (priority IN ('none', 'low', 'high')),
+            at           TEXT,
+            time_of_day  TEXT,
+            recurrence   TEXT CHECK (recurrence IS NULL OR json_valid(recurrence)),
+            items        TEXT CHECK (items IS NULL OR json_valid(items)),
+            target       TEXT CHECK (target IS NULL OR json_valid(target)),
+            grace        INTEGER,
+            streak       INTEGER NOT NULL DEFAULT 0,
+            progress     TEXT CHECK (progress IS NULL OR json_valid(progress)),
+            done         INTEGER NOT NULL DEFAULT 0 CHECK (done IN (0, 1)),
+            completed_at TEXT,
+            created_at   TEXT NOT NULL,
+            updated_at   TEXT NOT NULL,
+            deleted_at   TEXT,
+            mirror       INTEGER NOT NULL DEFAULT 0 CHECK (mirror IN (0, 1)),
+            source       TEXT,
+            external_id  TEXT,
+            snapshot     TEXT CHECK (snapshot IS NULL OR json_valid(snapshot)),
+            CHECK ((source IS NULL) = (external_id IS NULL)),
+            CHECK (mirror = 0 OR source IS NOT NULL)
+        );
+        CREATE INDEX tasks_kind_live ON tasks (kind, id) WHERE deleted_at IS NULL;
+        CREATE INDEX tasks_due ON tasks (due) WHERE deleted_at IS NULL AND due IS NOT NULL;
+        CREATE UNIQUE INDEX tasks_mirror_key ON tasks (source, external_id) WHERE mirror = 1;
+
+        CREATE TABLE events (
+            id                 TEXT PRIMARY KEY NOT NULL CHECK (length(id) = 26),
+            kind               TEXT NOT NULL,
+            title              TEXT NOT NULL,
+            start_at           TEXT NOT NULL,
+            end_at             TEXT,
+            all_day            INTEGER NOT NULL DEFAULT 0 CHECK (all_day IN (0, 1)),
+            timezone           TEXT,
+            recurrence         TEXT CHECK (recurrence IS NULL OR json_valid(recurrence)),
+            status             TEXT NOT NULL DEFAULT 'confirmed'
+                               CHECK (status IN ('tentative', 'confirmed', 'cancelled')),
+            notes              TEXT,
+            reminders          TEXT CHECK (reminders IS NULL OR json_valid(reminders)),
+            attendees          TEXT CHECK (attendees IS NULL OR json_valid(attendees)),
+            calendar_source_id TEXT NOT NULL,
+            created_at         TEXT NOT NULL,
+            updated_at         TEXT NOT NULL,
+            deleted_at         TEXT,
+            mirror             INTEGER NOT NULL DEFAULT 0 CHECK (mirror IN (0, 1)),
+            source             TEXT,
+            external_id        TEXT,
+            snapshot           TEXT CHECK (snapshot IS NULL OR json_valid(snapshot)),
+            CHECK ((source IS NULL) = (external_id IS NULL)),
+            CHECK (mirror = 0 OR source IS NOT NULL),
+            CHECK (mirror = 1 OR attendees IS NULL)
+        );
+        CREATE INDEX events_kind_live ON events (kind, id) WHERE deleted_at IS NULL;
+        CREATE INDEX events_start ON events (start_at) WHERE deleted_at IS NULL;
+        CREATE INDEX events_calendar_source ON events (calendar_source_id) WHERE deleted_at IS NULL;
+        CREATE UNIQUE INDEX events_mirror_key ON events (source, external_id) WHERE mirror = 1;
+
+        CREATE TABLE places (
+            id          TEXT PRIMARY KEY NOT NULL CHECK (length(id) = 26),
+            kind        TEXT NOT NULL,
+            name        TEXT NOT NULL,
+            lat         REAL,
+            lng         REAL,
+            address     TEXT,
+            category    TEXT,
+            phone       TEXT,
+            url         TEXT,
+            created_at  TEXT NOT NULL,
+            updated_at  TEXT NOT NULL,
+            deleted_at  TEXT,
+            mirror      INTEGER NOT NULL DEFAULT 0 CHECK (mirror IN (0, 1)),
+            source      TEXT,
+            external_id TEXT,
+            snapshot    TEXT CHECK (snapshot IS NULL OR json_valid(snapshot)),
+            CHECK ((lat IS NULL) = (lng IS NULL)),
+            CHECK ((source IS NULL) = (external_id IS NULL)),
+            CHECK (mirror = 0 OR source IS NOT NULL)
+        );
+        CREATE INDEX places_kind_live ON places (kind, id) WHERE deleted_at IS NULL;
+        CREATE UNIQUE INDEX places_one_home ON places (kind)
+            WHERE kind = 'home' AND mirror = 0 AND deleted_at IS NULL;
+        CREATE UNIQUE INDEX places_mirror_key ON places (source, external_id) WHERE mirror = 1;
+
+        CREATE TABLE attachments (
+            id          TEXT PRIMARY KEY NOT NULL CHECK (length(id) = 26),
+            kind        TEXT NOT NULL,
+            file_name   TEXT NOT NULL,
+            mime        TEXT NOT NULL,
+            size        INTEGER NOT NULL CHECK (size >= 0),
+            hash        TEXT NOT NULL,
+            store       TEXT NOT NULL DEFAULT 'workspace' CHECK (store IN ('workspace', 'vault')),
+            thumbnail   TEXT,
+            ocr_text    TEXT,
+            captured    TEXT CHECK (captured IS NULL OR json_valid(captured)),
+            created_at  TEXT NOT NULL,
+            updated_at  TEXT NOT NULL,
+            deleted_at  TEXT,
+            mirror      INTEGER NOT NULL DEFAULT 0 CHECK (mirror IN (0, 1)),
+            source      TEXT,
+            external_id TEXT,
+            snapshot    TEXT CHECK (snapshot IS NULL OR json_valid(snapshot)),
+            CHECK ((source IS NULL) = (external_id IS NULL)),
+            CHECK (mirror = 0 OR source IS NOT NULL),
+            CHECK (store = 'workspace' OR thumbnail IS NULL)
+        );
+        CREATE INDEX attachments_kind_live ON attachments (kind, id) WHERE deleted_at IS NULL;
+        CREATE UNIQUE INDEX attachments_mirror_key ON attachments (source, external_id) WHERE mirror = 1;
+
+        CREATE TABLE links (
+            owner_id   TEXT NOT NULL,
+            owner_type TEXT NOT NULL,
+            target_uri TEXT NOT NULL,
+            relation   TEXT NOT NULL
+                       CHECK (relation IN ('about', 'at', 'from', 'for', 'part-of', 'see-also')),
+            label      TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            deleted_at TEXT,
+            PRIMARY KEY (owner_id, target_uri, relation)
+        ) WITHOUT ROWID;
+        CREATE INDEX links_target ON links (target_uri) WHERE deleted_at IS NULL;
+
+        INSERT INTO entities (id, type, payload, created_at, updated_at)
+        VALUES ('00000000000000000000000001', 'calendar-source', '{"kind":"local"}',
+                '0000000000000000-00000000-00000000', '0000000000000000-00000000-00000000');
+        "#,
+    ]
+}

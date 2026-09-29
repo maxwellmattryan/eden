@@ -1,5 +1,6 @@
 // Toolbench's manifest (product/domains/toolbench.md): the page with its five tabs, the two default Garden tiles, the
 // capture-idea quick action.
+import { toolbenchExtras } from '@eden/shared/domains/toolbench'
 import { get } from 'svelte/store'
 import { goto } from '$app/navigation'
 import { resolve } from '$app/paths'
@@ -55,5 +56,10 @@ export const toolbenchManifest: DomainManifest = {
 	],
 	quickActions: [{ id: 'capture-idea', label: 'domains.toolbench.ideas.capture', icon: 'lightbulb' }],
 	load: () => toolbench.load(),
+	reload: () => toolbench.reload(),
+	extras: async () => {
+		await toolbench.load()
+		return toolbenchExtras(toolbench.data())
+	},
 	seed: () => toolbench.seed(get(t)('domains.toolbench.name')),
 }

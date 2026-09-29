@@ -3,7 +3,8 @@
 	// top-right corner that widens into a pill only when the number needs it, and folds the number into the name.
 	// `fab` is the floating + on mobile: --fab wide, round, on the accent, so it hovers by the ink wash like any fill and
 	// presses like one under the raised relief. Hover and pressed grounds are circles, never rounded boxes. `tooltip`
-	// shows the label (or another string) on hover and keyboard focus, for a glyph that may not explain itself.
+	// shows the label (or another string) on hover and keyboard focus, for a glyph that may not explain itself; with no
+	// `onclick` of its own (an info glyph) a click or tap toggles it too, so the pointer cursor never promises nothing.
 	import type { HTMLButtonAttributes } from 'svelte/elements'
 	import type { IconName } from '../../icons/icons.js'
 	import Icon from '../../icons/Icon.svelte'
@@ -27,7 +28,10 @@
 		pressed?: boolean
 		/** button unless the button submits a form. */
 		type?: 'button' | 'submit' | 'reset'
-		/** A tooltip on hover and keyboard focus: true shows the label, a string shows that string. Never on touch. */
+		/**
+		 * A tooltip on hover and keyboard focus: true shows the label, a string shows that string. Without `onclick`, a
+		 * click or tap toggles it.
+		 */
 		tooltip?: boolean | string
 	}
 	let {
@@ -53,7 +57,7 @@
 	{type}
 	aria-label={count ? s.iconButton.withCount(label, count) : label}
 	aria-pressed={pressed}
-	{@attach attachTooltip(() => tip)}
+	{@attach attachTooltip(() => tip, { toggle: !rest.onclick && type === 'button' })}
 	{...rest}
 >
 	<Icon name={icon} size={fab ? 'lg' : size === 'xs' ? 'sm' : 'md'} />
