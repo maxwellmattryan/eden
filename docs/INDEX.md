@@ -83,6 +83,7 @@ Every doc in one table per layer: path, status, one-liner, size (S under 120 lin
 | engineering/README.md | draft | Where engineering stands and the questions still open | S | starting engineering |
 | engineering/ui-kit.md | draft | The kit: location, exports, tokens pipeline, conventions, Storybook, gates | M | adding or consuming a component or token |
 | engineering/ui-kit-components.md | draft | Per-component contract: props, bindables, callbacks, snippets, stories | S | changing a component |
+| engineering/app-scaffold.md | draft | The two apps, the shared package and the crate: layout, platform features, commands, domain paths, pre-paint, the placeholder identifier | S | building under apps/*, packages/shared or src-tauri |
 
 ## Status legend
 

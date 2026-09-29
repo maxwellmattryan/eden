@@ -1,5 +1,5 @@
 <script module lang="ts">
-	import { spacing } from '$lib/tokens/tokens.js'
+	import { spacing } from '../../tokens/tokens.js'
 
 	// Room one step needs before the bars give way to dots: a bar and its gap, or twice that with a label beneath.
 	const px = (value: string) => parseInt(value, 10)
@@ -12,9 +12,9 @@
 	// Back and Continue move between steps, nothing here is clickable. Completed steps fill with the accent, the current
 	// one is ringed, the rest wait in stroke-hover; the nav's name and a live line say "Step 3 of 10" for a screen reader.
 	import type { HTMLAttributes } from 'svelte/elements'
-	import { useStrings } from '$lib/i18n/context.js'
-	import { measure } from '$lib/internal/measure.js'
-	import { platformOf } from '$lib/internal/platform.js'
+	import { useStrings } from '../../i18n/context.js'
+	import { measure } from '../../internal/measure.js'
+	import { platformOf } from '../../internal/platform.js'
 
 	type Props = Omit<HTMLAttributes<HTMLElement>, 'aria-label'> & {
 		/** How many steps the wizard has. */

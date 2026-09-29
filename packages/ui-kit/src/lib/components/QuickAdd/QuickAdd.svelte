@@ -1,5 +1,5 @@
 <script module lang="ts">
-	import type { IconName } from '$lib/icons/icons.js'
+	import type { IconName } from '../../icons/icons.js'
 
 	/** One parsed field, shown as an accent chip. */
 	export interface ParsedChip {
@@ -66,8 +66,8 @@
 	// name. The chrome is Field's InputWrap, so the two fields share one border and one ring; the input is controlled
 	// (value plus oninput), as in Field.
 	import type { HTMLInputAttributes } from 'svelte/elements'
-	import { useStrings } from '$lib/i18n/context.js'
-	import { platformOf } from '$lib/internal/platform.js'
+	import { useStrings } from '../../i18n/context.js'
+	import { platformOf } from '../../internal/platform.js'
 	import Chip from '../Chip/Chip.svelte'
 	import InputWrap from '../Field/InputWrap.svelte'
 	import IconButton from '../IconButton/IconButton.svelte'

@@ -3,8 +3,8 @@
 	// busy state while `onretry` runs. Danger colours the icon only; the sentence stays in text-primary. Rendered with
 	// the page by default; `live` makes it an alert for an error that arrives later.
 	import type { HTMLAttributes } from 'svelte/elements'
-	import Icon from '$lib/icons/Icon.svelte'
-	import { useStrings } from '$lib/i18n/context.js'
+	import Icon from '../../icons/Icon.svelte'
+	import { useStrings } from '../../i18n/context.js'
 	import Button from '../Button/Button.svelte'
 
 	type Props = HTMLAttributes<HTMLDivElement> & {

@@ -5,9 +5,9 @@
 	// presses like one under the raised relief. Hover and pressed grounds are circles, never rounded boxes. `tooltip`
 	// shows the label (or another string) on hover and keyboard focus, for a glyph that may not explain itself.
 	import type { HTMLButtonAttributes } from 'svelte/elements'
-	import type { IconName } from '$lib/icons/icons.js'
-	import Icon from '$lib/icons/Icon.svelte'
-	import { useStrings } from '$lib/i18n/context.js'
+	import type { IconName } from '../../icons/icons.js'
+	import Icon from '../../icons/Icon.svelte'
+	import { useStrings } from '../../i18n/context.js'
 	import { tooltip as attachTooltip } from '../Tooltip/tooltip.js'
 
 	type Props = Omit<HTMLButtonAttributes, 'aria-label' | 'aria-pressed'> & {

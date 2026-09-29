@@ -2,8 +2,8 @@
 	// The quiet back arrow at the top left of content (product/substrate/shell.md): it appears only when the history
 	// stack has somewhere to go, and names the previous screen in a tooltip on hover and keyboard focus.
 	import type { HTMLButtonAttributes } from 'svelte/elements'
-	import Icon from '$lib/icons/Icon.svelte'
-	import { useStrings } from '$lib/i18n/context.js'
+	import Icon from '../../icons/Icon.svelte'
+	import { useStrings } from '../../i18n/context.js'
 	import { tooltip } from '../Tooltip/tooltip.js'
 
 	type Props = Omit<HTMLButtonAttributes, 'type' | 'onclick' | 'aria-label'> & {

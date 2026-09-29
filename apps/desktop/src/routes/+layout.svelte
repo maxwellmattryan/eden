@@ -1,0 +1,174 @@
+<script lang="ts">
+	// The desktop shell (product/substrate/shell.md): the sidebar on the left, the content with its back affordance,
+	// the status bar along the bottom, and the overlays (toast, settings, crash) on top. It mounts the shared pieces
+	// once: settings, i18n, the global error handler, the hourly update check.
+	import '../app.css'
+	import { onMount } from 'svelte'
+	import { afterNavigate, goto } from '$app/navigation'
+	import { resolve } from '$app/paths'
+	import { page } from '$app/state'
+	import {
+		BackButton,
+		Sidebar,
+		StatusBar,
+		ToastHost,
+		UiKitProvider,
+		domainGlyph,
+		type SidebarEntry,
+	} from '@eden/ui-kit'
+	import { checkForUpdate } from '@eden/shared/api/updater'
+	import { initializeI18n, locale, t, uiKitStrings } from '@eden/shared/i18n'
+	import { settings } from '@eden/shared/settings'
+	import CrashScreen from '$lib/components/CrashScreen.svelte'
+	import { useGlobalErrorHandler } from '$lib/hooks/useGlobalErrorHandler'
+	import SettingsSheet from '$lib/settings/SettingsSheet.svelte'
+	import { settingsUi } from '$lib/settings/settings-ui.svelte'
+
+	let { children } = $props()
+
+	const UPDATE_INTERVAL = 60 * 60 * 1000
+
+	// Garden, Today, then the Phase 1 domains in the fixed order; the owner's order arrives with the Domains tab.
+	const hrefs = {
+		garden: resolve('/garden'),
+		today: resolve('/today'),
+		kitchen: resolve('/kitchen'),
+		toolbench: resolve('/toolbench'),
+		weather: resolve('/weather'),
+	} as const
+	const domains = ['kitchen', 'toolbench', 'weather'] as const
+
+	const items = $derived<SidebarEntry[]>([
+		{
+			id: 'garden',
+			name: $t('shell.garden'),
+			subtitle: $t('shell.gardenSubtitle'),
+			icon: domainGlyph('garden'),
+			shortcut: '⌘1',
+			href: hrefs.garden,
+		},
+		{
+			id: 'today',
+			name: $t('shell.today'),
+			subtitle: $t('shell.todaySubtitle'),
+			icon: domainGlyph('today'),
+			shortcut: '⌘2',
+			href: hrefs.today,
+		},
+		...domains.map((id, index) => ({
+			id,
+			name: $t(`domains.${id}.name`),
+			subtitle: $t(`domains.${id}.subtitle`),
+			icon: domainGlyph(id),
+			shortcut: `⌘${index + 3}`,
+			href: hrefs[id],
+		})),
+	])
+	const pinned = $derived<SidebarEntry[]>([
+		{
+			id: 'gardener',
+			name: $t('shell.gardener'),
+			subtitle: $t('shell.gardenerSubtitle'),
+			icon: domainGlyph('gardener'),
+		},
+		{
+			id: 'settings',
+			name: $t('shell.settings'),
+			subtitle: $t('shell.settingsSubtitle'),
+			icon: domainGlyph('settings'),
+		},
+	])
+	const current = $derived(page.route.id?.split('/')[1] || 'garden')
+
+	// How far the in-app history goes: the back arrow shows only when there is somewhere to go (shell.md).
+	let depth = $state(0)
+	afterNavigate((navigation) => {
+		if (navigation.type === 'link' || navigation.type === 'goto') depth += 1
+		else if (navigation.type === 'popstate') depth = Math.max(0, depth - 1)
+	})
+	const onback = $derived(depth > 0 ? () => history.back() : undefined)
+
+	function onselect(id: string) {
+		if (id === 'settings') settingsUi.show()
+	}
+
+	// ⌘, opens Settings; ⌘1 to ⌘9 go to the sidebar positions (shell.md, keyboard model).
+	function onkeydown(e: KeyboardEvent) {
+		if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return
+		if (e.key === ',') {
+			e.preventDefault()
+			settingsUi.show()
+			return
+		}
+		if (/^[1-9]$/.test(e.key)) {
+			const item = items[Number(e.key) - 1]
+			if (item?.href) {
+				e.preventDefault()
+				goto(item.href)
+			}
+		}
+	}
+
+	onMount(() => {
+		const cleanupErrors = useGlobalErrorHandler()
+		let timer: ReturnType<typeof setInterval> | undefined
+		;(async () => {
+			settings.load()
+			await initializeI18n(settings.language)
+			document.getElementById('splash')?.remove()
+			checkForUpdate().catch(() => null)
+			timer = setInterval(() => checkForUpdate().catch(() => null), UPDATE_INTERVAL)
+		})()
+		return () => {
+			cleanupErrors()
+			settings.dispose()
+			if (timer) clearInterval(timer)
+		}
+	})
+</script>
+
+<svelte:window {onkeydown} />
+
+<UiKitProvider strings={uiKitStrings($locale)}>
+	<div class="shell">
+		<Sidebar {items} {pinned} subtitles={settings.subtitles} {current} {onselect} />
+		<main class="content">
+			<div class="content-back"><BackButton {onback} /></div>
+			{@render children()}
+		</main>
+		<StatusBar
+			class="bar"
+			sync={$t('shell.sync.local')}
+			integrations={[]}
+			gardener={{ label: $t('shell.gardener'), noKey: true }}
+			inbox={[]}
+			logs={[]}
+		/>
+	</div>
+	<ToastHost />
+	<SettingsSheet />
+	<CrashScreen />
+</UiKitProvider>
+
+<style>
+	.shell {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr);
+		grid-template-rows: minmax(0, 1fr) auto;
+		height: 100dvh;
+		background: var(--surface-0);
+	}
+	.content {
+		grid-row: 1;
+		grid-column: 2;
+		overflow: auto;
+		padding: var(--ed-gutter);
+	}
+	.content-back {
+		min-height: var(--ed-control);
+	}
+	:global(.bar) {
+		grid-row: 2;
+		grid-column: 1 / -1;
+	}
+</style>

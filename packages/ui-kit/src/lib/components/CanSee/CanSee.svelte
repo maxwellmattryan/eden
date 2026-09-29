@@ -16,7 +16,7 @@
 	// Gardener is saying what it can see (D-40); the audit log is one quiet button away.
 	import type { Snippet } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
-	import { useStrings } from '$lib/i18n/context.js'
+	import { useStrings } from '../../i18n/context.js'
 	import Button from '../Button/Button.svelte'
 	import Chip from '../Chip/Chip.svelte'
 

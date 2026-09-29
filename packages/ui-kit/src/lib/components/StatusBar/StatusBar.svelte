@@ -1,5 +1,5 @@
 <script module lang="ts">
-	import type { IconName } from '$lib/icons/icons.js'
+	import type { IconName } from '../../icons/icons.js'
 	import type { BannerTone } from '../Banner/Banner.svelte'
 	import type { InboxAction } from '../InboxCard/InboxCard.svelte'
 
@@ -66,8 +66,8 @@
 	// unfurling upwards from the bar: Escape or a pointer outside closes it and focus returns to its button. On mobile
 	// these live behind More and the floating button.
 	import type { HTMLAttributes } from 'svelte/elements'
-	import { domainGlyph } from '$lib/icons/domain-glyphs.js'
-	import { useStrings } from '$lib/i18n/context.js'
+	import { domainGlyph } from '../../icons/domain-glyphs.js'
+	import { useStrings } from '../../i18n/context.js'
 	import Banner from '../Banner/Banner.svelte'
 	import Button from '../Button/Button.svelte'
 	import Chip from '../Chip/Chip.svelte'

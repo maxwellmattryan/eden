@@ -1,7 +1,7 @@
 <script module lang="ts">
 	import type { TransitionConfig } from 'svelte/transition'
 	import { quintOut } from 'svelte/easing'
-	import type { IconName } from '$lib/icons/icons.js'
+	import type { IconName } from '../../icons/icons.js'
 	import type { BadgeKind } from '../Badge/Badge.svelte'
 	import type { ChipTone } from '../Chip/Chip.svelte'
 	import type { MenuItem } from '../Menu/Menu.svelte'
@@ -82,9 +82,9 @@
 	// leading edge and a click or Space toggles the row onto brand-muted. Inside List the row is a grid row with one
 	// gridcell and the list manages its tab stop; on its own it is a list item and its own tab stop.
 	import type { HTMLAttributes } from 'svelte/elements'
-	import type { AnchorLike } from '$lib/internal/anchor.js'
-	import Icon from '$lib/icons/Icon.svelte'
-	import { useStrings } from '$lib/i18n/context.js'
+	import type { AnchorLike } from '../../internal/anchor.js'
+	import Icon from '../../icons/Icon.svelte'
+	import { useStrings } from '../../i18n/context.js'
 	import Badge from '../Badge/Badge.svelte'
 	import Chip from '../Chip/Chip.svelte'
 	import IconButton from '../IconButton/IconButton.svelte'

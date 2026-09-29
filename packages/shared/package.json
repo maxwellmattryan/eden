@@ -1,0 +1,43 @@
+{
+	"name": "@eden/shared",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Frontend code the desktop and mobile apps share: the Tauri API wrappers, the settings state, the crash store, i18n and the types behind them. Consumed from source like the kit.",
+	"type": "module",
+	"exports": {
+		"./api": "./src/api/index.ts",
+		"./api/updater": "./src/api/updater.ts",
+		"./stores": "./src/stores/index.ts",
+		"./settings": "./src/settings/index.ts",
+		"./i18n": "./src/i18n/index.ts",
+		"./types": "./src/types/index.ts"
+	},
+	"scripts": {
+		"check": "svelte-check --tsconfig ./tsconfig.json"
+	},
+	"dependencies": {
+		"@tauri-apps/api": "2.11.0",
+		"svelte-i18n": "4.0.1"
+	},
+	"peerDependencies": {
+		"@eden/ui-kit": "0.1.0",
+		"@tauri-apps/plugin-process": "2.3.1",
+		"@tauri-apps/plugin-updater": "2.10.0",
+		"svelte": "^5.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@tauri-apps/plugin-process": {
+			"optional": true
+		},
+		"@tauri-apps/plugin-updater": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"@tauri-apps/plugin-process": "2.3.1",
+		"@tauri-apps/plugin-updater": "2.10.0",
+		"svelte": "5.57.1",
+		"svelte-check": "4.7.6",
+		"typescript": "5.9.3"
+	}
+}

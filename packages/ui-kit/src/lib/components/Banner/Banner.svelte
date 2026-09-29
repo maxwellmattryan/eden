@@ -1,5 +1,5 @@
 <script module lang="ts">
-	import type { IconName } from '$lib/icons/icons.js'
+	import type { IconName } from '../../icons/icons.js'
 
 	export type BannerTone = 'info' | 'warning' | 'danger'
 	export type BannerPlacement = 'inline' | 'top'
@@ -15,8 +15,8 @@
 	// `top` is a full-width bar for mobile that reaches under the safe-area inset, its edge drawn beneath the inset
 	// where it can be seen. Info is a status; warning and danger are alerts.
 	import type { HTMLAttributes } from 'svelte/elements'
-	import Icon from '$lib/icons/Icon.svelte'
-	import { useStrings } from '$lib/i18n/context.js'
+	import Icon from '../../icons/Icon.svelte'
+	import { useStrings } from '../../i18n/context.js'
 	import Button from '../Button/Button.svelte'
 	import IconButton from '../IconButton/IconButton.svelte'
 

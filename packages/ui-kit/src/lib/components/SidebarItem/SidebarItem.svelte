@@ -5,8 +5,8 @@
 	// default. The current item sits on the nav ground the brand dial sets, its glyph and name in the dial's current
 	// colours, with the leaf bar beside it in the nav's gutter (0 wide at plain).
 	import type { HTMLAttributes } from 'svelte/elements'
-	import type { IconName } from '$lib/icons/icons.js'
-	import Icon from '$lib/icons/Icon.svelte'
+	import type { IconName } from '../../icons/icons.js'
+	import Icon from '../../icons/Icon.svelte'
 	import { tooltip } from '../Tooltip/tooltip.js'
 
 	type Props = Omit<HTMLAttributes<HTMLElement>, 'id' | 'onclick' | 'children'> & {

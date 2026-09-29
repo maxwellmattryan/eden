@@ -1,6 +1,6 @@
 <script module lang="ts">
 	import type { ComponentProps } from 'svelte'
-	import type { IconName } from '$lib/icons/icons.js'
+	import type { IconName } from '../../icons/icons.js'
 	import Button from '../Button/Button.svelte'
 
 	/** A header action, rendered as a Button; the first in the list is the page's primary. */
@@ -22,8 +22,8 @@
 	// row beneath when the page is a list. On mobile the actions wrap under the name. Never a second row of buttons.
 	import type { Snippet } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
-	import Icon from '$lib/icons/Icon.svelte'
-	import { platformOf } from '$lib/internal/platform.js'
+	import Icon from '../../icons/Icon.svelte'
+	import { platformOf } from '../../internal/platform.js'
 	import BackButton from '../BackButton/BackButton.svelte'
 
 	type Props = Omit<HTMLAttributes<HTMLElement>, 'children'> & {

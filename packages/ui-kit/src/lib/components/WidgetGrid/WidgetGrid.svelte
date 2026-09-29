@@ -4,7 +4,7 @@
 	// tile fill the gap a wide one left. Layout only: edit mode, the catalog and dragging are the app's.
 	import type { Snippet } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
-	import { platformOf } from '$lib/internal/platform.js'
+	import { platformOf } from '../../internal/platform.js'
 
 	type Props = Omit<HTMLAttributes<HTMLDivElement>, 'children'> & {
 		/** The desktop column count; the tokens' --widget-columns (four) unless set. Mobile always has two. */

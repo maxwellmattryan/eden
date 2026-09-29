@@ -16,9 +16,9 @@
 	// reads: nothing runs a model because the Garden opened.
 	import type { Snippet } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
-	import type { IconName } from '$lib/icons/icons.js'
-	import Icon from '$lib/icons/Icon.svelte'
-	import { useStrings } from '$lib/i18n/context.js'
+	import type { IconName } from '../../icons/icons.js'
+	import Icon from '../../icons/Icon.svelte'
+	import { useStrings } from '../../i18n/context.js'
 	import Button from '../Button/Button.svelte'
 	import IconButton from '../IconButton/IconButton.svelte'
 

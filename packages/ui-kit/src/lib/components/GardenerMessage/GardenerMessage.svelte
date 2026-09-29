@@ -5,8 +5,8 @@
 	// children (tool and proposal cards) follow the text inside the same bubble.
 	import type { Snippet } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
-	import Icon from '$lib/icons/Icon.svelte'
-	import { useStrings } from '$lib/i18n/context.js'
+	import Icon from '../../icons/Icon.svelte'
+	import { useStrings } from '../../i18n/context.js'
 
 	type Props = HTMLAttributes<HTMLElement> & {
 		/** The message: one string, or one per paragraph. */

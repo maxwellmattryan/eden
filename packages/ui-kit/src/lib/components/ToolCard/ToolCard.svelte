@@ -10,12 +10,12 @@
 	// repeats the verb, so the owner confirms exactly what will happen; read and write-draft cards have no buttons.
 	// After the choice the card says what it did, or that nothing changed. Never-automated actions have no card at all.
 	import type { HTMLAttributes } from 'svelte/elements'
-	import { useStrings } from '$lib/i18n/context.js'
+	import { useStrings } from '../../i18n/context.js'
 	import Badge from '../Badge/Badge.svelte'
 	import Button from '../Button/Button.svelte'
 	import ToolChrome from './ToolChrome.svelte'
 
-	type Props = HTMLAttributes<HTMLDivElement> & {
+	type Props = Omit<HTMLAttributes<HTMLDivElement>, 'oncancel'> & {
 		/** The tool's registered name ("create-event"). */
 		name: string
 		/** Its access level; read shows no badge. */

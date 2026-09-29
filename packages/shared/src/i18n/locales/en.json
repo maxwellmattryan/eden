@@ -1,0 +1,143 @@
+{
+	"app": {
+		"name": "Eden"
+	},
+	"shell": {
+		"garden": "Garden",
+		"gardenSubtitle": "Dashboard",
+		"today": "Today",
+		"todaySubtitle": "Tasks and routines",
+		"gardener": "Gardener",
+		"gardenerSubtitle": "Ask, log, run",
+		"settings": "Settings",
+		"settingsSubtitle": "Preferences",
+		"more": "More",
+		"back": "Back",
+		"sync": {
+			"local": "Local only",
+			"offline": "Offline"
+		},
+		"gardenerNoKey": "No key on this device"
+	},
+	"domains": {
+		"kitchen": {
+			"name": "Hearth",
+			"subtitle": "Food, recipes, pantry, groceries"
+		},
+		"toolbench": {
+			"name": "Toolbench",
+			"subtitle": "Ideas, projects, homelab, generative art"
+		},
+		"weather": {
+			"name": "Sky",
+			"subtitle": "Weather, forecasts, sun and moon"
+		}
+	},
+	"settings": {
+		"title": "Settings",
+		"tabs": {
+			"general": "General",
+			"appearance": "Appearance",
+			"domains": "Domains",
+			"gardener": "Gardener",
+			"privacy": "Privacy and grants",
+			"notifications": "Notifications",
+			"integrations": "Integrations",
+			"shortcuts": "Shortcuts",
+			"sync": "Sync and data",
+			"diagnostics": "Diagnostics",
+			"about": "About"
+		},
+		"general": {
+			"language": "Language",
+			"languageHelp": "Changes take effect at once.",
+			"english": "English",
+			"japanese": "日本語"
+		},
+		"appearance": {
+			"theme": "Theme",
+			"light": "Light",
+			"dark": "Dark",
+			"system": "System",
+			"accent": "Accent",
+			"font": "Font",
+			"fontDefault": "Default",
+			"fontSystem": "System",
+			"density": "Compact density",
+			"densityHelp": "Tighter rows and controls on the desktop.",
+			"subtitles": "Sidebar subtitles",
+			"subtitlesHelp": "Show each domain's plain subtitle beneath its name.",
+			"accents": {
+				"moss": "Moss",
+				"fern": "Fern",
+				"sage": "Sage",
+				"clay": "Clay",
+				"marigold": "Marigold",
+				"lavender": "Lavender",
+				"plum": "Plum",
+				"sky": "Sky",
+				"slate": "Slate",
+				"rose": "Rose"
+			}
+		},
+		"about": {
+			"version": "Version",
+			"channel": "Channel",
+			"dataDir": "Data directory",
+			"notInApp": "Not available in the browser",
+			"checkForUpdates": "Check for updates",
+			"checking": "Checking for updates…",
+			"upToDate": "{name} is up to date.",
+			"updateAvailable": "{version} is available.",
+			"updateFailed": "Could not check for updates.",
+			"updatesNotAvailable": "Updates are checked from the installed app."
+		},
+		"placeholder": {
+			"title": "Not built yet",
+			"text": "This tab arrives with its substrate."
+		}
+	},
+	"crash": {
+		"title": "Something went wrong",
+		"text": "{name} hit an error it could not recover from.",
+		"details": "Error details",
+		"copy": "Copy details",
+		"copied": "Copied",
+		"reset": "Restart {name}",
+		"unknown": "Unknown error"
+	},
+	"error": {
+		"title": "This page could not be shown",
+		"status": "Status {status}",
+		"home": "Back to the Garden"
+	},
+	"empty": {
+		"garden": {
+			"title": "Nothing in the garden yet",
+			"text": "Widgets appear here as the domains fill with data."
+		},
+		"today": {
+			"title": "Nothing due today",
+			"text": "Tasks and routines from every domain gather here."
+		},
+		"kitchen": {
+			"title": "Nothing in the fridge yet",
+			"text": "Capture a haul or add what you have, and recipes follow.",
+			"action": "Capture a haul"
+		},
+		"toolbench": {
+			"title": "No ideas yet",
+			"text": "Capture the first one; it resurfaces when it has rested.",
+			"action": "Capture an idea"
+		},
+		"weather": {
+			"title": "No forecast yet",
+			"text": "Set your home place and the sky fills in."
+		},
+		"more": {
+			"title": "More",
+			"text": "Toolbench, the Gardener and settings."
+		}
+	},
+	"uiKit": {}
+}

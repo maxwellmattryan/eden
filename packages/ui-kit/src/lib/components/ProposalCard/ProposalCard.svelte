@@ -7,7 +7,7 @@
 	// before Accept, which saves the fact as user-confirmed (your word beats inference); Dismiss leaves no trace. After
 	// the choice the card says which happened, and an accepted fact settles with the Breeze (D-42).
 	import type { HTMLAttributes } from 'svelte/elements'
-	import { useStrings } from '$lib/i18n/context.js'
+	import { useStrings } from '../../i18n/context.js'
 	import Badge from '../Badge/Badge.svelte'
 	import Button from '../Button/Button.svelte'
 	import ToolChrome from '../ToolCard/ToolChrome.svelte'

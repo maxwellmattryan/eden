@@ -1,0 +1,191 @@
+{
+	"app": {
+		"name": "Eden"
+	},
+	"shell": {
+		"garden": "庭",
+		"gardenSubtitle": "ダッシュボード",
+		"today": "今日",
+		"todaySubtitle": "タスクと習慣",
+		"gardener": "庭師",
+		"gardenerSubtitle": "相談、記録、実行",
+		"settings": "設定",
+		"settingsSubtitle": "環境設定",
+		"more": "その他",
+		"back": "戻る",
+		"sync": {
+			"local": "この端末のみ",
+			"offline": "オフライン"
+		},
+		"gardenerNoKey": "この端末にキーがありません"
+	},
+	"domains": {
+		"kitchen": {
+			"name": "台所",
+			"subtitle": "食材、レシピ、買い物"
+		},
+		"toolbench": {
+			"name": "工房",
+			"subtitle": "アイデア、プロジェクト"
+		},
+		"weather": {
+			"name": "空",
+			"subtitle": "天気、日の出と月"
+		}
+	},
+	"settings": {
+		"title": "設定",
+		"tabs": {
+			"general": "一般",
+			"appearance": "外観",
+			"domains": "ドメイン",
+			"gardener": "庭師",
+			"privacy": "プライバシーと許可",
+			"notifications": "通知",
+			"integrations": "連携",
+			"shortcuts": "ショートカット",
+			"sync": "同期とデータ",
+			"diagnostics": "診断",
+			"about": "情報"
+		},
+		"general": {
+			"language": "言語",
+			"languageHelp": "すぐに反映されます。",
+			"english": "English",
+			"japanese": "日本語"
+		},
+		"appearance": {
+			"theme": "テーマ",
+			"light": "ライト",
+			"dark": "ダーク",
+			"system": "システム",
+			"accent": "アクセント",
+			"font": "フォント",
+			"fontDefault": "標準",
+			"fontSystem": "システム",
+			"density": "コンパクト表示",
+			"densityHelp": "デスクトップで行と操作部を詰めます。",
+			"subtitles": "サイドバーの副題",
+			"subtitlesHelp": "各ドメイン名の下に副題を表示します。",
+			"accents": {
+				"moss": "苔",
+				"fern": "羊歯",
+				"sage": "セージ",
+				"clay": "土",
+				"marigold": "金盞花",
+				"lavender": "ラベンダー",
+				"plum": "梅",
+				"sky": "空",
+				"slate": "石板",
+				"rose": "薔薇"
+			}
+		},
+		"about": {
+			"version": "バージョン",
+			"channel": "チャンネル",
+			"dataDir": "データフォルダ",
+			"notInApp": "ブラウザでは利用できません",
+			"checkForUpdates": "更新を確認",
+			"checking": "更新を確認しています…",
+			"upToDate": "{name} は最新です。",
+			"updateAvailable": "{version} が利用できます。",
+			"updateFailed": "更新を確認できませんでした。",
+			"updatesNotAvailable": "更新の確認はインストール済みのアプリから行います。"
+		},
+		"placeholder": {
+			"title": "まだありません",
+			"text": "このタブは基盤とともに届きます。"
+		}
+	},
+	"crash": {
+		"title": "問題が起きました",
+		"text": "{name} は回復できないエラーに遭遇しました。",
+		"details": "エラーの詳細",
+		"copy": "詳細をコピー",
+		"copied": "コピーしました",
+		"reset": "{name} を再起動",
+		"unknown": "不明なエラー"
+	},
+	"error": {
+		"title": "このページを表示できません",
+		"status": "ステータス {status}",
+		"home": "庭へ戻る"
+	},
+	"empty": {
+		"garden": {
+			"title": "庭にはまだ何もありません",
+			"text": "ドメインにデータが入るとウィジェットが並びます。"
+		},
+		"today": {
+			"title": "今日の予定はありません",
+			"text": "すべてのドメインのタスクと習慣がここに集まります。"
+		},
+		"kitchen": {
+			"title": "冷蔵庫はまだ空です",
+			"text": "買い物を取り込むか手元の食材を加えると、レシピが続きます。",
+			"action": "買い物を取り込む"
+		},
+		"toolbench": {
+			"title": "アイデアはまだありません",
+			"text": "最初のひとつを書き留めると、寝かせた後に浮かび上がります。",
+			"action": "アイデアを書き留める"
+		},
+		"weather": {
+			"title": "予報はまだありません",
+			"text": "自宅の場所を設定すると空が埋まります。"
+		},
+		"more": {
+			"title": "その他",
+			"text": "工房、庭師、設定。"
+		}
+	},
+	"uiKit": {
+		"add": "追加",
+		"save": "保存",
+		"cancel": "キャンセル",
+		"confirm": "確認",
+		"done": "完了",
+		"dismiss": "閉じる",
+		"discard": "破棄",
+		"close": "閉じる",
+		"back": "戻る",
+		"retry": "再試行",
+		"retrying": "再試行中…",
+		"undo": "元に戻す",
+		"select": "選択",
+		"selected": "{0} 件を選択",
+		"more": "その他",
+		"menu": "メニュー",
+		"loading": "読み込み中",
+		"nothingYet": "まだありません。",
+		"addSampleData": "サンプルデータを追加",
+		"unread": "未読",
+		"tabs": "タブ",
+		"on": "オン",
+		"off": "オフ",
+		"noData": "データはまだありません",
+		"gardener": {
+			"name": "庭師",
+			"open": "庭師を開く",
+			"noKeyOnDevice": "この端末にキーがありません"
+		},
+		"statusBar": {
+			"inbox": "受信箱",
+			"sync": "同期",
+			"connect": "接続",
+			"syncNow": "今すぐ同期",
+			"settings": "設定",
+			"domains": "ドメイン",
+			"quickLog": "クイックログ",
+			"label": "ステータスバー"
+		},
+		"sidebar": {
+			"label": "ドメイン",
+			"pinned": "庭師と設定"
+		},
+		"tabBar": {
+			"label": "セクション",
+			"withBadge": "{0}、{1} 件の新着"
+		}
+	}
+}

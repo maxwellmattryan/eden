@@ -14,17 +14,17 @@
 	import type { Snippet } from 'svelte'
 	import type { AriaRole, HTMLAttributes } from 'svelte/elements'
 	import { untrack } from 'svelte'
-	import { anchor as anchored, type AnchorLike } from '$lib/internal/anchor.js'
-	import { dismiss } from '$lib/internal/dismiss.js'
-	import { FOCUSABLE, focusables } from '$lib/internal/focusable.js'
-	import { hasTopLayer, portal } from '$lib/internal/portal.js'
-	import { trapFocus } from '$lib/internal/trap-focus.js'
+	import { anchor as anchored, type AnchorLike } from '../../internal/anchor.js'
+	import { dismiss } from '../../internal/dismiss.js'
+	import { FOCUSABLE, focusables } from '../../internal/focusable.js'
+	import { hasTopLayer, portal } from '../../internal/portal.js'
+	import { trapFocus } from '../../internal/trap-focus.js'
 
 	export type PopoverCloseReason = 'escape' | 'outside' | 'api'
 	/** An element, or anything with `getBoundingClientRect` (a pointer position for a context menu). */
 	export type PopoverAnchor = AnchorLike
 
-	type Props = Omit<HTMLAttributes<HTMLDivElement>, 'role' | 'popover' | 'hidden' | 'children'> & {
+	type Props = Omit<HTMLAttributes<HTMLDivElement>, 'role' | 'popover' | 'hidden' | 'children' | 'onclose'> & {
 		/** What the panel hangs from: an element, or a rect-like object for a context menu at the pointer. */
 		anchor?: AnchorLike | null
 		/** Bindable. Set it to open and close; every close path sets it back to false. */

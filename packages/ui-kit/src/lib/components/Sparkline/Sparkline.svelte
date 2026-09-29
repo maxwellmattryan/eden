@@ -3,7 +3,7 @@
 	// in chart-reference, the axis in chart-axis, the latest point marked. Colour is not the only carrier: the legend
 	// names each line, and the SVG carries one accessible sentence.
 	import type { HTMLAttributes } from 'svelte/elements'
-	import { useStrings } from '$lib/i18n/context.js'
+	import { useStrings } from '../../i18n/context.js'
 	import { sparkline } from './sparkline.js'
 
 	type Props = HTMLAttributes<HTMLDivElement> & {

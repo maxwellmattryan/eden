@@ -1,5 +1,5 @@
 <script module lang="ts">
-	import type { IconName } from '$lib/icons/icons.js'
+	import type { IconName } from '../../icons/icons.js'
 
 	/** One inline action on a notification, rendered as a quiet button. The first is the thing the line asks for. */
 	export interface InboxAction {
@@ -20,8 +20,8 @@
 	// ground one step up (surface-1 against surface-0), never by a heavier line: the voice has one weight. The app
 	// dates the card; the kit shows the string it is given.
 	import type { HTMLAttributes } from 'svelte/elements'
-	import Icon from '$lib/icons/Icon.svelte'
-	import { useStrings } from '$lib/i18n/context.js'
+	import Icon from '../../icons/Icon.svelte'
+	import { useStrings } from '../../i18n/context.js'
 	import Button from '../Button/Button.svelte'
 
 	type Props = HTMLAttributes<HTMLElement> & {

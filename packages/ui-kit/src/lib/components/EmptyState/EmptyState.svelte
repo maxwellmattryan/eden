@@ -4,8 +4,8 @@
 	// the splash and onboarding. Copy is plain and never themed: "Nothing in the fridge yet". Widgets do not use this;
 	// they show a one-line prompt instead.
 	import type { HTMLAttributes } from 'svelte/elements'
-	import type { IconName } from '$lib/icons/icons.js'
-	import { useStrings } from '$lib/i18n/context.js'
+	import type { IconName } from '../../icons/icons.js'
+	import { useStrings } from '../../i18n/context.js'
 	import Button from '../Button/Button.svelte'
 
 	type Props = Omit<HTMLAttributes<HTMLDivElement>, 'title'> & {

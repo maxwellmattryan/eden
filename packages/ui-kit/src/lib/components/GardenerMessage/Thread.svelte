@@ -4,7 +4,7 @@
 	// arrives without leaving the composer. The thread list and the composer are the app's (engineering/ui-kit.md).
 	import type { Snippet } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
-	import { useStrings } from '$lib/i18n/context.js'
+	import { useStrings } from '../../i18n/context.js'
 
 	type Props = Omit<HTMLAttributes<HTMLDivElement>, 'aria-label'> & {
 		/** The log's accessible name; "Conversation with the Gardener" by default. */

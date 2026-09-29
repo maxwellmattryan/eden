@@ -1,6 +1,6 @@
 <script module lang="ts">
-	import type { IconName } from '$lib/icons/icons.js'
-	import type { UiStrings } from '$lib/i18n/strings.js'
+	import type { IconName } from '../../icons/icons.js'
+	import type { UiStrings } from '../../i18n/strings.js'
 
 	export type BadgeKind =
 		| 'read'
@@ -35,8 +35,8 @@
 	// The access-level badges and the small qualifiers on rows. `read` renders nothing at all. A badge is Inter, data
 	// the app holds, and never carries meaning by colour alone: every kind has a glyph or a word.
 	import type { HTMLAttributes } from 'svelte/elements'
-	import Icon from '$lib/icons/Icon.svelte'
-	import { useStrings } from '$lib/i18n/context.js'
+	import Icon from '../../icons/Icon.svelte'
+	import { useStrings } from '../../i18n/context.js'
 
 	type Props = HTMLAttributes<HTMLSpanElement> & {
 		/** read shows nothing; write-draft a pencil, write a check, act-external an arrow in the warning colour; tier the T2 lock; estimated a dashed edge; origin a mono source; warning a clock with a date; ai anything the Gardener produced. */

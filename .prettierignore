@@ -16,3 +16,11 @@ packages/ui-kit/src/lib/tokens/tokens-report.md
 packages/ui-kit/src/lib/tokens/tokens-report.json
 packages/ui-kit/src/lib/icons/icons.ts
 packages/ui-kit/.storybook/preview-head.html
+# the Rust crate (cargo fmt) and the generated mobile projects
+src-tauri
+# locale files keep their own key order and layout
+packages/shared/src/i18n/locales
+# managed by scripts/changelog.mjs
+CHANGELOG.md
+# agent worktrees and local tooling state
+.claude

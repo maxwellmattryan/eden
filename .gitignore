@@ -21,3 +21,17 @@ eden-design-system/
 
 # visual baselines: about 45 MB per theme×platform cell, kept local until OQ-20 decides between Git LFS and a reduced matrix
 packages/ui-kit/src/vrt/__baselines__/*.png
+
+# the Rust crate and the generated mobile projects
+src-tauri/target/
+src-tauri/gen/schemas/
+src-tauri/gen/apple/build/
+src-tauri/gen/apple/xcuserdata/
+src-tauri/gen/apple/Externals/
+src-tauri/gen/android/**/build/
+src-tauri/gen/android/.gradle/
+src-tauri/gen/android/local.properties
+src-tauri/gen/android/app/key.properties
+
+# app build output (adapter-static)
+apps/*/build/

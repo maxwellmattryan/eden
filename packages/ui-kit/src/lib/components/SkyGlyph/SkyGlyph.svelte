@@ -1,6 +1,6 @@
 <script module lang="ts">
-	import type { IconName } from '$lib/icons/icons.js'
-	import type { UiStrings } from '$lib/i18n/strings.js'
+	import type { IconName } from '../../icons/icons.js'
+	import type { UiStrings } from '../../i18n/strings.js'
 
 	/** Every condition Sky reports. */
 	export const CONDITIONS = [
@@ -60,8 +60,8 @@
 	// Until the domain glyph family is drawn (its resting glyph is a sun peeking from behind a cloud) each condition
 	// maps to the nearest Lucide icon, and the change crossfades through Icon.
 	import type { SVGAttributes } from 'svelte/elements'
-	import Icon from '$lib/icons/Icon.svelte'
-	import { useStrings } from '$lib/i18n/context.js'
+	import Icon from '../../icons/Icon.svelte'
+	import { useStrings } from '../../i18n/context.js'
 
 	type Props = Omit<SVGAttributes<SVGSVGElement>, 'name'> & {
 		/** The current condition. */

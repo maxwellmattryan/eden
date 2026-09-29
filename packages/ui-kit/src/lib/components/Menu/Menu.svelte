@@ -1,6 +1,6 @@
 <script module lang="ts">
-	import type { IconName } from '$lib/icons/icons.js'
-	import type { RovingOptions } from '$lib/internal/roving.js'
+	import type { IconName } from '../../icons/icons.js'
+	import type { RovingOptions } from '../../internal/roving.js'
 
 	/** One action. Destructive items render last, after a separator, whatever their position in `items`. */
 	export interface MenuItem {
@@ -36,11 +36,11 @@
 	// (`presentation="auto"` reads data-platform once). `roving` moves focus (arrows, Home, End, first-letter
 	// typeahead); Enter, Space or a click picks, which calls the item's onselect, then the menu's, then closes; Escape
 	// and Tab close without picking. Every close hands focus back to the anchor.
-	import type { AnchorLike } from '$lib/internal/anchor.js'
-	import Icon from '$lib/icons/Icon.svelte'
-	import { useStrings } from '$lib/i18n/context.js'
-	import { platformOf } from '$lib/internal/platform.js'
-	import { roving } from '$lib/internal/roving.js'
+	import type { AnchorLike } from '../../internal/anchor.js'
+	import Icon from '../../icons/Icon.svelte'
+	import { useStrings } from '../../i18n/context.js'
+	import { platformOf } from '../../internal/platform.js'
+	import { roving } from '../../internal/roving.js'
 	import Popover from '../Popover/Popover.svelte'
 	import Sheet from '../Sheet/Sheet.svelte'
 

@@ -5,9 +5,9 @@
 // subtitle); it is never the only place a fact lives, and it never appears on touch.
 import { mount } from 'svelte'
 import type { Attachment } from 'svelte/attachments'
-import { anchor } from '$lib/internal/anchor.js'
-import { dismiss } from '$lib/internal/dismiss.js'
-import { hasTopLayer } from '$lib/internal/portal.js'
+import { anchor } from '../../internal/anchor.js'
+import { dismiss } from '../../internal/dismiss.js'
+import { hasTopLayer } from '../../internal/portal.js'
 import TooltipBubble from './TooltipBubble.svelte'
 
 export interface TooltipOptions {

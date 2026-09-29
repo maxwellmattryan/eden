@@ -9,8 +9,8 @@
 	// its bottom edge fixed, as if it sank into its hole (D-49); a filled button's shadow collapses too. The height follows the platform
 	// through --ed-control unless a size is forced, and the label is set in --ed-t-button, which the brand dial owns.
 	import type { HTMLButtonAttributes } from 'svelte/elements'
-	import type { IconName } from '$lib/icons/icons.js'
-	import Icon from '$lib/icons/Icon.svelte'
+	import type { IconName } from '../../icons/icons.js'
+	import Icon from '../../icons/Icon.svelte'
 
 	/** A button either shows a label or, when it is icon-only, names itself through `aria-label`. */
 	type Named =

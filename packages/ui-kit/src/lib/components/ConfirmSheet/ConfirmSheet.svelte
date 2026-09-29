@@ -5,7 +5,7 @@
 	// repeats the verb, in danger for a destructive write. Reversible writes take an undo toast instead, never this
 	// sheet. Composes Sheet, so Escape and the scrim take the cancel path and focus returns to the opener.
 	import type { HTMLDialogAttributes } from 'svelte/elements'
-	import { useStrings } from '$lib/i18n/context.js'
+	import { useStrings } from '../../i18n/context.js'
 	import Button from '../Button/Button.svelte'
 	import Sheet, { type SheetCloseReason } from '../Sheet/Sheet.svelte'
 

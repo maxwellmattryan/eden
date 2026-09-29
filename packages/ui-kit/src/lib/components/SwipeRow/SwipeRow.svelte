@@ -1,5 +1,5 @@
 <script module lang="ts">
-	import type { IconName } from '$lib/icons/icons.js'
+	import type { IconName } from '../../icons/icons.js'
 
 	/** A swipe action: the label on the revealed button, an optional glyph above it, and what it does. */
 	export interface SwipeAction {
@@ -26,9 +26,9 @@
 	// them. On desktop the children render unchanged. The gesture lives in `swipe.ts`, on the content itself.
 	import type { Snippet } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
-	import Icon from '$lib/icons/Icon.svelte'
-	import { dismiss } from '$lib/internal/dismiss.js'
-	import { platformOf } from '$lib/internal/platform.js'
+	import Icon from '../../icons/Icon.svelte'
+	import { dismiss } from '../../internal/dismiss.js'
+	import { platformOf } from '../../internal/platform.js'
 	import { swipe } from './swipe.js'
 
 	type Props = Omit<HTMLAttributes<HTMLDivElement>, 'children'> & {

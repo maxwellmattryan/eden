@@ -11,11 +11,11 @@
 	// or `onclick` it is a button, otherwise a span. A selectable chip owns its state: it toggles `selected` (bindable)
 	// and then reports through `onselect`, so a parent that binds and one that listens see the same value.
 	import type { HTMLAttributes } from 'svelte/elements'
-	import type { IconName } from '$lib/icons/icons.js'
-	import Icon from '$lib/icons/Icon.svelte'
-	import { useStrings } from '$lib/i18n/context.js'
+	import type { IconName } from '../../icons/icons.js'
+	import Icon from '../../icons/Icon.svelte'
+	import { useStrings } from '../../i18n/context.js'
 
-	type Props = Omit<HTMLAttributes<HTMLElement>, 'onclick'> & {
+	type Props = Omit<HTMLAttributes<HTMLElement>, 'onclick' | 'onselect'> & {
 		/** The text: a unit, a filter, a name, a registry id. */
 		label: string
 		/** neutral labels; accent marks a parsed field or a selected filter; ai and honey are the Gardener's two colours; grey means no key or not connected here; outline is a filter trigger. */

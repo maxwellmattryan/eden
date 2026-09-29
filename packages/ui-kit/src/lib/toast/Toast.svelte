@@ -5,10 +5,10 @@
 	// only; the sentence stays in text-primary. The dismiss button and the action both hand back through `ondismiss`,
 	// the action after its own onclick.
 	import type { HTMLAttributes } from 'svelte/elements'
-	import Icon from '$lib/icons/Icon.svelte'
-	import Button from '$lib/components/Button/Button.svelte'
-	import IconButton from '$lib/components/IconButton/IconButton.svelte'
-	import { useStrings } from '$lib/i18n/context.js'
+	import Icon from '../icons/Icon.svelte'
+	import Button from '../components/Button/Button.svelte'
+	import IconButton from '../components/IconButton/IconButton.svelte'
+	import { useStrings } from '../i18n/context.js'
 	import type { ToastAction } from './toast.svelte.js'
 
 	type Props = HTMLAttributes<HTMLDivElement> & {

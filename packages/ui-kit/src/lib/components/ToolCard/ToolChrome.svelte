@@ -6,8 +6,8 @@
 	// beside the check (D-42), never for a card that mounts already done. Nothing pops.
 	import { untrack, type Snippet } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
-	import type { IconName } from '$lib/icons/icons.js'
-	import Icon from '$lib/icons/Icon.svelte'
+	import type { IconName } from '../../icons/icons.js'
+	import Icon from '../../icons/Icon.svelte'
 	import Breeze from '../Breeze/Breeze.svelte'
 
 	type Props = HTMLAttributes<HTMLDivElement> & {

@@ -1,5 +1,5 @@
 <script module lang="ts">
-	import type { IconName } from '$lib/icons/icons.js'
+	import type { IconName } from '../../icons/icons.js'
 
 	/** One entry of the domain nav or of the pinned pair at the bottom. */
 	export interface SidebarEntry {
@@ -23,11 +23,11 @@
 	// shortcuts are off by default. The whole nav is one tab stop: arrows, Home and End and typing a name move focus
 	// through `roving`; Enter or a click makes an item current. There is no sidebar on mobile: BottomTabBar instead.
 	import type { HTMLAttributes } from 'svelte/elements'
-	import { useStrings } from '$lib/i18n/context.js'
-	import { roving } from '$lib/internal/roving.js'
+	import { useStrings } from '../../i18n/context.js'
+	import { roving } from '../../internal/roving.js'
 	import SidebarItem from '../SidebarItem/SidebarItem.svelte'
 
-	type Props = Omit<HTMLAttributes<HTMLElement>, 'children'> & {
+	type Props = Omit<HTMLAttributes<HTMLElement>, 'children' | 'onselect'> & {
 		/** Garden, Today, then the enabled domains in the owner's order. */
 		items: SidebarEntry[]
 		/** Gardener and Settings, pinned at the bottom. */

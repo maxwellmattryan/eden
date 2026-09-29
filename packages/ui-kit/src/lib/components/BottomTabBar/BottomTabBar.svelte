@@ -1,5 +1,5 @@
 <script module lang="ts">
-	import type { IconName } from '$lib/icons/icons.js'
+	import type { IconName } from '../../icons/icons.js'
 
 	/** One tab of the mobile shell. */
 	export interface BottomTab {
@@ -20,11 +20,11 @@
 	// folds into the tab's name. The bar is one tab stop: arrows, Home and End move focus through `roving`; Enter or a
 	// tap selects. The kit renders a block that pads the bottom safe-area inset; the app pins it to the viewport.
 	import type { HTMLAttributes } from 'svelte/elements'
-	import Icon from '$lib/icons/Icon.svelte'
-	import { useStrings } from '$lib/i18n/context.js'
-	import { roving } from '$lib/internal/roving.js'
+	import Icon from '../../icons/Icon.svelte'
+	import { useStrings } from '../../i18n/context.js'
+	import { roving } from '../../internal/roving.js'
 
-	type Props = Omit<HTMLAttributes<HTMLElement>, 'children'> & {
+	type Props = Omit<HTMLAttributes<HTMLElement>, 'children' | 'onselect'> & {
 		/** The tabs, five at most. */
 		items: BottomTab[]
 		/** The current tab's id. Bindable. */

@@ -7,8 +7,8 @@
 	// (scale .98 and fade); reduced motion fades only.
 	import type { Snippet } from 'svelte'
 	import type { HTMLDialogAttributes } from 'svelte/elements'
-	import { platformOf } from '$lib/internal/platform.js'
-	import { trapFocus } from '$lib/internal/trap-focus.js'
+	import { platformOf } from '../../internal/platform.js'
+	import { trapFocus } from '../../internal/trap-focus.js'
 
 	export type SheetCloseReason = 'escape' | 'scrim' | 'api'
 	export type SheetPlacement = 'auto' | 'bottom' | 'center' | 'side'

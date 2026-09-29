@@ -9,7 +9,7 @@ updated: 2026-09-28
 
 ## Where it lives
 
-The kit is the workspace package `@eden/ui-kit` at `packages/ui-kit` (D-43). Apps in `apps/*` depend on it by exact version (Yarn 1 has no `workspace:` protocol) and consume it from source: `exports` point at `src/lib`, so Vite compiles the kit with the app and HMR crosses the package boundary. `svelte-package` plus `publint` run as a build gate so the package would also stand alone; `svelte-package` copies stories and tests into `dist` (it has no exclude), so `scripts/prune-dist.mjs` removes them and the gallery-only fonts before `publint` checks the tarball. The toolchain is pinned in D-44.
+The kit is the workspace package `@eden/ui-kit` at `packages/ui-kit` (D-43). Apps in `apps/*` depend on it by exact version (Yarn 1 has no `workspace:` protocol) and consume it from source: `exports` point at `src/lib`, so Vite compiles the kit with the app and HMR crosses the package boundary. `apps/desktop` and `apps/mobile` do so today (`engineering/app-scaffold.md`), with `@eden/shared` beside the kit for the code the two apps share. `svelte-package` plus `publint` run as a build gate so the package would also stand alone; `svelte-package` copies stories and tests into `dist` (it has no exclude), so `scripts/prune-dist.mjs` removes them and the gallery-only fonts before `publint` checks the tarball. The toolchain is pinned in D-44.
 
 The package is SvelteKit-shaped because `svelte-package`, `svelte-check` and the Storybook framework expect it; the one route only points at Storybook. The kit never imports `$app/*` or `svelte/store` (ESLint forbids both).
 
@@ -82,8 +82,8 @@ Newsreader (upright and italic), Inter and Geist Mono ship from `src/lib/fonts`,
 ```svelte
 <script lang="ts">
 	import type { HTMLButtonAttributes } from 'svelte/elements'
-	import type { IconName } from '$lib/icons/icons.js'
-	import Icon from '$lib/icons/Icon.svelte'
+	import type { IconName } from '../../icons/icons.js'
+	import Icon from '../../icons/Icon.svelte'
 
 	type Props = HTMLButtonAttributes & {
 		/** Sentence-case verb. Omit only for an icon-only button, which then needs `aria-label`. */
@@ -108,7 +108,8 @@ Newsreader (upright and italic), Inter and Geist Mono ship from `src/lib/fonts`,
 
 | rule | why | enforced by |
 |---|---|---|
-| `<script lang="ts">`, `type Props` with a JSDoc line per prop, `class: className`, `...rest` typed from `svelte/elements` when the root is a native element | attachments and `aria-*` pass through; consumers get types | svelte-check, review |
+| `<script lang="ts">`, `type Props` with a JSDoc line per prop, `class: className`, `...rest` typed from `svelte/elements` when the root is a native element; a callback prop that shares a DOM handler's name (`onselect`, `onchange`, `onclose`, `oncancel`) is `Omit`ted from the element type first | attachments and `aria-*` pass through; consumers get types, and a callback's signature is not intersected with the DOM event's | svelte-check, the apps' svelte-check, review |
+| imports inside `src/lib` are relative, never `$lib/…` | the apps compile the kit from source through the workspace symlink, where `$lib` is the app's own alias (`engineering/app-scaffold.md`) | the apps' `yarn check` and `yarn build` |
 | callback props and snippets; `$bindable` only where `ui-kit-components.md` says so | one data-flow convention | review |
 | keyed `{#each}`; list props carry an `id` | stable identity, no duplicate-key crashes | ESLint `svelte/require-each-key` |
 | `$derived` for derived state; `$effect` only to drive an imperative DOM API, tagged `// effect: imperative DOM` | no state syncing in effects | review |

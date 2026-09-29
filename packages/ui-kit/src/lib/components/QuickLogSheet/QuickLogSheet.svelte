@@ -1,5 +1,5 @@
 <script module lang="ts">
-	import type { IconName } from '$lib/icons/icons.js'
+	import type { IconName } from '../../icons/icons.js'
 
 	export type QuickLogKind = 'number' | 'text' | 'check'
 
@@ -42,7 +42,7 @@
 	// draft, keyed by the log's id, so switching away and back loses nothing; a save clears that draft and, unless the
 	// panel is embedded (the status bar's popover), closes the sheet. The caller writes with undo and shows the toast.
 	import type { HTMLAttributes } from 'svelte/elements'
-	import { useStrings } from '$lib/i18n/context.js'
+	import { useStrings } from '../../i18n/context.js'
 	import Button from '../Button/Button.svelte'
 	import Chip from '../Chip/Chip.svelte'
 	import Field from '../Field/Field.svelte'
