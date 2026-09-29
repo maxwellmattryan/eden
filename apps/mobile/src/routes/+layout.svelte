@@ -74,6 +74,8 @@
 
 <style>
 	.content {
+		display: flex;
+		flex-direction: column;
 		min-height: 100dvh;
 		box-sizing: border-box;
 		padding: calc(var(--ed-safe-top) + var(--ed-gutter)) calc(var(--ed-safe-right) + var(--ed-gutter))

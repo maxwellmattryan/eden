@@ -51,6 +51,9 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
+		justify-content: center;
+		/* In a column flex parent it takes the space left under the page header and centres within it */
+		flex: 1 1 auto;
 		text-align: center;
 		gap: var(--space-3);
 		box-sizing: border-box;

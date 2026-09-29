@@ -212,6 +212,8 @@
 		grid-row: 1;
 		grid-column: 2;
 		overflow: auto;
+		display: flex;
+		flex-direction: column;
 		padding: var(--ed-gutter) var(--space-6);
 	}
 	/* The arrow is centred over the page header's glyph: each page insets itself by the gutter, and the arrow's box

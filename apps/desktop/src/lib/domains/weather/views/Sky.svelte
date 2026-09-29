@@ -818,6 +818,9 @@
 		min-width: 0;
 	}
 	.area-empty {
+		display: flex;
+		flex: 1 0 auto;
+		flex-direction: column;
 		grid-column: 1 / -1;
 	}
 	/* An alert and the note read whole: the strip wraps its sentence rather than trimming it */
