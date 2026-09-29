@@ -1,13 +1,32 @@
 name: ci.build
 
+# The triggers follow ci.frontend, narrowed to what can break the native build: the crate, the toolchain pin and the
+# Tauri CLI. A frontend-only change is proven by ci.frontend's yarn build.
 on:
   push:
-    branches: ['**']
+    branches: [develop]
+    paths:
+      - 'src-tauri/**'
+      - 'rust-toolchain.toml'
+      - 'package.json'
+      - 'yarn.lock'
+      - '.github/workflows/ci.build.yml'
   pull_request:
+    branches: [develop]
+    paths:
+      - 'src-tauri/**'
+      - 'rust-toolchain.toml'
+      - 'package.json'
+      - 'yarn.lock'
+      - '.github/workflows/ci.build.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+# No debuginfo in the dev profile: it is most of the link time and of the cached target dir, and CI never debugs.
+env:
+  CARGO_PROFILE_DEV_DEBUG: '0'
 
 # dtolnay/rust-toolchain needs the channel as an input; each job's pin step reads it from rust-toolchain.toml so the pin
 # lives in one place.
@@ -46,36 +65,13 @@ jobs:
       - run: yarn install --frozen-lockfile
       # The apps compile the kit from source, and the kit's tsconfig extends the one svelte-kit generates.
       - run: yarn workspace @eden/ui-kit svelte-kit sync
-      # Updater artifacts are off: a CI build has no signing key, and the release workflow is where they are made.
-      - name: Build (macOS universal)
-        if: matrix.os == 'macos-latest'
-        run: yarn tauri build --target universal-apple-darwin --config '{"bundle":{"createUpdaterArtifacts":false}}' --features desktop
-      - name: Build (Windows)
-        if: matrix.os == 'windows-latest'
-        run: yarn tauri build --config '{"bundle":{"createUpdaterArtifacts":false}}' --features desktop
+      # A debug build for the host arch, bundled, proves the crate and the bundle config compile on each OS; the optimized
+      # universal build (two full release compiles) is cd.release's job. Updater artifacts are off: a CI build has no
+      # signing key, and the release workflow is where they are made.
+      - run: yarn tauri build --debug --config '{"bundle":{"createUpdaterArtifacts":false}}' --features desktop
 
-  # Mobile targets are compile-checked only (no bundle) so a desktop change that leaks into shared code cannot break the
-  # mobile build unnoticed.
-  ios:
-    name: cargo check (ios)
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Read the pinned Rust toolchain
-        id: pin
-        shell: bash
-        run: echo "channel=$(grep -m1 '^channel' rust-toolchain.toml | cut -d'"' -f2)" >> "$GITHUB_OUTPUT"
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ steps.pin.outputs.channel }}
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
-          shared-key: mobile-ios
-          cache-on-failure: true
-          save-if: ${{ github.ref == 'refs/heads/develop' }}
-      - run: cargo check --manifest-path src-tauri/Cargo.toml --target aarch64-apple-ios --no-default-features --features mobile
-
+  # Android is compile-checked only (no bundle) so a desktop change that leaks into shared code cannot break the mobile
+  # build unnoticed. iOS needs no job here: ci.rust's clippy already compiles the mobile feature for aarch64-apple-ios.
   android:
     name: cargo check (android)
     runs-on: ubuntu-latest

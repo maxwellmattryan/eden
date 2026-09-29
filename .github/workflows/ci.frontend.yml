@@ -1,9 +1,12 @@
 name: ci.frontend
 
+# A push to develop, and a pull request into develop (every push to its branch re-runs it); a branch without a pull
+# request runs nothing, so a commit is never checked twice.
 on:
   push:
-    branches: ['**']
+    branches: [develop]
   pull_request:
+    branches: [develop]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
