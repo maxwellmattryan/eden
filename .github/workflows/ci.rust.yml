@@ -14,26 +14,28 @@ on:
       - '.github/workflows/ci.rust.yml'
 
 concurrency:
-  group: ci-rust-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# dtolnay/rust-toolchain needs the channel as an input; each job's pin step reads it from rust-toolchain.toml so the pin
+# lives in one place.
 jobs:
   fmt:
     name: cargo fmt
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # dtolnay/rust-toolchain needs the channel as an input; it is read from rust-toolchain.toml so the pin lives in one place
-      - id: pin
-        run: echo "channel=$(grep -m1 '^channel' rust-toolchain.toml | cut -d'"' -f2)" >> "$GITHUB_OUTPUT"
+      - name: Read the pinned Rust toolchain
+        id: pin
         shell: bash
+        run: echo "channel=$(grep -m1 '^channel' rust-toolchain.toml | cut -d'"' -f2)" >> "$GITHUB_OUTPUT"
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ steps.pin.outputs.channel }}
       - run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
 
   clippy:
-    name: clippy and tests (${{ matrix.features }})
+    name: cargo clippy and test (${{ matrix.features }})
     runs-on: macos-latest
     strategy:
       fail-fast: false
@@ -47,17 +49,17 @@ jobs:
             target: --target aarch64-apple-ios --no-default-features
     steps:
       - uses: actions/checkout@v4
-      # dtolnay/rust-toolchain needs the channel as an input; it is read from rust-toolchain.toml so the pin lives in one place
-      - id: pin
-        run: echo "channel=$(grep -m1 '^channel' rust-toolchain.toml | cut -d'"' -f2)" >> "$GITHUB_OUTPUT"
+      - name: Read the pinned Rust toolchain
+        id: pin
         shell: bash
+        run: echo "channel=$(grep -m1 '^channel' rust-toolchain.toml | cut -d'"' -f2)" >> "$GITHUB_OUTPUT"
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ steps.pin.outputs.channel }}
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-          shared-key: ${{ matrix.features }}
+          shared-key: clippy-${{ matrix.features }}
           cache-on-failure: true
           save-if: ${{ github.ref == 'refs/heads/develop' }}
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml ${{ matrix.target }} --features ${{ matrix.features }} -- -D warnings

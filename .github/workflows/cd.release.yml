@@ -16,9 +16,15 @@ on:
         type: boolean
         default: false
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+# dtolnay/rust-toolchain needs the channel as an input; each job's pin step reads it from rust-toolchain.toml so the pin
+# lives in one place.
 jobs:
   validate:
-    name: Validate
+    name: validate
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.validate.outputs.version }}
@@ -112,17 +118,13 @@ jobs:
           path: release_notes.md
 
   build:
-    name: Build ${{ matrix.os }}
+    name: tauri build (${{ matrix.os }})
     needs: validate
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: macos-latest
-            artifact_name: macos
-          - os: windows-latest
-            artifact_name: windows
+        os: [macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -139,7 +141,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-          shared-key: build-${{ matrix.os }}
+          shared-key: desktop-${{ matrix.os }}
           cache-on-failure: true
           save-if: 'false'
 
@@ -245,10 +247,10 @@ jobs:
             src-tauri/target/release/bundle/nsis/*.exe.sig
 
   android:
-    name: Build Android APK
+    name: tauri android build (apk)
     needs: validate
     # Off until the Android project is generated (gen/android needs a JDK 17 or 21 on the owner's machine, see
-    # docs/engineering/app-scaffold.md); the release job treats a skipped Android build as non-blocking.
+    # docs/engineering/app-scaffold.md); the publish job treats a skipped Android build as non-blocking.
     if: false
     runs-on: ubuntu-latest
     steps:
@@ -352,7 +354,7 @@ jobs:
             ${{ steps.artifacts.outputs.sha256 }}
 
   ios:
-    name: Build iOS (ad-hoc)
+    name: tauri ios build (ad-hoc)
     needs: validate
     runs-on: macos-latest
     steps:
@@ -493,8 +495,8 @@ jobs:
         if: always()
         run: security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" 2>/dev/null || true
 
-  release:
-    name: Publish
+  publish:
+    name: publish
     needs: [validate, build, android, ios]
     # A release is published when validate and both desktop builds succeed; a mobile job that was skipped (Android
     # off, iOS without secrets) does not block, a mobile job that failed does.

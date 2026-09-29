@@ -4,7 +4,7 @@ status: draft
 summary: "`@eden/ui-kit` in `packages/ui-kit`: how it is built and consumed, the token pipeline and its generated files, the root attributes, fonts, icons, component conventions and internal primitives, the strings boundary, Storybook as the acceptance surface, and the gates CI runs."
 read-this-if: You are adding or changing a component, a token or an icon, or wiring an app to the kit.
 depends-on: [design/visual-language, design/ux-patterns, design/brand]
-updated: 2026-09-28
+updated: 2026-09-29
 ---
 
 ## Where it lives
@@ -165,7 +165,7 @@ A page is mocked in the kit's Storybook before it is built (D-54): `packages/ui-
 | `yarn build` | `svelte-package` and `publint` | the package builds standalone |
 | `yarn storybook:build` | the static gallery | builds |
 
-CI (`.github/workflows/ci.yml`) runs them on every push. Visual baselines (`scripts/vrt.mjs`, `{light, dark} × {desktop, mobile}` per story) are generated artifacts and never committed (D-50): `.github/workflows/vrt.yml` regenerates them on `main` and uploads them as a workflow artifact, and on a pull request downloads the latest set and fails on a pixel difference above 0.1 %. Locally `yarn vrt:update` writes them git-ignored and `yarn vrt` compares.
+CI (`.github/workflows/ci.frontend.yml`) runs them on every push. Visual baselines (`scripts/vrt.mjs`, `{light, dark} × {desktop, mobile}` per story) are generated artifacts and never committed (D-50): `.github/workflows/vrt.yml` regenerates them on `main` and uploads them as a workflow artifact, and on a pull request downloads the latest set and fails on a pixel difference above 0.1 %. Locally `yarn vrt:update` writes them git-ignored and `yarn vrt` compares.
 
 The paper grain is a full-size pseudo-element, and axe cannot see through one: without `ignorePseudo` on the colour-contrast check it marks every contrast result incomplete instead of failing it, and the gate is inert. The a11y config sets it. Known tension: `text-tertiary` at 12 or 13 px in light sits at 3.3:1 and fails axe's colour-contrast rule. Components use it only where `design/visual-language.md` allows (metadata a reader can do without) and mark that element with `data-tertiary`, the one attribute the a11y config exempts from the contrast rule; nothing else is exempted.
 

@@ -6,9 +6,11 @@ on:
   pull_request:
 
 concurrency:
-  group: ci-build-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# dtolnay/rust-toolchain needs the channel as an input; each job's pin step reads it from rust-toolchain.toml so the pin
+# lives in one place.
 jobs:
   build:
     name: tauri build (${{ matrix.os }})
@@ -19,10 +21,10 @@ jobs:
         os: [macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
-      # dtolnay/rust-toolchain needs the channel as an input; it is read from rust-toolchain.toml so the pin lives in one place
-      - id: pin
-        run: echo "channel=$(grep -m1 '^channel' rust-toolchain.toml | cut -d'"' -f2)" >> "$GITHUB_OUTPUT"
+      - name: Read the pinned Rust toolchain
+        id: pin
         shell: bash
+        run: echo "channel=$(grep -m1 '^channel' rust-toolchain.toml | cut -d'"' -f2)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
@@ -33,7 +35,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-          shared-key: build-${{ matrix.os }}
+          shared-key: desktop-${{ matrix.os }}
           cache-on-failure: true
           save-if: ${{ github.ref == 'refs/heads/develop' }}
       - name: Install Strawberry Perl (Windows)
@@ -55,14 +57,14 @@ jobs:
   # Mobile targets are compile-checked only (no bundle) so a desktop change that leaks into shared code cannot break the
   # mobile build unnoticed.
   ios:
-    name: cargo check (iOS)
+    name: cargo check (ios)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      # dtolnay/rust-toolchain needs the channel as an input; it is read from rust-toolchain.toml so the pin lives in one place
-      - id: pin
-        run: echo "channel=$(grep -m1 '^channel' rust-toolchain.toml | cut -d'"' -f2)" >> "$GITHUB_OUTPUT"
+      - name: Read the pinned Rust toolchain
+        id: pin
         shell: bash
+        run: echo "channel=$(grep -m1 '^channel' rust-toolchain.toml | cut -d'"' -f2)" >> "$GITHUB_OUTPUT"
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ steps.pin.outputs.channel }}
@@ -75,14 +77,14 @@ jobs:
       - run: cargo check --manifest-path src-tauri/Cargo.toml --target aarch64-apple-ios --no-default-features --features mobile
 
   android:
-    name: cargo check (Android)
+    name: cargo check (android)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # dtolnay/rust-toolchain needs the channel as an input; it is read from rust-toolchain.toml so the pin lives in one place
-      - id: pin
-        run: echo "channel=$(grep -m1 '^channel' rust-toolchain.toml | cut -d'"' -f2)" >> "$GITHUB_OUTPUT"
+      - name: Read the pinned Rust toolchain
+        id: pin
         shell: bash
+        run: echo "channel=$(grep -m1 '^channel' rust-toolchain.toml | cut -d'"' -f2)" >> "$GITHUB_OUTPUT"
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ steps.pin.outputs.channel }}

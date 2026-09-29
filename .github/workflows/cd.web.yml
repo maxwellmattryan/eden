@@ -14,12 +14,12 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: ${{ github.workflow }}
   cancel-in-progress: false
 
 jobs:
   deploy:
-    name: GitHub Pages
+    name: deploy (github pages)
     runs-on: ubuntu-latest
     environment:
       name: github-pages
