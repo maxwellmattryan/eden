@@ -59,8 +59,8 @@ describe('sunArc', () => {
 	it('writes the two times under their crossings when they have room', () => {
 		const labels = { sunrise: '07:22', sunset: '19:14' }
 		const geo = arc(at(7, 22), at(19, 14), at(12), { ...options, labels })
-		expect(geo.labels.sunrise).toBeCloseTo(geo.rise.x - 20, 0)
-		expect(geo.labels.sunset).toBeCloseTo(geo.set.x - 20, 0)
+		expect(geo.labels?.sunrise).toBeCloseTo(geo.rise.x - 20, 0)
+		expect(geo.labels?.sunset).toBeCloseTo(geo.set.x - 20, 0)
 		expect(arc(at(10), at(14), at(12), { ...options, labels }).labels).toBeNull()
 		expect(arc(at(6), at(18), at(12), options).labels).toBeNull()
 	})
