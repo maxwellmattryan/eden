@@ -1,17 +1,21 @@
 <script lang="ts">
 	// The mobile shell (product/substrate/shell.md, Mobile): the page, the bottom tab bar pinned to the viewport
 	// (Garden, Today, Hearth, Sky, More), and the overlays (toast, the settings sheet, crash). It mounts the shared
-	// pieces once: settings, i18n, the global error handler. No updater: mobile updates through the stores.
+	// pieces once: settings, i18n, the global error handler. No updater: mobile updates through the stores. The splash
+	// covers it until they are ready, then fades out as the shell fades in.
 	import '../app.css'
 	import { onMount } from 'svelte'
 	import { goto } from '$app/navigation'
 	import { resolve } from '$app/paths'
 	import { page } from '$app/state'
+	import { env } from '$env/dynamic/public'
 	import { BottomTabBar, ToastHost, UiKitProvider, domainGlyph, iconFor, type BottomTab } from '@eden/ui-kit'
 	import { initializeI18n, locale, t, uiKitStrings } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { weather } from '@eden/shared/weather'
+	import { dismissSplash, splashVisible } from '@eden/shared/stores'
 	import CrashScreen from '$lib/components/CrashScreen.svelte'
+	import SplashScreen from '$lib/components/SplashScreen.svelte'
 	import { useGlobalErrorHandler } from '$lib/hooks/useGlobalErrorHandler'
 	import SettingsSheet from '$lib/settings/SettingsSheet.svelte'
 
@@ -51,7 +55,9 @@
 	onMount(() => {
 		const cleanupErrors = useGlobalErrorHandler()
 		settings.load()
-		initializeI18n(settings.language)
+		void initializeI18n(settings.language)
+			.catch(() => null)
+			.then(dismissSplash)
 		void weather.load().catch(() => null)
 		const skyTimer = setInterval(() => void weather.load().catch(() => null), WEATHER_INTERVAL)
 		return () => {
@@ -62,17 +68,29 @@
 	})
 </script>
 
+<SplashScreen show={$splashVisible} version={env.PUBLIC_APP_VERSION ?? ''} />
+
 <UiKitProvider strings={uiKitStrings($locale)}>
-	<main class="content">
-		{@render children()}
-	</main>
-	<BottomTabBar class="tabs" items={tabs} {current} {onselect} />
+	<div class={['shell', $splashVisible && 'shell-waiting']}>
+		<main class="content">
+			{@render children()}
+		</main>
+		<BottomTabBar class="tabs" items={tabs} {current} {onselect} />
+	</div>
 	<ToastHost />
 	<SettingsSheet />
 	<CrashScreen />
 </UiKitProvider>
 
 <style>
+	.shell {
+		transition: opacity var(--ed-duration-settle) var(--ed-ease-out);
+	}
+	/* Under the splash the shell is laid out but neither seen nor reachable */
+	.shell-waiting {
+		opacity: 0;
+		pointer-events: none;
+	}
 	.content {
 		display: flex;
 		flex-direction: column;

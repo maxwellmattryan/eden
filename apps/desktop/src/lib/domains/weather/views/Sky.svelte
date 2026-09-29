@@ -605,30 +605,34 @@
 									</p>
 								</div>
 							</div>
-							{#if trend.length > 1}
-								<!-- the day's shape beside the reading: where the temperature goes over the coming hours -->
-								<div class="now-trend">
-									<TrendChart
-										step={10}
-										height={144}
-										values={trend.map((hour) => hour.temp)}
-										labels={trend.map((hour) => hour.tick)}
-										format={(value) => $t('domains.weather.value.degrees', { values: { value } })}
-										label={$t('domains.weather.trend.label', {
-											values: {
-												from: trend[0]?.label,
-												to: trend.at(-1)?.label,
-												low: Math.min(...trend.map((hour) => hour.temp)),
-												high: Math.max(...trend.map((hour) => hour.temp)),
-											},
-										})}
-									/>
-								</div>
-							{/if}
-							{#if sun}
-								<!-- and the light's: the sun on its wave, where the day has reached -->
-								<div class="now-sun">
-									<SunArc {...sun} height={144} />
+							{#if trend.length > 1 || sun}
+								<div class="now-charts">
+									{#if trend.length > 1}
+										<!-- the day's shape beside the reading: where the temperature goes over the coming hours -->
+										<div class="now-trend">
+											<TrendChart
+												step={10}
+												height={144}
+												values={trend.map((hour) => hour.temp)}
+												labels={trend.map((hour) => hour.tick)}
+												format={(value) => $t('domains.weather.value.degrees', { values: { value } })}
+												label={$t('domains.weather.trend.label', {
+													values: {
+														from: trend[0]?.label,
+														to: trend.at(-1)?.label,
+														low: Math.min(...trend.map((hour) => hour.temp)),
+														high: Math.max(...trend.map((hour) => hour.temp)),
+													},
+												})}
+											/>
+										</div>
+									{/if}
+									{#if sun}
+										<!-- and the light's: the sun on its wave, where the day has reached -->
+										<div class="now-sun">
+											<SunArc {...sun} height={144} />
+										</div>
+									{/if}
 								</div>
 							{/if}
 						</div>
@@ -954,7 +958,7 @@
 	}
 	.cols-wide {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) var(--sheet-sm);
+		grid-template-columns: minmax(0, 1fr) calc(var(--sheet-sm) - var(--space-3));
 	}
 	.col {
 		display: flex;
@@ -1005,16 +1009,25 @@
 		font-variation-settings: var(--ed-t-title-opsz);
 		color: var(--text-secondary);
 	}
-	/* Now: the reading on one side, the day's shape on the other; they stack when the card is narrow */
+	/* Now: the reading and the day's two shapes on one row. The reading keeps its own width; the shapes share what is
+	   left, equal in width and height. Only when a shape would be too narrow to read does the pair drop below. */
 	.now-split {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: var(--space-4) var(--space-8);
+		gap: var(--space-4) var(--space-6);
+	}
+	.now-charts {
+		flex: 1 1 calc(var(--space-8) * 7.5 + var(--space-4));
+		display: grid;
+		grid-auto-flow: column;
+		grid-auto-columns: minmax(0, 1fr);
+		align-items: stretch;
+		gap: var(--space-4);
+		min-width: 0;
 	}
 	.now-trend,
 	.now-sun {
-		flex: 1 1 calc(var(--space-8) * 8);
 		min-width: 0;
 	}
 	.now-row {

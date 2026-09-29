@@ -57,12 +57,21 @@ env_logger = "0.11"
 semver = "1.0"
 sysinfo = "0.37"
 thiserror = "2.0"
+# The workspace database (docs/engineering/data-layer.md): SQLCipher built from source with its own OpenSSL, so every
+# target links the same encrypted SQLite and nothing depends on a system library.
+rusqlite = { version = "0.38.0", features = ["bundled-sqlcipher-vendored-openssl"] }
 
 # iOS unified logging: a normally-launched app's stderr is discarded by iOS, so `env_logger` output never reaches
 # Console.app. `oslog` routes the `log` facade to os_log under the app's identifier as subsystem.
+# `security-framework` holds the database key in the Keychain; already in the tree through Tauri.
 [target.'cfg(target_os = "ios")'.dependencies]
 oslog = "0.2"
+security-framework = "3.7"
+security-framework-sys = "2"
 
 # Android counterpart: stderr never reaches logcat, so route the `log` facade there.
+# `jni` and `ndk-context` reach the Keystore-backed database key (`android/EdenDbKey.kt`); already in the tree.
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.15"
+jni = "0.21"
+ndk-context = "0.1"

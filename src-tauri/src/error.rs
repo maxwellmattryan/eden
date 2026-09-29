@@ -12,10 +12,16 @@ pub enum EdenError {
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
 
+    #[error("Database error: {0}")]
+    Database(#[from] rusqlite::Error),
+
+    /// The database key could not be read from, or written to, the platform's key store.
+    #[error("Key storage error: {0}")]
+    KeyStorage(String),
+
     #[error("Invalid operation: {0}")]
     InvalidOperation(String),
 
-    #[allow(dead_code)]
     #[error("Internal lock error")]
     LockPoisoned,
 }
