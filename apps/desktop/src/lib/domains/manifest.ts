@@ -3,10 +3,11 @@
 // quick actions. Resources, reads, tools, signals, intents and the palette arrive with the registry work, which will
 // grow this type rather than replace it.
 import type { Component } from 'svelte'
+import type { ResolvedPathname } from '$app/types'
 import type { DomainId, IconName, WidgetSize } from '@eden/ui-kit'
 
-/** The routes a domain may own; the literal union is what `resolve()` accepts. */
-export type DomainRoute = '/kitchen' | '/toolbench' | '/weather'
+/** The route ids a domain may own; a page with tabs takes the tab as an optional parameter. */
+export type DomainRoute = '/kitchen/[[tab]]' | '/toolbench/[[tab]]' | '/weather'
 
 /** A Garden tile the domain contributes; it computes locally from the domain's store, never from a model. */
 export interface WidgetDeclaration {
@@ -40,8 +41,11 @@ export interface DomainManifest {
 	subtitle: string
 	/** `domainGlyph(id)`. */
 	glyph: IconName
-	/** The page, with its tab ids in order when the page has a segmented control. */
-	routes: { path: DomainRoute; tabs?: readonly string[] }
+	/**
+	 * The page: its route id, its href through `resolve()` for the sidebar, `open()` for a button (a `goto` with the
+	 * `resolve()` call inline, which is what the navigation lint accepts), and its tab ids in order when it has tabs.
+	 */
+	routes: { path: DomainRoute; href: ResolvedPathname; open: () => void; tabs?: readonly string[] }
 	widgets: WidgetDeclaration[]
 	quickActions: QuickAction[]
 	/** Loads the domain's store; the Garden calls it for every domain, the domain's own page for itself. */

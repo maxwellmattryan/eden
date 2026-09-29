@@ -72,13 +72,119 @@
 		},
 		"feed": {
 			"yesterday": "昨日 {time}",
-			"sampleAdded": "{domain}にサンプルデータを追加"
+			"sampleAdded": "{domain}にサンプルデータを追加",
+			"stockAdded": "{name}を在庫に追加",
+			"stockRemoved": "{name}を在庫から削除",
+			"stockMoved": "{name}を{location}へ移動",
+			"groceryAdded": "{name}を買い物リストに追加",
+			"groceryChecked": "{name}をチェック",
+			"groceryCleared": "チェック済み{count}件を整理"
 		}
 	},
 	"domains": {
 		"kitchen": {
 			"name": "台所",
-			"subtitle": "食材、レシピ、買い物"
+			"subtitle": "食材、レシピ、買い物",
+			"tabs": {
+				"stock": "在庫",
+				"recipes": "レシピ",
+				"grocery": "買い物",
+				"tips": "保存のコツ"
+			},
+			"tabsLabel": "台所のセクション",
+			"saveFailed": "変更を保存できませんでした。",
+			"capture": {
+				"action": "買い物を撮る",
+				"notYet": "撮影は庭師とともに届きます。"
+			},
+			"stock": {
+				"add": "追加",
+				"addPlaceholder": "在庫に追加",
+				"expiring": "期限間近",
+				"lowStock": "残りわずか",
+				"sortExpiry": "並び順: 期限",
+				"locations": {
+					"fridge": "冷蔵庫",
+					"freezer": "冷凍庫",
+					"pantry": "食品庫",
+					"counter": "カウンター"
+				},
+				"badge": {
+					"lowStock": "残りわずか",
+					"thisWeek": "今週"
+				},
+				"empty": {
+					"title": "在庫はまだありません",
+					"text": "買い物を撮ると、場所ごとに推定期限つきでここに並びます。"
+				},
+				"detail": {
+					"quantity": "数量",
+					"location": "場所",
+					"expires": "期限",
+					"category": "分類",
+					"source": "出所",
+					"threshold": "残りわずかの基準",
+					"tip": "保存のコツ"
+				},
+				"source": {
+					"manual": "手入力",
+					"capture": "撮影",
+					"sample": "サンプル"
+				},
+				"actions": {
+					"moveTo": "{location}へ移動",
+					"move": "移動",
+					"addToGrocery": "買い物リストへ",
+					"delete": "削除"
+				},
+				"toast": {
+					"added": "{name}を在庫に追加しました。",
+					"removed": "{name}を在庫から削除しました。",
+					"moved": "{name}を{location}へ移動しました。",
+					"addedToGrocery": "{name}を買い物リストに追加しました。"
+				}
+			},
+			"grocery": {
+				"add": "追加",
+				"addPlaceholder": "リストに追加",
+				"clearChecked": "チェック済みを整理",
+				"checked": "{total}件中{checked}件チェック済み",
+				"allChecked": "すべてチェック済みです。帰ったらリストを整理しましょう。",
+				"empty": {
+					"title": "リストは空です",
+					"text": "一行で追加するか、レシピから足りない材料を送ってください。",
+					"action": "項目を追加"
+				},
+				"origin": {
+					"manual": "手入力",
+					"recipe": "レシピ",
+					"lowStock": "残りわずか"
+				},
+				"actions": {
+					"check": "チェック",
+					"uncheck": "チェックを外す",
+					"delete": "削除"
+				},
+				"toast": {
+					"added": "{name}をリストに追加しました。",
+					"removed": "{name}をリストから削除しました。",
+					"checked": "{name}をチェックしました。",
+					"unchecked": "{name}のチェックを外しました。",
+					"cleared": "チェック済み{count}件を整理しました。"
+				}
+			},
+			"recipes": {
+				"empty": {
+					"title": "レシピはまだありません",
+					"text": "庭師の提案とあなたのレシピがここに集まります。"
+				}
+			},
+			"tips": {
+				"empty": {
+					"title": "コツはまだありません",
+					"text": "保存のコツがここに集まります。"
+				}
+			}
 		},
 		"toolbench": {
 			"name": "工房",

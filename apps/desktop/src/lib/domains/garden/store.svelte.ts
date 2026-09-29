@@ -29,23 +29,33 @@ export class GardenStore {
 	ready = $state(false)
 	feed = $state<FeedEntry[]>([])
 
-	async load() {
-		const document = await load<GardenData>(DOCUMENT)
-		if (document?.data?.feed) this.feed = document.data.feed
-		this.ready = true
+	#loading: Promise<void> | null = null
+
+	/** Reads the persisted feed once; every later call returns the same promise, so a write never races the read. */
+	load(): Promise<void> {
+		this.#loading ??= load<GardenData>(DOCUMENT).then((document) => {
+			if (document?.data?.feed) this.feed = document.data.feed
+			this.ready = true
+		})
+		return this.#loading
 	}
 
-	/** Appends an entry to the feed and persists it. */
-	record(domain: string, key: string, values?: Record<string, string | number>) {
+	/** Appends an entry to the feed (after the feed has loaded) and persists it; returns the entry for `forget`. */
+	record(domain: string, key: string, values?: Record<string, string | number>): FeedEntry {
 		const entry: FeedEntry = { id: crypto.randomUUID(), domain, key, values, at: nowIso() }
-		this.feed = [entry, ...this.feed].slice(0, FEED_CAP)
-		void this.save()
+		void this.load().then(() => {
+			this.feed = [entry, ...this.feed].slice(0, FEED_CAP)
+			return this.save()
+		})
+		return entry
 	}
 
 	/** Drops an entry, for an undone write. */
 	forget(id: string) {
-		this.feed = this.feed.filter((entry) => entry.id !== id)
-		void this.save()
+		void this.load().then(() => {
+			this.feed = this.feed.filter((entry) => entry.id !== id)
+			return this.save()
+		})
 	}
 
 	private save() {

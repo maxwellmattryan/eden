@@ -34,7 +34,7 @@ The apps and the shared package depend on the kit by exact version and consume e
 | dev port | 1420 (HMR 1421 when `TAURI_DEV_HOST` is set) | 1421 (HMR 1430) |
 | shell | `Sidebar`, `BackButton`, `StatusBar`, the settings `Sheet` with a tab rail | `BottomTabBar` pinned to the bottom, More, an Appearance-only settings sheet |
 
-The five Phase 1 routes exist on both: `garden`, `today`, `kitchen`, `toolbench`, `weather` (mobile has `more` instead of `toolbench`, which lives behind it). A route renders its `PageHeader` and `EmptyState` from the locale until its approved mockup is implemented (D-54); on desktop the Garden is built, and the story stays its reference.
+The five Phase 1 routes exist on both: `garden`, `today`, `kitchen`, `toolbench`, `weather` (mobile has `more` instead of `toolbench`, which lives behind it). A route renders its `PageHeader` and `EmptyState` from the locale until its approved mockup is implemented (D-54); on desktop the Garden and Hearth (Stock and Grocery; Recipes and Tips are empty states) are built, and each story stays its reference.
 
 ## Commands
 
@@ -70,7 +70,7 @@ A desktop domain module is laid out as:
 
 | file | holds |
 |---|---|
-| `manifest.ts` | the `DomainManifest` (`src/lib/domains/manifest.ts`): id, the name and subtitle keys, the glyph, the route and its tab ids, the Garden widgets (size, title and prompt keys, body component, `hasData()`), the quick actions. The seed of the manifest as code (`product/substrate/domain-manifest.md`); the shell composes the sidebar, the quick-nav row and the widget grid from `src/lib/domains/index.ts` and nothing else |
+| `manifest.ts` | the `DomainManifest` (`src/lib/domains/manifest.ts`): id, the name and subtitle keys, the glyph, the route id with its resolved href and its tab ids (a tab is an optional route parameter, `/kitchen/[[tab]]`), the Garden widgets (size, title and prompt keys, body component, `hasData()`), the quick actions. The seed of the manifest as code (`product/substrate/domain-manifest.md`); the shell composes the sidebar, the quick-nav row and the widget grid from `src/lib/domains/index.ts` and nothing else |
 | `store.svelte.ts` | the store: a `$state` class with the domain's records, its `$derived` lists and one method per write, each returning an `undo` the page turns into the toast (`src/lib/shell/undo.ts`) |
 | `seed.ts` | fills the store from `@eden/ui-kit/sample-data`, behind the empty state's "Add sample data" link; the dataset's dates are shifted onto the real calendar (`src/lib/domains/dates.ts`) |
 | `views/` | the page and its tabs, ported from the approved mockup |

@@ -72,13 +72,119 @@
 		},
 		"feed": {
 			"yesterday": "yesterday {time}",
-			"sampleAdded": "Added sample data to {domain}"
+			"sampleAdded": "Added sample data to {domain}",
+			"stockAdded": "{name} added to stock",
+			"stockRemoved": "{name} removed from stock",
+			"stockMoved": "{name} moved to the {location}",
+			"groceryAdded": "{name} added to the list",
+			"groceryChecked": "{name} checked off",
+			"groceryCleared": "{count, plural, one {# checked item} other {# checked items}} cleared"
 		}
 	},
 	"domains": {
 		"kitchen": {
 			"name": "Hearth",
-			"subtitle": "Food, recipes, pantry, groceries"
+			"subtitle": "Food, recipes, pantry, groceries",
+			"tabs": {
+				"stock": "Stock",
+				"recipes": "Recipes",
+				"grocery": "Grocery",
+				"tips": "Tips"
+			},
+			"tabsLabel": "Hearth sections",
+			"saveFailed": "Couldn't save your changes.",
+			"capture": {
+				"action": "Capture a haul",
+				"notYet": "Capture arrives with the Gardener."
+			},
+			"stock": {
+				"add": "Add",
+				"addPlaceholder": "Add to stock",
+				"expiring": "Expiring",
+				"lowStock": "Low stock",
+				"sortExpiry": "Sort: expiry",
+				"locations": {
+					"fridge": "Fridge",
+					"freezer": "Freezer",
+					"pantry": "Pantry",
+					"counter": "Counter"
+				},
+				"badge": {
+					"lowStock": "low stock",
+					"thisWeek": "this week"
+				},
+				"empty": {
+					"title": "Nothing in stock yet",
+					"text": "Capture a haul and it lands here by location, with an estimated expiry on each item."
+				},
+				"detail": {
+					"quantity": "Quantity",
+					"location": "Location",
+					"expires": "Expires",
+					"category": "Category",
+					"source": "Source",
+					"threshold": "Low-stock threshold",
+					"tip": "Storage tip"
+				},
+				"source": {
+					"manual": "manual",
+					"capture": "capture",
+					"sample": "sample"
+				},
+				"actions": {
+					"moveTo": "Move to {location}",
+					"move": "Move",
+					"addToGrocery": "Add to grocery",
+					"delete": "Delete"
+				},
+				"toast": {
+					"added": "{name} added to stock.",
+					"removed": "{name} removed from stock.",
+					"moved": "{name} moved to the {location}.",
+					"addedToGrocery": "{name} added to the list."
+				}
+			},
+			"grocery": {
+				"add": "Add",
+				"addPlaceholder": "Add to the list",
+				"clearChecked": "Clear checked",
+				"checked": "{checked} of {total} checked",
+				"allChecked": "Everything is checked. Clear the list once you are home.",
+				"empty": {
+					"title": "The list is empty",
+					"text": "Add an item in one line, or send a recipe's missing ingredients here from Recipes.",
+					"action": "Add an item"
+				},
+				"origin": {
+					"manual": "manual",
+					"recipe": "recipe",
+					"lowStock": "low stock"
+				},
+				"actions": {
+					"check": "Check off",
+					"uncheck": "Uncheck",
+					"delete": "Delete"
+				},
+				"toast": {
+					"added": "{name} added to the list.",
+					"removed": "{name} removed from the list.",
+					"checked": "{name} checked off.",
+					"unchecked": "{name} unchecked.",
+					"cleared": "{count, plural, one {# checked item} other {# checked items}} cleared."
+				}
+			},
+			"recipes": {
+				"empty": {
+					"title": "No recipes yet",
+					"text": "Recipes arrive with the Gardener's suggestions and your own."
+				}
+			},
+			"tips": {
+				"empty": {
+					"title": "No tips yet",
+					"text": "Storage tips gather here, bundled and your own."
+				}
+			}
 		},
 		"toolbench": {
 			"name": "Toolbench",

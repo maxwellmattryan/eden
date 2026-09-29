@@ -13,18 +13,17 @@
 	import { formatDate, formatTime, formatWeekday, nowIso, relativeDay } from '../dates'
 	import { layout, shellTiles, type GardenTile } from './layout'
 
-	const todayHref = resolve('/today')
 	const lang = $derived($locale ?? 'en')
 	const subtitle = $derived(formatDate(nowIso(), lang))
 
 	/** The quick-nav tiles: Today, then the enabled domains in order. */
 	const quickNav = $derived([
-		{ id: 'today', name: $t('shell.today'), icon: domainGlyph('today'), href: todayHref },
+		{ id: 'today', name: $t('shell.today'), icon: domainGlyph('today'), open: () => void goto(resolve('/today')) },
 		...manifests.map((manifest) => ({
 			id: manifest.id,
 			name: $t(manifest.name),
 			icon: manifest.glyph,
-			href: resolve(manifest.routes.path),
+			open: manifest.routes.open,
 		})),
 	])
 
@@ -93,7 +92,7 @@
 		<ul class="quick-list">
 			{#each quickNav as entry (entry.id)}
 				<li>
-					<button class="tile" type="button" onclick={() => goto(entry.href)}>
+					<button class="tile" type="button" onclick={entry.open}>
 						<Icon name={entry.icon} size="md" />
 						<span>{entry.name}</span>
 					</button>

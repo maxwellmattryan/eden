@@ -1,8 +1,9 @@
 // The enabled domains in the Phase 1 order (docs/product/substrate/shell.md, "Sidebar"). The sidebar, the Garden's
 // quick-nav row and its widget grid read this list and nothing else; the owner's order arrives with the Domains tab.
+import { kitchenManifest } from './kitchen/manifest.js'
 import type { DomainManifest, WidgetDeclaration } from './manifest.js'
 
-export const manifests: DomainManifest[] = []
+export const manifests: DomainManifest[] = [kitchenManifest]
 
 export function manifestFor(id: string): DomainManifest | undefined {
 	return manifests.find((manifest) => manifest.id === id)

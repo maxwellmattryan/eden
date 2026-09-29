@@ -52,9 +52,26 @@ export function formatTime(iso: string, lang: string): string {
 	return new Intl.DateTimeFormat(lang, { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso))
 }
 
-/** `MM-DD`, the short form the sample data and the lists use. */
-export function formatDay(isoDate: string, lang: string): string {
-	return new Intl.DateTimeFormat(lang, { month: '2-digit', day: '2-digit' }).format(new Date(`${isoDate}T12:00:00`))
+/** `MM-DD`, the short form the sample data and the lists use, the same in every locale. */
+export function formatDay(isoDate: string): string {
+	return isoDate.slice(5, 10)
+}
+
+/** `MM-DD HH:MM` for a timestamp, the form a source line or a shop day takes in a list. */
+export function formatDayTime(iso: string, lang: string): string {
+	return `${formatDay(iso)} ${formatTime(iso, lang)}`
+}
+
+/** `Sat 10-03 10:00`: the weekday, the day and the time of an event. */
+export function formatEventTime(iso: string, lang: string): string {
+	const weekday = new Intl.DateTimeFormat(lang, { weekday: 'short' }).format(new Date(iso))
+	return `${weekday} ${formatDayTime(iso, lang)}`
+}
+
+/** A sample timestamp (`MM-DD HH:MM`) shifted like `shiftSampleDate`, keeping its time of day. */
+export function shiftSampleDateTime(sample: string): string {
+	const [day, time] = sample.split(' ')
+	return `${shiftSampleDate(day ?? sample)}T${time ?? '12:00'}:00`
 }
 
 /** The full weekday name. */

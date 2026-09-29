@@ -63,7 +63,7 @@
 			subtitle: $t(manifest.subtitle),
 			icon: manifest.glyph,
 			shortcut: `⌘${index + 3}`,
-			href: resolve(manifest.routes.path),
+			href: manifest.routes.href,
 		})),
 	])
 	const items = $derived(groups.flat())
