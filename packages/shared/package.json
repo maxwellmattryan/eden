@@ -9,6 +9,7 @@
 		"./api/updater": "./src/api/updater.ts",
 		"./stores": "./src/stores/index.ts",
 		"./settings": "./src/settings/index.ts",
+		"./persistence": "./src/persistence/index.ts",
 		"./i18n": "./src/i18n/index.ts",
 		"./types": "./src/types/index.ts"
 	},
@@ -16,13 +17,13 @@
 		"check": "svelte-check --tsconfig ./tsconfig.json"
 	},
 	"dependencies": {
-		"@tauri-apps/api": "2.11.0",
+		"@tauri-apps/api": "2.12.0",
 		"svelte-i18n": "4.0.1"
 	},
 	"peerDependencies": {
 		"@eden/ui-kit": "0.1.0",
-		"@tauri-apps/plugin-process": "2.3.1",
-		"@tauri-apps/plugin-updater": "2.10.0",
+		"@tauri-apps/plugin-process": "2.4.0",
+		"@tauri-apps/plugin-updater": "2.13.0",
 		"svelte": "^5.0.0"
 	},
 	"peerDependenciesMeta": {
@@ -34,8 +35,8 @@
 		}
 	},
 	"devDependencies": {
-		"@tauri-apps/plugin-process": "2.3.1",
-		"@tauri-apps/plugin-updater": "2.10.0",
+		"@tauri-apps/plugin-process": "2.4.0",
+		"@tauri-apps/plugin-updater": "2.13.0",
 		"svelte": "5.57.1",
 		"svelte-check": "4.7.6",
 		"typescript": "5.9.3"

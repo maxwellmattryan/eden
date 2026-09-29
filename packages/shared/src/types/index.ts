@@ -13,6 +13,22 @@ export const themeSettings: readonly ThemeSetting[] = ['light', 'dark', 'system'
 export type FontSetting = 'default' | 'system'
 export const fontSettings: readonly FontSetting[] = ['default', 'system']
 
+/** Temperature units for Sky and the Garden's sky tile (D-27: units are a setting, not a fact). */
+export type TemperatureUnit = 'celsius' | 'fahrenheit'
+export const temperatureUnits: readonly TemperatureUnit[] = ['celsius', 'fahrenheit']
+
+/**
+ * The home place, as a setting until Places exist (D-38 makes it a Place of kind `home`): a label and the coordinates
+ * Sky forecasts for. Only rounded coordinates ever leave the device.
+ */
+export interface HomePlace {
+	label: string
+	latitude: number
+	longitude: number
+}
+/** Rowan's Hyde Park, Austin (design/sample-data.md), until onboarding asks. */
+export const DEFAULT_HOME: HomePlace = { label: 'Hyde Park', latitude: 30.305, longitude: -97.735 }
+
 export interface AppInfo {
 	version: string
 	/** development, staging or production: the channel the binary was built for. */

@@ -2,6 +2,10 @@
 	"app": {
 		"name": "Eden"
 	},
+	"common": {
+		"undo": "元に戻す",
+		"sampleAdded": "サンプルデータを追加しました。"
+	},
 	"shell": {
 		"garden": "庭",
 		"gardenSubtitle": "ダッシュボード",
@@ -19,18 +23,284 @@
 		},
 		"gardenerNoKey": "この端末にキーがありません"
 	},
+	"garden": {
+		"edit": "配置を編集",
+		"quickNav": "クイックナビゲーション",
+		"activity": "アクティビティ",
+		"lastUpdated": "最終更新 {time}",
+		"widgets": {
+			"weatherNow": "今の空",
+			"today": "今日",
+			"expiringSoon": "まもなく期限",
+			"cookTonight": "今夜の料理",
+			"resurfacedIdea": "再浮上したアイデア",
+			"activeProjects": "進行中のプロジェクト",
+			"sunAndMoon": "太陽と月",
+			"dailyLine": "今日の一行",
+			"quickLog": "体重"
+		},
+		"empty": {
+			"weatherNow": "自宅の場所を設定すると空が見えます。",
+			"today": "今日の予定はありません。",
+			"expiringSoon": "まもなく期限のものはありません。",
+			"cookTonight": "食材とレシピを追加してください。",
+			"resurfacedIdea": "アイデアを記録すると、また巡ってきます。",
+			"activeProjects": "プロジェクトはまだありません。",
+			"sunAndMoon": "自宅の場所を設定すると光が見えます。",
+			"dailyLine": "足るを知る",
+			"quickLog": "体重を記録すると線が始まります。",
+			"feed": "まだ何も起きていません。"
+		},
+		"actions": {
+			"today": "今日を開く",
+			"cookTonight": "これを作る",
+			"resurfacedIdea": "アイデアを開く",
+			"activeProjects": "プロジェクトを開く",
+			"quickLog": "体重を記録"
+		},
+		"untouched": "{days}日間手つかず",
+		"minutes": "{minutes}分",
+		"suggested": "{name}が明日期限",
+		"sunrise": "日の出",
+		"sunset": "日の入り",
+		"goldenHour": "ゴールデンアワー",
+		"moon": "月",
+		"weightUnit": "kg",
+		"dailyLine": {
+			"line": "足るを知る",
+			"source": "老子"
+		},
+		"feed": {
+			"yesterday": "昨日 {time}",
+			"sampleAdded": "{domain}にサンプルデータを追加",
+			"stockAdded": "{name}を在庫に追加",
+			"stockRemoved": "{name}を在庫から削除",
+			"stockMoved": "{name}を{location}へ移動",
+			"groceryAdded": "{name}を買い物リストに追加",
+			"groceryChecked": "{name}をチェック",
+			"groceryCleared": "チェック済み{count}件を整理",
+			"ideaCaptured": "{title}を記録",
+			"ideaMoved": "{title}を{status}へ",
+			"ideaArchived": "{title}を保管",
+			"ideaDeleted": "{title}を削除"
+		}
+	},
 	"domains": {
 		"kitchen": {
 			"name": "台所",
-			"subtitle": "食材、レシピ、買い物"
+			"subtitle": "食材、レシピ、買い物",
+			"tabs": {
+				"stock": "在庫",
+				"recipes": "レシピ",
+				"grocery": "買い物",
+				"tips": "保存のコツ"
+			},
+			"tabsLabel": "台所のセクション",
+			"saveFailed": "変更を保存できませんでした。",
+			"capture": {
+				"action": "買い物を撮る",
+				"notYet": "撮影は庭師とともに届きます。"
+			},
+			"stock": {
+				"add": "追加",
+				"addPlaceholder": "在庫に追加",
+				"expiring": "期限間近",
+				"lowStock": "残りわずか",
+				"sortExpiry": "並び順: 期限",
+				"locations": {
+					"fridge": "冷蔵庫",
+					"freezer": "冷凍庫",
+					"pantry": "食品庫",
+					"counter": "カウンター"
+				},
+				"badge": {
+					"lowStock": "残りわずか",
+					"thisWeek": "今週"
+				},
+				"empty": {
+					"title": "在庫はまだありません",
+					"text": "買い物を撮ると、場所ごとに推定期限つきでここに並びます。"
+				},
+				"detail": {
+					"quantity": "数量",
+					"location": "場所",
+					"expires": "期限",
+					"category": "分類",
+					"source": "出所",
+					"threshold": "残りわずかの基準",
+					"tip": "保存のコツ"
+				},
+				"source": {
+					"manual": "手入力",
+					"capture": "撮影",
+					"sample": "サンプル"
+				},
+				"actions": {
+					"moveTo": "{location}へ移動",
+					"move": "移動",
+					"addToGrocery": "買い物リストへ",
+					"delete": "削除"
+				},
+				"toast": {
+					"added": "{name}を在庫に追加しました。",
+					"removed": "{name}を在庫から削除しました。",
+					"moved": "{name}を{location}へ移動しました。",
+					"addedToGrocery": "{name}を買い物リストに追加しました。"
+				}
+			},
+			"grocery": {
+				"add": "追加",
+				"addPlaceholder": "リストに追加",
+				"clearChecked": "チェック済みを整理",
+				"checked": "{total}件中{checked}件チェック済み",
+				"allChecked": "すべてチェック済みです。帰ったらリストを整理しましょう。",
+				"empty": {
+					"title": "リストは空です",
+					"text": "一行で追加するか、レシピから足りない材料を送ってください。",
+					"action": "項目を追加"
+				},
+				"origin": {
+					"manual": "手入力",
+					"recipe": "レシピ",
+					"lowStock": "残りわずか"
+				},
+				"actions": {
+					"check": "チェック",
+					"uncheck": "チェックを外す",
+					"delete": "削除"
+				},
+				"toast": {
+					"added": "{name}をリストに追加しました。",
+					"removed": "{name}をリストから削除しました。",
+					"checked": "{name}をチェックしました。",
+					"unchecked": "{name}のチェックを外しました。",
+					"cleared": "チェック済み{count}件を整理しました。"
+				}
+			},
+			"recipes": {
+				"empty": {
+					"title": "レシピはまだありません",
+					"text": "庭師の提案とあなたのレシピがここに集まります。"
+				}
+			},
+			"tips": {
+				"empty": {
+					"title": "コツはまだありません",
+					"text": "保存のコツがここに集まります。"
+				}
+			}
 		},
 		"toolbench": {
 			"name": "工房",
-			"subtitle": "アイデア、プロジェクト"
+			"subtitle": "アイデア、プロジェクト",
+			"tabs": {
+				"ideas": "アイデア",
+				"projects": "プロジェクト",
+				"lab": "ラボ",
+				"studio": "スタジオ",
+				"notes": "ノート"
+			},
+			"tabsLabel": "工房のセクション",
+			"saveFailed": "変更を保存できませんでした。",
+			"ideas": {
+				"capture": "アイデアを記録",
+				"addPlaceholder": "アイデアを記録",
+				"list": "アイデア",
+				"status": {
+					"idea": "アイデア",
+					"exploring": "検討中",
+					"building": "制作中",
+					"archived": "保管"
+				},
+				"untouched": "{days}日",
+				"detail": {
+					"status": "状態",
+					"area": "分野",
+					"project": "プロジェクト",
+					"log": "記録",
+					"brainstorm": "ブレインストーム"
+				},
+				"noLog": "記録はまだありません。",
+				"brainstormWith": "庭師とブレインストーム",
+				"actions": {
+					"moveTo": "{status}へ移す",
+					"archive": "保管",
+					"delete": "削除"
+				},
+				"log": {
+					"captured": "クイック追加から記録",
+					"moved": "{status}へ移動"
+				},
+				"toast": {
+					"captured": "{title}を記録しました。",
+					"moved": "{title}を{status}へ移しました。",
+					"archived": "{title}を保管しました。",
+					"deleted": "{title}を削除しました。"
+				},
+				"empty": {
+					"title": "アイデアはまだありません",
+					"text": "5秒で記録して、あとで整理しましょう。良いものはプロジェクトに育ちます。"
+				}
+			},
+			"projects": {
+				"empty": {
+					"title": "プロジェクトはまだありません",
+					"text": "制作中のアイデアが、リポジトリと次の一手、記録とともにここでプロジェクトになります。"
+				}
+			},
+			"lab": {
+				"empty": {
+					"title": "デバイスはまだありません",
+					"text": "ホームラボのデバイス、サービス、ルーチンがここに集まります。"
+				}
+			},
+			"studio": {
+				"empty": {
+					"title": "スケッチはまだありません",
+					"text": "ジェネラティブアートのレンダー、シード、パラメータがここに集まります。"
+				}
+			},
+			"notes": {
+				"empty": {
+					"title": "ノートはまだありません",
+					"text": "技術メモ、コマンド、設定のレシピがここに集まり、検索できます。"
+				}
+			}
 		},
 		"weather": {
 			"name": "空",
-			"subtitle": "天気、日の出と月"
+			"subtitle": "天気、日の出と月",
+			"now": "今",
+			"hours": "時間ごと",
+			"hoursStrip": "時間ごとの予報",
+			"week": "今週",
+			"sunAndMoon": "太陽と月",
+			"sunrise": "日の出",
+			"sunset": "日の入り",
+			"goldenHour": "ゴールデンアワー",
+			"moon": "月",
+			"location": "場所",
+			"home": "自宅 · {label}",
+			"today": "{day}（今日）",
+			"high": "最高 {value}°",
+			"low": "最低 {value}°",
+			"precip": "{value} %",
+			"moonLine": "{phase} {percent} %",
+			"moonPhase": {
+				"new": "新月",
+				"waxing-crescent": "三日月",
+				"first-quarter": "上弦",
+				"waxing-gibbous": "十三夜",
+				"full": "満月",
+				"waning-gibbous": "十六夜",
+				"last-quarter": "下弦",
+				"waning-crescent": "有明"
+			},
+			"offline": {
+				"message": "Open-Meteo に接続できませんでした。",
+				"lastGood": "{time} の予報を表示しています。",
+				"banner": "オフライン。{time} の予報を表示しています。"
+			}
 		}
 	},
 	"settings": {
@@ -52,7 +322,11 @@
 			"language": "言語",
 			"languageHelp": "すぐに反映されます。",
 			"english": "English",
-			"japanese": "日本語"
+			"japanese": "日本語",
+			"units": "気温の単位",
+			"unitsHelp": "天気予報と庭の空のタイルに使います。",
+			"celsius": "°C",
+			"fahrenheit": "°F"
 		},
 		"appearance": {
 			"theme": "テーマ",
@@ -186,6 +460,20 @@
 		"tabBar": {
 			"label": "セクション",
 			"withBadge": "{0}、{1} 件の新着"
+		},
+		"sky": {
+			"sunny": "晴れ",
+			"clearNight": "快晴の夜",
+			"partlyCloudy": "晴れ時々曇り",
+			"cloudy": "曇り",
+			"fog": "霧",
+			"drizzle": "霧雨",
+			"rain": "雨",
+			"thunderstorm": "雷雨",
+			"snow": "雪",
+			"hail": "雹",
+			"wind": "強風",
+			"tornado": "竜巻"
 		}
 	}
 }

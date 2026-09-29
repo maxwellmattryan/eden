@@ -1,20 +1,23 @@
-name: ci
+name: ci.frontend
 
+# A push to develop, and a pull request into develop (every push to its branch re-runs it); a branch without a pull
+# request runs nothing, so a commit is never checked twice.
 on:
   push:
-    branches: ['**']
+    branches: [develop]
   pull_request:
+    branches: [develop]
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   STORYBOOK_DISABLE_TELEMETRY: '1'
 
 jobs:
-  checks:
-    name: format, lint, check, tokens
+  check:
+    name: yarn check (format, lint, generators, types)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,7 +34,7 @@ jobs:
       - run: yarn run check
 
   test:
-    name: unit and story tests
+    name: yarn test (unit, stories)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,7 +47,7 @@ jobs:
       - run: yarn test
 
   build:
-    name: packages, apps and storybook
+    name: yarn build (packages, apps, storybook)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -57,6 +60,6 @@ jobs:
       - run: yarn storybook:build
       - uses: actions/upload-artifact@v4
         with:
-          name: storybook-static
+          name: storybook
           path: packages/ui-kit/storybook-static
           retention-days: 7

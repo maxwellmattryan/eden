@@ -25,8 +25,12 @@
 	import { platformOf } from '$lib/internal/platform.js'
 	import { bottomTabs, budget, inbox, integrations, quickLogs, sidebar } from '../../sample-data.js'
 
-	/** A sidebar's entries without their glyphs, as sample-data.ts holds them. */
-	export type SidebarSample = { items: Omit<SidebarEntry, 'icon'>[]; pinned: Omit<SidebarEntry, 'icon'>[] }
+	/** A sidebar's entries without their glyphs, as sample-data.ts holds them: the groups, and the same entries flat. */
+	export type SidebarSample = {
+		groups: Omit<SidebarEntry, 'icon'>[][]
+		items: Omit<SidebarEntry, 'icon'>[]
+		pinned: Omit<SidebarEntry, 'icon'>[]
+	}
 
 	type Props = {
 		/** The current page's plain id: garden, kitchen, weather, toolbench. */
@@ -88,7 +92,7 @@
 	let root = $state<HTMLElement>()
 	const mode = $derived<Platform>(platform === 'auto' ? (root ? platformOf(root) : 'desktop') : platform)
 
-	const items = $derived(withGlyphs(nav.items))
+	const groups = $derived(nav.groups.map(withGlyphs))
 	const pinned = $derived(withGlyphs(nav.pinned))
 	const tabItems = $derived<BottomTab[]>(
 		tabs ?? bottomTabs.map((tab) => ({ ...tab, icon: tab.id === 'more' ? 'menu' : domainGlyph(tab.id) }))
@@ -115,7 +119,7 @@
 
 <div class={['app', `app-${mode}`]} bind:this={root}>
 	{#if mode === 'desktop'}
-		<Sidebar {items} {pinned} subtitles {current} onselect={select} />
+		<Sidebar {groups} {pinned} brand="eden" subtitles {current} onselect={select} />
 		<main class="app-main">
 			{#if back}
 				<div class="app-back"><BackButton breadcrumb={back} onback={onback ?? (() => {})} /></div>

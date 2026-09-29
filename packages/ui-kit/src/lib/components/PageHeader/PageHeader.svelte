@@ -11,6 +11,8 @@
 		icon?: IconName
 		/** primary for the first and secondary for the rest unless set. */
 		variant?: NonNullable<ComponentProps<typeof Button>['variant']>
+		/** Shown but not yet available: the Garden's "Edit layout" before edit mode exists. */
+		disabled?: boolean
 		onclick?: () => void
 	}
 </script>
@@ -74,6 +76,7 @@
 						label={action.label}
 						icon={action.icon}
 						variant={action.variant ?? (i === 0 ? 'primary' : 'secondary')}
+						disabled={action.disabled}
 						onclick={action.onclick}
 					/>
 				{/each}

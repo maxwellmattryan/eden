@@ -232,28 +232,38 @@ export const integrations = [
 	},
 ]
 
-export const sidebar = {
-	items: [
-		{ id: 'garden', name: 'Garden', subtitle: 'Dashboard', shortcut: '⌘1' },
-		{ id: 'today', name: 'Today', subtitle: 'Tasks and routines', shortcut: '⌘2' },
+const sidebarGroups = [
+	[{ id: 'today', name: 'Today', subtitle: 'Tasks and routines', shortcut: '⌘1' }],
+	[{ id: 'garden', name: 'Garden', subtitle: 'Dashboard', shortcut: '⌘2' }],
+	[
 		{ id: 'kitchen', name: 'Hearth', subtitle: 'Food, recipes, pantry, groceries', shortcut: '⌘3' },
 		{ id: 'toolbench', name: 'Toolbench', subtitle: 'Ideas, projects, homelab, generative art', shortcut: '⌘4' },
 		{ id: 'weather', name: 'Sky', subtitle: 'Weather, forecasts, sun and moon', shortcut: '⌘5' },
 	],
+]
+
+export const sidebar = {
+	groups: sidebarGroups,
+	items: sidebarGroups.flat(),
 	pinned: [
 		{ id: 'gardener', name: 'Gardener', subtitle: 'Ask, log, run' },
 		{ id: 'settings', name: 'Settings', subtitle: 'Preferences' },
 	],
 }
 
-export const sidebarJa = {
-	items: [
-		{ id: 'garden', name: '庭', subtitle: 'ダッシュボード' },
-		{ id: 'today', name: '今日', subtitle: 'タスクと習慣' },
+const sidebarJaGroups = [
+	[{ id: 'today', name: '今日', subtitle: 'タスクと習慣' }],
+	[{ id: 'garden', name: '庭', subtitle: 'ダッシュボード' }],
+	[
 		{ id: 'kitchen', name: '台所', subtitle: '食材、レシピ、買い物' },
 		{ id: 'toolbench', name: '工房', subtitle: 'アイデア、プロジェクト' },
 		{ id: 'weather', name: '空', subtitle: '天気、日の出と月' },
 	],
+]
+
+export const sidebarJa = {
+	groups: sidebarJaGroups,
+	items: sidebarJaGroups.flat(),
 	pinned: [
 		{ id: 'gardener', name: '庭師', subtitle: '相談、記録、実行' },
 		{ id: 'settings', name: '設定', subtitle: '環境設定' },

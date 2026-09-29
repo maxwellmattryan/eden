@@ -20,6 +20,9 @@
 	import { initializeI18n, locale, t, uiKitStrings } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import CrashScreen from '$lib/components/CrashScreen.svelte'
+	import { manifests } from '$lib/domains'
+	import { weather } from '$lib/domains/weather/store.svelte'
+	import { formatTime } from '$lib/domains/dates'
 	import { useGlobalErrorHandler } from '$lib/hooks/useGlobalErrorHandler'
 	import SettingsSheet from '$lib/settings/SettingsSheet.svelte'
 	import { settingsUi } from '$lib/settings/settings-ui.svelte'
@@ -28,42 +31,44 @@
 
 	const UPDATE_INTERVAL = 60 * 60 * 1000
 
-	// Garden, Today, then the Phase 1 domains in the fixed order; the owner's order arrives with the Domains tab.
+	// Today, Garden, then the enabled domains from their manifests, each its own group under a rule (D-55); the owner's
+	// order arrives with the Domains tab.
 	const hrefs = {
-		garden: resolve('/garden'),
 		today: resolve('/today'),
-		kitchen: resolve('/kitchen'),
-		toolbench: resolve('/toolbench'),
-		weather: resolve('/weather'),
+		garden: resolve('/garden'),
 	} as const
-	const domains = ['kitchen', 'toolbench', 'weather'] as const
 
-	const items = $derived<SidebarEntry[]>([
-		{
-			id: 'garden',
-			name: $t('shell.garden'),
-			subtitle: $t('shell.gardenSubtitle'),
-			icon: domainGlyph('garden'),
-			shortcut: '⌘1',
-			href: hrefs.garden,
-		},
-		{
-			id: 'today',
-			name: $t('shell.today'),
-			subtitle: $t('shell.todaySubtitle'),
-			icon: domainGlyph('today'),
-			shortcut: '⌘2',
-			href: hrefs.today,
-		},
-		...domains.map((id, index) => ({
-			id,
-			name: $t(`domains.${id}.name`),
-			subtitle: $t(`domains.${id}.subtitle`),
-			icon: domainGlyph(id),
+	const groups = $derived<SidebarEntry[][]>([
+		[
+			{
+				id: 'today',
+				name: $t('shell.today'),
+				subtitle: $t('shell.todaySubtitle'),
+				icon: domainGlyph('today'),
+				shortcut: '⌘1',
+				href: hrefs.today,
+			},
+		],
+		[
+			{
+				id: 'garden',
+				name: $t('shell.garden'),
+				subtitle: $t('shell.gardenSubtitle'),
+				icon: domainGlyph('garden'),
+				shortcut: '⌘2',
+				href: hrefs.garden,
+			},
+		],
+		manifests.map((manifest, index) => ({
+			id: manifest.id,
+			name: $t(manifest.name),
+			subtitle: $t(manifest.subtitle),
+			icon: manifest.glyph,
 			shortcut: `⌘${index + 3}`,
-			href: hrefs[id],
+			href: manifest.routes.href,
 		})),
 	])
+	const items = $derived(groups.flat())
 	const pinned = $derived<SidebarEntry[]>([
 		{
 			id: 'gardener',
@@ -79,6 +84,18 @@
 		},
 	])
 	const current = $derived(page.route.id?.split('/')[1] || 'garden')
+
+	// Offline: the banner takes the sync line's place while the forecast is a mirror from an earlier fetch
+	// (product/substrate/shell.md, "Global states").
+	const banner = $derived(
+		weather.offline && weather.lastGood
+			? {
+					message: $t('domains.weather.offline.banner', {
+						values: { time: formatTime(weather.lastGood, $locale ?? 'en') },
+					}),
+				}
+			: undefined
+	)
 
 	// How far the in-app history goes: the back arrow shows only when there is somewhere to go (shell.md).
 	let depth = $state(0)
@@ -131,7 +148,14 @@
 
 <UiKitProvider strings={uiKitStrings($locale)}>
 	<div class="shell">
-		<Sidebar {items} {pinned} subtitles={settings.subtitles} {current} {onselect} />
+		<Sidebar
+			{groups}
+			{pinned}
+			brand={$t('app.name').toLowerCase()}
+			subtitles={settings.subtitles}
+			{current}
+			{onselect}
+		/>
 		<main class="content">
 			<div class="content-back"><BackButton {onback} /></div>
 			{@render children()}
@@ -139,6 +163,7 @@
 		<StatusBar
 			class="bar"
 			sync={$t('shell.sync.local')}
+			{banner}
 			integrations={[]}
 			gardener={{ label: $t('shell.gardener'), noKey: true }}
 			inbox={[]}

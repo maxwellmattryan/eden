@@ -17,7 +17,7 @@ Each screen below lists: id, platform, purpose, must show, primary actions, stat
 |---|---|---|---|---|---|---|
 | `splash` | both | the daily line while the workspace opens | wordmark, one line, source | none | neutral line when Sanctuary is off | Sanctuary Wednesday line |
 | `onboarding-1..10` | both | first launch | step indicator, back, skip | continue | steps 5, 7, 8 are the ones that matter | Rowan's home, key entry, the two T2 grants with the "can see" chip |
-| `garden`, mocked as `Domains/Garden/Garden` | both | the dashboard | quick-nav row, widget grid, activity feed, daily line | edit mode, ⌘K | first run empty, edit mode, offline | the Phase 1 default layout (`gardenLayout`) |
+| `garden`, mocked as `Domains/Garden/Garden`, built in `apps/desktop` (edit mode pending) | both | the dashboard | quick-nav row, widget grid, activity feed, daily line | edit mode, ⌘K | first run empty, edit mode, offline | the Phase 1 default layout (`gardenLayout`) |
 | `garden-edit` | desktop | arrange widgets | drag handles, resize, catalog sheet by domain | done | | |
 | `today` | both | tasks and routines | overdue, due today, routines, habits, Quick Log strip, quick-add | add, done, snooze | empty, overdue | Wednesday's task and routines |
 | `palette` | desktop | ⌘K | verbs, fuzzy results, recents | run | no results | "log weight 82.4", "go to almanac" |
@@ -38,16 +38,16 @@ Each screen below lists: id, platform, purpose, must show, primary actions, stat
 
 | id | platform | purpose | must show | primary actions | states | sample data |
 |---|---|---|---|---|---|---|
-| `hearth-stock`, mocked as `Domains/Hearth/Stock` | both | stock by location | Fridge, Freezer, Pantry, Counter sections, expiry sort, low-stock filter | capture haul, add | empty, expiring | the stock table |
+| `hearth-stock`, mocked as `Domains/Hearth/Stock`, built in `apps/desktop` | both | stock by location | Fridge, Freezer, Pantry, Counter sections, expiry sort, low-stock filter | capture haul, add | empty, expiring | the stock table |
 | `hearth-recipes` | desktop | recipes and cook this | list, detail with ingredients marked in stock or missing | cook this, add missing to grocery | empty | the three recipes |
-| `hearth-grocery`, mocked as `Domains/Hearth/Grocery` | both | the list | grouped by store, check off, origin badges | add, clear checked, export (later) | empty, all checked | H-E-B Saturday |
+| `hearth-grocery`, mocked as `Domains/Hearth/Grocery`, built in `apps/desktop` | both | the list | grouped by store, check off, origin badges | add, clear checked, export (later) | empty, all checked | H-E-B Saturday |
 | `hearth-tips` | desktop | storage tips | search, tip cards | | | miso, ginger, avocados |
-| `toolbench-ideas`, mocked as `Domains/Toolbench/Ideas` (desktop) | both | the inbox of ideas | status filter, list, detail with log and brainstorm thread | capture, change status | empty | the six ideas, `ideaLog` |
+| `toolbench-ideas`, mocked as `Domains/Toolbench/Ideas` (desktop), built in `apps/desktop` | both | the inbox of ideas | status filter, list, detail with log and brainstorm thread | capture, change status | empty | the six ideas, `ideaLog` |
 | `toolbench-projects` | desktop | projects | list, detail with repo, next steps, log | add step | | weather-field, pi-pantry |
 | `toolbench-lab` | desktop | devices | device rows with services and routine status | add device | | the two devices |
 | `toolbench-studio` | desktop | render gallery | grid of renders, sketch detail with seed and parameters | | empty | weather-field |
 | `toolbench-notes` | both | technical notes | search-first list, Markdown detail | add | | |
-| `sky`, mocked as `Domains/Sky/Sky` | both | weather | now, hours, days, sun and moon, alerts, location switcher | | offline (last updated), night | the Austin week, `skyHours` |
+| `sky`, mocked as `Domains/Sky/Sky`, built in `apps/desktop` | both | weather | now, hours, days, sun and moon, alerts, location switcher | | offline (last updated), night | the Austin week, `skyHours` |
 | `almanac-month` | desktop | the almanac | month grid with layer glyphs and legend, layer panel | create, toggle layer | no sources | the week's layers |
 | `almanac-week` | desktop | the week | timeline with Events by kind colour, task markers | | | |
 | `almanac-agenda` | both | the list | days with Events and annotations | | | |

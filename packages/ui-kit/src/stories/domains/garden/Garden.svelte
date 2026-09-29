@@ -82,8 +82,11 @@
 		Widget,
 		WidgetGrid,
 		domainGlyph,
+		useStrings,
 		type BottomTab,
 		type GlyphId,
+		type SkyCondition,
+		type UiStrings,
 	} from '$lib/index.js'
 	import type { StatusBarBanner } from '$lib/components/StatusBar/StatusBar.svelte'
 	import AppFrame, { type SidebarSample } from '../_frame/AppFrame.svelte'
@@ -95,8 +98,8 @@
 		projects,
 		recipes,
 		sidebar,
+		skyHours,
 		skyToday,
-		skyWeek,
 		stock,
 		todayTasks,
 		weightAverage,
@@ -139,7 +142,23 @@
 	/** The tiles: every entry but the Garden itself. */
 	const tiles = $derived(nav.items.filter((entry) => entry.id !== 'garden'))
 
-	const now = skyWeek[2]!
+	const s = useStrings()
+	/** The condition names live in the kit's strings, the same ones SkyGlyph reads. */
+	const LABEL: Record<SkyCondition, keyof UiStrings['sky']> = {
+		sunny: 'sunny',
+		'partly-cloudy': 'partlyCloudy',
+		cloudy: 'cloudy',
+		fog: 'fog',
+		drizzle: 'drizzle',
+		rain: 'rain',
+		thunderstorm: 'thunderstorm',
+		snow: 'snow',
+		hail: 'hail',
+		wind: 'wind',
+		tornado: 'tornado',
+	}
+	/** Now: the current hour's reading, the same one the Sky page's Now block shows, never the day's high. */
+	const now = skyHours[0]!
 	/** Anything dated on or before Friday 10-02: today is Wednesday 09-30. */
 	const expiring = stock.filter((item) => item.expiry && item.expiry <= '10-02')
 	const suggested = recipes[0]!
@@ -160,7 +179,7 @@
 	{#if tile.id === 'weather-now'}
 		<div class="now">
 			<SkyGlyph condition={now.condition} size="lg" class="now-glyph" />
-			<Stat value="{now.hi}°" unit={now.note} />
+			<Stat value="{now.temp}°" unit={s.sky[LABEL[now.condition]]} />
 		</div>
 		{#if offline}<p class="meta">{copy.lastUpdated(skyToday.lastGood)}</p>{/if}
 	{:else if tile.id === 'today'}
@@ -228,7 +247,7 @@
 				name={copy.name}
 				subtitle={copy.subtitle}
 				icon={domainGlyph('garden')}
-				actions={[{ label: copy.edit, icon: 'grip-vertical', variant: 'secondary', onclick: onedit }]}
+				actions={[{ label: copy.edit, icon: 'grip-vertical', variant: 'secondary', disabled: true, onclick: onedit }]}
 			/>
 			<nav class="quick" aria-label={copy.quickNav}>
 				<ul class="quick-list">
@@ -373,7 +392,8 @@
 		color: var(--text-secondary);
 	}
 
-	/* Widget bodies: short rows in the body style, meta in mono, a note beneath a name */
+	/* Widget bodies: short rows in the body style, meta in mono, a note beneath a name; a meta that does not fit beside
+	   its text (the 1×1 tiles) wraps under it rather than overlapping */
 	.now {
 		display: flex;
 		align-items: center;
@@ -392,9 +412,10 @@
 	}
 	.rows li {
 		display: flex;
+		flex-wrap: wrap;
 		justify-content: space-between;
 		align-items: baseline;
-		gap: var(--space-2);
+		gap: 0 var(--space-2);
 		min-width: 0;
 	}
 	.row-text {
@@ -411,6 +432,7 @@
 	}
 	.row-meta {
 		flex: none;
+		margin-left: auto;
 		font: var(--ed-t-data-sm);
 		letter-spacing: var(--ed-t-data-sm-tracking);
 		font-variant-numeric: tabular-nums;

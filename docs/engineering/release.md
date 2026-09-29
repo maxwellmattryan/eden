@@ -4,7 +4,7 @@ status: draft
 summary: The owner's checklist for shipping Eden: the GCS bucket and its service account, the updater key, Apple signing and notarization, iOS ad-hoc distribution from the BBX team, the Android keystore, GitHub Pages for the download page, the secrets the release workflow reads, and the tag-to-release flow.
 read-this-if: You are setting up the release accounts and secrets, cutting a release, or changing the release workflow.
 depends-on: [engineering/app-scaffold]
-updated: 2026-09-28
+updated: 2026-09-29
 ---
 
 ## Shape
@@ -72,7 +72,7 @@ When it exists: `keytool -genkeypair -v -keystore eden-release.keystore -alias e
 
 ## The download page
 
-1. Repository settings → Pages → Source "GitHub Actions". `.github/workflows/cd.web.yml` deploys `web/` on every push to `main` that touches it.
+1. Repository settings → Pages → Source "GitHub Actions". `.github/workflows/cd.web.yml` deploys `web/` on every push to `develop` that touches it.
 2. Custom domain `eden.mattmaxwell.dev`: DNS `CNAME eden → maxwellmattryan.github.io`; `web/CNAME` already carries the name, so Pages keeps it across deploys. Enforce HTTPS once the certificate is issued.
 3. The page fetches `downloads.json` from the bucket per channel (`?channel=staging`) and falls back to GitHub Releases.
 

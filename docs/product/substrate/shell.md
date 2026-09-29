@@ -4,7 +4,7 @@ status: draft
 summary: The frame everything sits in: layout regions, the sidebar, the Garden dashboard and its widgets, the command palette, navigation history and the back affordance, the status bar, Quick Log surfaces, the notification center, mobile structure, keyboard model and global states.
 read-this-if: You are designing navigation, layout, the dashboard, or anything that appears on every screen.
 depends-on: [domain-manifest, tasks, signals-notifications]
-updated: 2026-09-27
+updated: 2026-09-28
 ---
 
 ## Layout regions
@@ -15,7 +15,7 @@ updated: 2026-09-27
 
 ## Sidebar (Phase 1)
 
-Garden, Today, then the enabled domains in the owner's order, then Gardener and Settings pinned at the bottom. Each domain shows its glyph, themed name and plain subtitle; the subtitle collapses to a tooltip once the owner turns it off (D-2). Domains can be reordered by drag and hidden without being disabled (`substrate/domain-manifest.md`). Badges are rare: unread inbox count on the bell, nothing on domains by default.
+The app mark and wordmark at the head, then Today, Garden and the enabled domains in the owner's order as three groups under rules, then Gardener and Settings pinned at the bottom (D-55). Each domain shows its glyph, themed name and plain subtitle; the subtitle collapses to a tooltip once the owner turns it off (D-2). Domains can be reordered by drag and hidden without being disabled (`substrate/domain-manifest.md`). Badges are rare: unread inbox count on the bell, nothing on domains by default.
 
 ## The Garden (Phase 1)
 

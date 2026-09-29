@@ -16,6 +16,9 @@
 
 <Story name="Default" />
 
+<!-- the size at the head of the desktop sidebar, beside the AppMark (D-55) -->
+<Story name="Sidebar size" args={{ size: 'md' }} />
+
 <!-- The splash per docs/design/brand.md: the wordmark, one daily line with its source, nothing else, on surface-0. -->
 <Story name="Splash composition">
 	{#snippet template(args)}
