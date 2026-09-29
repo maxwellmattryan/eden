@@ -4,7 +4,7 @@ status: draft
 summary: The contract for every component in `@eden/ui-kit`: purpose, props with the bindable ones marked, callbacks, snippets, platform behaviour and the stories each ships, grouped by the wave it is built in.
 read-this-if: You are building, changing or consuming a kit component.
 depends-on: [engineering/ui-kit, design/ux-patterns]
-updated: 2026-09-28
+updated: 2026-09-29
 ---
 
 ## How to read this
@@ -25,7 +25,7 @@ Props are listed by name; `*` marks a bindable prop; every component also takes 
 | `Button` | one action; primary at most once per view | `label` or `aria-label` (one is required), `variant` (primary, secondary, quiet, danger, ai, honey), `size` (md, lg, auto), `icon`, `iconRight`, `disabled`, `type` | `onclick` | `auto` is 44 px on mobile; filled variants press under the raised relief (OQ-21) | Variants, Sizes, Icon only, Disabled, With icons, Keyboard, Relief comparison |
 | `IconButton` | an icon control with a required name; hover and press on a circle | `icon`, `label` (required), `count`, `fab`, `size` (sm, md), `active`, `pressed`, `tooltip` (true shows the label, a string shows that string) | `onclick` | `fab` is mobile only and presses under the raised relief | Default, With count, Fab, Active, Pressed, Sizes |
 | `Chip` | a pill: unit, filter, integration, model | `label`, `tone` (neutral, accent, ai, honey, grey, outline), `icon`, `count`, `status` (healthy, stale, failed, off; the word is read out), `meter`, `selectable`, `selected*`, `mono` | `onclick`, `onselect(selected)` | | Tones, With icon and count, Status, Meter, Selectable, Mono |
-| `Badge` | access levels and row qualifiers | `kind` (read, write-draft, write, act-external, tier, estimated, origin, warning, ai, danger, neutral), `label` | | `read` renders nothing | All kinds, In a row |
+| `Badge` | access levels and row qualifiers | `kind` (read, write-draft, write, act-external, tier, estimated, origin, warning, ai, danger, neutral), `label`, `level` (1 to 6: a dot in the step's colour before the word) | | `read` renders nothing | All kinds, Levels, In a row |
 | `Field` | a labelled input whose border becomes the focus ring (on the internal `InputWrap`) | `label`, `value*`, `placeholder`, `unit`, `helper`, `error`, `icon`, `mono`, `large`, `type`, `id`; the input's attributes pass through | `oninput`, `onkeydown`; `trailing` snippet | | Default, Unit, Helper, Error, With icon, Large, Mono, Trailing |
 | `Segmented` | tabs inside a domain, with a sliding pill | `items` (strings or `{ id, label, icon }`), `selected*`, `iconPosition`, `label` | `onchange` (only on a real change) | | Text, Icons, In a header |
 | `Skeleton` | loading rows matching the final layout | `rows`, `icon` | | one fade-in, no loop | Default, Compact |
@@ -36,6 +36,8 @@ Props are listed by name; `*` marks a bindable prop; every component also takes 
 | `Breeze` | the one-shot specks (D-42) | `count`, `size` | `onend` | renders nothing under reduced motion | Once |
 | `Sparkline` | a numeric trend with a dashed reference | `values`, `reference`, `width`, `height`, `label`, `legend`, `referenceLabel` | | | Default, Reference, Empty, Single |
 | `SkyGlyph` | Sky's live glyph until the family is drawn | `condition`, `night`, `size`, `label`; module `iconFor`, `CONDITIONS` | | | All conditions, Live |
+| `MoonGlyph` (new) | the moon as it looks tonight, its lit face drawn from the cycle | `cycle` (0 new, 0.5 full), `size` (sm, md, lg), `label`; decorative without a label | | the lit side is the northern hemisphere's | Default, Phases, Sizes |
+| `LevelScale` (new) | a banded scale with a marker: where a reading sits between fine and hazardous | `value`, `stops` (where each band ends, at most six), `min`, `label` (required) | | bands are equally wide; colour is never alone | Air quality, Unhealthy, Beyond the scale, UV index |
 | `Toggle` (new) | an on/off switch | `checked*`, `label`, `description`, `disabled` | `onchange` | 44 px on mobile | On and off, Disabled, In a settings row |
 | `Tooltip` (new) | the collapsed subtitle, an icon's name | attachment `tooltip(text, { side, delay })` on any control, and a `Tooltip` wrapper for markup | | never on touch; shown on hover and keyboard focus only | On an icon button, On a sidebar item, Wrapper, Delay |
 | `Stepper` (new) | the onboarding step indicator | `steps`, `current`, `labels`, `label`, `shape` (bars, dots, auto) | | dots on mobile and when the row is too narrow | Steps, With labels, Compact |
@@ -45,7 +47,7 @@ Props are listed by name; `*` marks a bindable prop; every component also takes 
 
 | component | purpose | props | callbacks / snippets | platform | stories |
 |---|---|---|---|---|---|
-| `Sheet` (new) | the modal base: a `<dialog>` with `showModal()`, a focus trap for Tab cycling, Escape on keydown | `open*`, `placement` (auto, bottom, center, side), `size` (sm, md, lg, full), `label`, `labelledby`, `dismissible` | `onclose(reason: escape, scrim, api)`; `header`, `footer`, `children` | `auto` is a bottom sheet on mobile | Center, Bottom, Side, Auto, Sizes, Not dismissible, Keyboard |
+| `Sheet` (new) | the modal base: a `<dialog>` with `showModal()`, a focus trap for Tab cycling, Escape on keydown | `open*`, `placement` (auto, bottom, center, side), `size` (sm, md, lg, full), `label`, `labelledby`, `initialFocus` (first, container), `dismissible` | `onclose(reason: escape, scrim, api)`; `header`, `footer`, `children` | `auto` is a bottom sheet on mobile | Center, Bottom, Side, Auto, Sizes, Not dismissible, Focus on the sheet, Keyboard |
 | `Popover` | an anchored panel in the top layer (`popover="manual"`), placed by the anchor attachment, focus returned to the anchor on every close | `anchor` (an element or a rect), `open*`, `align`, `side`, `gap`, `role` (dialog by default; the trap applies only then), `label` | `onclose(reason: escape, outside, api)`; `children` | inline frame | Below, Above (flips), Align end, As dialog, At a point |
 | `Menu` | the action and context menu: a popover menu on desktop, a bottom sheet on mobile; destructive items last behind a separator | `items` (`{ id, label, icon, destructive, shortcut, disabled, onselect }`), `open*`, `anchor`, `align`, `label`, `presentation` (auto, menu, sheet) | `onselect(item)` | roving focus, Home and End, first-letter typeahead; Tab closes | Basic, With icons and shortcuts, Destructive last, Disabled item, Action sheet, Auto |
 | `Toast`, `ToastHost`, `toast` | the one toast, for errors and undo; one live region per toast | `toast({ message, action: { label, icon, onclick }, error, duration })`; `ToastHost` `store`; the host only dismisses the toast that asked | `ondismiss` | above the tab bar on mobile; paused while hovered or focused | Undo, Error, Replace, Paused, Times out |

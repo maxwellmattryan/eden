@@ -24,7 +24,7 @@ export type Relief = (typeof reliefs)[number]
 export const typeStyleNames = ["display-xl", "display-lg", "display-md", "display-sm", "voice", "daily-line", "daily-line-lg", "body-lg", "body", "body-sm", "label", "title", "title-lg", "caption", "data-lg", "data", "data-sm", "code"] as const
 export type TypeStyle = (typeof typeStyleNames)[number]
 
-export const colorTokenNames = ["surface-0", "surface-1", "surface-2", "surface-3", "text-primary", "text-secondary", "text-tertiary", "stroke", "stroke-subtle", "stroke-hover", "brand-primary", "brand-hover", "brand-muted", "on-brand", "ai", "ai-muted", "honey", "honey-muted", "on-honey", "on-ai", "danger", "on-danger", "warning", "info", "success", "accent-moss", "accent-fern", "accent-sage", "accent-clay", "accent-marigold", "accent-lavender", "accent-plum", "accent-sky", "accent-slate", "accent-rose", "chart-primary", "chart-reference", "chart-series-2", "chart-series-3", "chart-series-4", "chart-axis", "chart-grid", "chart-label"] as const
+export const colorTokenNames = ["surface-0", "surface-1", "surface-2", "surface-3", "text-primary", "text-secondary", "text-tertiary", "stroke", "stroke-subtle", "stroke-hover", "brand-primary", "brand-hover", "brand-muted", "on-brand", "ai", "ai-muted", "honey", "honey-muted", "on-honey", "on-ai", "danger", "on-danger", "warning", "info", "success", "accent-moss", "accent-fern", "accent-sage", "accent-clay", "accent-marigold", "accent-lavender", "accent-plum", "accent-sky", "accent-slate", "accent-rose", "chart-primary", "chart-reference", "chart-series-2", "chart-series-3", "chart-series-4", "chart-axis", "chart-grid", "chart-label", "level-1", "level-2", "level-3", "level-4", "level-5", "level-6", "moon-lit", "moon-shade"] as const
 export type ColorToken = (typeof colorTokenNames)[number]
 
 export const defaults = {
@@ -82,7 +82,15 @@ export const colors = {
 		"chart-series-4": "#c98a2e",
 		"chart-axis": "#d9d6c8",
 		"chart-grid": "#e8e5d9",
-		"chart-label": "#4c5a50"
+		"chart-label": "#4c5a50",
+		"level-1": "#4f8a4c",
+		"level-2": "#a8861c",
+		"level-3": "#c4682a",
+		"level-4": "#b0413e",
+		"level-5": "#7d4a9c",
+		"level-6": "#7a2e3a",
+		"moon-lit": "#f4ecd0",
+		"moon-shade": "#55625a"
 	},
 	"dark": {
 		"surface-0": "#0f1512",
@@ -127,7 +135,15 @@ export const colors = {
 		"chart-series-4": "#e8b45a",
 		"chart-axis": "#2a3730",
 		"chart-grid": "#1f2a24",
-		"chart-label": "#a9b5ac"
+		"chart-label": "#a9b5ac",
+		"level-1": "#7fc07a",
+		"level-2": "#e3c24f",
+		"level-3": "#f09a55",
+		"level-4": "#e0706c",
+		"level-5": "#b88ad6",
+		"level-6": "#c9707f",
+		"moon-lit": "#f0ead2",
+		"moon-shade": "#2a3730"
 	}
 } as const satisfies Record<Theme, Record<ColorToken, string>>
 

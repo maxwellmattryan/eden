@@ -1,11 +1,17 @@
 <script lang="ts">
 	// General: the language (D-20), then the measurement system, the week start and the clock every domain reads
-	// (D-58). Date formats, timezone and work hours follow.
+	// (D-58). Units and the clock show an example of the current choice, written by the formatters the domains use.
+	// Date formats, timezone and work hours follow.
 	import { Segmented } from '@eden/ui-kit'
+	import { formatTime } from '@eden/shared/dates'
 	import { t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { clockFormats, languages, measurementSystems, weekStarts } from '@eden/shared/types'
+	import { distance, pressure, rainfall, speed } from '@eden/shared/weather'
 	import SettingsRow from './SettingsRow.svelte'
+
+	// half past six in the evening, on the device's own clock
+	const SAMPLE_TIME = Date.parse('2026-01-01T18:30:00')
 
 	const items = $derived([$t('settings.general.english'), $t('settings.general.japanese')])
 	const selected = $derived(Math.max(0, languages.indexOf(settings.language)))
@@ -15,6 +21,16 @@
 	const selectedWeekStart = $derived(Math.max(0, weekStarts.indexOf(settings.weekStart)))
 	const clockItems = $derived([$t('settings.general.clock24'), $t('settings.general.clock12')])
 	const selectedClock = $derived(Math.max(0, clockFormats.indexOf(settings.clock)))
+
+	const measurementExample = $derived(
+		[
+			settings.measurement === 'imperial' ? '°F' : '°C',
+			...[speed, pressure, distance, rainfall].map((convert) =>
+				$t(`domains.weather.units.${convert(0, settings.measurement).unit}`)
+			),
+		].join(', ')
+	)
+	const clockExample = $derived(formatTime(SAMPLE_TIME, { lang: settings.language, clock: settings.clock }))
 </script>
 
 <SettingsRow label={$t('settings.general.language')} help={$t('settings.general.languageHelp')}>
@@ -26,7 +42,11 @@
 	/>
 </SettingsRow>
 
-<SettingsRow label={$t('settings.general.measurement')} help={$t('settings.general.measurementHelp')}>
+<SettingsRow
+	label={$t('settings.general.measurement')}
+	help={$t('settings.general.measurementHelp')}
+	example={measurementExample}
+>
 	<Segmented
 		items={measurementItems}
 		selected={selectedMeasurement}
@@ -44,7 +64,7 @@
 	/>
 </SettingsRow>
 
-<SettingsRow label={$t('settings.general.clock')} help={$t('settings.general.clockHelp')}>
+<SettingsRow label={$t('settings.general.clock')} help={$t('settings.general.clockHelp')} example={clockExample}>
 	<Segmented
 		items={clockItems}
 		selected={selectedClock}

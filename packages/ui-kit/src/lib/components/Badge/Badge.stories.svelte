@@ -59,6 +59,20 @@
 	{/snippet}
 </Story>
 
+<!-- The six-step scale: a dot in the step's colour beside the word that carries the meaning -->
+<Story name="Levels">
+	{#snippet template(args)}
+		<div class="row">
+			<Badge {...args} kind="neutral" level={1} label="Good" />
+			<Badge {...args} kind="neutral" level={2} label="Moderate" />
+			<Badge {...args} kind="neutral" level={3} label="Unhealthy for sensitive groups" />
+			<Badge {...args} kind="neutral" level={4} label="Unhealthy" />
+			<Badge {...args} kind="neutral" level={5} label="Very unhealthy" />
+			<Badge {...args} kind="neutral" level={6} label="Hazardous" />
+		</div>
+	{/snippet}
+</Story>
+
 <!-- Two row lines as a list would set them: the name in the platform text style, the badges after it -->
 <Story name="In a row">
 	{#snippet template(args)}

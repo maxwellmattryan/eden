@@ -45,6 +45,20 @@
 <Story name="Not dismissible" args={{ dismissible: false, placement: 'center' }} {template} />
 
 <Story
+	name="Focus on the sheet"
+	args={{ initialFocus: 'container', placement: 'center' }}
+	{template}
+	play={async ({ canvasElement }) => {
+		const canvas = canvasOf(canvasElement)
+		await userEvent.click(canvas.getByRole('button', { name: 'Open the sheet' }))
+		const dialog = await canvas.findByRole('dialog', { name: 'A sheet' })
+		await waitFor(() => expect(document.activeElement).toBe(dialog.querySelector('.ed-sheet-panel')))
+		await userEvent.tab()
+		await expect(document.activeElement).toBe(canvas.getByRole('textbox', { name: 'Reason' }))
+	}}
+/>
+
+<Story
 	name="Keyboard: Escape closes and returns focus"
 	args={{ placement: 'center' }}
 	{template}

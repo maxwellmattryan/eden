@@ -1,7 +1,7 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
 	import type { ComponentProps } from 'svelte'
-	import { expect, fn, within } from 'storybook/test'
+	import { expect, fn, userEvent, within } from 'storybook/test'
 	import { canvasOf, hasCanvas } from '../../../storybook/play.js'
 	import { defaultStrings } from '$lib/i18n/strings.js'
 	import { sidebar, skyAirQuality, skyAllergens, skyHours, skyToday, skyWeek } from '../../sample-data.js'
@@ -23,7 +23,7 @@
 				},
 			},
 		},
-		args: { onretry: fn(), onlocation: fn(), onopentoday: fn(), onnavigate: fn(), onsources: fn() },
+		args: { onretry: fn(), onlocation: fn(), onopentoday: fn(), onnavigate: fn(), onsources: fn(), onplace: fn() },
 	})
 </script>
 
@@ -66,7 +66,13 @@
 		for (const allergen of skyAllergens) await expect(within(allergens).getByText(allergen.name)).toBeVisible()
 		await expect(canvas.getByRole('region', { name: 'Sun and moon' })).toBeVisible()
 		await expect(canvas.getByText(skyToday.sunrise)).toBeVisible()
-		await expect(canvas.getByText('Forecast by Open-Meteo.')).toBeVisible()
+		await expect(canvas.getByText('Forecast by Open-Meteo')).toBeVisible()
+		await expect(
+			within(air).getByRole('img', { name: `US air quality index ${skyAirQuality.index}, Good` })
+		).toBeVisible()
+		await expect(within(details).getByRole('button', { name: 'About Humidity' })).toBeVisible()
+		await expect(within(air).getByRole('button', { name: 'About Ozone' })).toBeVisible()
+		await expect(within(now).getByRole('img', { name: /Temperature over the next 12 hours/ })).toBeVisible()
 	}}
 />
 
@@ -147,7 +153,7 @@
 		await expect(canvas.getByRole('region', { name: 'Air quality' })).toBeVisible()
 		await expect(canvas.getAllByRole('row')).toHaveLength(7)
 		await expect(canvas.getByText('Apple Weather')).toBeVisible()
-		await expect(canvas.queryByText('Forecast by Open-Meteo.')).toBeNull()
+		await expect(canvas.queryByText('Forecast by Open-Meteo')).toBeNull()
 		canvas.getByRole('button', { name: 'Data sources' }).click()
 		await expect(args.onsources).toHaveBeenCalledTimes(1)
 	}}
@@ -162,7 +168,7 @@
 		if (!hasCanvas(canvasElement)) return
 		const canvas = canvasOf(canvasElement)
 		await expect(canvas.getByText("Couldn't reach Apple Weather. Showing Open-Meteo's forecast instead.")).toBeVisible()
-		await expect(canvas.getByText('Forecast by Open-Meteo.')).toBeVisible()
+		await expect(canvas.getByText('Forecast by Open-Meteo')).toBeVisible()
 	}}
 />
 
@@ -176,5 +182,23 @@
 		const canvas = canvasOf(canvasElement)
 		const allergens = canvas.getByRole('region', { name: 'Pollen and mold' })
 		await expect(within(allergens).getByText('No pollen or mold source covers this place yet.')).toBeVisible()
+	}}
+/>
+
+<!-- Changing home: the location menu's last item opens a sheet with a search and its results; a result becomes home -->
+<Story
+	name="Change home"
+	{template}
+	args={{ locating: true }}
+	parameters={{ platformFrame: 'inline' }}
+	play={async ({ canvasElement, args }) => {
+		const page = within(canvasElement.ownerDocument.body)
+		const sheet = await page.findByRole('dialog', { name: 'Change home' })
+		await expect(within(sheet).getByRole('textbox', { name: 'Find a place' })).toHaveValue('Austin')
+		const places = within(within(sheet).getByRole('list', { name: 'Places' })).getAllByRole('button')
+		await expect(places).toHaveLength(3)
+		await expect(places[0]).toHaveTextContent('Austin · Texas, United States')
+		await userEvent.click(places[0]!)
+		await expect(args.onplace).toHaveBeenCalledWith('austin-tx')
 	}}
 />

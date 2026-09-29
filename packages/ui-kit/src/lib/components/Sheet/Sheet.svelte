@@ -23,6 +23,9 @@
 		/** The accessible name, when no visible title is labelled through `labelledby`. */
 		label?: string
 		labelledby?: string
+		/** Where focus lands on open: the first focusable (an `autofocus` element wins), or the panel itself, so a
+		 * sheet that opens on navigation shows no ring until Tab is pressed. */
+		initialFocus?: 'first' | 'container'
 		/** When false, Escape and the scrim do nothing; the sheet closes only through `open`. */
 		dismissible?: boolean
 		/** Called after the sheet has closed, with why. */
@@ -37,6 +40,7 @@
 		size = 'md',
 		label,
 		labelledby,
+		initialFocus = 'first',
 		dismissible = true,
 		onclose,
 		header,
@@ -100,7 +104,7 @@
 	<div
 		class="ed-sheet-panel"
 		role="document"
-		{@attach trapFocus(() => ({ active: open, initial: 'first', returnFocus: false }))}
+		{@attach trapFocus(() => ({ active: open, initial: initialFocus, returnFocus: false }))}
 	>
 		{#if resolved === 'bottom'}<span class="ed-sheet-handle" aria-hidden="true"></span>{/if}
 		{#if header}<header class="ed-sheet-header">{@render header()}</header>{/if}
@@ -147,6 +151,10 @@
 		transition:
 			transform var(--ed-duration-panel) var(--ed-ease-out),
 			opacity var(--ed-duration-panel) var(--ed-ease-out);
+	}
+	/* The panel takes focus only from the trap (tabindex -1), never from Tab, so it draws no ring of its own. */
+	.ed-sheet-panel:focus {
+		outline: none;
 	}
 	.ed-sheet-header,
 	.ed-sheet-footer {

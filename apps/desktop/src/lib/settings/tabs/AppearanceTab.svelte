@@ -1,7 +1,8 @@
 <script lang="ts">
 	// Appearance: theme, accent, font, density and the sidebar subtitles, every change applied to <html> at once
 	// through the shared settings and persisted to the keys the pre-paint script reads. The accent row is a set of
-	// selectable chips rather than the eventual picker (OQ-18).
+	// selectable chips rather than the eventual picker (OQ-18); each chip carries its own data-accent, so it wears the
+	// colour it stands for, and the chosen one takes the check.
 	import { Chip, Segmented, Toggle, accents, type Accent } from '@eden/ui-kit'
 	import { t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
@@ -33,6 +34,9 @@
 		{#each accentRows as accent (accent.id)}
 			<Chip
 				label={accent.label}
+				tone="accent"
+				icon={settings.accent === accent.id ? 'check' : undefined}
+				data-accent={accent.id}
 				selectable
 				selected={settings.accent === accent.id}
 				onselect={(on) => on && settings.setAccent(accent.id)}
@@ -69,5 +73,9 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: 8px;
+	}
+	/* The kit resolves the accent chip's border at the root, from the app's accent; here it follows the chip's own. */
+	.accents :global([data-accent]) {
+		--ed-chip-accent-border: color-mix(in srgb, var(--brand-primary) 45%, transparent);
 	}
 </style>

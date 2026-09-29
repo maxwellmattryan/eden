@@ -205,11 +205,19 @@ export const skyAllergens: { id: string; name: string; level: SkyAllergenLevel }
 	{ id: 'ragweed', name: 'Ragweed pollen', level: 'high' },
 	{ id: 'mold', name: 'Mold', level: 'moderate' },
 ]
+/** What a search for "Austin" finds when the home place is changed: a name, its region and country. */
+export const skyPlaceResults = [
+	{ id: 'austin-tx', name: 'Austin', region: 'Texas, United States' },
+	{ id: 'austin-mn', name: 'Austin', region: 'Minnesota, United States' },
+	{ id: 'austin-nv', name: 'Austin', region: 'Nevada, United States' },
+]
 export const skyToday = {
 	sunrise: '07:22',
 	sunset: '19:14',
 	goldenHour: '18:35',
 	moon: 'waning gibbous 84 %',
+	/** Where the moon is in its cycle (0 new, 0.5 full): what draws the glyph. */
+	moonCycle: 0.63,
 	goodFor: 'an early run before the showers',
 	lastGood: '07:40',
 }
