@@ -17,7 +17,7 @@ Each screen below lists: id, platform, purpose, must show, primary actions, stat
 |---|---|---|---|---|---|---|
 | `splash` | both | the daily line while the workspace opens | wordmark, one line, source | none | neutral line when Sanctuary is off | Sanctuary Wednesday line |
 | `onboarding-1..10` | both | first launch | step indicator, back, skip | continue | steps 5, 7, 8 are the ones that matter | Rowan's home, key entry, the two T2 grants with the "can see" chip |
-| `garden`, mocked as `Domains/Garden/Garden` | both | the dashboard | quick-nav row, widget grid, activity feed, daily line | edit mode, ⌘K | first run empty, edit mode, offline | the Phase 1 default layout (`gardenLayout`) |
+| `garden`, mocked as `Domains/Garden/Garden`, built in `apps/desktop` (edit mode pending) | both | the dashboard | quick-nav row, widget grid, activity feed, daily line | edit mode, ⌘K | first run empty, edit mode, offline | the Phase 1 default layout (`gardenLayout`) |
 | `garden-edit` | desktop | arrange widgets | drag handles, resize, catalog sheet by domain | done | | |
 | `today` | both | tasks and routines | overdue, due today, routines, habits, Quick Log strip, quick-add | add, done, snooze | empty, overdue | Wednesday's task and routines |
 | `palette` | desktop | ⌘K | verbs, fuzzy results, recents | run | no results | "log weight 82.4", "go to almanac" |

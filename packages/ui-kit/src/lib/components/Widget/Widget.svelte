@@ -13,7 +13,9 @@
 	// Sizes s (1×1), m (2×1) and l (2×2) are grid spans, which only bite inside WidgetGrid; on its own a tile fills its
 	// container and keeps a minimum height. An empty widget shows a one-line prompt rather than hiding. `editing` dims
 	// the body and shows the drag handle; the dragging itself is the app's. Widgets compute locally from their declared
-	// reads: nothing runs a model because the Garden opened.
+	// reads: nothing runs a model because the Garden opened. At 1×1 the title row has room for the glyph and the title
+	// only, so the domain name is not drawn there and a long title wraps to a second line: the glyph names the domain
+	// (ux-patterns, "Widgets").
 	import type { Snippet } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
 	import type { IconName } from '../../icons/icons.js'
@@ -27,7 +29,7 @@
 		title: string
 		/** The domain glyph: pass `domainGlyph(id)`. */
 		icon?: IconName
-		/** The themed domain name, quiet at the right of the title row. */
+		/** The themed domain name, quiet at the right of the title row; not drawn at size s, where the glyph stands for it. */
 		domain?: string
 		/** s is 1×1, m 2×1, l 2×2 on the grid. */
 		size?: WidgetSize
@@ -133,11 +135,32 @@
 	}
 	.ed-widget-domain {
 		margin-left: auto;
-		flex: none;
+		flex: 0 1 auto;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
 		font: var(--ed-t-caption);
 		letter-spacing: var(--ed-t-caption-tracking);
 		color: var(--text-tertiary);
 		white-space: nowrap;
+	}
+	/* a 1×1 cell has room for the glyph and the title only, and a long title takes a second line rather than an ellipsis */
+	.ed-widget-s .ed-widget-domain {
+		display: none;
+	}
+	.ed-widget-s .ed-widget-head {
+		align-items: flex-start;
+	}
+	.ed-widget-s .ed-widget-title {
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		white-space: normal;
+		overflow-wrap: anywhere;
+	}
+	.ed-widget-s .ed-widget-head :global(.ed-widget-glyph) {
+		margin-top: var(--space-1);
 	}
 
 	.ed-widget-body {

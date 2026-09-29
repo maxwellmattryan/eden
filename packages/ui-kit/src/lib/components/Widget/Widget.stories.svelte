@@ -11,6 +11,7 @@
 		ideas,
 		quickLogs,
 		sidebar,
+		skyToday,
 		skyWeek,
 		stock,
 		weightAverage,
@@ -65,6 +66,34 @@
 					{#each expiring as item (item.id)}
 						<li><span>{item.name}</span><span class="sb-meta">{item.expiry}</span></li>
 					{/each}
+				</ul>
+			</Widget>
+		</WidgetGrid>
+	{/snippet}
+</Story>
+
+<!-- 1×1: the domain name is not drawn, the glyph stands for it, and a long value wraps under its label -->
+<Story
+	name="Small"
+	play={async ({ canvasElement }) => {
+		const canvas = canvasOf(canvasElement)
+		await expect(canvas.getByRole('region', { name: idle.title })).toBeVisible()
+		await expect(canvas.getByRole('region', { name: 'Sun and moon' })).toBeVisible()
+		await expect(canvas.getByText(toolbench.name)).not.toBeVisible()
+		await expect(canvas.getByText(skyToday.moon)).toBeVisible()
+	}}
+>
+	{#snippet template(args)}
+		<WidgetGrid>
+			<Widget {...args} title={idle.title} icon={domainGlyph('toolbench')} domain={toolbench.name} size="s">
+				<p class="sb-line">{idle.title}</p>
+			</Widget>
+			<Widget {...args} title="Sun and moon" icon={domainGlyph('weather')} domain={sky.name} size="s">
+				<ul class="sb-list">
+					<li><span>Sunrise</span><span class="sb-meta">{skyToday.sunrise}</span></li>
+					<li><span>Sunset</span><span class="sb-meta">{skyToday.sunset}</span></li>
+					<li><span>Golden hour</span><span class="sb-meta">{skyToday.goldenHour}</span></li>
+					<li><span>Moon</span><span class="sb-meta">{skyToday.moon}</span></li>
 				</ul>
 			</Widget>
 		</WidgetGrid>
@@ -141,11 +170,17 @@
 	}
 	.sb-list li {
 		display: flex;
+		flex-wrap: wrap;
 		justify-content: space-between;
-		gap: var(--space-2);
+		gap: 0 var(--space-2);
 	}
 	.sb-meta {
+		margin-left: auto;
 		font: var(--ed-t-data-sm);
 		color: var(--text-secondary);
+	}
+	.sb-line {
+		margin: 0;
+		font: var(--ed-t-body);
 	}
 </style>

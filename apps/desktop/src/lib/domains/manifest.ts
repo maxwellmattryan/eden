@@ -44,4 +44,8 @@ export interface DomainManifest {
 	routes: { path: DomainRoute; tabs?: readonly string[] }
 	widgets: WidgetDeclaration[]
 	quickActions: QuickAction[]
+	/** Loads the domain's store; the Garden calls it for every domain, the domain's own page for itself. */
+	load?: () => Promise<void>
+	/** Seeds the store from the kit's sample dataset and returns the undo; behind the empty states' "Add sample data". */
+	seed?: () => () => void
 }

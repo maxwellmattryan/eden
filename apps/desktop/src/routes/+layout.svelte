@@ -20,6 +20,7 @@
 	import { initializeI18n, locale, t, uiKitStrings } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import CrashScreen from '$lib/components/CrashScreen.svelte'
+	import { manifests } from '$lib/domains'
 	import { useGlobalErrorHandler } from '$lib/hooks/useGlobalErrorHandler'
 	import SettingsSheet from '$lib/settings/SettingsSheet.svelte'
 	import { settingsUi } from '$lib/settings/settings-ui.svelte'
@@ -28,16 +29,12 @@
 
 	const UPDATE_INTERVAL = 60 * 60 * 1000
 
-	// Today, Garden, then the Phase 1 domains in the fixed order, each its own group under a rule (D-55); the owner's
+	// Today, Garden, then the enabled domains from their manifests, each its own group under a rule (D-55); the owner's
 	// order arrives with the Domains tab.
 	const hrefs = {
 		today: resolve('/today'),
 		garden: resolve('/garden'),
-		kitchen: resolve('/kitchen'),
-		toolbench: resolve('/toolbench'),
-		weather: resolve('/weather'),
 	} as const
-	const domains = ['kitchen', 'toolbench', 'weather'] as const
 
 	const groups = $derived<SidebarEntry[][]>([
 		[
@@ -60,13 +57,13 @@
 				href: hrefs.garden,
 			},
 		],
-		domains.map((id, index) => ({
-			id,
-			name: $t(`domains.${id}.name`),
-			subtitle: $t(`domains.${id}.subtitle`),
-			icon: domainGlyph(id),
+		manifests.map((manifest, index) => ({
+			id: manifest.id,
+			name: $t(manifest.name),
+			subtitle: $t(manifest.subtitle),
+			icon: manifest.glyph,
 			shortcut: `⌘${index + 3}`,
-			href: hrefs[id],
+			href: resolve(manifest.routes.path),
 		})),
 	])
 	const items = $derived(groups.flat())

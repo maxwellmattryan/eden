@@ -2,6 +2,10 @@
 	"app": {
 		"name": "Eden"
 	},
+	"common": {
+		"undo": "Undo",
+		"sampleAdded": "Sample data added."
+	},
 	"shell": {
 		"garden": "Garden",
 		"gardenSubtitle": "Dashboard",
@@ -18,6 +22,58 @@
 			"offline": "Offline"
 		},
 		"gardenerNoKey": "No key on this device"
+	},
+	"garden": {
+		"edit": "Edit layout",
+		"quickNav": "Quick navigation",
+		"activity": "Activity",
+		"lastUpdated": "Last updated {time}",
+		"widgets": {
+			"weatherNow": "Now",
+			"today": "Today",
+			"expiringSoon": "Expiring soon",
+			"cookTonight": "Cook tonight",
+			"resurfacedIdea": "Resurfaced idea",
+			"activeProjects": "Active projects",
+			"sunAndMoon": "Sun and moon",
+			"dailyLine": "Daily line",
+			"quickLog": "Weight"
+		},
+		"empty": {
+			"weatherNow": "Set a home place to see the sky.",
+			"today": "Nothing due today.",
+			"expiringSoon": "Nothing expiring soon.",
+			"cookTonight": "Add stock and a recipe or two.",
+			"resurfacedIdea": "Capture an idea and it will come back around.",
+			"activeProjects": "No projects yet.",
+			"sunAndMoon": "Set a home place to see the light.",
+			"dailyLine": "Tend what you can reach.",
+			"quickLog": "Log a weight to start the line.",
+			"feed": "Nothing has happened yet."
+		},
+		"actions": {
+			"today": "Open Today",
+			"cookTonight": "Cook this",
+			"resurfacedIdea": "Open idea",
+			"activeProjects": "Open projects",
+			"quickLog": "Log weight"
+		},
+		"untouched": "{days, plural, one {# day untouched} other {# days untouched}}",
+		"minutes": "{minutes} min",
+		"suggested": "{name} expires tomorrow",
+		"sunrise": "Sunrise",
+		"sunset": "Sunset",
+		"goldenHour": "Golden hour",
+		"moon": "Moon",
+		"weightUnit": "kg",
+		"dailyLine": {
+			"line": "Tend what you can reach.",
+			"source": "Eden"
+		},
+		"feed": {
+			"yesterday": "yesterday {time}",
+			"sampleAdded": "Added sample data to {domain}"
+		}
 	},
 	"domains": {
 		"kitchen": {

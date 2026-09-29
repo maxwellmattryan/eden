@@ -1,14 +1,16 @@
-// svelte-i18n with the two launch locales (D-20). en.json is the source of truth; ja.json changes with it. The
-// dictionaries load lazily; `init` runs at import with English so a `$t` before `initializeI18n` never throws.
-import { _, getLocaleFromNavigator, init, locale, register, waitLocale } from 'svelte-i18n'
+// svelte-i18n with the two launch locales (D-20). en.json is the source of truth; ja.json changes with it. English
+// is added synchronously and `init` runs at import with it, so the locale is set before the first render and a `$t`
+// before `initializeI18n` never throws; Japanese loads lazily when chosen.
+import { _, addMessages, getLocaleFromNavigator, init, locale, register, waitLocale } from 'svelte-i18n'
 import { languages, type Language } from '../types/index.js'
+import en from './locales/en.json' with { type: 'json' }
 
 export const SUPPORTED_LANGUAGES: { value: Language; label: string; nativeLabel: string }[] = [
 	{ value: 'en', label: 'English', nativeLabel: 'English' },
 	{ value: 'ja', label: 'Japanese', nativeLabel: '日本語' },
 ]
 
-register('en', () => import('./locales/en.json'))
+addMessages('en', en)
 register('ja', () => import('./locales/ja.json'))
 
 init({ fallbackLocale: 'en', initialLocale: 'en' })

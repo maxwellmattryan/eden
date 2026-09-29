@@ -42,6 +42,8 @@ jobs:
           choco install strawberryperl -y --no-progress
           echo "C:\Strawberry\perl\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       - run: yarn install --frozen-lockfile
+      # The apps compile the kit from source, and the kit's tsconfig extends the one svelte-kit generates.
+      - run: yarn workspace @eden/ui-kit svelte-kit sync
       # Updater artifacts are off: a CI build has no signing key, and the release workflow is where they are made.
       - name: Build (macOS universal)
         if: matrix.os == 'macos-latest'

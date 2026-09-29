@@ -2,6 +2,10 @@
 	"app": {
 		"name": "Eden"
 	},
+	"common": {
+		"undo": "元に戻す",
+		"sampleAdded": "サンプルデータを追加しました。"
+	},
 	"shell": {
 		"garden": "庭",
 		"gardenSubtitle": "ダッシュボード",
@@ -18,6 +22,58 @@
 			"offline": "オフライン"
 		},
 		"gardenerNoKey": "この端末にキーがありません"
+	},
+	"garden": {
+		"edit": "配置を編集",
+		"quickNav": "クイックナビゲーション",
+		"activity": "アクティビティ",
+		"lastUpdated": "最終更新 {time}",
+		"widgets": {
+			"weatherNow": "今の空",
+			"today": "今日",
+			"expiringSoon": "まもなく期限",
+			"cookTonight": "今夜の料理",
+			"resurfacedIdea": "再浮上したアイデア",
+			"activeProjects": "進行中のプロジェクト",
+			"sunAndMoon": "太陽と月",
+			"dailyLine": "今日の一行",
+			"quickLog": "体重"
+		},
+		"empty": {
+			"weatherNow": "自宅の場所を設定すると空が見えます。",
+			"today": "今日の予定はありません。",
+			"expiringSoon": "まもなく期限のものはありません。",
+			"cookTonight": "食材とレシピを追加してください。",
+			"resurfacedIdea": "アイデアを記録すると、また巡ってきます。",
+			"activeProjects": "プロジェクトはまだありません。",
+			"sunAndMoon": "自宅の場所を設定すると光が見えます。",
+			"dailyLine": "足るを知る",
+			"quickLog": "体重を記録すると線が始まります。",
+			"feed": "まだ何も起きていません。"
+		},
+		"actions": {
+			"today": "今日を開く",
+			"cookTonight": "これを作る",
+			"resurfacedIdea": "アイデアを開く",
+			"activeProjects": "プロジェクトを開く",
+			"quickLog": "体重を記録"
+		},
+		"untouched": "{days}日間手つかず",
+		"minutes": "{minutes}分",
+		"suggested": "{name}が明日期限",
+		"sunrise": "日の出",
+		"sunset": "日の入り",
+		"goldenHour": "ゴールデンアワー",
+		"moon": "月",
+		"weightUnit": "kg",
+		"dailyLine": {
+			"line": "足るを知る",
+			"source": "老子"
+		},
+		"feed": {
+			"yesterday": "昨日 {time}",
+			"sampleAdded": "{domain}にサンプルデータを追加"
+		}
 	},
 	"domains": {
 		"kitchen": {
