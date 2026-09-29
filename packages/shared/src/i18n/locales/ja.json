@@ -78,7 +78,11 @@
 			"stockMoved": "{name}を{location}へ移動",
 			"groceryAdded": "{name}を買い物リストに追加",
 			"groceryChecked": "{name}をチェック",
-			"groceryCleared": "チェック済み{count}件を整理"
+			"groceryCleared": "チェック済み{count}件を整理",
+			"ideaCaptured": "{title}を記録",
+			"ideaMoved": "{title}を{status}へ",
+			"ideaArchived": "{title}を保管",
+			"ideaDeleted": "{title}を削除"
 		}
 	},
 	"domains": {
@@ -188,7 +192,80 @@
 		},
 		"toolbench": {
 			"name": "工房",
-			"subtitle": "アイデア、プロジェクト"
+			"subtitle": "アイデア、プロジェクト",
+			"tabs": {
+				"ideas": "アイデア",
+				"projects": "プロジェクト",
+				"lab": "ラボ",
+				"studio": "スタジオ",
+				"notes": "ノート"
+			},
+			"tabsLabel": "工房のセクション",
+			"saveFailed": "変更を保存できませんでした。",
+			"ideas": {
+				"capture": "アイデアを記録",
+				"addPlaceholder": "アイデアを記録",
+				"list": "アイデア",
+				"status": {
+					"idea": "アイデア",
+					"exploring": "検討中",
+					"building": "制作中",
+					"archived": "保管"
+				},
+				"untouched": "{days}日",
+				"detail": {
+					"status": "状態",
+					"area": "分野",
+					"project": "プロジェクト",
+					"log": "記録",
+					"brainstorm": "ブレインストーム"
+				},
+				"noLog": "記録はまだありません。",
+				"brainstormWith": "庭師とブレインストーム",
+				"actions": {
+					"moveTo": "{status}へ移す",
+					"archive": "保管",
+					"delete": "削除"
+				},
+				"log": {
+					"captured": "クイック追加から記録",
+					"moved": "{status}へ移動"
+				},
+				"toast": {
+					"captured": "{title}を記録しました。",
+					"moved": "{title}を{status}へ移しました。",
+					"archived": "{title}を保管しました。",
+					"deleted": "{title}を削除しました。"
+				},
+				"empty": {
+					"title": "アイデアはまだありません",
+					"text": "5秒で記録して、あとで整理しましょう。良いものはプロジェクトに育ちます。"
+				}
+			},
+			"projects": {
+				"empty": {
+					"title": "プロジェクトはまだありません",
+					"text": "制作中のアイデアが、リポジトリと次の一手、記録とともにここでプロジェクトになります。"
+				}
+			},
+			"lab": {
+				"empty": {
+					"title": "デバイスはまだありません",
+					"text": "ホームラボのデバイス、サービス、ルーチンがここに集まります。"
+				}
+			},
+			"studio": {
+				"empty": {
+					"title": "スケッチはまだありません",
+					"text": "ジェネラティブアートのレンダー、シード、パラメータがここに集まります。"
+				}
+			},
+			"notes": {
+				"empty": {
+					"title": "ノートはまだありません",
+					"text": "技術メモ、コマンド、設定のレシピがここに集まり、検索できます。"
+				}
+			}
 		},
 		"weather": {
 			"name": "空",

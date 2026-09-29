@@ -28,6 +28,11 @@ export function daysUntil(isoDate: string, from = todayIso()): number {
 	return Math.round((Date.parse(isoDate) - Date.parse(from)) / DAY)
 }
 
+/** Whole days since an ISO date or timestamp; never negative. */
+export function daysSince(iso: string): number {
+	return Math.max(0, -daysUntil(iso.slice(0, 10)))
+}
+
 /** An ISO date `days` from today. */
 export function daysFromToday(days: number): string {
 	return toIsoDate(new Date(Date.now() + days * DAY))

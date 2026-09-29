@@ -34,7 +34,7 @@ The apps and the shared package depend on the kit by exact version and consume e
 | dev port | 1420 (HMR 1421 when `TAURI_DEV_HOST` is set) | 1421 (HMR 1430) |
 | shell | `Sidebar`, `BackButton`, `StatusBar`, the settings `Sheet` with a tab rail | `BottomTabBar` pinned to the bottom, More, an Appearance-only settings sheet |
 
-The five Phase 1 routes exist on both: `garden`, `today`, `kitchen`, `toolbench`, `weather` (mobile has `more` instead of `toolbench`, which lives behind it). A route renders its `PageHeader` and `EmptyState` from the locale until its approved mockup is implemented (D-54); on desktop the Garden, Hearth (Stock and Grocery; Recipes and Tips are empty states) and Sky are built, and each story stays its reference.
+The five Phase 1 routes exist on both: `garden`, `today`, `kitchen`, `toolbench`, `weather` (mobile has `more` instead of `toolbench`, which lives behind it). A route renders its `PageHeader` and `EmptyState` from the locale until its approved mockup is implemented (D-54); on desktop the Garden, Hearth (Stock and Grocery), Sky and Toolbench (Ideas) are built from their approved mockups, and each story stays its reference; the tabs without a mockup yet (Recipes, Tips, Projects, Lab, Studio, Notes) render an `EmptyState`, and Today its placeholder.
 
 ## Commands
 

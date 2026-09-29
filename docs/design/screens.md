@@ -42,7 +42,7 @@ Each screen below lists: id, platform, purpose, must show, primary actions, stat
 | `hearth-recipes` | desktop | recipes and cook this | list, detail with ingredients marked in stock or missing | cook this, add missing to grocery | empty | the three recipes |
 | `hearth-grocery`, mocked as `Domains/Hearth/Grocery`, built in `apps/desktop` | both | the list | grouped by store, check off, origin badges | add, clear checked, export (later) | empty, all checked | H-E-B Saturday |
 | `hearth-tips` | desktop | storage tips | search, tip cards | | | miso, ginger, avocados |
-| `toolbench-ideas`, mocked as `Domains/Toolbench/Ideas` (desktop) | both | the inbox of ideas | status filter, list, detail with log and brainstorm thread | capture, change status | empty | the six ideas, `ideaLog` |
+| `toolbench-ideas`, mocked as `Domains/Toolbench/Ideas` (desktop), built in `apps/desktop` | both | the inbox of ideas | status filter, list, detail with log and brainstorm thread | capture, change status | empty | the six ideas, `ideaLog` |
 | `toolbench-projects` | desktop | projects | list, detail with repo, next steps, log | add step | | weather-field, pi-pantry |
 | `toolbench-lab` | desktop | devices | device rows with services and routine status | add device | | the two devices |
 | `toolbench-studio` | desktop | render gallery | grid of renders, sketch detail with seed and parameters | | empty | weather-field |

@@ -78,7 +78,11 @@
 			"stockMoved": "{name} moved to the {location}",
 			"groceryAdded": "{name} added to the list",
 			"groceryChecked": "{name} checked off",
-			"groceryCleared": "{count, plural, one {# checked item} other {# checked items}} cleared"
+			"groceryCleared": "{count, plural, one {# checked item} other {# checked items}} cleared",
+			"ideaCaptured": "{title} captured",
+			"ideaMoved": "{title} moved to {status}",
+			"ideaArchived": "{title} archived",
+			"ideaDeleted": "{title} deleted"
 		}
 	},
 	"domains": {
@@ -188,7 +192,80 @@
 		},
 		"toolbench": {
 			"name": "Toolbench",
-			"subtitle": "Ideas, projects, homelab, generative art"
+			"subtitle": "Ideas, projects, homelab, generative art",
+			"tabs": {
+				"ideas": "Ideas",
+				"projects": "Projects",
+				"lab": "Lab",
+				"studio": "Studio",
+				"notes": "Notes"
+			},
+			"tabsLabel": "Toolbench sections",
+			"saveFailed": "Couldn't save your changes.",
+			"ideas": {
+				"capture": "Capture an idea",
+				"addPlaceholder": "Capture an idea",
+				"list": "Ideas",
+				"status": {
+					"idea": "Idea",
+					"exploring": "Exploring",
+					"building": "Building",
+					"archived": "Archived"
+				},
+				"untouched": "{days, plural, one {# day} other {# days}}",
+				"detail": {
+					"status": "Status",
+					"area": "Area",
+					"project": "Project",
+					"log": "Log",
+					"brainstorm": "Brainstorm"
+				},
+				"noLog": "No log yet.",
+				"brainstormWith": "Brainstorm with the Gardener",
+				"actions": {
+					"moveTo": "Move to {status}",
+					"archive": "Archive",
+					"delete": "Delete"
+				},
+				"log": {
+					"captured": "Captured from the quick-add line",
+					"moved": "Moved to {status}"
+				},
+				"toast": {
+					"captured": "{title} captured.",
+					"moved": "{title} moved to {status}.",
+					"archived": "{title} archived.",
+					"deleted": "{title} deleted."
+				},
+				"empty": {
+					"title": "No ideas yet",
+					"text": "Capture one in five seconds and file it later. The good ones grow into projects."
+				}
+			},
+			"projects": {
+				"empty": {
+					"title": "No projects yet",
+					"text": "A building idea becomes a project here, with its repo, next steps and log."
+				}
+			},
+			"lab": {
+				"empty": {
+					"title": "No devices yet",
+					"text": "Homelab devices, their services and their routines gather here."
+				}
+			},
+			"studio": {
+				"empty": {
+					"title": "No sketches yet",
+					"text": "Renders, seeds and parameters of your generative sketches gather here."
+				}
+			},
+			"notes": {
+				"empty": {
+					"title": "No notes yet",
+					"text": "Technical notes, commands and config recipes gather here, searchable."
+				}
+			}
 		},
 		"weather": {
 			"name": "Sky",
