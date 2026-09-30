@@ -13,7 +13,16 @@ import {
 	type GrantInput,
 	type GrantQuery,
 } from '../grants/types.js'
-import { isEntityType, kindsOf } from '../registry/index.js'
+import {
+	checkWindow,
+	effectiveOrder,
+	historyCutoff,
+	isInWindow,
+	validateFact,
+	validatePatch,
+} from '../profile/rules.js'
+import type { Fact, FactHistoryEntry, FactInput, FactPatch, FactQuery } from '../profile/types.js'
+import { factsOf, isEntityType, kindsOf } from '../registry/index.js'
 import { DataError } from './errors.js'
 import { formatStamp, tick, type Hlc } from './hlc.js'
 import { createIdGenerator, isUlid } from './ulid.js'
@@ -74,6 +83,10 @@ interface State {
 	grants: Grant[]
 	/** The egress ledger (`egress.rs`), one row per destination and day. */
 	egress: EgressRow[]
+	/** The profile (`facts.rs`), tombstones included. */
+	facts: Fact[]
+	/** What a fact held before each edit, thirty days. */
+	factHistory: FactHistoryEntry[]
 }
 
 /**
@@ -184,6 +197,8 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 			links: [],
 			grants: [],
 			egress: [],
+			facts: [],
+			factHistory: [],
 		}
 		// what the first migration seeds in the crate
 		const stamp = formatStamp({ wallMs: 0, counter: 0, node: 0 })
@@ -203,6 +218,8 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 					// A document from before the grant store and the ledger has neither; it reads as if it had them empty.
 					state.grants ??= []
 					state.egress ??= []
+					state.facts ??= []
+					state.factHistory ??= []
 					return state
 				}
 			} catch {
@@ -223,6 +240,38 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 	function stamp(state: State): string {
 		state.clock = tick(state.clock, now())
 		return formatStamp(state.clock)
+	}
+
+	/** Keeps what a fact held before an edit, under the edit's stamp, and lets go of what is past thirty days. */
+	function keepHistory(state: State, before: Fact, replacedAt: string): void {
+		state.factHistory.push({
+			factId: before.id,
+			type: before.type,
+			value: structuredClone(before.value),
+			note: before.note,
+			validFrom: before.validFrom,
+			validUntil: before.validUntil,
+			replacedAt,
+		})
+	}
+
+	function sweepHistory(state: State): void {
+		const cutoff = historyCutoff(now())
+		state.factHistory = state.factHistory.filter((entry) => entry.replacedAt >= cutoff)
+	}
+
+	/** Whether an edit changed what the history keeps: the value, the note or the window. */
+	function keptChanged(before: Fact, after: Fact): boolean {
+		return (
+			JSON.stringify(before.value) !== JSON.stringify(after.value) ||
+			before.note !== after.note ||
+			before.validFrom !== after.validFrom ||
+			before.validUntil !== after.validUntil
+		)
+	}
+
+	function liveSystemFact(state: State, type: string): Fact | undefined {
+		return state.facts.find((fact) => !fact.deletedAt && fact.provenance === 'system-derived' && fact.type === type)
 	}
 
 	function common(type: string, id: string, at: string, input: RowInput): Omit<Row, 'links'> {
@@ -652,6 +701,136 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 				if (refusal) throw new DataError(refusal[0], refusal[1])
 			}
 			return decide(check, load().grants)
+		},
+
+		// The profile (`facts.rs`, D-72): the crate's rules, from `../profile/rules.js`.
+
+		/** Asserts a fact. A `system-derived` fact of a type the substrate already derived is renewed in place. */
+		assertFact(input: FactInput): Fact {
+			const refusal = validateFact(input)
+			if (refusal) throw new DataError(refusal[0], refusal[1])
+			return write((state) => {
+				sweepHistory(state)
+				const fields = {
+					value: structuredClone(input.value),
+					confidence: input.confidence ?? null,
+					validFrom: input.validFrom ?? null,
+					validUntil: input.validUntil ?? null,
+					source: input.source ?? null,
+					note: input.note ?? null,
+				}
+				if (input.provenance === 'system-derived') {
+					const existing = liveSystemFact(state, input.type)
+					if (existing) {
+						const before = structuredClone(existing)
+						Object.assign(existing, fields)
+						existing.updatedAt = stamp(state)
+						if (keptChanged(before, existing)) keepHistory(state, before, existing.updatedAt)
+						return structuredClone(existing)
+					}
+				}
+				if (input.id !== undefined && !isUlid(input.id)) throw invalid(`not an id: ${JSON.stringify(input.id)}`)
+				const id = input.id ?? newId()
+				if (state.facts.some((fact) => fact.id === id)) throw new DataError('fact:invalid', `the id is taken: ${id}`)
+				const at = stamp(state)
+				const fact: Fact = {
+					uri: toUri('fact', id),
+					id,
+					type: input.type,
+					provenance: input.provenance,
+					...fields,
+					createdAt: at,
+					updatedAt: at,
+					deletedAt: null,
+				}
+				state.facts.push(fact)
+				return structuredClone(fact)
+			})
+		},
+
+		/** Edits a fact in place; the provenance moves only to the owner's own word, which drops the confidence. */
+		updateFact(id: string, patch: FactPatch): Fact {
+			const shape = validatePatch(patch)
+			if (shape) throw new DataError(shape[0], shape[1])
+			return write((state) => {
+				sweepHistory(state)
+				const fact = state.facts.find((entry) => entry.id === id)
+				if (!fact || fact.deletedAt) throw notFound(`fact ${id}`)
+				const after: Fact = structuredClone(fact)
+				if (patch.provenance === 'user-asserted') {
+					after.provenance = 'user-asserted'
+					after.confidence = null
+				}
+				if ('value' in patch) after.value = structuredClone(patch.value)
+				if ('confidence' in patch) after.confidence = patch.confidence ?? null
+				if ('validFrom' in patch) after.validFrom = patch.validFrom ?? null
+				if ('validUntil' in patch) after.validUntil = patch.validUntil ?? null
+				if ('source' in patch) after.source = patch.source ?? null
+				if ('note' in patch) after.note = patch.note ?? null
+				const refusal = validateFact(after)
+				if (refusal) throw new DataError(refusal[0], refusal[1])
+				after.updatedAt = stamp(state)
+				if (keptChanged(fact, after)) keepHistory(state, fact, after.updatedAt)
+				Object.assign(fact, after)
+				return structuredClone(fact)
+			})
+		},
+
+		/** Deletes a fact: the row stays as its tombstone. Deleting a deleted fact changes nothing. */
+		deleteFact(id: string): Fact {
+			return write((state) => {
+				const fact = state.facts.find((entry) => entry.id === id)
+				if (!fact) throw notFound(`fact ${id}`)
+				if (!fact.deletedAt) {
+					fact.updatedAt = stamp(state)
+					fact.deletedAt = fact.updatedAt
+				}
+				return structuredClone(fact)
+			})
+		},
+
+		/** Lifts a tombstone. Restoring a live fact changes nothing. */
+		restoreFact(id: string): Fact {
+			return write((state) => {
+				const fact = state.facts.find((entry) => entry.id === id)
+				if (!fact) throw notFound(`fact ${id}`)
+				if (fact.deletedAt) {
+					if (fact.provenance === 'system-derived' && liveSystemFact(state, fact.type)) {
+						throw new DataError('fact:invalid', `the substrate has derived ${fact.type} again since`)
+					}
+					fact.updatedAt = stamp(state)
+					fact.deletedAt = null
+				}
+				return structuredClone(fact)
+			})
+		},
+
+		/** The facts a reader gets: by type, the owner's own word first, then the latest. */
+		queryFacts(filter: FactQuery = {}): Fact[] {
+			if (filter.at !== undefined) {
+				const window = checkWindow(filter.at, null)
+				if (window) throw new DataError(window[0], window[1])
+			}
+			const day = filter.at ?? today()
+			const owned = filter.owner === undefined ? undefined : factsOf(filter.owner)
+			return structuredClone(
+				load()
+					.facts.filter((fact) => filter.includeDeleted || !fact.deletedAt)
+					.filter((fact) => filter.includeExpired || isInWindow(fact, day))
+					.filter((fact) => !filter.types || (filter.types as readonly string[]).includes(fact.type))
+					.filter((fact) => !owned || (owned as readonly string[]).includes(fact.type))
+					.sort(effectiveOrder)
+			)
+		},
+
+		/** What a fact held before each of its edits, the latest first. */
+		queryFactHistory(factId: string): FactHistoryEntry[] {
+			const cutoff = historyCutoff(now())
+			return structuredClone(
+				load()
+					.factHistory.filter((entry) => entry.factId === factId && entry.replacedAt >= cutoff)
+					.sort((a, b) => byText(b.replacedAt, a.replacedAt))
+			)
 		},
 
 		// The egress ledger (`egress.rs`, D-71): this browser's, by destination and local day.

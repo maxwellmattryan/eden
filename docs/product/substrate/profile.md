@@ -4,7 +4,7 @@ status: draft
 summary: The facts store that makes Eden a digital twin: the fact model, provenance, who may write and read each type, the "What Eden knows about me" surface, and the fact lifecycle.
 read-this-if: A domain needs to know something another domain learned, or you are designing anything that shows or edits facts about the owner.
 depends-on: [privacy, registry]
-updated: 2026-09-27
+updated: 2026-09-30
 ---
 
 ## Purpose
@@ -36,21 +36,21 @@ The registry is the source of truth; this table shows the value schemas the firs
 | `preferred-name` | string | substrate | T1 |
 | `home-area` | `{city, region, country}` | substrate | T1 |
 | `allergy` | `{kind: food \| drug \| environmental, substance, severity: mild \| moderate \| severe}` | kitchen | T2 |
-| `dietary-preference` | enum list (vegetarian, vegan, pescatarian, halal, kosher, low-sodium, low-sugar, gluten-free, custom) | kitchen | T1 |
+| `dietary-preference` | enum list (vegetarian, vegan, pescatarian, halal, kosher, low-sodium, low-sugar, gluten-free, alcohol-free, custom) | kitchen | T1 |
 | `disliked-ingredient` | string | kitchen | T0 |
-| `cuisine-preference` | string with weight | kitchen | T0 |
+| `cuisine-preference` | `{name, weight}`, the weight 0–1 | kitchen | T0 |
 | `household-size` | integer | kitchen | T1 |
 | `skill` | `{name, level}` | toolbench | T1 |
 | `owned-hardware` | string | toolbench | T1 |
 | `preferred-tool` | string | toolbench | T1 |
 
-Fact types owned by Phase 2 and Phase 3 domains (`gym-preference`, `training-limitation`, `value`, `favorite-vibe`, …) are listed in the registry with their phase.
+Fact types owned by Phase 2 and Phase 3 domains (`gym-preference`, `training-limitation`, `value`, `favorite-vibe`, …) are listed in the registry with their phase. The value schemas live in code as `FACT_SHAPES` in `@eden/shared/profile`, not in the registry (D-72); a new fact type adds its row to the registry and its shape there.
 
 ## Write rules (Phase 1)
 
 - The owning domain writes its types through its own editors.
 - **The owner may assert any registered fact type** from "What Eden knows about me", even when the owning domain is not installed. A `medical-dietary-restriction` can be entered in Phase 1 although Wellspring arrives later; Hearth reads it immediately.
-- The substrate writes `system-derived` facts (`home-area` from the `home` Place).
+- The substrate writes `system-derived` facts (`home-area` from the `home` Place; from the home the owner chose in Sky until the Place picker exists, D-72).
 - Integrations write with provenance `integration` and a source, only for types their grant names.
 - **AI-inferred facts pass a confirm gate.** The Gardener proposes; nothing is stored until the owner accepts, at which point provenance stays `ai-inferred` with confidence.
 - Conflicts: a user-asserted row always wins. Otherwise, the latest stamp per type and value wins. A row outside its validity window is ignored by readers and shown greyed in the profile.
@@ -63,15 +63,15 @@ Fact types owned by Phase 2 and Phase 3 domains (`gym-preference`, `training-lim
 
 ## Surfaces (Phase 1)
 
-- **What Eden knows about me** (Garden → profile): every fact grouped by domain, with value, provenance, source, dates, and "used by N Gardener requests" linking into the audit log. Edit, delete, add, set a validity window. T2 rows show a lock glyph; the Vault is not listed here because it holds no facts.
+- **What Eden knows about me** (Garden → profile; mocked as `Domains/Garden/Profile`, built in `apps/desktop`, `shell/profile/`): every fact grouped by domain, with value, provenance, source, dates, and "used by N Gardener requests" linking into the audit log (the count waits on the audit log). Edit, delete, add, set a validity window, renew what expired. T2 rows show a lock glyph; the Vault is not listed here because it holds no facts.
 - **Why am I seeing this**: any suggestion that used a fact shows the fact by name on hover or long press and links to it.
 - **Gardener proposals**: an inline card "I noticed you avoid cilantro. Save as a dislike?" with accept and dismiss.
 
 ## Lifecycle
 
-- Edit in place; every edit keeps the old value in history for thirty days.
+- Edit in place; every edit keeps the old value in history for thirty days, on the device that made it (the history is never exported or synced).
 - Expire by validity window; expired rows are hidden from readers and can be renewed.
-- Delete removes the row from readers immediately and from history after thirty days.
+- Delete removes the row from readers immediately; the row stays as its tombstone, for undo and for sync, as every row does.
 - Export includes every fact with provenance; import restores them.
 - When a domain is removed, its `domain-derived` and `integration` rows are retracted; user-asserted rows stay (`substrate/domain-manifest.md`).
 

@@ -200,5 +200,43 @@ pub fn get_migrations() -> Vec<&'static str> {
             PRIMARY KEY (destination, day)
         ) WITHOUT ROWID;
         "#,
+        // Migration 3: the profile (docs/product/substrate/profile.md, D-72). A fact is a row with stamps and a
+        // tombstone like any other, so it exports, syncs and merges; its type is a registry fact id and its value is
+        // JSON the frontend shapes. Who wrote it and how sure it was are code's rules, not the schema's, so a
+        // tombstone stripped of what it held can still be put back. The history keeps each replaced value thirty
+        // days and is this device's: never exported, never synced.
+        r#"
+        CREATE TABLE facts (
+            id          TEXT PRIMARY KEY NOT NULL CHECK (length(id) = 26),
+            type        TEXT NOT NULL CHECK (length(type) > 0),
+            value       TEXT NOT NULL CHECK (json_valid(value) AND json_type(value) <> 'null'),
+            provenance  TEXT NOT NULL CHECK (provenance IN
+                            ('user-asserted', 'domain-derived', 'system-derived', 'integration', 'ai-inferred')),
+            confidence  REAL CHECK (confidence IS NULL OR (confidence >= 0 AND confidence <= 1)),
+            valid_from  TEXT CHECK (valid_from IS NULL OR length(valid_from) = 10),
+            valid_until TEXT CHECK (valid_until IS NULL OR length(valid_until) = 10),
+            source      TEXT,
+            note        TEXT,
+            created_at  TEXT NOT NULL,
+            updated_at  TEXT NOT NULL,
+            deleted_at  TEXT,
+            CHECK (valid_from IS NULL OR valid_until IS NULL OR valid_from <= valid_until)
+        );
+        CREATE INDEX facts_type_live ON facts (type, id) WHERE deleted_at IS NULL;
+        CREATE UNIQUE INDEX facts_system_key ON facts (type)
+            WHERE provenance = 'system-derived' AND deleted_at IS NULL;
+
+        CREATE TABLE fact_history (
+            seq         INTEGER PRIMARY KEY,
+            fact_id     TEXT NOT NULL CHECK (length(fact_id) = 26),
+            type        TEXT NOT NULL,
+            value       TEXT NOT NULL CHECK (json_valid(value)),
+            note        TEXT,
+            valid_from  TEXT,
+            valid_until TEXT,
+            replaced_at TEXT NOT NULL
+        );
+        CREATE INDEX fact_history_fact ON fact_history (fact_id, replaced_at);
+        "#,
     ]
 }

@@ -37,6 +37,15 @@ export interface HomePlace {
 	label: string
 	latitude: number
 	longitude: number
+	/** The city, region and country the place is in, as the geocoder named them: what `home-area` is derived from
+	 * until the home Place carries it (D-38, D-72). Absent for a home that was never chosen. */
+	area?: HomeArea
+}
+
+export interface HomeArea {
+	city: string
+	region: string
+	country: string
 }
 /** Rowan's Hyde Park, Austin (design/sample-data.md), until onboarding asks. */
 export const DEFAULT_HOME: HomePlace = { label: 'Hyde Park', latitude: 30.305, longitude: -97.735 }

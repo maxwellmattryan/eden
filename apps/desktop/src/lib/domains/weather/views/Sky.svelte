@@ -43,6 +43,7 @@
 	import { cubicOut } from 'svelte/easing'
 	import { openExternal } from '@eden/shared/api'
 	import { updatedLine } from '$lib/domains/weather/updated'
+	import { profile } from '$lib/shell/profile/store.svelte'
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { dayOfMonth, formatHour, hourOfDay, formatMoment, formatTime, formatWeekdayOf } from '@eden/shared/dates'
@@ -127,6 +128,8 @@
 	function choose(place: PlaceResult) {
 		finding = false
 		settings.setHome(homeFrom(place))
+		// The substrate derives `home-area` from the home the owner chose (D-38); the profile is the shell's.
+		void profile.syncHomeArea(settings.home)
 		void weather.load()
 	}
 

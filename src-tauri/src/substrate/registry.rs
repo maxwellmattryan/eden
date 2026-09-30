@@ -39,8 +39,6 @@ pub struct Resource {
     pub primitive: Option<&'static str>,
     /// A domain id, or `substrate`.
     pub owner: &'static str,
-    // Read by the grant store (issue 33) and the Gardener's context packs (issue 35).
-    #[allow(dead_code)]
     pub tier: Tier,
     /// When the resource first exists; `None` is later than Phase 3.
     pub phase: Option<u8>,
@@ -54,8 +52,6 @@ impl Resource {
 }
 
 /// The row of an id, live or not: what a declared read, a grant or an audit entry names (D-31).
-// Called by the grant store (issue 33) and the audit log (issue 35).
-#[allow(dead_code)]
 pub fn resource(id: &str) -> Option<&'static Resource> {
     RESOURCES.iter().find(|row| row.id == id)
 }
@@ -64,6 +60,20 @@ fn live(category: Category) -> impl Iterator<Item = &'static Resource> {
     RESOURCES
         .iter()
         .filter(move |row| row.category == category && row.live())
+}
+
+/// Whether the owner may assert a fact of this type: the fact types of Phase 1, their domain built or not.
+pub fn is_fact(id: &str) -> bool {
+    live(Category::Fact).any(|row| row.id == id)
+}
+
+/// The fact types of an owner, of any phase: what the profile groups under the owner's name.
+pub fn facts_of(owner: &str) -> Vec<&'static str> {
+    RESOURCES
+        .iter()
+        .filter(|row| row.category == Category::Fact && row.owner == owner)
+        .map(|row| row.id)
+        .collect()
 }
 
 pub fn is_entity_type(id: &str) -> bool {
@@ -126,6 +136,11 @@ mod tests {
         assert_eq!(kinds_of("kitchen", "attachment"), ["haul-photo"]);
         assert!(entity_types_of("toolbench").contains(&"idea"));
         assert!(is_owner("weather") && !is_owner("finance"));
+        assert!(is_fact("allergy") && is_fact("medical-dietary-restriction"));
+        assert!(!is_fact("gym-preference") && !is_fact("recipe") && !is_fact("home"));
+        assert_eq!(facts_of("substrate"), ["preferred-name", "home-area"]);
+        assert!(facts_of("fitness").contains(&"training-limitation"));
+        assert!(facts_of("weather").is_empty());
     }
 
     #[test]

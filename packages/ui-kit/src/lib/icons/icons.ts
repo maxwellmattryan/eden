@@ -360,6 +360,10 @@ export const ICONS = {
 		n: [["path",{"d":"M12 19h8"}],["path",{"d":"m4 17 6-6-6-6"}]],
 		x: [4, 5, 16, 14],
 	},
+	'id-card': {
+		n: [["path",{"d":"M13 19a4 4 0 00-8 0"}],["path",{"d":"M16 10h2"}],["path",{"d":"M16 14h2"}],["circle",{"cx":"9","cy":"12","r":"3"}],["rect",{"x":"2","y":"5","width":"20","height":"14","rx":"2"}]],
+		x: [2, 5, 20, 14],
+	},
 } as const satisfies Record<string, IconDef>
 
 export type IconName = keyof typeof ICONS

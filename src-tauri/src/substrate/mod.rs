@@ -7,6 +7,7 @@ pub mod bundle;
 pub mod changes;
 pub mod egress;
 pub mod entities;
+pub mod facts;
 pub mod grants;
 pub mod hlc;
 pub mod ids;
@@ -14,6 +15,7 @@ pub mod links;
 pub mod primitives;
 pub mod registry;
 pub mod rows;
+pub mod text;
 
 use std::path::{Path, PathBuf};
 
@@ -55,14 +57,18 @@ impl Workspace {
             db,
             dir: dir.to_path_buf(),
         };
-        // What the last run left behind: the grants that lasted a session, and ledger days past their retention.
-        let (sessions, days) = workspace.write(|ctx| {
+        // What the last run left behind: the grants that lasted a session, and the ledger days and the replaced
+        // facts past their retention.
+        let (sessions, days, history) = workspace.write(|ctx| {
             let sessions = grants::sweep_session(ctx)?;
             let days = egress::sweep(ctx.conn, &egress::today())?;
-            Ok((sessions, days))
+            let history = facts::sweep_history(ctx.conn, hlc::now_ms())?;
+            Ok((sessions, days, history))
         })?;
-        if sessions > 0 || days > 0 {
-            log::info!("Swept {sessions} session grants and {days} ledger rows");
+        if sessions > 0 || days > 0 || history > 0 {
+            log::info!(
+                "Swept {sessions} session grants, {days} ledger rows and {history} replaced facts"
+            );
         }
         Ok(workspace)
     }

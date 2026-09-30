@@ -25,6 +25,7 @@ import {
 	weekStarts,
 	type ClockFormat,
 	type FontSetting,
+	type HomeArea,
 	type HomePlace,
 	type Language,
 	type MeasurementSystem,
@@ -71,6 +72,17 @@ function oneOf<T extends string>(value: string | null, allowed: readonly T[], fa
 	return value !== null && (allowed as readonly string[]).includes(value) ? (value as T) : fallback
 }
 
+function isArea(value: unknown): value is HomeArea {
+	const area = value as HomeArea | null
+	return (
+		typeof area === 'object' &&
+		area !== null &&
+		typeof area.city === 'string' &&
+		typeof area.region === 'string' &&
+		typeof area.country === 'string'
+	)
+}
+
 function isHome(value: unknown): value is HomePlace {
 	const place = value as HomePlace | null
 	return (
@@ -82,10 +94,16 @@ function isHome(value: unknown): value is HomePlace {
 	)
 }
 
+/** The home as it is kept: an area that is not one is dropped, the place itself stands. */
+function asHome(place: HomePlace): HomePlace {
+	const { label, latitude, longitude, area } = place
+	return isArea(area) ? { label, latitude, longitude, area } : { label, latitude, longitude }
+}
+
 function readHome(): HomePlace {
 	try {
 		const parsed: unknown = JSON.parse(read(storage.home) ?? 'null')
-		return isHome(parsed) ? parsed : DEFAULT_HOME
+		return isHome(parsed) ? asHome(parsed) : DEFAULT_HOME
 	} catch {
 		return DEFAULT_HOME
 	}
@@ -243,7 +261,7 @@ export class Settings {
 	}
 
 	setHome(home: HomePlace) {
-		this.home = isHome(home) ? home : DEFAULT_HOME
+		this.home = isHome(home) ? asHome(home) : DEFAULT_HOME
 		write(storage.home, JSON.stringify(this.home))
 	}
 

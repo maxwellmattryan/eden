@@ -2,6 +2,9 @@
 	// The crash card: the message, a copy button and a restart, on the page surface. It covers everything, including
 	// the shell, because the state behind the shell can no longer be trusted. CrashScreen renders it from the crash
 	// store; hooks.client.ts mounts the same card for an error before the layout exists, so the two never differ.
+	// It is a modal <dialog>, so it opens in the browser's top layer: a sheet, a menu or a popover that was open when
+	// the error came is in that layer too, and a card drawn beneath it would be a crash nobody sees. Escape does not
+	// close it; the only ways out are the two buttons.
 	import { Button } from '@eden/ui-kit'
 	import { t } from '@eden/shared/i18n'
 	import { crashStore } from '@eden/shared/stores'
@@ -25,9 +28,22 @@
 	function reset() {
 		window.location.reload()
 	}
+
+	/** Opens the card over everything, whatever else is in the top layer. */
+	function show(dialog: HTMLDialogElement) {
+		if (!dialog.open) dialog.showModal()
+	}
 </script>
 
-<div class="crash" role="alertdialog" aria-labelledby="crash-title" aria-describedby="crash-text">
+<dialog
+	class="crash"
+	role="alertdialog"
+	aria-labelledby="crash-title"
+	aria-describedby="crash-text"
+	{@attach show}
+	oncancel={(event) => event.preventDefault()}
+	onclose={(event) => show(event.currentTarget)}
+>
 	<div class="crash-card">
 		<h2 id="crash-title" class="crash-title">{$t('crash.title')}</h2>
 		<p id="crash-text" class="crash-text">{$t('crash.text', { values: { name: $t('app.name') } })}</p>
@@ -45,18 +61,31 @@
 			/>
 		</div>
 	</div>
-</div>
+</dialog>
 
 <style>
 	.crash {
 		position: fixed;
 		inset: 0;
 		z-index: 9999;
-		display: flex;
+		box-sizing: border-box;
+		width: 100%;
+		height: 100%;
+		max-width: none;
+		max-height: none;
+		margin: 0;
+		border: 0;
 		align-items: center;
 		justify-content: center;
 		background: var(--surface-0);
+		color: var(--text-primary);
 		padding: var(--ed-gutter);
+	}
+	.crash[open] {
+		display: flex;
+	}
+	.crash::backdrop {
+		background: transparent;
 	}
 	.crash-card {
 		width: 100%;

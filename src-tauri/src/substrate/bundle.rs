@@ -18,6 +18,7 @@ use zip::write::SimpleFileOptions;
 
 use super::attachments::{hash_file, hex};
 use super::entities::{self, Entity, EntityQuery};
+use super::facts::{self, Fact};
 use super::grants::{self, Grant, GrantsFile};
 use super::hlc::{self, Hlc};
 use super::ids::{self, Uri};
@@ -36,6 +37,9 @@ const SETTINGS: &str = "settings.json";
 const GRANTS: &str = "grants.json";
 /// The type the manifest counts grants under.
 const GRANT: &str = "grant";
+const FACTS: &str = "facts.jsonl";
+/// The type the manifest counts facts under.
+const FACT: &str = "fact";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
@@ -176,6 +180,8 @@ struct Collected {
     attachments: Vec<String>,
     /// The grants a full bundle carries, revocations included.
     grants: Vec<Grant>,
+    /// The facts a full bundle carries, tombstones included.
+    facts: Vec<Fact>,
     schema_version: i64,
     node: String,
 }
@@ -258,6 +264,10 @@ fn collect(conn: &Connection, scope: &Scope) -> Result<Collected> {
             Scope::Full => grants::exportable(conn)?,
             Scope::Domain { .. } => Vec::new(),
         },
+        facts: match scope {
+            Scope::Full => facts::exportable(conn)?,
+            Scope::Domain { .. } => Vec::new(),
+        },
         schema_version: crate::db::schema_version(conn)?,
         node: format!("{:08x}", hlc::node_id(conn)?),
     };
@@ -338,7 +348,8 @@ fn readme(manifest: &Manifest) -> String {
          | `attachments/` | the files of the attachments, named by the id of their row |\n\
          | `friendly/` | the same data in formats made for reading: CSV and Markdown |\n\
          | `grants.json` | the grants: who may see or do what, and the ones you ended |\n\
-         | `facts.jsonl`, `settings.json` | what Eden knows about you (empty until the profile exists), and your settings |\n\n\
+         | `facts.jsonl` | what Eden knows about you, one fact a line, with where each one came from |\n\
+         | `settings.json` | your settings |\n\n\
          A file is only present when there is something to put in it.\n\n\
          ## Rows\n\n",
     );
@@ -401,10 +412,24 @@ pub fn export(workspace: &Workspace, request: ExportRequest) -> Result<ExportRes
     let mut collected = workspace.read(|conn| collect(conn, &scope))?;
 
     if scope == Scope::Full {
-        // Facts have no store yet; the file is there so the layout does not change when they do.
+        // Facts leave one a line by id, a tombstone as its id, type and stamps and nothing of what it held.
+        let facts = std::mem::take(&mut collected.facts);
+        let mut bytes = Vec::new();
+        let (mut rows, mut tombstones) = (0, 0);
+        for fact in &facts {
+            if fact.deleted_at.is_some() {
+                serde_json::to_writer(&mut bytes, &facts::stripped(fact))?;
+                tombstones += 1;
+            } else {
+                serde_json::to_writer(&mut bytes, fact)?;
+            }
+            bytes.push(b'\n');
+            rows += 1;
+        }
+        collected.counts.insert(FACT.into(), rows - tombstones);
         collected
             .files
-            .push(("facts.jsonl".into(), Vec::new(), None));
+            .push((FACTS.into(), bytes, Some((rows, tombstones))));
         // Grants leave by id with their stamps, revocations included, so a merge can tell what was ended.
         let grants = std::mem::take(&mut collected.grants);
         let tombstones = grants
@@ -760,6 +785,74 @@ fn parse_grants(bytes: &[u8]) -> Result<Vec<Grant>> {
     Ok(file.grants)
 }
 
+/// The facts of a bundle, one a line, each checked as a row is.
+fn parse_facts(bytes: &[u8]) -> Result<Vec<Fact>> {
+    let text = std::str::from_utf8(bytes)
+        .map_err(|e| bundle_error("unreadable", format!("{FACTS}: {e}")))?;
+    let mut facts = Vec::new();
+    for (index, line) in text
+        .lines()
+        .enumerate()
+        .filter(|(_, line)| !line.is_empty())
+    {
+        let bad = |detail: String| {
+            bundle_error(
+                "unreadable",
+                format!("{FACTS}, line {}: {detail}", index + 1),
+            )
+        };
+        let fact: Fact = serde_json::from_str(line).map_err(|e| bad(e.to_string()))?;
+        facts::validate_imported(&fact).map_err(bad)?;
+        facts.push(fact);
+    }
+    Ok(facts)
+}
+
+/// A fact of the bundle against the one here, by the rule rows follow. A live fact the substrate derived that finds
+/// another of its type yields to the later of the two.
+fn apply_fact(ctx: &mut WriteCtx, fact: &Fact, summary: &mut ImportSummary) -> Result<()> {
+    let conn = ctx.conn;
+    let deleted = fact.deleted_at.is_some();
+    let local = state(conn, "facts", &fact.id)?;
+    let decision = decide(
+        local
+            .as_ref()
+            .map(|(stamp, deleted)| (stamp.as_str(), *deleted)),
+        &fact.updated_at,
+        deleted,
+        true,
+    );
+    let mut row = fact.clone();
+    if !deleted && matches!(decision, Decision::Insert | Decision::Replace) {
+        if let Some((rival_id, rival_stamp)) = facts::rival(conn, fact)? {
+            let next = hlc::next(conn)?;
+            if fact.updated_at > rival_stamp {
+                tombstone(conn, "facts", &rival_id, &next)?;
+            } else {
+                row.updated_at = next.clone();
+                row.deleted_at = Some(next);
+            }
+            summary.tombstoned += 1;
+        }
+    }
+    match decision {
+        Decision::Insert | Decision::Replace => {
+            facts::put(conn, &row)?;
+            if decision == Decision::Insert {
+                summary.inserted += 1;
+            } else {
+                summary.updated += 1;
+            }
+        }
+        Decision::Tombstone => {
+            tombstone(conn, "facts", &fact.id, &fact.updated_at)?;
+            summary.updated += 1;
+        }
+        Decision::Keep => summary.skipped += 1,
+    }
+    Ok(())
+}
+
 /// A grant of the bundle against the one here, by the rule rows follow. A live grant that finds its key taken by
 /// another id yields to the later of the two: the other is ended, or this one arrives ended.
 fn apply_grant(ctx: &mut WriteCtx, grant: &Grant, summary: &mut ImportSummary) -> Result<()> {
@@ -910,10 +1003,11 @@ fn clear(conn: &Connection, scope: &Scope) -> Result<Vec<String>> {
         Scope::Domain { .. } => Some(entity_types(conn, scope)?),
     };
     delete("entities", "type", types)?;
-    // A domain's bundle carries no grants, so only a replace of the whole workspace clears them; the ledger is this
-    // device's and no import touches it.
+    // A domain's bundle carries no grants and no facts, so only a replace of the whole workspace clears them; the
+    // ledger is this device's and no import touches it.
     if *scope == Scope::Full {
         grants::clear(conn)?;
+        facts::clear(conn)?;
     }
     Ok(removed_files)
 }
@@ -933,6 +1027,7 @@ pub fn import(workspace: &Workspace, path: &Path, mode: Mode) -> Result<ImportSu
     // Everything is read and checked before anything is written.
     let mut incoming = Vec::new();
     let mut incoming_grants = Vec::new();
+    let mut incoming_facts = Vec::new();
     let mut files = Vec::new();
     let mut settings = None;
     for file in &manifest.files {
@@ -951,6 +1046,8 @@ pub fn import(workspace: &Workspace, path: &Path, mode: Mode) -> Result<ImportSu
             settings = serde_json::from_slice(&entry(&mut archive, SETTINGS)?).ok();
         } else if file.path == GRANTS {
             incoming_grants = parse_grants(&entry(&mut archive, GRANTS)?)?;
+        } else if file.path == FACTS {
+            incoming_facts = parse_facts(&entry(&mut archive, FACTS)?)?;
         }
     }
 
@@ -964,6 +1061,15 @@ pub fn import(workspace: &Workspace, path: &Path, mode: Mode) -> Result<ImportSu
         .iter()
         .filter(|row| row.primitive.is_none() && !registry::is_entity_type(&row.type_id))
         .map(|row| row.type_id.clone())
+        .chain(
+            incoming_facts
+                .iter()
+                .filter(|fact| {
+                    !registry::resource(&fact.type_id)
+                        .is_some_and(|row| row.category == registry::Category::Fact)
+                })
+                .map(|fact| fact.type_id.clone()),
+        )
         .collect::<std::collections::BTreeSet<_>>()
         .into_iter()
         .collect();
@@ -996,6 +1102,7 @@ pub fn import(workspace: &Workspace, path: &Path, mode: Mode) -> Result<ImportSu
                 .chain(row.links.iter().map(|link| link.updated_at.clone()))
         })
         .chain(incoming_grants.iter().map(|grant| grant.updated_at.clone()))
+        .chain(incoming_facts.iter().map(|fact| fact.updated_at.clone()))
         .max();
     let removed_files = workspace.write(|ctx| {
         if let Some(latest) = &latest {
@@ -1010,6 +1117,9 @@ pub fn import(workspace: &Workspace, path: &Path, mode: Mode) -> Result<ImportSu
         }
         for grant in &incoming_grants {
             apply_grant(ctx, grant, &mut summary)?;
+        }
+        for fact in &incoming_facts {
+            apply_fact(ctx, fact, &mut summary)?;
         }
         Ok(removed)
     })?;
@@ -1074,9 +1184,27 @@ mod tests {
         }
     }
 
+    fn fact_of(type_id: &str, value: Value, provenance: facts::Provenance) -> facts::FactInput {
+        facts::FactInput {
+            id: None,
+            type_id: type_id.into(),
+            value,
+            provenance,
+            confidence: match provenance {
+                facts::Provenance::AiInferred => Some(0.8),
+                _ => None,
+            },
+            valid_from: None,
+            valid_until: None,
+            source: None,
+            note: None,
+        }
+    }
+
     /// A workspace with something of everything: rows in every table, tombstones, links live and removed, an
-    /// overlay, a mirror, an attachment with its file, and grants standing, revoked, for the session and for the
-    /// device.
+    /// overlay, a mirror, an attachment with its file, grants standing, revoked, for the session and for the
+    /// device, and facts the owner asserted, the substrate derived, the Gardener inferred, one edited and one
+    /// deleted.
     fn populated(scratch: &Path) -> Workspace {
         let workspace = Workspace::in_memory();
         let photo = scratch.join("haul.jpg");
@@ -1141,6 +1269,28 @@ mod tests {
                 grants::revoke(ctx, &ended.id)?;
                 grants::grant(ctx, grant_of("anthropic", "body-metric", ResourceType::Registry, Lifetime::Session))?;
                 grants::grant(ctx, grant_of("this-device", "camera", ResourceType::Capability, Lifetime::Standing))?;
+
+                let nuts = facts::assert(
+                    ctx,
+                    fact_of(
+                        "allergy",
+                        json!({ "kind": "food", "substance": "tree nuts", "severity": "mild" }),
+                        facts::Provenance::UserAsserted,
+                    ),
+                )?;
+                let severe = json!({ "value": { "kind": "food", "substance": "tree nuts", "severity": "severe" } });
+                facts::update(ctx, &nuts.id, severe.as_object().unwrap())?;
+                facts::assert(
+                    ctx,
+                    fact_of(
+                        "home-area",
+                        json!({ "city": "Austin", "region": "Texas", "country": "United States" }),
+                        facts::Provenance::SystemDerived,
+                    ),
+                )?;
+                facts::assert(ctx, fact_of("disliked-ingredient", json!("cilantro"), facts::Provenance::AiInferred))?;
+                let name = facts::assert(ctx, fact_of("preferred-name", json!("Rowan"), facts::Provenance::UserAsserted))?;
+                facts::delete(ctx, &name.id)?;
                 Ok(dal)
             })
             .unwrap();
@@ -1287,6 +1437,7 @@ mod tests {
         assert_eq!(manifest.counts["task"], 1);
         assert_eq!(manifest.counts["forecast"], 1);
         assert_eq!(manifest.counts[GRANT], 1);
+        assert_eq!(manifest.counts[FACT], 3);
         assert_eq!(result.counts, manifest.counts);
         let recipes = manifest
             .files
@@ -1335,6 +1486,20 @@ mod tests {
         assert!(!grants_text.contains("body-metric") && !grants_text.contains("camera"));
         assert!(!grants_text.contains("session") && !grants_text.contains("capability"));
 
+        // The facts leave one a line; the deleted one as its tombstone, with nothing it held, and the history stays.
+        let facts_file = manifest
+            .files
+            .iter()
+            .find(|file| file.path == FACTS)
+            .unwrap();
+        assert_eq!((facts_file.rows, facts_file.tombstones), (Some(4), Some(1)));
+        let facts_text = text(&files, FACTS);
+        assert_eq!(facts_text.lines().count(), 4);
+        assert!(facts_text.contains("severe") && !facts_text.contains("mild"));
+        assert!(facts_text.contains("cilantro") && facts_text.contains("system-derived"));
+        assert!(!facts_text.contains("Rowan"));
+        assert_eq!(count(&workspace, "fact_history"), 1);
+
         assert!(text(&files, README).contains("| recipe | 1 |"));
         cleanup(&scratch, &[&workspace]);
     }
@@ -1351,7 +1516,7 @@ mod tests {
         let summary = import(&second, &scratch.join("a.zip"), Mode::Merge).unwrap();
         // The local calendar source is in every workspace, the same row: it is the one skipped.
         assert_eq!(summary.skipped, 1);
-        assert_eq!(summary.inserted, 13);
+        assert_eq!(summary.inserted, 17);
         assert_eq!((summary.updated, summary.tombstoned), (0, 0));
         assert_eq!(summary.settings, Some(json!({ "measurement": "metric" })));
         assert_eq!(summary.backup_path, None);
@@ -1401,9 +1566,17 @@ mod tests {
         assert_eq!(live[0].resource, "allergy");
         assert_eq!(count(&second, "grants"), 2);
 
+        // The facts landed as they were, the tombstone included; the history never left.
+        let effective = second
+            .read(|conn| facts::query(conn, &facts::FactQuery::default()))
+            .unwrap();
+        assert_eq!(effective.len(), 3);
+        assert_eq!(count(&second, "facts"), 4);
+        assert_eq!(count(&second, "fact_history"), 0);
+
         // Importing the same bundle again changes nothing, and says so.
         let again = import(&second, &scratch.join("a.zip"), Mode::Merge).unwrap();
-        assert_eq!((again.inserted, again.updated, again.skipped), (0, 0, 14));
+        assert_eq!((again.inserted, again.updated, again.skipped), (0, 0, 18));
         cleanup(&scratch, &[&first, &second]);
     }
 
@@ -1426,7 +1599,7 @@ mod tests {
         let summary = import(&second, &scratch.join("a.zip"), Mode::Replace).unwrap();
         assert_eq!(
             (summary.inserted, summary.updated, summary.skipped),
-            (14, 0, 0)
+            (18, 0, 0)
         );
 
         // What was there went into the backup before it was cleared, and the backup is a bundle.
@@ -1865,6 +2038,133 @@ mod tests {
         import(&second, &kitchen, Mode::Replace).unwrap();
         assert_eq!(count(&second, "grants"), 4);
         cleanup(&scratch, &[&first, &second]);
+    }
+
+    #[test]
+    fn a_replace_clears_facts_and_their_history() {
+        let scratch = temp_dir("bundle-facts-replace");
+        let first = populated(&scratch);
+        export_to(&first, &scratch.join("a.zip"), Scope::Full);
+
+        let second = populated(&scratch);
+        second
+            .write(|ctx| {
+                facts::assert(
+                    ctx,
+                    fact_of("household-size", json!(3), facts::Provenance::UserAsserted),
+                )
+            })
+            .unwrap();
+        assert_eq!(count(&second, "facts"), 5);
+        assert_eq!(count(&second, "fact_history"), 1);
+        import(&second, &scratch.join("a.zip"), Mode::Replace).unwrap();
+        assert_eq!(count(&second, "facts"), 4);
+        assert_eq!(count(&second, "fact_history"), 0);
+        let types: Vec<String> = second
+            .read(|conn| facts::query(conn, &facts::FactQuery::default()))
+            .unwrap()
+            .into_iter()
+            .map(|fact| fact.type_id)
+            .collect();
+        assert!(!types.contains(&"household-size".to_string()));
+
+        // A domain's replace touches no fact.
+        let kitchen = scratch.join("kitchen.zip");
+        export_to(
+            &first,
+            &kitchen,
+            Scope::Domain {
+                domain: "kitchen".into(),
+            },
+        );
+        import(&second, &kitchen, Mode::Replace).unwrap();
+        assert_eq!(count(&second, "facts"), 4);
+        cleanup(&scratch, &[&first, &second]);
+    }
+
+    #[test]
+    fn two_derived_facts_of_one_type_keep_the_later() {
+        let scratch = temp_dir("bundle-fact-rivals");
+        // Two devices each derive the home area, at different times, under different ids.
+        let area = |city: &str| {
+            fact_of(
+                "home-area",
+                json!({ "city": city, "region": "Texas", "country": "United States" }),
+                facts::Provenance::SystemDerived,
+            )
+        };
+        let earlier = Workspace::in_memory();
+        earlier
+            .write(|ctx| facts::assert(ctx, area("Austin")))
+            .unwrap();
+        export_to(&earlier, &scratch.join("earlier.zip"), Scope::Full);
+        let later = Workspace::in_memory();
+        // A write first, so the fact's stamp is past the other device's even within the same millisecond.
+        later
+            .write(|ctx| entities::create(ctx, entity("recipe", json!({ "name": "Dal" }))))
+            .unwrap();
+        let kept = later
+            .write(|ctx| facts::assert(ctx, area("Houston")))
+            .unwrap();
+
+        // The earlier one arrives at the later one's device, and yields.
+        let summary = import(&later, &scratch.join("earlier.zip"), Mode::Merge).unwrap();
+        assert_eq!((summary.inserted, summary.tombstoned), (1, 1));
+        let live = later
+            .read(|conn| facts::query(conn, &facts::FactQuery::default()))
+            .unwrap();
+        assert_eq!(live.len(), 1);
+        assert_eq!(live[0].id, kept.id);
+        assert_eq!(count(&later, "facts"), 2);
+
+        // The later one arrives at the earlier one's device, with the earlier one's own fact already ended.
+        export_to(&later, &scratch.join("later.zip"), Scope::Full);
+        let summary = import(&earlier, &scratch.join("later.zip"), Mode::Merge).unwrap();
+        assert!(summary.updated + summary.tombstoned >= 1);
+        assert_eq!(count(&earlier, "facts"), 2);
+        let live = earlier
+            .read(|conn| facts::query(conn, &facts::FactQuery::default()))
+            .unwrap();
+        assert_eq!(live.len(), 1);
+        assert_eq!(live[0].id, kept.id);
+        cleanup(&scratch, &[&earlier, &later]);
+    }
+
+    #[test]
+    fn a_fact_that_cannot_be_read_stops_the_import_before_it_writes() {
+        let fact = json!({
+            "uri": "eden://fact/01ARZ3NDEKTSV4RRFFQ69G5FAV",
+            "id": "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+            "type": "allergy",
+            "value": { "kind": "food", "substance": "shellfish", "severity": "moderate" },
+            "provenance": "user-asserted",
+            "createdAt": "0000000000000001-00000000-00000001",
+            "updatedAt": "0000000000000001-00000000-00000001",
+        });
+        let file = |change: &dyn Fn(&mut Value)| {
+            let mut fact = fact.clone();
+            change(&mut fact);
+            format!("{fact}\n").into_bytes()
+        };
+        assert_eq!(parse_facts(&file(&|_| {})).unwrap().len(), 1);
+        assert!(parse_facts(b"").unwrap().is_empty());
+        for change in [
+            &(|fact: &mut Value| fact["id"] = json!("not-an-id")) as &dyn Fn(&mut Value),
+            &|fact| fact["uri"] = json!("eden://grant/01ARZ3NDEKTSV4RRFFQ69G5FAV"),
+            &|fact| fact["type"] = json!("Allergy!"),
+            &|fact| fact["value"] = Value::Null,
+            &|fact| fact["confidence"] = json!(0.5),
+            &|fact| fact["provenance"] = json!("hearsay"),
+            &|fact| fact["validUntil"] = json!("someday"),
+            &|fact| fact["deletedAt"] = json!("0000000000000002-00000000-00000001"),
+        ] {
+            let error = parse_facts(&file(change)).unwrap_err().to_string();
+            assert!(
+                error.starts_with("bundle:unreadable: facts.jsonl"),
+                "{error}"
+            );
+        }
+        assert!(parse_facts(b"not json\n").is_err());
     }
 
     #[test]
