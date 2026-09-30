@@ -10,4 +10,5 @@ export const weatherManifest = defineDomain('weather', {
 	routes: { href: resolve('/weather'), open: () => void goto(resolve('/weather')) },
 	liveGlyph: () => (weather.now ? iconFor(weather.now.condition, weather.now.night) : undefined),
 	load: () => weather.load(),
+	subscribe: () => weather.bind(),
 })

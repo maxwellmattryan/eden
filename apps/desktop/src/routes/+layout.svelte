@@ -27,10 +27,11 @@
 	import SplashScreen from '$lib/components/SplashScreen.svelte'
 	import { shell, shortcutPositions, sidebarGroups, type SidebarItem } from '@eden/shared/manifest'
 	import { rememberPlace, rememberScroll, scrollOf, tabOf } from '@eden/shared/navigation'
+	import { coordinator } from '@eden/shared/refresh'
 	import { startSignals } from '@eden/shared/signals'
 	import { declarations, manifestFor, manifests } from '$lib/domains'
 	import { grants } from '$lib/shell/grants.svelte'
-	import { weather } from '@eden/shared/weather'
+	import { FORECAST_RESOURCE, weather } from '@eden/shared/weather'
 	import { formatTime } from '@eden/shared/dates'
 	import { detectOs, formatShortcut } from '@eden/shared/shortcuts'
 	import { useGlobalErrorHandler } from '$lib/hooks/useGlobalErrorHandler'
@@ -44,8 +45,6 @@
 	const keys = (key: string) => formatShortcut(key, { os, platform: 'desktop' })
 
 	const UPDATE_INTERVAL = 60 * 60 * 1000
-	/** How often the shell asks the weather store whether its forecast is stale, so the sidebar glyph keeps up. */
-	const WEATHER_INTERVAL = 10 * 60 * 1000
 	const format = $derived({ lang: $locale ?? 'en', clock: settings.clock })
 	/** Sky's times are the place's (D-58). */
 	const skyFormat = $derived({ ...format, timeZone: weather.timeZone })
@@ -157,19 +156,20 @@
 			void dismissSplash()
 			checkForUpdate().catch(() => null)
 			timer = setInterval(() => checkForUpdate().catch(() => null), UPDATE_INTERVAL)
-			void weather.load().catch(() => null)
 			void grants.load()
 		})()
-		const skyTimer = setInterval(() => void weather.load().catch(() => null), WEATHER_INTERVAL)
 		// Signals and the scheduler (substrate/signals-notifications.md): the domains bind what they hear, their
 		// schedules are declared, and what came due while Eden was closed is taken. The settings are read by now.
 		const stopSignals = startSignals({
 			declarations,
 			bind: manifests.flatMap((manifest) => (manifest.subscribe ? [manifest.subscribe] : [])),
 		})
+		// The sidebar's glyph and the offline banner read the forecast for as long as the shell is up, which is what
+		// keeps it fresh while the window is seen (the refresh coordinator; D-73).
+		const releaseSky = coordinator.watch(FORECAST_RESOURCE)
 		return () => {
+			releaseSky()
 			stopSignals()
-			clearInterval(skyTimer)
 			cleanupErrors()
 			settings.dispose()
 			weather.dispose()

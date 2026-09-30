@@ -16,4 +16,5 @@ export const weatherManifest = defineDomain('weather', {
 	},
 	liveGlyph: () => (weather.now ? iconFor(weather.now.condition, weather.now.night) : undefined),
 	load: () => weather.load(),
+	subscribe: () => weather.bind(),
 })

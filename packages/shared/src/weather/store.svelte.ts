@@ -4,9 +4,15 @@
 // as supplementary slots that fail on their own (D-59), and the light and the moon computed here. The mirror is
 // metric and the page converts, so a change of units never needs the network; the week and every time are the
 // place's (D-58).
+//
+// When it is fetched again is the refresh coordinator's (D-73): the forecast while something reads it and it is a
+// quarter of an hour old, and whenever the owner asks; the alerts every five minutes on the scheduler, read or not,
+// because a severe one is told even while the window is hidden. Each alert is emitted as `weather.alert`, once.
 import { nowIso } from '../dates/index.js'
 import { load, save } from '../persistence/index.js'
+import { coordinator } from '../refresh/index.js'
 import { settings } from '../settings/settings.svelte.js'
+import { emit } from '../signals/runtime.js'
 import type { HomePlace } from '../types/index.js'
 import { goldenHourOf, moonAt, type Moon } from './ephemeris.js'
 import {
@@ -35,6 +41,10 @@ export interface WeatherData {
 	place: HomePlace
 	forecast: Forecast
 	alerts: WeatherAlert[]
+	/** When the alerts were last answered, as an ISO timestamp; a mirror from before they were fetched apart has none. */
+	alertsAt?: string
+	/** `false` once the alert service said it does not cover the place: it is not asked again until the place changes. */
+	alertsCovered?: boolean
 	airQuality: SupplementSlot<AirQuality>
 	allergens: SupplementSlot<Allergens>
 	/** The ids of the alerts the owner has dismissed; one is forgotten once its alert is no longer issued. */
@@ -51,8 +61,14 @@ export interface Sun {
 const DOCUMENT = 'weather'
 /** 2: the provider-neutral model. A mirror is never migrated: an older document is dropped and fetched again. */
 const VERSION = 2
-/** Refresh when the forecast is older than this (weather.md: every three hours on the scheduler; sooner on open). */
-const STALE_MS = 30 * 60 * 1000
+/** The forecast is refreshed once it is this old, while something reads it (weather.md, "Refresh"). */
+const STALE_MS = 15 * 60 * 1000
+/** The alerts are the scheduler's, every five minutes; a forecast refresh brings them along only when they are older. */
+const ALERTS_STALE_MS = 5 * 60 * 1000
+/** The forecast as the refresh coordinator knows it: what a view watches to keep it fresh. */
+export const FORECAST_RESOURCE = 'weather.forecast'
+/** The schedule Sky declares for the alerts (`manifest.json`), and the resource bound to it. */
+export const ALERTS_SCHEDULE = 'weather.alerts'
 const AIR_STALE_MS = 60 * 60 * 1000
 const ALLERGENS_STALE_MS = 3 * 60 * 60 * 1000
 const HOURS_SHOWN = 12
@@ -126,31 +142,68 @@ export class WeatherStore {
 
 	#reading: Promise<void> | null = null
 	#ticker: ReturnType<typeof setInterval> | null = null
+	#alerting: Promise<void> | null = null
 
-	/** The mirror is missing, older than the refresh interval, for another place, or from another provider's choice. */
-	get stale(): boolean {
+	/**
+	 * How old the forecast is, in milliseconds. One that is missing, for another place, from another provider's
+	 * choice or without today in it is as old as can be.
+	 */
+	get forecastAge(): number {
 		const data = this.data
-		if (!data) return true
+		if (!data) return Infinity
 		const chosen = settings.weatherProvider
 		const from = data.forecast.fallbackFrom ?? data.forecast.provider
-		return (
-			Date.now() - Date.parse(data.fetchedAt) > STALE_MS ||
-			!samePlace(data.place, settings.home) ||
-			from !== chosen ||
-			!todayOf(data.forecast, Date.now())
-		)
+		if (!samePlace(data.place, settings.home) || from !== chosen || !todayOf(data.forecast, Date.now())) return Infinity
+		return Date.now() - Date.parse(data.fetchedAt)
+	}
+
+	/** How old the alerts are; never answered for this place is as old as can be. */
+	get alertsAge(): number {
+		const data = this.data
+		if (!data?.alertsAt || !samePlace(data.place, settings.home)) return Infinity
+		return Date.now() - Date.parse(data.alertsAt)
+	}
+
+	/** The forecast is due a refresh. */
+	get stale(): boolean {
+		return this.forecastAge >= STALE_MS
+	}
+
+	#read(): Promise<void> {
+		return (this.#reading ??= load<WeatherData>(DOCUMENT).then((document) => {
+			if (document?.version === VERSION && document.data?.forecast) this.data = document.data
+			this.ready = true
+		}))
 	}
 
 	/** Reads the mirror once, then refreshes whenever it is stale; every page that shows the sky calls this on mount. */
 	async load(): Promise<void> {
-		this.#reading ??= load<WeatherData>(DOCUMENT).then((document) => {
-			if (document?.version === VERSION && document.data?.forecast) this.data = document.data
-			this.ready = true
-		})
-		await this.#reading
+		await this.#read()
 		this.at = Date.now()
 		this.#ticker ??= setInterval(() => (this.clock = Date.now()), MINUTE_MS)
 		if (this.stale) await this.refresh()
+	}
+
+	/**
+	 * Makes Sky known to the refresh coordinator: the forecast, fresh while something reads it, and the alerts, on
+	 * their schedule. The shell binds it once when it starts (the manifest's `subscribe`); the answer unbinds.
+	 */
+	bind(): () => void {
+		const stops = [
+			coordinator.register({
+				id: FORECAST_RESOURCE,
+				foreground: STALE_MS,
+				age: () => this.forecastAge,
+				refresh: () => this.load(),
+			}),
+			coordinator.register({
+				id: ALERTS_SCHEDULE,
+				schedule: ALERTS_SCHEDULE,
+				age: () => this.alertsAge,
+				refresh: () => this.refreshAlerts(),
+			}),
+		]
+		return () => stops.forEach((stop) => stop())
 	}
 
 	/** Stops the minute. */
@@ -185,13 +238,52 @@ export class WeatherStore {
 	async dismissAlert(id: string): Promise<void> {
 		if (!this.data || this.data.dismissed?.includes(id)) return
 		this.data.dismissed = [...(this.data.dismissed ?? []), id]
-		await save<WeatherData>(DOCUMENT, { version: VERSION, data: $state.snapshot(this.data) }).catch(() => null)
+		await this.#save()
+	}
+
+	#save(): Promise<unknown> {
+		if (!this.data) return Promise.resolve()
+		return save<WeatherData>(DOCUMENT, { version: VERSION, data: $state.snapshot(this.data) }).catch(() => null)
 	}
 
 	/**
-	 * Fetches the forecast and the alerts for the home place, then the supplementary slots that are due, or every slot
-	 * when the owner asks for everything at once (`force`). A failure of the forecast keeps the last good one and flags
-	 * offline; a failure of a supplement marks its slot alone.
+	 * Asks the alert service about the home place and emits each active alert as `weather.alert`, keyed by its id so
+	 * it is a signal once however often it is answered. The alerts sit in the mirror beside the forecast, so there is
+	 * nothing to do before a forecast for the place exists, nor for a place the service does not cover; a service that
+	 * does not answer leaves the alerts as they were. A call while one is under way joins it.
+	 */
+	refreshAlerts({ force = false }: { force?: boolean } = {}): Promise<void> {
+		return (this.#alerting ??= this.#alerts(force).finally(() => (this.#alerting = null)))
+	}
+
+	async #alerts(force: boolean): Promise<void> {
+		await this.#read()
+		const place = $state.snapshot(settings.home)
+		const held = (data: WeatherData | null): data is WeatherData => !!data && samePlace(data.place, place)
+		if (!held(this.data) || (this.data.alertsCovered === false && !force)) return
+		const answer = await fetchAlerts(place.latitude, place.longitude)
+		// the forecast may have been replaced while the service answered; the alerts go into whatever is held now
+		const data = this.data
+		if (!answer || !held(data)) return
+		data.alerts = answer.alerts
+		data.alertsAt = nowIso()
+		data.alertsCovered = answer.covered
+		data.dismissed = (data.dismissed ?? []).filter((id) => answer.alerts.some((alert) => alert.id === id))
+		await this.#save()
+		for (const alert of answer.alerts) {
+			const { id, severity, event, headline, ends } = alert
+			await emit(
+				'weather.alert',
+				{ alertId: id, severity, event, headline, ...(ends ? { ends } : {}) },
+				{ dedupeKey: id }
+			).catch(() => null)
+		}
+	}
+
+	/**
+	 * Fetches the forecast for the home place, then the supplementary slots that are due, or every slot when the owner
+	 * asks for everything at once (`force`), and then the alerts when they are due too. A failure of the forecast
+	 * keeps the last good one and flags offline; a failure of a supplement marks its slot alone.
 	 */
 	async refresh({ force = false }: { force?: boolean } = {}): Promise<void> {
 		if (this.loading) return
@@ -199,10 +291,7 @@ export class WeatherStore {
 		const place = $state.snapshot(settings.home)
 		const previous = this.data && samePlace(this.data.place, place) ? $state.snapshot(this.data) : null
 		try {
-			const [forecast, alerts] = await Promise.all([
-				this.#forecast(place),
-				fetchAlerts(place.latitude, place.longitude),
-			])
+			const forecast = await this.#forecast(place)
 			const fetchedAt = nowIso()
 			const now = Date.now()
 			const [airQuality, allergens] = await Promise.all([
@@ -215,18 +304,30 @@ export class WeatherStore {
 			])
 			const from = addDays(placeToday(forecast.timeZone, now), -PAST_DAYS)
 			const days = mergeDays(previous?.forecast.days ?? [], forecast.days, from)
-			const dismissed = (previous?.dismissed ?? []).filter((id) => alerts.some((alert) => alert.id === id))
-			this.data = { fetchedAt, place, forecast: { ...forecast, days }, alerts, airQuality, allergens, dismissed }
+			// the alerts are their own fetch: what the mirror holds of them now, for this place, is carried over
+			const kept = this.data && samePlace(this.data.place, place) ? $state.snapshot(this.data) : null
+			this.data = {
+				fetchedAt,
+				place,
+				forecast: { ...forecast, days },
+				alerts: kept?.alerts ?? [],
+				alertsAt: kept?.alertsAt,
+				alertsCovered: kept?.alertsCovered,
+				airQuality,
+				allergens,
+				dismissed: kept?.dismissed ?? [],
+			}
 			this.at = now
 			this.clock = now
 			this.offline = false
-			await save<WeatherData>(DOCUMENT, { version: VERSION, data: $state.snapshot(this.data) }).catch(() => null)
+			await this.#save()
 		} catch (error) {
 			if (!(error instanceof OfflineError)) throw error
 			this.offline = true
 		} finally {
 			this.loading = false
 		}
+		if (force || this.alertsAge >= ALERTS_STALE_MS) await this.refreshAlerts({ force })
 	}
 }
 

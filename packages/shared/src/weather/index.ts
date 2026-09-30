@@ -9,5 +9,12 @@ export * from './week.js'
 export { conditionLabel, CONDITION_KEY } from './conditions.js'
 export { goldenHourOf, moonAt, type Moon, type MoonPhase } from './ephemeris.js'
 export { MIN_QUERY, homeFrom, searchPlaces, type PlaceResult } from './geocoding.js'
-export { fetchAlerts, type AlertSeverity, type WeatherAlert } from './nws.js'
-export { WeatherStore, weather, type Sun, type WeatherData } from './store.svelte.js'
+export { fetchAlerts, readAlerts, type AlertsAnswer, type AlertSeverity, type WeatherAlert } from './nws.js'
+export {
+	ALERTS_SCHEDULE,
+	FORECAST_RESOURCE,
+	WeatherStore,
+	weather,
+	type Sun,
+	type WeatherData,
+} from './store.svelte.js'
