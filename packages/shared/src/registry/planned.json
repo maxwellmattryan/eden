@@ -1,0 +1,151 @@
+{
+	"note": "The rows of the owners that are not built yet, so a Phase 1 read of a later resource resolves. `phase` is the owner's; a row may carry its own. When a domain is built its block moves into its manifest.json.",
+	"owners": {
+		"calendar": {
+			"phase": 2,
+			"facts": [],
+			"entities": [
+				{ "id": "layer", "tier": "T0" },
+				{ "id": "holiday-set", "tier": "T0" }
+			],
+			"kinds": [
+				{ "id": "google-event", "primitive": "event", "tier": "by-source" },
+				{ "id": "ics-event", "primitive": "event", "tier": "by-source", "phase": "later" }
+			]
+		},
+		"fitness": {
+			"phase": 2,
+			"facts": [
+				{ "id": "gym-preference", "tier": "T1" },
+				{ "id": "training-schedule", "tier": "T1" },
+				{ "id": "equipment", "tier": "T1" },
+				{ "id": "fitness-goal", "tier": "T1" },
+				{ "id": "favorite-supplement", "tier": "T1" },
+				{ "id": "training-limitation", "tier": "T2" },
+				{ "id": "current-weight", "tier": "T2" }
+			],
+			"entities": [
+				{ "id": "exercise", "tier": "T0" },
+				{ "id": "workout-template", "tier": "T1" },
+				{ "id": "workout-log", "tier": "T1" },
+				{ "id": "gym", "tier": "T1" },
+				{ "id": "training-goal", "tier": "T1" },
+				{ "id": "body-metric", "tier": "T2" },
+				{ "id": "supplement", "tier": "T1" },
+				{ "id": "intake-log", "tier": "T1" }
+			],
+			"kinds": [{ "id": "workout-session", "primitive": "event", "tier": "T1" }]
+		},
+		"spirit": {
+			"phase": 2,
+			"facts": [
+				{ "id": "followed-tradition", "tier": "T1" },
+				{ "id": "value", "tier": "T1" },
+				{ "id": "favorite-author", "tier": "T1" },
+				{ "id": "birth-data", "tier": "T2" }
+			],
+			"entities": [
+				{ "id": "tradition", "tier": "T1" },
+				{ "id": "reading-source", "tier": "T0" },
+				{ "id": "excerpt", "tier": "T0" },
+				{ "id": "author", "tier": "T0" },
+				{ "id": "reading-log", "tier": "T1" },
+				{ "id": "astrology-profile", "tier": "T2" }
+			],
+			"kinds": []
+		},
+		"places": {
+			"phase": 3,
+			"facts": [{ "id": "favorite-vibe", "tier": "T0" }],
+			"entities": [
+				{ "id": "place-profile", "tier": "T1" },
+				{ "id": "vibe", "tier": "T0" },
+				{ "id": "collection", "tier": "T1" },
+				{ "id": "listing", "tier": "T0" },
+				{ "id": "visit", "tier": "T1" }
+			],
+			"kinds": [{ "id": "outing", "primitive": "event", "tier": "T1" }]
+		},
+		"health": {
+			"phase": "later",
+			"facts": [
+				{ "id": "medical-dietary-restriction", "tier": "T2", "phase": 1 },
+				{ "id": "blood-type", "tier": "T2" }
+			],
+			"entities": [
+				{ "id": "condition", "tier": "T2" },
+				{ "id": "medication", "tier": "T2" },
+				{ "id": "appointment-note", "tier": "T2" },
+				{ "id": "provider", "tier": "T1" },
+				{ "id": "insurance-plan", "tier": "T2" }
+			],
+			"kinds": [
+				{ "id": "medical-appointment", "primitive": "event", "tier": "T2" },
+				{ "id": "insurance-card", "primitive": "attachment", "tier": "T3" }
+			]
+		},
+		"finance": {
+			"phase": "later",
+			"facts": [
+				{ "id": "monthly-income-band", "tier": "T2" },
+				{ "id": "savings-goal", "tier": "T2" }
+			],
+			"entities": [
+				{ "id": "account", "tier": "T2" },
+				{ "id": "transaction", "tier": "T2" },
+				{ "id": "budget", "tier": "T2" },
+				{ "id": "budget-category", "tier": "T1" },
+				{ "id": "recurring-charge", "tier": "T2" },
+				{ "id": "holding", "tier": "T2" }
+			],
+			"kinds": [
+				{ "id": "receipt", "primitive": "attachment", "tier": "T2" },
+				{ "id": "bill-due", "primitive": "event", "tier": "T2" }
+			]
+		},
+		"people": {
+			"phase": "later",
+			"facts": [],
+			"entities": [
+				{ "id": "person", "tier": "T1" },
+				{ "id": "interaction", "tier": "T1" }
+			],
+			"kinds": [{ "id": "birthday", "primitive": "event", "tier": "T1" }]
+		},
+		"journal": {
+			"phase": "later",
+			"facts": [],
+			"entities": [
+				{ "id": "entry", "tier": "T1" },
+				{ "id": "prompt", "tier": "T0" }
+			],
+			"kinds": []
+		},
+		"travel": {
+			"phase": "later",
+			"facts": [
+				{ "id": "home-airport", "tier": "T1" },
+				{ "id": "seat-preference", "tier": "T1" },
+				{ "id": "passport-expiry", "tier": "T2" }
+			],
+			"entities": [
+				{ "id": "trip", "tier": "T1" },
+				{ "id": "itinerary-item", "tier": "T1" },
+				{ "id": "trip-document", "tier": "T2" }
+			],
+			"kinds": [
+				{ "id": "trip-destination", "primitive": "place", "tier": "T1" },
+				{ "id": "trip-item", "primitive": "event", "tier": "T1" }
+			]
+		},
+		"library": {
+			"phase": "later",
+			"facts": [{ "id": "reading-interest", "tier": "T1" }],
+			"entities": [
+				{ "id": "reading-item", "tier": "T1" },
+				{ "id": "highlight", "tier": "T1" }
+			],
+			"kinds": []
+		}
+	}
+}

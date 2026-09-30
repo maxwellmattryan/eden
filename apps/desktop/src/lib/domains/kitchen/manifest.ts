@@ -1,44 +1,29 @@
-// Hearth's manifest (product/domains/kitchen.md; product/substrate/domain-manifest.md, "Example: Hearth's manifest"):
-// the fields the shell composes from today. Capture, the tools and the signals arrive with their substrates.
+// Hearth's bindings (product/domains/kitchen.md): the page and its tabs, the bodies of its two built Garden tiles,
+// its store. What Hearth declares is in `@eden/shared/domains/kitchen/manifest.json`.
 import { kitchenExtras } from '@eden/shared/domains/kitchen'
 import { get } from 'svelte/store'
 import { goto } from '$app/navigation'
 import { resolve } from '$app/paths'
-import { domainGlyph } from '@eden/ui-kit'
 import { t } from '@eden/shared/i18n'
-import type { DomainManifest } from '../manifest.js'
+import { declarationOf, type TabId } from '@eden/shared/manifest'
+import { defineDomain } from '../manifest.js'
 import { kitchen } from './store.svelte.js'
 import CookTonight from './widgets/CookTonight.svelte'
 import ExpiringSoon from './widgets/ExpiringSoon.svelte'
 
-export const KITCHEN_TABS = ['stock', 'recipes', 'grocery', 'tips'] as const
-export type KitchenTab = (typeof KITCHEN_TABS)[number]
+export type KitchenTab = TabId<'kitchen'>
+export const KITCHEN_TABS: readonly KitchenTab[] = declarationOf('kitchen').tabs.map((tab) => tab.id)
 
-export const kitchenManifest: DomainManifest = {
-	id: 'kitchen',
-	name: 'domains.kitchen.name',
-	subtitle: 'domains.kitchen.subtitle',
-	glyph: domainGlyph('kitchen'),
+export const kitchenManifest = defineDomain('kitchen', {
 	routes: {
 		path: '/kitchen/[[tab]]',
 		href: resolve('/kitchen/[[tab]]', {}),
 		open: () => void goto(resolve('/kitchen/[[tab]]', {})),
-		tabs: KITCHEN_TABS,
+		openTab: (tab) => void goto(resolve('/kitchen/[[tab]]', { tab })),
 	},
-	widgets: [
-		{
-			id: 'expiring-soon',
-			size: 's',
-			title: 'garden.widgets.expiringSoon',
-			empty: 'garden.empty.expiringSoon',
-			body: ExpiringSoon,
-			hasData: () => kitchen.expiring.length > 0,
-		},
-		{
-			id: 'cook-tonight',
-			size: 'm',
-			title: 'garden.widgets.cookTonight',
-			empty: 'garden.empty.cookTonight',
+	widgets: {
+		'expiring-soon': { body: ExpiringSoon, hasData: () => kitchen.expiring.length > 0 },
+		'cook-tonight': {
 			body: CookTonight,
 			hasData: () => kitchen.recipes.length > 0,
 			action: {
@@ -46,11 +31,7 @@ export const kitchenManifest: DomainManifest = {
 				open: () => void goto(resolve('/kitchen/[[tab]]', { tab: 'recipes' })),
 			},
 		},
-	],
-	quickActions: [
-		{ id: 'capture-haul', label: 'domains.kitchen.capture.action', icon: 'camera' },
-		{ id: 'add-to-grocery', label: 'domains.kitchen.grocery.add', icon: 'plus' },
-	],
+	},
 	load: () => kitchen.load(),
 	reload: () => kitchen.reload(),
 	extras: async () => {
@@ -58,4 +39,4 @@ export const kitchenManifest: DomainManifest = {
 		return kitchenExtras(kitchen.data())
 	},
 	seed: () => kitchen.seed(get(t)('domains.kitchen.name')),
-}
+})

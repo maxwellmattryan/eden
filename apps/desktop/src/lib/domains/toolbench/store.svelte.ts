@@ -32,7 +32,7 @@ import {
 	type ProjectPayload,
 	type ToolbenchData,
 } from '@eden/shared/domains/toolbench'
-import { garden } from '../garden/store.svelte.js'
+import { feed } from '../../shell/feed.svelte.js'
 import { parseIdea } from './parse.js'
 import { seedData } from './seed.js'
 
@@ -236,11 +236,11 @@ export class ToolbenchStore {
 	#commit(change: Change, feedKey?: string, values?: Record<string, string | number>): Undo {
 		change.apply()
 		this.#queue.enqueue(change.write)
-		const entry = feedKey ? garden.record('toolbench', feedKey, values) : undefined
+		const entry = feedKey ? feed.record('toolbench', feedKey, values) : undefined
 		return () => {
 			change.revert()
 			this.#queue.enqueue(change.unwrite)
-			if (entry) garden.forget(entry.id)
+			if (entry) feed.forget(entry.id)
 		}
 	}
 }

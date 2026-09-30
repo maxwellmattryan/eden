@@ -1,18 +1,26 @@
 <script lang="ts">
-	// More: what the tab bar has no room for (product/substrate/shell.md, Mobile). Toolbench has no mobile surface
-	// yet, the Gardener arrives with its substrate; Settings opens the Appearance sheet.
-	import { EmptyState, Icon, PageHeader, domainGlyph } from '@eden/ui-kit'
+	// More: what the tab bar has no room for (product/substrate/shell.md, Mobile), composed from the manifests: the
+	// domains that are not pinned, then the Gardener and Settings. Toolbench has no mobile surface yet, the Gardener
+	// arrives with its substrate; Settings opens the Appearance sheet.
+	import { EmptyState, Icon, PageHeader, domainGlyph, type GlyphId } from '@eden/ui-kit'
 	import { t } from '@eden/shared/i18n'
+	import { shell, tabBar } from '@eden/shared/manifest'
+	import { declarations, manifestFor } from '$lib/domains'
 	import { settingsUi } from '$lib/settings/settings-ui.svelte'
 
-	const rows = $derived([
-		{ id: 'toolbench' as const, name: $t('domains.toolbench.name'), subtitle: $t('domains.toolbench.subtitle') },
-		{ id: 'gardener' as const, name: $t('shell.gardener'), subtitle: $t('shell.gardenerSubtitle') },
-		{ id: 'settings' as const, name: $t('shell.settings'), subtitle: $t('shell.settingsSubtitle') },
-	])
+	const rows = $derived(
+		tabBar(declarations, shell).more.map((item) => ({
+			id: item.id,
+			name: $t(item.name),
+			subtitle: $t(item.subtitle),
+			// the registry builder checked each id against the kit's glyphs
+			icon: domainGlyph(item.id as GlyphId),
+		}))
+	)
 
-	function open(id: (typeof rows)[number]['id']) {
-		if (id === 'settings') settingsUi.show()
+	function open(id: string) {
+		if (id === 'settings') return settingsUi.show()
+		manifestFor(id)?.routes?.open()
 	}
 </script>
 
@@ -21,7 +29,7 @@
 	{#each rows as row (row.id)}
 		<li>
 			<button type="button" class="more-row" onclick={() => open(row.id)}>
-				<Icon name={domainGlyph(row.id)} size="md" />
+				<Icon name={row.icon} size="md" />
 				<span class="more-text">
 					<span class="more-name">{row.name}</span>
 					<span class="more-subtitle">{row.subtitle}</span>

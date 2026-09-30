@@ -12,6 +12,8 @@
 		"./settings": "./src/settings/index.ts",
 		"./persistence": "./src/persistence/index.ts",
 		"./data": "./src/data/index.ts",
+		"./registry": "./src/registry/index.ts",
+		"./manifest": "./src/manifest/index.ts",
 		"./domains/kitchen": "./src/domains/kitchen/index.ts",
 		"./domains/toolbench": "./src/domains/toolbench/index.ts",
 		"./dates": "./src/dates/index.ts",
@@ -21,7 +23,9 @@
 		"./types": "./src/types/index.ts"
 	},
 	"scripts": {
-		"check": "svelte-check --tsconfig ./tsconfig.json",
+		"registry": "node scripts/build-registry.mjs",
+		"registry:check": "node scripts/build-registry.mjs --check",
+		"check": "yarn registry:check && svelte-check --tsconfig ./tsconfig.json",
 		"test": "vitest run",
 		"test:watch": "vitest"
 	},

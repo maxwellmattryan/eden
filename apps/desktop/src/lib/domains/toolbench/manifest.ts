@@ -1,36 +1,28 @@
-// Toolbench's manifest (product/domains/toolbench.md): the page with its five tabs, the two default Garden tiles, the
-// capture-idea quick action.
+// Toolbench's bindings (product/domains/toolbench.md): the page and its five tabs, the bodies of its two built
+// Garden tiles, its store. What Toolbench declares is in `@eden/shared/domains/toolbench/manifest.json`.
 import { toolbenchExtras } from '@eden/shared/domains/toolbench'
 import { get } from 'svelte/store'
 import { goto } from '$app/navigation'
 import { resolve } from '$app/paths'
-import { domainGlyph } from '@eden/ui-kit'
 import { t } from '@eden/shared/i18n'
-import type { DomainManifest } from '../manifest.js'
+import { declarationOf, type TabId } from '@eden/shared/manifest'
+import { defineDomain } from '../manifest.js'
 import { toolbench } from './store.svelte.js'
 import ActiveProjects from './widgets/ActiveProjects.svelte'
 import ResurfacedIdea from './widgets/ResurfacedIdea.svelte'
 
-export const TOOLBENCH_TABS = ['ideas', 'projects', 'lab', 'studio', 'notes'] as const
-export type ToolbenchTab = (typeof TOOLBENCH_TABS)[number]
+export type ToolbenchTab = TabId<'toolbench'>
+export const TOOLBENCH_TABS: readonly ToolbenchTab[] = declarationOf('toolbench').tabs.map((tab) => tab.id)
 
-export const toolbenchManifest: DomainManifest = {
-	id: 'toolbench',
-	name: 'domains.toolbench.name',
-	subtitle: 'domains.toolbench.subtitle',
-	glyph: domainGlyph('toolbench'),
+export const toolbenchManifest = defineDomain('toolbench', {
 	routes: {
 		path: '/toolbench/[[tab]]',
 		href: resolve('/toolbench/[[tab]]', {}),
 		open: () => void goto(resolve('/toolbench/[[tab]]', {})),
-		tabs: TOOLBENCH_TABS,
+		openTab: (tab) => void goto(resolve('/toolbench/[[tab]]', { tab })),
 	},
-	widgets: [
-		{
-			id: 'resurfaced-idea',
-			size: 's',
-			title: 'garden.widgets.resurfacedIdea',
-			empty: 'garden.empty.resurfacedIdea',
+	widgets: {
+		'resurfaced-idea': {
 			body: ResurfacedIdea,
 			hasData: () => toolbench.resurfaced !== undefined,
 			action: {
@@ -41,11 +33,7 @@ export const toolbenchManifest: DomainManifest = {
 				},
 			},
 		},
-		{
-			id: 'active-projects',
-			size: 'm',
-			title: 'garden.widgets.activeProjects',
-			empty: 'garden.empty.activeProjects',
+		'active-projects': {
 			body: ActiveProjects,
 			hasData: () => toolbench.projects.length > 0,
 			action: {
@@ -53,8 +41,7 @@ export const toolbenchManifest: DomainManifest = {
 				open: () => void goto(resolve('/toolbench/[[tab]]', { tab: 'projects' })),
 			},
 		},
-	],
-	quickActions: [{ id: 'capture-idea', label: 'domains.toolbench.ideas.capture', icon: 'lightbulb' }],
+	},
 	load: () => toolbench.load(),
 	reload: () => toolbench.reload(),
 	extras: async () => {
@@ -62,4 +49,4 @@ export const toolbenchManifest: DomainManifest = {
 		return toolbenchExtras(toolbench.data())
 	},
 	seed: () => toolbench.seed(get(t)('domains.toolbench.name')),
-}
+})

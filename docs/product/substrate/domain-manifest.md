@@ -4,7 +4,7 @@ status: draft
 summary: What a domain declares to the shell, the isolation rules that keep domains standalone, entity URIs and intents, what enabling, disabling and removing a domain does, the plugin path, and Hearth as a worked example.
 read-this-if: You are adding a domain, changing how domains plug into the shell, or wiring two domains together.
 depends-on: [registry, primitives, grants]
-updated: 2026-09-27
+updated: 2026-09-29
 ---
 
 ## Purpose
@@ -39,7 +39,7 @@ A domain is a manifest plus the code behind it. The shell composes the sidebar, 
 | `export` | 1 | its export sections |
 | `mobile` | 2 | which surfaces exist on the phone |
 
-Fields no Phase 1 domain consumes are marked planned and left unimplemented until a domain needs them.
+Fields no Phase 1 domain consumes are marked planned and left unimplemented until a domain needs them. How a manifest is written in code, and what is checked when it is built, is in `engineering/domain-module.md` (D-68).
 
 ## Isolation rules
 
@@ -86,7 +86,7 @@ Built-in domains are manifests compiled into the app. An external plugin is the 
 | `reads` | `medical-dietary-restriction`, `favorite-supplement`, `home-area` |
 | `widgets` | expiring-soon (S, M; reads `stock-item`), cook-tonight (M; reads `stock-item`, `recipe`, `allergy`, `medical-dietary-restriction`, `dietary-preference`), grocery-quick-add (S; reads `grocery-list`, `grocery-item`) |
 | `quickActions` | capture-haul, add-to-grocery |
-| `captureSources` | photo, receipt, barcode |
+| `captureSources` | photo, receipt (barcode in Phase 2) |
 | `tools` | suggest-recipes (read), storage-tip (read), capture-haul (write-draft), draft-grocery-list (write-draft), add-stock (write, confirm), plan-week (write-draft) |
 | `signals` | `stock.expiring`, `stock.low`, `grocery.shop-day` |
 | `notificationKinds` | expiring-digest (daily, in-app), low-stock (weekly, in-app), shop-day-reminder (OS, morning of) |

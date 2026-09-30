@@ -1,0 +1,82 @@
+{
+	"id": "kitchen",
+	"phase": 1,
+	"sidebar": { "group": "domains", "order": 10, "visible": true },
+	"tabs": ["stock", "recipes", "grocery", "tips"],
+	"resources": {
+		"facts": [
+			{ "id": "allergy", "tier": "T2" },
+			{ "id": "dietary-preference", "tier": "T1" },
+			{ "id": "disliked-ingredient", "tier": "T0" },
+			{ "id": "cuisine-preference", "tier": "T0" },
+			{ "id": "household-size", "tier": "T1" }
+		],
+		"entities": [
+			{ "id": "stock-item", "tier": "T0" },
+			{ "id": "recipe", "tier": "T0" },
+			{ "id": "grocery-list", "tier": "T0" },
+			{ "id": "grocery-item", "tier": "T0" },
+			{ "id": "storage-tip", "tier": "T0" }
+		],
+		"kinds": [
+			{ "id": "shop-day", "primitive": "event", "tier": "T0" },
+			{ "id": "haul-photo", "primitive": "attachment", "tier": "T1" }
+		]
+	},
+	"reads": ["medical-dietary-restriction", "favorite-supplement", "home-area"],
+	"widgets": [
+		{ "id": "expiring-soon", "sizes": ["s", "m"], "default": true, "reads": ["stock-item"] },
+		{
+			"id": "cook-tonight",
+			"sizes": ["m"],
+			"default": true,
+			"reads": ["stock-item", "recipe", "dietary-preference", "allergy", "medical-dietary-restriction"]
+		},
+		{ "id": "grocery-quick-add", "sizes": ["s"], "reads": ["grocery-list", "grocery-item"], "planned": true }
+	],
+	"quickActions": [
+		{ "id": "capture-haul", "label": "domains.kitchen.capture.action", "icon": "camera" },
+		{ "id": "add-to-grocery", "label": "domains.kitchen.grocery.add", "icon": "plus" }
+	],
+	"captureSources": ["photo", "receipt"],
+	"tools": [
+		{
+			"id": "suggest-recipes",
+			"access": "read",
+			"reads": [
+				"stock-item",
+				"recipe",
+				"dietary-preference",
+				"disliked-ingredient",
+				"cuisine-preference",
+				"allergy",
+				"medical-dietary-restriction"
+			]
+		},
+		{ "id": "storage-tip", "access": "read", "reads": ["stock-item", "storage-tip"] },
+		{ "id": "capture-haul", "access": "write-draft", "reads": [] },
+		{
+			"id": "draft-grocery-list",
+			"access": "write-draft",
+			"reads": ["stock-item", "recipe", "grocery-list", "grocery-item"]
+		},
+		{ "id": "add-stock", "access": "write", "confirm": true, "reads": ["stock-item"] },
+		{ "id": "plan-week", "access": "write-draft", "reads": ["stock-item", "recipe", "local-event", "task"] }
+	],
+	"signals": ["stock.expiring", "stock.low", "grocery.shop-day"],
+	"notificationKinds": [
+		{ "id": "expiring-digest", "channel": "in-app", "cadence": "daily" },
+		{ "id": "low-stock", "channel": "in-app", "cadence": "weekly" },
+		{ "id": "shop-day-reminder", "channel": "os", "cadence": "morning-of" }
+	],
+	"intents": ["kitchen.add-to-grocery"],
+	"deviceCapabilities": ["camera"],
+	"palette": {
+		"entries": [
+			{ "verb": "run", "quickAction": "add-to-grocery" },
+			{ "verb": "run", "quickAction": "capture-haul" }
+		],
+		"search": ["stock-item", "recipe"]
+	},
+	"export": ["stock-item", "recipe", "grocery-list", "grocery-item", "storage-tip"]
+}

@@ -1,18 +1,28 @@
 <script lang="ts">
 	// The Garden (product/substrate/shell.md, "The Garden"), ported from the approved Domains/Garden/Garden story: the
-	// quick-navigation row, the Phase 1 default grid from `layout.ts`, and the activity feed in a column of its own.
-	// The tiles come from the domain manifests and compute from their stores; a tile whose domain has nothing to show
-	// keeps its one-line prompt. Edit mode is not built yet, so "Edit layout" shows disabled.
+	// quick-navigation row, the default grid the shell composes from the manifests (`defaultLayout`), and the activity
+	// feed in a column of its own. The tiles compute from their domains' stores; a tile whose domain has nothing to
+	// show keeps its one-line prompt. Edit mode is not built yet, so "Edit layout" shows disabled.
 	import { goto } from '$app/navigation'
 	import { resolve } from '$app/paths'
-	import { EmptyState, Icon, PageHeader, Widget, WidgetGrid, domainGlyph, type WidgetAction } from '@eden/ui-kit'
+	import {
+		EmptyState,
+		Icon,
+		PageHeader,
+		Widget,
+		WidgetGrid,
+		domainGlyph,
+		type GlyphId,
+		type WidgetAction,
+	} from '@eden/ui-kit'
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
-	import { manifestFor, manifests } from '$lib/domains'
+	import { defaultLayout, shell, type LayoutTile } from '@eden/shared/manifest'
+	import { declarations, manifestFor, manifests, type WidgetBinding } from '$lib/domains'
+	import { feed as activity } from '$lib/shell/feed.svelte'
 	import { undoToast } from '$lib/shell/undo'
-	import { garden } from './store.svelte'
 	import { formatDate, formatTime, formatWeekday, nowIso, relativeDay } from '@eden/shared/dates'
-	import { layout, shellTiles, type GardenTile } from './layout'
+	import { shellTiles } from './tiles'
 
 	const lang = $derived($locale ?? 'en')
 	const format = $derived({ lang, clock: settings.clock })
@@ -29,25 +39,28 @@
 		})),
 	])
 
-	function domainOf(tile: GardenTile): string | undefined {
-		if (tile.id === 'today') return $t('shell.today')
-		const manifest = manifestFor(tile.domain)
+	const layout = defaultLayout(declarations, shell)
+	const bindings: Partial<Record<string, WidgetBinding>> = shellTiles
+
+	/** The name under the tile's title: its domain's, or Today's for the shell's own tile of it. */
+	function domainOf(tile: LayoutTile): string | undefined {
+		if (tile.glyph === 'today') return $t('shell.today')
+		const manifest = manifestFor(tile.owner)
 		return manifest ? $t(manifest.name) : undefined
 	}
 
 	const tiles = $derived(
 		layout.map((tile) => {
-			const declared = manifestFor(tile.domain)?.widgets.find((w) => w.id === tile.id)
-			const declaration = declared ?? shellTiles[tile.id]
-			const body = declaration?.hasData?.() ? declaration.body : undefined
+			const bound = manifestFor(tile.owner)?.widgets.find((w) => w.id === tile.id) ?? bindings[tile.id]
+			const body = bound?.hasData?.() ? bound.body : undefined
 			const action: WidgetAction | undefined =
-				body && declaration?.action
-					? { label: $t(declaration.action.label), onclick: declaration.action.open }
-					: undefined
+				body && bound?.action ? { label: $t(bound.action.label), onclick: bound.action.open } : undefined
 			return {
 				tile,
-				title: $t(declared?.title ?? tile.title),
-				empty: $t(declared?.empty ?? tile.empty),
+				// the registry builder checked each glyph against the kit's list
+				icon: domainGlyph(tile.glyph as GlyphId),
+				title: $t(tile.title),
+				empty: $t(tile.empty),
 				domain: domainOf(tile),
 				body,
 				action,
@@ -57,7 +70,7 @@
 
 	/** No domain has anything yet: the first run, when the feed's column offers the sample data. */
 	const firstRun = $derived(
-		garden.ready && garden.feed.length === 0 && manifests.every((m) => !m.widgets.some((w) => w.hasData?.()))
+		activity.ready && activity.entries.length === 0 && manifests.every((m) => !m.widgets.some((w) => w.hasData?.()))
 	)
 
 	function whenOf(at: string): string {
@@ -68,7 +81,7 @@
 		return formatWeekday(at, lang)
 	}
 	const feed = $derived(
-		garden.feed.map((entry) => ({
+		activity.entries.map((entry) => ({
 			id: entry.id,
 			icon: manifestFor(entry.domain)?.glyph ?? domainGlyph('garden'),
 			line: $t(entry.key, { values: entry.values }),
@@ -104,12 +117,12 @@
 	</nav>
 	<div class="content">
 		<WidgetGrid>
-			{#each tiles as { tile, title, empty, domain, body, action } (tile.id)}
+			{#each tiles as { tile, icon, title, empty, domain, body, action } (tile.id)}
 				{@const Body = body}
 				{#if Body}
-					<Widget {title} icon={domainGlyph(tile.domain)} {domain} size={tile.size} {action}><Body /></Widget>
+					<Widget {title} {icon} {domain} size={tile.size} {action}><Body /></Widget>
 				{:else}
-					<Widget {title} icon={domainGlyph(tile.domain)} {domain} size={tile.size} {empty} />
+					<Widget {title} {icon} {domain} size={tile.size} {empty} />
 				{/if}
 			{/each}
 		</WidgetGrid>

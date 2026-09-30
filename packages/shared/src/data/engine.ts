@@ -1,12 +1,12 @@
 // The data layer outside Tauri. `yarn dev:web` serves the app to a plain browser, where there is no crate and no
 // database; this is the same API over one JSON document in the storage it is given, with real ids and real stamps,
-// so a store cannot tell the difference. It follows the crate's rules (`src-tauri/src/substrate/*`) with two
-// exceptions: it does not know the registry of entity types, so it accepts any well-formed one, and it cannot attach
-// a file, because a browser has no path to copy from.
+// so a store cannot tell the difference. It follows the crate's rules (`src-tauri/src/substrate/*`), the registry
+// among them, with one exception: it cannot attach a file, because a browser has no path to copy from.
+import { isEntityType, kindsOf } from '../registry/index.js'
 import { DataError } from './errors.js'
 import { formatStamp, tick, type Hlc } from './hlc.js'
 import { createIdGenerator, isUlid } from './ulid.js'
-import { isResourceId, parseUri, toUri } from './uri.js'
+import { parseUri, toUri } from './uri.js'
 import {
 	RELATIONS,
 	type BatchOp,
@@ -56,7 +56,10 @@ interface State {
 	links: Link[]
 }
 
-/** A primitive as the crate describes it (`primitives.rs`): its kinds, and each field with what it is when left out. */
+/**
+ * A primitive as the crate describes it (`primitives.rs`): its kinds, which are the registry's, and each field with
+ * what it is when left out.
+ */
 interface Primitive {
 	kinds: readonly string[]
 	required: readonly string[]
@@ -67,7 +70,7 @@ interface Primitive {
 
 const PRIMITIVES: Record<PrimitiveType, Primitive> = {
 	task: {
-		kinds: ['todo', 'checklist', 'routine', 'habit', 'reminder'],
+		kinds: kindsOf('task'),
 		required: ['kind', 'title'],
 		fixed: [],
 		fields: {
@@ -89,7 +92,7 @@ const PRIMITIVES: Record<PrimitiveType, Primitive> = {
 		},
 	},
 	event: {
-		kinds: ['local-event', 'shop-day'],
+		kinds: kindsOf('event'),
 		required: ['kind', 'title', 'startAt'],
 		fixed: [],
 		fields: {
@@ -108,13 +111,13 @@ const PRIMITIVES: Record<PrimitiveType, Primitive> = {
 		},
 	},
 	place: {
-		kinds: ['home', 'venue'],
+		kinds: kindsOf('place'),
 		required: ['kind', 'name'],
 		fixed: [],
 		fields: { kind: null, name: null, lat: null, lng: null, address: null, category: null, phone: null, url: null },
 	},
 	attachment: {
-		kinds: ['document', 'photo', 'haul-photo', 'render'],
+		kinds: kindsOf('attachment'),
 		required: ['kind', 'fileName'],
 		fixed: ['mime', 'size', 'hash', 'store'],
 		fields: {
@@ -236,9 +239,7 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 	}
 
 	function createEntity(state: State, input: EntityInput<object>): Entity {
-		if (!isResourceId(input.type) || isPrimitive(input.type)) {
-			throw invalid(`not an entity type: ${JSON.stringify(input.type)}`)
-		}
+		if (!isEntityType(input.type)) throw invalid(`not a registered entity type: ${JSON.stringify(input.type)}`)
 		if (!isObject(input.payload)) throw invalid("an entity's payload is a JSON object")
 		const id = claim(state, input.type, input)
 		const row = { ...common(input.type, id, stamp(state), input), payload: structuredClone(input.payload) }

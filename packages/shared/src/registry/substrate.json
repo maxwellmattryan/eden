@@ -1,0 +1,27 @@
+{
+	"note": "The substrate's own rows of docs/product/substrate/registry.md. A primitive is its own category: a row of the four shared tables, never an entity type. scripts/build-registry.mjs reads this with the domains' manifests and planned.json.",
+	"facts": [
+		{ "id": "preferred-name", "tier": "T1", "phase": 1 },
+		{ "id": "home-area", "tier": "T1", "phase": 1 }
+	],
+	"primitives": [
+		{ "id": "task", "tier": "T1", "phase": 1 },
+		{ "id": "event", "tier": "by-kind", "phase": 1 },
+		{ "id": "place", "tier": "by-kind", "phase": 1 },
+		{ "id": "attachment", "tier": "by-kind", "phase": 1 }
+	],
+	"entities": [{ "id": "calendar-source", "tier": "T1", "phase": 1 }],
+	"kinds": [
+		{ "id": "todo", "primitive": "task", "tier": "T1", "phase": 1 },
+		{ "id": "checklist", "primitive": "task", "tier": "T1", "phase": 1 },
+		{ "id": "routine", "primitive": "task", "tier": "T1", "phase": 1 },
+		{ "id": "habit", "primitive": "task", "tier": "T1", "phase": 1 },
+		{ "id": "reminder", "primitive": "task", "tier": "T1", "phase": 1 },
+		{ "id": "local-event", "primitive": "event", "tier": "T1", "phase": 1 },
+		{ "id": "home", "primitive": "place", "tier": "T2", "phase": 1 },
+		{ "id": "venue", "primitive": "place", "tier": "T1", "phase": 1 },
+		{ "id": "document", "primitive": "attachment", "tier": "T2", "phase": 1 },
+		{ "id": "photo", "primitive": "attachment", "tier": "T1", "phase": 1 },
+		{ "id": "identity-document", "primitive": "attachment", "tier": "T3", "phase": 2 }
+	]
+}
