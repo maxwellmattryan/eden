@@ -21,6 +21,12 @@
 			"local": "この端末のみ",
 			"offline": "オフライン"
 		},
+		"inbox": {
+			"open": "開く",
+			"allow": "通知をオンにする",
+			"private": "Edenを開いて確認してください。",
+			"yesterday": "昨日"
+		},
 		"gardenerNoKey": "この端末にキーがありません",
 		"profile": "Edenが知っていること",
 		"profileSubtitle": "事実と、その出どころと使い道"

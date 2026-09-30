@@ -21,6 +21,12 @@
 			"local": "Local only",
 			"offline": "Offline"
 		},
+		"inbox": {
+			"open": "Open",
+			"allow": "Turn on notifications",
+			"private": "Open Eden to see it.",
+			"yesterday": "yesterday"
+		},
 		"gardenerNoKey": "No key on this device",
 		"profile": "What Eden knows about me",
 		"profileSubtitle": "Facts, where they came from, and who uses them"

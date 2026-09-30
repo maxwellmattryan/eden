@@ -17,6 +17,7 @@
 		UiKitProvider,
 		domainGlyph,
 		type GlyphId,
+		type InboxItem,
 		type SidebarEntry,
 	} from '@eden/ui-kit'
 	import { checkForUpdate } from '@eden/shared/api/updater'
@@ -28,11 +29,12 @@
 	import { shell, shortcutPositions, sidebarGroups, type SidebarItem } from '@eden/shared/manifest'
 	import { rememberPlace, rememberScroll, scrollOf, tabOf } from '@eden/shared/navigation'
 	import { coordinator } from '@eden/shared/refresh'
-	import { startSignals } from '@eden/shared/signals'
+	import { messageValues, notificationKeys, startSignals } from '@eden/shared/signals'
 	import { declarations, manifestFor, manifests } from '$lib/domains'
 	import { grants } from '$lib/shell/grants.svelte'
+	import { inbox } from '$lib/shell/inbox.svelte'
 	import { FORECAST_RESOURCE, weather } from '@eden/shared/weather'
-	import { formatTime } from '@eden/shared/dates'
+	import { formatTime, formatWeekday, relativeDay } from '@eden/shared/dates'
 	import { detectOs, formatShortcut } from '@eden/shared/shortcuts'
 	import { useGlobalErrorHandler } from '$lib/hooks/useGlobalErrorHandler'
 	import SettingsSheet from '$lib/settings/SettingsSheet.svelte'
@@ -101,6 +103,43 @@
 			: undefined
 	)
 
+	// The inbox behind the bell (substrate/signals-notifications.md): each card's line is written here from its
+	// rule's locale key and its signal's payload, so it reads in the current locale. A card opens its domain; the
+	// latest card that would have been an OS notification offers to turn those on while they are off.
+	function arrived(at: number): string {
+		const iso = new Date(at).toISOString()
+		const day = relativeDay(iso)
+		if (day === 'today') return formatTime(at, format)
+		return day === 'yesterday' ? $t('shell.inbox.yesterday') : formatWeekday(iso, format.lang)
+	}
+	const notices = $derived<InboxItem[]>(
+		inbox.cards.map((card) => {
+			const keys = notificationKeys(card.rule)
+			const manifest = manifestFor(keys.domain)
+			return {
+				id: card.id,
+				icon: manifest?.glyph,
+				line: $t(keys.line, { values: messageValues(card.payload) }),
+				when: arrived(card.at),
+				domain: manifest ? $t(manifest.name) : undefined,
+				unread: !card.read,
+				actions: [
+					...(manifest ? [{ id: 'open', label: $t('shell.inbox.open'), onclick: () => manifest.routes.open() }] : []),
+					...(inbox.asks === card.id
+						? [
+								{
+									id: 'allow',
+									label: $t('shell.inbox.allow'),
+									icon: 'bell' as const,
+									onclick: () => void inbox.allowNotifications(),
+								},
+							]
+						: []),
+				],
+			}
+		})
+	)
+
 	// How far the in-app history goes: the back arrow shows only when there is somewhere to go (shell.md).
 	let depth = $state(0)
 	// The content scrolls in `main`, not the window, so the router's own restoration never reaches it: each sidebar
@@ -158,6 +197,8 @@
 			timer = setInterval(() => checkForUpdate().catch(() => null), UPDATE_INTERVAL)
 			void grants.load()
 		})()
+		// The inbox hears what is delivered before signals start, so a card made by the first take is not missed.
+		void inbox.load()
 		// Signals and the scheduler (substrate/signals-notifications.md): the domains bind what they hear, their
 		// schedules are declared, and what came due while Eden was closed is taken. The settings are read by now.
 		const stopSignals = startSignals({
@@ -195,8 +236,9 @@
 			{banner}
 			integrations={[]}
 			gardener={{ label: $t('shell.gardener'), noKey: true }}
-			inbox={[]}
+			inbox={notices}
 			logs={[]}
+			oninboxclose={() => void inbox.markRead()}
 		/>
 	</div>
 	<ToastHost />

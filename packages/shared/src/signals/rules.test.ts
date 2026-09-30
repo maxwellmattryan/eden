@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { newId } from '../data/ulid.js'
 import { toUri } from '../data/uri.js'
-import { deliveriesFor, rulesOf, signalCutoff, signalTier, validateSignal, type RuleSource } from './rules.js'
+import {
+	deliveriesFor,
+	mayShowContent,
+	messageValues,
+	notificationKeys,
+	rulesOf,
+	signalCutoff,
+	signalTier,
+	validateSignal,
+	type RuleSource,
+} from './rules.js'
 import { MAX_PAYLOAD_BYTES, type SignalInput } from './types.js'
 
 const declarations: Record<string, RuleSource> = {
@@ -99,6 +109,24 @@ describe('signal rules', () => {
 		]) {
 			expect(validateSignal(bad)?.[0]).toBe('signal:invalid')
 		}
+	})
+
+	it("finds a rule's words, and what a payload gives them to write with", () => {
+		expect(notificationKeys('kitchen.shop-day-reminder')).toEqual({
+			domain: 'kitchen',
+			kind: 'shop-day-reminder',
+			line: 'domains.kitchen.notifications.shopDayReminder.line',
+			title: 'domains.kitchen.notifications.shopDayReminder.title',
+		})
+		expect(notificationKeys('weather.severe-alert').line).toBe('domains.weather.notifications.severeAlert.line')
+		expect(
+			messageValues({ uris: ['eden://stock-item/1'], count: 2, first: 'Spinach', fresh: true, more: null })
+		).toEqual({
+			count: 2,
+			first: 'Spinach',
+		})
+		// From T2 up an OS notification does not say what it is about.
+		expect(['T0', 'T1', 'T2', 'T3'].map((tier) => mayShowContent(tier as never))).toEqual([true, true, false, false])
 	})
 
 	it('keeps a signal thirty days', () => {

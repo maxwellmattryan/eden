@@ -125,3 +125,25 @@ export function deliveriesFor(rules: readonly Rule[], name: string, payload: Sig
 		.filter((rule) => rule.signal === name && holds(rule, payload))
 		.map((rule) => ({ rule: rule.id, channel: rule.channel }))
 }
+
+/** A rule's domain and kind, and the locale keys of its words: the line of its card, and the title the OS shows. */
+export function notificationKeys(rule: string): { domain: string; kind: string; line: string; title: string } {
+	const [domain = '', kind = ''] = rule.split('.')
+	const camel = kind.replace(/-([a-z0-9])/g, (_, letter: string) => letter.toUpperCase())
+	const base = `domains.${domain}.notifications.${camel}`
+	return { domain, kind, line: `${base}.line`, title: `${base}.title` }
+}
+
+/** What a payload gives a message to write with: its words and its numbers, and nothing nested. */
+export function messageValues(payload: SignalPayload): Record<string, string | number> {
+	return Object.fromEntries(
+		Object.entries(payload).filter(
+			(entry): entry is [string, string | number] => typeof entry[1] === 'string' || typeof entry[1] === 'number'
+		)
+	)
+}
+
+/** Whether an OS notification may say what a signal is about: not from T2 up (signals-notifications.md). */
+export function mayShowContent(tier: SignalTier): boolean {
+	return tier === 'T0' || tier === 'T1'
+}

@@ -123,7 +123,7 @@ export type { SwipeAction, SwipeLeading, SwipeTrailing } from './components/Swip
 
 // The status bar
 export { default as StatusBar } from './components/StatusBar/StatusBar.svelte'
-export type { StatusBarGardener, StatusBarIntegration } from './components/StatusBar/StatusBar.svelte'
+export type { InboxItem, StatusBarGardener, StatusBarIntegration } from './components/StatusBar/StatusBar.svelte'
 
 // Lists
 export { default as ListRow } from './components/ListRow/ListRow.svelte'

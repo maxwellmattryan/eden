@@ -5,6 +5,9 @@ export { createPump } from './pump.js'
 export {
 	deliveriesFor,
 	holds,
+	mayShowContent,
+	messageValues,
+	notificationKeys,
 	rulesOf,
 	signalCutoff,
 	signalTier,
