@@ -62,7 +62,8 @@
 	// banner in its place, and one chip per integration; a chip opens a small dialog with its detail and the one action
 	// that helps (Connect when it is granted but not connected here, Sync now when it is stale or failed). Right: the
 	// Gardener chip (the model and its budget meter in honey, grey without a key) that opens the Gardener, the bell that
-	// opens the inbox as a stack of InboxCards, and + that opens the embedded Quick Log. Every panel is a Popover dialog
+	// opens the inbox as a stack of InboxCards (the cards keep their unread mark while it is open; the app hears it
+	// close), and + that opens the embedded Quick Log. Every panel is a Popover dialog
 	// unfurling upwards from the bar: Escape or a pointer outside closes it and focus returns to its button. On mobile
 	// these live behind More and the floating button.
 	import type { HTMLAttributes } from 'svelte/elements'
@@ -93,6 +94,8 @@
 		onlog?: (log: QuickLog, value: string) => void
 		/** Called with the action and its notification when an inline action is pressed; the popover then closes. */
 		oninboxaction?: (action: InboxAction, item: InboxItem) => void
+		/** Called once the inbox has closed, however it was closed: when the app marks what was shown as read. */
+		oninboxclose?: () => void
 		/** Called with the integration when Sync now is pressed. Without it a stale or failed chip shows its detail alone. */
 		onsync?: (integration: StatusBarIntegration) => void
 	}
@@ -105,6 +108,7 @@
 		logs = [],
 		onlog,
 		oninboxaction,
+		oninboxclose,
 		onsync,
 		class: className = '',
 		...rest
@@ -244,7 +248,14 @@
 				onclick={() => (bellOpen = !bellOpen)}
 			/>
 		</span>
-		<Popover bind:open={bellOpen} anchor={bellAnchor} side="top" align="end" label={s.statusBar.inbox}>
+		<Popover
+			bind:open={bellOpen}
+			anchor={bellAnchor}
+			side="top"
+			align="end"
+			label={s.statusBar.inbox}
+			onclose={() => oninboxclose?.()}
+		>
 			<div class="ed-status-inbox">
 				{#each inbox as item (item.id)}
 					<InboxCard

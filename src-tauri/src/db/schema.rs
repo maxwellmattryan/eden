@@ -7,7 +7,8 @@
 //! Conventions (docs/engineering/data-layer.md, "Schema"):
 //! - Stamps (`created_at`, `updated_at`, `deleted_at`) are hybrid logical clock stamps as fixed-width hex text, so
 //!   text order is clock order. `updated_at` is the row's version; a delete sets `deleted_at` to the same stamp.
-//! - Booleans are `INTEGER` 0 or 1. Times the owner sees (`due`, `start_at`) are ISO 8601 text.
+//! - Booleans are `INTEGER` 0 or 1. Times the owner sees (`due`, `start_at`) are ISO 8601 text; an instant only the
+//!   code reads (`next_at`) is an `INTEGER` of milliseconds since the epoch.
 //! - No foreign keys between data tables: an import inserts rows in any order and the code validates.
 
 pub fn get_migrations() -> Vec<&'static str> {
@@ -237,6 +238,45 @@ pub fn get_migrations() -> Vec<&'static str> {
             replaced_at TEXT NOT NULL
         );
         CREATE INDEX fact_history_fact ON fact_history (fact_id, replaced_at);
+        "#,
+        // Migration 4: the scheduler (docs/product/substrate/signals-notifications.md, D-73). One row per named
+        // schedule with the instant it is next due; a one-shot is gone once taken. The schedules are this device's:
+        // never exported, never synced, and the repeating ones are declared again from the manifests at every start.
+        r#"
+        CREATE TABLE schedules (
+            name     TEXT PRIMARY KEY NOT NULL CHECK (length(name) > 0),
+            kind     TEXT NOT NULL CHECK (kind IN ('once', 'daily', 'every')),
+            daily_at TEXT CHECK (daily_at IS NULL OR length(daily_at) = 5),
+            every_s  INTEGER CHECK (every_s IS NULL OR every_s >= 60),
+            next_at  INTEGER NOT NULL CHECK (next_at >= 0),
+            CHECK ((kind = 'daily') = (daily_at IS NOT NULL)),
+            CHECK ((kind = 'every') = (every_s IS NOT NULL))
+        ) WITHOUT ROWID;
+        "#,
+        // Migration 5: signals and the inbox (docs/product/substrate/signals-notifications.md, D-73). A signal is what
+        // happened, with a small payload and the tier of what it names; its key, when it has one, lets it be emitted
+        // only once. An inbox row is one rule's card for one signal and carries nothing of its own but whether it was
+        // read: the words come from the signal. Both are this device's and kept thirty days.
+        r#"
+        CREATE TABLE signals (
+            id         TEXT PRIMARY KEY NOT NULL CHECK (length(id) = 26),
+            name       TEXT NOT NULL CHECK (length(name) > 0),
+            payload    TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(payload) AND json_type(payload) = 'object'),
+            tier       TEXT NOT NULL CHECK (tier IN ('T0', 'T1', 'T2', 'T3')),
+            dedupe_key TEXT,
+            created_at TEXT NOT NULL
+        );
+        CREATE UNIQUE INDEX signals_dedupe ON signals (name, dedupe_key) WHERE dedupe_key IS NOT NULL;
+        CREATE INDEX signals_created ON signals (created_at);
+
+        CREATE TABLE inbox (
+            id        TEXT PRIMARY KEY NOT NULL CHECK (length(id) = 26),
+            signal_id TEXT NOT NULL CHECK (length(signal_id) = 26),
+            rule      TEXT NOT NULL CHECK (length(rule) > 0),
+            channel   TEXT NOT NULL CHECK (channel IN ('in-app', 'os')),
+            read      INTEGER NOT NULL DEFAULT 0 CHECK (read IN (0, 1))
+        );
+        CREATE UNIQUE INDEX inbox_once ON inbox (signal_id, rule);
         "#,
     ]
 }

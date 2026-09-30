@@ -1,0 +1,70 @@
+{
+	"type": "FeatureCollection",
+	"features": [
+		{
+			"id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.2e79d154c75f01601be54f7bff80bba704753009.001.1",
+			"type": "Feature",
+			"geometry": null,
+			"properties": {
+				"areaDesc": "Armstrong, TX; Randall, TX",
+				"sent": "2026-09-30T10:59:00-05:00",
+				"effective": "2026-09-30T10:59:00-05:00",
+				"onset": "2026-09-30T10:59:00-05:00",
+				"expires": "2026-09-30T13:15:00-05:00",
+				"ends": "2026-09-30T13:15:00-05:00",
+				"status": "Actual",
+				"messageType": "Update",
+				"severity": "Minor",
+				"certainty": "Likely",
+				"urgency": "Expected",
+				"event": "Flood Advisory",
+				"senderName": "NWS Amarillo TX",
+				"headline": "Flood Advisory issued September 30 at 10:59AM CDT until September 30 at 1:15PM CDT by NWS Amarillo TX"
+			}
+		},
+		{
+			"id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.9c0753f26ef3a4ab912855fdfac7b35a3e4dfe0c.001.1",
+			"type": "Feature",
+			"geometry": null,
+			"properties": {
+				"areaDesc": "Randall, TX",
+				"sent": "2026-09-30T10:56:00-05:00",
+				"effective": "2026-09-30T10:56:00-05:00",
+				"onset": "2026-09-30T10:56:00-05:00",
+				"expires": "2026-09-30T13:15:00-05:00",
+				"ends": "2026-09-30T13:15:00-05:00",
+				"status": "Actual",
+				"messageType": "Update",
+				"severity": "Severe",
+				"certainty": "Likely",
+				"urgency": "Expected",
+				"event": "Flood Warning",
+				"senderName": "NWS Amarillo TX",
+				"headline": "Flood Warning issued September 30 at 10:56AM CDT until September 30 at 1:15PM CDT by NWS Amarillo TX"
+			}
+		},
+		{
+			"id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.9e02d67faa33e556d6faa0c0d51c062779ee0ad4.001.1",
+			"type": "Feature",
+			"geometry": null,
+			"properties": {
+				"areaDesc": "Brooks; Inland Kenedy; Starr; Southern Hidalgo; Inland Willacy; Inland Cameron; Coastal Kenedy; Northern Hidalgo; Coastal Willacy; Coastal Cameron",
+				"sent": "2026-09-30T09:23:00-05:00",
+				"effective": "2026-09-30T09:23:00-05:00",
+				"onset": "2026-09-30T09:23:00-05:00",
+				"expires": "2026-09-30T18:00:00-05:00",
+				"ends": null,
+				"status": "Actual",
+				"messageType": "Alert",
+				"severity": "Moderate",
+				"certainty": "Observed",
+				"urgency": "Expected",
+				"event": "Special Weather Statement",
+				"senderName": "NWS Brownsville TX",
+				"headline": "Special Weather Statement issued September 30 at 9:23AM CDT by NWS Brownsville TX"
+			}
+		}
+	],
+	"title": "Current watches, warnings, and advisories for Texas",
+	"updated": "2026-09-30T16:00:00+00:00"
+}

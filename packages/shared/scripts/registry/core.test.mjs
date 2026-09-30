@@ -229,6 +229,99 @@ describe('build', () => {
 		expect(errors).toContainEqual(expect.stringMatching(/"colour" is not a manifest field/))
 	})
 
+	it('makes a rule of a notification kind with a signal, and refuses one that cannot hold', () => {
+		const rule = (change = () => {}) =>
+			sources((given) => {
+				for (const messages of Object.values(given.locales)) {
+					messages.domains.kitchen.notifications = { lowStock: { line: '{name} is low', title: 'Low stock' } }
+				}
+				kitchen(given).deviceCapabilities = ['os-notifications']
+				kitchen(given).notificationKinds = [
+					{ id: 'low-stock', channel: 'os', cadence: 'weekly', signal: 'stock.low', when: { level: ['empty', 'low'] } },
+					{ id: 'expiring-digest', channel: 'in-app', cadence: 'daily', default: false },
+				]
+				change(given)
+			})
+		const kind = (given) => kitchen(given).notificationKinds[0]
+		const result = build(rule())
+		expect(result.errors).toEqual([])
+		expect(result.declarations[0].notificationKinds).toEqual([
+			{
+				id: 'low-stock',
+				channel: 'os',
+				cadence: 'weekly',
+				default: true,
+				signal: 'stock.low',
+				when: { level: ['empty', 'low'] },
+			},
+			// A kind with no signal is declared and answers nothing, so it needs no words yet.
+			{ id: 'expiring-digest', channel: 'in-app', cadence: 'daily', default: false, signal: null, when: null },
+		])
+
+		const refused = (change) => build(rule(change)).errors
+		expect(refused((given) => (kind(given).signal = 'stock.expiring'))).toEqual([
+			'kitchen/manifest.json: the notification kind "low-stock" answers "stock.expiring", which is not a signal the domain emits',
+		])
+		expect(refused((given) => (kitchen(given).deviceCapabilities = ['camera']))).toEqual([
+			'kitchen/manifest.json: the notification kind "low-stock" notifies through the OS, so "deviceCapabilities" lists "os-notifications"',
+		])
+		// The line for every rule, the title for one that goes to the OS, in both languages.
+		expect(refused((given) => delete given.locales.ja.domains.kitchen.notifications.lowStock.title)).toEqual([
+			'kitchen/manifest.json: the notification kind "low-stock": "domains.kitchen.notifications.lowStock.title" is missing from ja.json',
+		])
+		expect(refused((given) => delete given.locales.en.domains.kitchen.notifications.lowStock.line)).toEqual([
+			'kitchen/manifest.json: the notification kind "low-stock": "domains.kitchen.notifications.lowStock.line" is missing from en.json',
+		])
+		for (const when of [{}, { level: [] }, { level: 'low' }, { level: [1] }, { 'stock-level': ['low'] }, ['low']]) {
+			expect(refused((given) => (kind(given).when = when))).toContainEqual(
+				expect.stringMatching(/has a condition that is not fields/)
+			)
+		}
+		expect(
+			refused((given) => {
+				kitchen(given).notificationKinds[1].when = { level: ['low'] }
+			})
+		).toEqual([
+			'kitchen/manifest.json: the notification kind "expiring-digest" has a condition and no signal to hold it against',
+		])
+	})
+
+	it('names each schedule by its domain, and refuses one that is neither daily nor every', () => {
+		const declared = build(
+			sources((given) => {
+				kitchen(given).schedules = [
+					{ id: 'morning', daily: '08:00' },
+					{ id: 'restock', every: 3600 },
+				]
+			})
+		)
+		expect(declared.errors).toEqual([])
+		expect(declared.declarations[0].schedules).toEqual([
+			{ id: 'morning', name: 'kitchen.morning', daily: '08:00', every: null },
+			{ id: 'restock', name: 'kitchen.restock', daily: null, every: 3600 },
+		])
+		expect(build(sources()).declarations[0].schedules).toEqual([])
+
+		const refused = (schedules) => errorsOf((given) => (kitchen(given).schedules = schedules))
+		expect(refused([{ id: 'Morning', daily: '08:00' }])).toContainEqual(expect.stringMatching(/is not a schedule id/))
+		expect(refused([{ id: 'morning' }])).toContainEqual(expect.stringMatching(/is daily or every, one of the two/))
+		expect(refused([{ id: 'morning', daily: '08:00', every: 60 }])).toContainEqual(
+			expect.stringMatching(/is daily or every, one of the two/)
+		)
+		for (const daily of ['8:00', '24:00', '08:60', 800]) {
+			expect(refused([{ id: 'morning', daily }])).toContainEqual(expect.stringMatching(/is not a time of day/))
+		}
+		for (const every of [30, 90.5, '300']) {
+			expect(refused([{ id: 'restock', every }])).toContainEqual(expect.stringMatching(/a whole number, 60 at least/))
+		}
+		expect(
+			refused([
+				{ id: 'morning', daily: '08:00' },
+				{ id: 'morning', every: 300 },
+			])
+		).toEqual(['kitchen/manifest.json: the schedule "morning" is declared twice'])
+	})
+
 	it('refuses a locale key one language lacks, but not the keys of a planned widget', () => {
 		const missing = errorsOf((given) => {
 			delete given.locales.ja.garden.empty.expiringSoon

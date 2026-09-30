@@ -65,12 +65,13 @@
 	],
 	"signals": ["stock.expiring", "stock.low", "grocery.shop-day"],
 	"notificationKinds": [
-		{ "id": "expiring-digest", "channel": "in-app", "cadence": "daily" },
+		{ "id": "expiring-digest", "channel": "in-app", "cadence": "daily", "signal": "stock.expiring" },
 		{ "id": "low-stock", "channel": "in-app", "cadence": "weekly" },
-		{ "id": "shop-day-reminder", "channel": "os", "cadence": "morning-of" }
+		{ "id": "shop-day-reminder", "channel": "os", "cadence": "morning-of", "signal": "grocery.shop-day" }
 	],
+	"schedules": [{ "id": "morning", "daily": "08:00" }],
 	"intents": ["kitchen.add-to-grocery"],
-	"deviceCapabilities": ["camera"],
+	"deviceCapabilities": ["camera", "os-notifications"],
 	"palette": {
 		"entries": [
 			{ "verb": "run", "quickAction": "add-to-grocery" },

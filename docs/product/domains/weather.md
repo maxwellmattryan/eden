@@ -4,7 +4,7 @@ status: draft
 summary: Conditions and forecasts for home and saved places, severe-weather alerts, sunrise, sunset and moon computed on-device, the default Garden widget, and the weather and ephemeris layers Almanac draws. Id `weather`, Phase 1.
 read-this-if: You are working on weather, forecasts, alerts, sun and moon, or anything that plans around them.
 depends-on: [substrate/registry, substrate/primitives, substrate/signals-notifications, substrate/shell, substrate/ai]
-updated: 2026-09-29
+updated: 2026-09-30
 ---
 
 ## 1. Purpose
@@ -67,11 +67,11 @@ Never-do list: never sends coordinates finer than city level (D-60) to a model o
 
 Kinds: none.
 
-Signals: `weather.alert`, `weather.rain-before-plan` (a rule over `event.upcoming` and the forecast), `weather.frost`.
+Signals: `weather.alert` (each active alert, once; built), `weather.rain-before-plan` (a rule over `event.upcoming` and the forecast), `weather.frost`.
 
 | notification | channel | cadence | default |
 |---|---|---|---|
-| severe alert | OS; breaks quiet hours | on issue | on |
+| severe alert (built: severe and extreme alerts) | OS; breaks quiet hours | on issue | on |
 | rain before plans | in-app | evening before, morning of | on |
 | frost warning | in-app | evening before | on |
 
@@ -89,7 +89,9 @@ Intents: none.
 | Apple WeatherKit (macOS, iOS) | 1 | the app's entitlement (D-57) | rounded coordinates | forecast |
 | AccuWeather | later | key | rounded coordinates | pollen and mold |
 
-The provider is the owner's choice (D-56); air quality and allergens are supplementary sources (D-59). Forecasts are held in metric and converted for display. The refresh cadence is every three hours on the scheduler and on demand.
+The provider is the owner's choice (D-56); air quality and allergens are supplementary sources (D-59). Forecasts are held in metric and converted for display.
+
+**Refresh** (D-73). The forecast is fetched again once it is fifteen minutes old while something shows it, and whenever the owner asks; a hidden window fetches none and catches up when it returns. The alerts are asked for every five minutes on the scheduler, shown or not, because a severe one is told even while the window is hidden. A place the alert service does not cover is asked about once, and again only when the home place changes or the owner refreshes.
 
 ## 9. Settings
 

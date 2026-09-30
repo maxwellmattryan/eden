@@ -5,6 +5,10 @@
 const ID = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/
 const SIGNAL = /^[a-z][a-z0-9]*(-[a-z0-9]+)*\.[a-z][a-z0-9]*(-[a-z0-9]+)*$/
 const LOCALE_KEY = /^[a-z][A-Za-z0-9]*(\.[a-z][A-Za-z0-9]*)+$/
+const FIELD = /^[a-z][A-Za-z0-9]*$/
+const TIME_OF_DAY = /^(?:[01]\d|2[0-3]):[0-5]\d$/
+/** The shortest period a schedule repeats at, in seconds; the crate's `MIN_EVERY_S`. */
+const MIN_EVERY_S = 60
 
 export const PRIMITIVES = ['task', 'event', 'place', 'attachment']
 export const TIERS = ['T0', 'T1', 'T2', 'T3', 'by-kind', 'by-source']
@@ -31,6 +35,7 @@ const FIELDS = [
 	'tools',
 	'signals',
 	'notificationKinds',
+	'schedules',
 	'intents',
 	'deviceCapabilities',
 	'palette',
@@ -351,6 +356,11 @@ export function build(sources) {
 			}
 		}
 
+		const signals = ids(file, '"signals"', data.signals, SIGNAL)
+		const deviceCapabilities = among(file, '"deviceCapabilities"', data.deviceCapabilities, DEVICE_CAPABILITIES)
+
+		// A notification kind with a signal is a rule (signals-notifications.md): the signal triggers it, `when` is
+		// its condition on the payload, the channel its action. One without is declared and answers nothing yet.
 		const notificationKinds = []
 		for (const kind of list(data.notificationKinds)) {
 			if (typeof kind?.id !== 'string' || !ID.test(kind.id))
@@ -363,12 +373,65 @@ export function build(sources) {
 					fail(file, `${what} has the channel ${JSON.stringify(kind.channel)}; one of ${CHANNELS.join(', ')}`)
 				if (typeof kind.cadence !== 'string' || !ID.test(kind.cadence))
 					fail(file, `${what} has the cadence ${JSON.stringify(kind.cadence)}`)
+				let when = null
+				if (kind.signal === undefined) {
+					if (kind.when !== undefined) fail(file, `${what} has a condition and no signal to hold it against`)
+				} else {
+					if (!signals.includes(kind.signal))
+						fail(file, `${what} answers ${JSON.stringify(kind.signal)}, which is not a signal the domain emits`)
+					if (kind.channel === 'os' && !deviceCapabilities.includes('os-notifications'))
+						fail(file, `${what} notifies through the OS, so "deviceCapabilities" lists "os-notifications"`)
+					localeKey(file, what, `domains.${domain}.notifications.${camel(kind.id)}.line`)
+					if (kind.channel === 'os') localeKey(file, what, `domains.${domain}.notifications.${camel(kind.id)}.title`)
+					if (kind.when !== undefined) {
+						const fields = kind.when && typeof kind.when === 'object' && !Array.isArray(kind.when) ? kind.when : {}
+						const sound =
+							Object.keys(fields).length > 0 &&
+							Object.entries(fields).every(
+								([field, values]) =>
+									FIELD.test(field) &&
+									Array.isArray(values) &&
+									values.length > 0 &&
+									values.every((value) => typeof value === 'string')
+							)
+						if (sound) when = fields
+						else fail(file, `${what} has a condition that is not fields, each with the words it may be`)
+					}
+				}
 				notificationKinds.push({
 					id: kind.id,
 					channel: kind.channel,
 					cadence: kind.cadence,
 					default: kind.default !== false,
+					signal: kind.signal ?? null,
+					when,
 				})
+			}
+		}
+
+		// The repeating schedules the shell declares to the scheduler when it starts; a one-shot is set while the app
+		// runs and is not declared.
+		const schedules = []
+		for (const schedule of list(data.schedules)) {
+			if (typeof schedule?.id !== 'string' || !ID.test(schedule.id))
+				fail(file, `${JSON.stringify(schedule?.id)} is not a schedule id`)
+			else if (schedules.some((other) => other.id === schedule.id))
+				fail(file, `the schedule "${schedule.id}" is declared twice`)
+			else {
+				const what = `the schedule "${schedule.id}"`
+				const { daily, every } = schedule
+				if ((daily === undefined) === (every === undefined)) fail(file, `${what} is daily or every, one of the two`)
+				else if (daily !== undefined && (typeof daily !== 'string' || !TIME_OF_DAY.test(daily)))
+					fail(file, `${what} is daily at ${JSON.stringify(daily)}, which is not a time of day (HH:MM)`)
+				else if (every !== undefined && !(Number.isInteger(every) && every >= MIN_EVERY_S))
+					fail(file, `${what} repeats every ${JSON.stringify(every)} seconds; a whole number, ${MIN_EVERY_S} at least`)
+				else
+					schedules.push({
+						id: schedule.id,
+						name: `${domain}.${schedule.id}`,
+						daily: daily ?? null,
+						every: every ?? null,
+					})
 			}
 		}
 
@@ -435,10 +498,11 @@ export function build(sources) {
 			quickActions,
 			captureSources: among(file, '"captureSources"', data.captureSources, CAPTURE_SOURCES),
 			tools,
-			signals: ids(file, '"signals"', data.signals, SIGNAL),
+			signals,
 			notificationKinds,
+			schedules,
 			intents,
-			deviceCapabilities: among(file, '"deviceCapabilities"', data.deviceCapabilities, DEVICE_CAPABILITIES),
+			deviceCapabilities,
 			palette: { entries, search },
 			export: exported,
 		})

@@ -4,7 +4,7 @@ status: draft
 summary: Stock by location, recipes from what you have, grocery lists, capture a haul from a photo or receipt, storage tips, food allergies and supplements. Id `kitchen`, Phase 1.
 read-this-if: You are working on stock, recipes, grocery lists, capture, food allergies or supplements.
 depends-on: [substrate/registry, substrate/primitives, substrate/grants, substrate/tasks, substrate/shell, substrate/ai]
-updated: 2026-09-27
+updated: 2026-09-30
 ---
 
 ## 1. Purpose
@@ -81,13 +81,15 @@ Photo, receipt or barcode → a vision model returns draft rows (name, qty, unit
 
 Kinds: `shop-day` (event, T0), `haul-photo` (attachment, T1).
 
-Signals: `stock.expiring` (daily at 08:00 via the scheduler), `stock.low`, `grocery.shop-day`.
+Signals: `stock.expiring` (daily at 08:00 via the scheduler, when something is dated no later than two days on; built), `stock.low`, `grocery.shop-day` (at 08:00 on the list's shop day; built).
 
 | notification | channel | cadence | default |
 |---|---|---|---|
 | expiring digest | in-app; part of the morning digest from Phase 2 | daily | on |
 | low stock | in-app | weekly | on |
 | shop-day reminder | OS | morning of the `shop-day` Event | on |
+
+Until the shop day is an Event, the reminder is set from the list's own shop-day field (D-73, `engineering/signals.md`). Nothing in the interface sets that field yet, so the reminder is reachable only through the sample data.
 
 Intents handled: `kitchen.add-to-grocery`. Intents sent: none.
 

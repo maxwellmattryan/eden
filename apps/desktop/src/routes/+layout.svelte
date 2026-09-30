@@ -1,8 +1,8 @@
 <script lang="ts">
 	// The desktop shell (product/substrate/shell.md): the sidebar on the left, the content with its back affordance,
 	// the status bar along the bottom, and the overlays (toast, settings, crash) on top. It mounts the shared pieces
-	// once: settings, i18n, the global error handler, the hourly update check. The splash covers it until they are
-	// ready, then fades out as the shell fades in.
+	// once: settings, i18n, the global error handler, the hourly update check, signals and the scheduler. The splash
+	// covers it until they are ready, then fades out as the shell fades in.
 	import '../app.css'
 	import { onMount, tick } from 'svelte'
 	import { afterNavigate, beforeNavigate, goto } from '$app/navigation'
@@ -17,6 +17,7 @@
 		UiKitProvider,
 		domainGlyph,
 		type GlyphId,
+		type InboxItem,
 		type SidebarEntry,
 	} from '@eden/ui-kit'
 	import { checkForUpdate } from '@eden/shared/api/updater'
@@ -27,10 +28,13 @@
 	import SplashScreen from '$lib/components/SplashScreen.svelte'
 	import { shell, shortcutPositions, sidebarGroups, type SidebarItem } from '@eden/shared/manifest'
 	import { rememberPlace, rememberScroll, scrollOf, tabOf } from '@eden/shared/navigation'
-	import { declarations, manifestFor } from '$lib/domains'
+	import { coordinator } from '@eden/shared/refresh'
+	import { messageValues, notificationKeys, startSignals } from '@eden/shared/signals'
+	import { declarations, manifestFor, manifests } from '$lib/domains'
 	import { grants } from '$lib/shell/grants.svelte'
-	import { weather } from '@eden/shared/weather'
-	import { formatTime } from '@eden/shared/dates'
+	import { inbox } from '$lib/shell/inbox.svelte'
+	import { FORECAST_RESOURCE, weather } from '@eden/shared/weather'
+	import { formatTime, formatWeekday, relativeDay } from '@eden/shared/dates'
 	import { detectOs, formatShortcut } from '@eden/shared/shortcuts'
 	import { useGlobalErrorHandler } from '$lib/hooks/useGlobalErrorHandler'
 	import SettingsSheet from '$lib/settings/SettingsSheet.svelte'
@@ -43,8 +47,6 @@
 	const keys = (key: string) => formatShortcut(key, { os, platform: 'desktop' })
 
 	const UPDATE_INTERVAL = 60 * 60 * 1000
-	/** How often the shell asks the weather store whether its forecast is stale, so the sidebar glyph keeps up. */
-	const WEATHER_INTERVAL = 10 * 60 * 1000
 	const format = $derived({ lang: $locale ?? 'en', clock: settings.clock })
 	/** Sky's times are the place's (D-58). */
 	const skyFormat = $derived({ ...format, timeZone: weather.timeZone })
@@ -99,6 +101,43 @@
 					}),
 				}
 			: undefined
+	)
+
+	// The inbox behind the bell (substrate/signals-notifications.md): each card's line is written here from its
+	// rule's locale key and its signal's payload, so it reads in the current locale. A card opens its domain; the
+	// latest card that would have been an OS notification offers to turn those on while they are off.
+	function arrived(at: number): string {
+		const iso = new Date(at).toISOString()
+		const day = relativeDay(iso)
+		if (day === 'today') return formatTime(at, format)
+		return day === 'yesterday' ? $t('shell.inbox.yesterday') : formatWeekday(iso, format.lang)
+	}
+	const notices = $derived<InboxItem[]>(
+		inbox.cards.map((card) => {
+			const keys = notificationKeys(card.rule)
+			const manifest = manifestFor(keys.domain)
+			return {
+				id: card.id,
+				icon: manifest?.glyph,
+				line: $t(keys.line, { values: messageValues(card.payload) }),
+				when: arrived(card.at),
+				domain: manifest ? $t(manifest.name) : undefined,
+				unread: !card.read,
+				actions: [
+					...(manifest ? [{ id: 'open', label: $t('shell.inbox.open'), onclick: () => manifest.routes.open() }] : []),
+					...(inbox.asks === card.id
+						? [
+								{
+									id: 'allow',
+									label: $t('shell.inbox.allow'),
+									icon: 'bell' as const,
+									onclick: () => void inbox.allowNotifications(),
+								},
+							]
+						: []),
+				],
+			}
+		})
 	)
 
 	// How far the in-app history goes: the back arrow shows only when there is somewhere to go (shell.md).
@@ -156,12 +195,22 @@
 			void dismissSplash()
 			checkForUpdate().catch(() => null)
 			timer = setInterval(() => checkForUpdate().catch(() => null), UPDATE_INTERVAL)
-			void weather.load().catch(() => null)
 			void grants.load()
 		})()
-		const skyTimer = setInterval(() => void weather.load().catch(() => null), WEATHER_INTERVAL)
+		// The inbox hears what is delivered before signals start, so a card made by the first take is not missed.
+		void inbox.load()
+		// Signals and the scheduler (substrate/signals-notifications.md): the domains bind what they hear, their
+		// schedules are declared, and what came due while Eden was closed is taken. The settings are read by now.
+		const stopSignals = startSignals({
+			declarations,
+			bind: manifests.flatMap((manifest) => (manifest.subscribe ? [manifest.subscribe] : [])),
+		})
+		// The sidebar's glyph and the offline banner read the forecast for as long as the shell is up, which is what
+		// keeps it fresh while the window is seen (the refresh coordinator; D-73).
+		const releaseSky = coordinator.watch(FORECAST_RESOURCE)
 		return () => {
-			clearInterval(skyTimer)
+			releaseSky()
+			stopSignals()
 			cleanupErrors()
 			settings.dispose()
 			weather.dispose()
@@ -187,8 +236,9 @@
 			{banner}
 			integrations={[]}
 			gardener={{ label: $t('shell.gardener'), noKey: true }}
-			inbox={[]}
+			inbox={notices}
 			logs={[]}
+			oninboxclose={() => void inbox.markRead()}
 		/>
 	</div>
 	<ToastHost />

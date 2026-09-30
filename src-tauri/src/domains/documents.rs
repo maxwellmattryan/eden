@@ -1,9 +1,9 @@
 //! The domain document store: one JSON document per domain at `<app_data_dir>/domains/<id>.json`, behind
 //! `@eden/shared/persistence`. It holds what stays on this device and out of every export: the Garden's feed until
-//! signals exist, and Sky's mirror. The owner's data lives in the workspace database (docs/engineering/data-layer.md);
-//! a domain that moved there has its old document imported once and removed. The frontend owns each document's
-//! shape and version; this side reads and writes it whole, and writes atomically (to `<id>.json.tmp`, then a
-//! rename) so a crash mid-write never leaves a truncated document behind.
+//! it moves onto signals, and Sky's mirror. The owner's data lives in the workspace database
+//! (docs/engineering/data-layer.md); a domain that moved there has its old document imported once and removed. The
+//! frontend owns each document's shape and version; this side reads and writes it whole, and writes atomically (to
+//! `<id>.json.tmp`, then a rename) so a crash mid-write never leaves a truncated document behind.
 use std::path::PathBuf;
 
 use tauri::{AppHandle, Manager};

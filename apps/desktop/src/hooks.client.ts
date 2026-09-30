@@ -2,7 +2,9 @@
 // the CrashScreen can render it; once the layout mounts, `markSvelteKitReady()` hands over. It mounts the same
 // CrashCard the CrashScreen renders, so the two look alike by construction, and the stylesheet chain is imported here
 // so the kit's tokens are already applied when it does (in a build that makes it the page's one blocking stylesheet).
-// Only if the card itself cannot be loaded does it draw a plain copy by hand, from the kit's variables with the
+// When the root layout cannot load, SvelteKit shows its static error page by swapping in a <head> of its own, which
+// drops every stylesheet the app had; the app's head is put back before the card mounts. Only if the card cannot be
+// loaded, or its styles still did not apply, does it draw a plain copy by hand, from the kit's variables with the
 // resolved tokens behind them.
 import './app.css'
 import { mount, unmount } from 'svelte'
@@ -18,6 +20,29 @@ const FALLBACK_ID = 'early-crash-screen'
 const LANGUAGE_KEY = 'eden:language'
 let svelteKitReady = false
 let card: Record<string, unknown> | undefined
+/** The app's own <head>, with the pre-paint and every stylesheet, kept in case SvelteKit swaps it out. */
+const appHead = document.head
+
+/**
+ * Puts the app's <head> back if SvelteKit's static error page replaced it, carrying over the stylesheets that were
+ * added to the replacement since (Vite's injected styles in dev, preloaded CSS in a build) but not the error page's
+ * own.
+ */
+function restoreAppHead(): void {
+	const current = document.head
+	if (current === appHead) return
+	for (const sheet of current.querySelectorAll('style[data-vite-dev-id], link[rel="stylesheet"]')) {
+		appHead.appendChild(sheet)
+	}
+	document.documentElement.replaceChild(appHead, current)
+}
+
+/** Whether the kit's tokens and the card's own scoped styles reached the page: the browser's <dialog> has a border. */
+function stylesApplied(dialog: HTMLDialogElement | null): boolean {
+	if (!dialog) return false
+	if (!getComputedStyle(document.documentElement).getPropertyValue('--surface-0').trim()) return false
+	return getComputedStyle(dialog).borderTopStyle === 'none'
+}
 
 function themePreference(): Theme {
 	const attr = document.documentElement.getAttribute('data-theme')
@@ -81,6 +106,7 @@ function drawPlainCard(container: HTMLElement, error: EarlyError): void {
 
 async function showFallbackCrashScreen(error: EarlyError): Promise<void> {
 	if (svelteKitReady || document.getElementById(FALLBACK_ID)) return
+	restoreAppHead()
 	const container = document.createElement('div')
 	container.id = FALLBACK_ID
 	document.body.appendChild(container)
@@ -93,8 +119,13 @@ async function showFallbackCrashScreen(error: EarlyError): Promise<void> {
 		await initializeI18n(savedLanguage() as Parameters<typeof initializeI18n>[0])
 		if (svelteKitReady || !container.isConnected) return
 		card = mount(CrashCard, { target: container, props: { error: { ...error, source: 'startup' } } })
+		await new Promise(requestAnimationFrame)
+		if (svelteKitReady || !container.isConnected) return
+		if (!stylesApplied(container.querySelector('dialog'))) throw new Error('crash card unstyled')
 	} catch {
 		if (svelteKitReady || !container.isConnected) return
+		if (card) void unmount(card)
+		card = undefined
 		drawPlainCard(container, error)
 	}
 }

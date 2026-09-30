@@ -1,6 +1,6 @@
 //! The Eden shell: one crate for the desktop and mobile apps (D-51), selected by the `desktop` and `mobile` cargo
 //! features. `run()` installs the crash log and the platform logger, registers the plugins each platform needs, manages
-//! the diagnostics service and exposes the commands the frontends call.
+//! the diagnostics service, starts the scheduler's alarm and exposes the commands the frontends call.
 
 mod commands;
 mod db;
@@ -153,6 +153,14 @@ pub fn run() {
             commands::profile::restore_fact,
             commands::profile::query_facts,
             commands::profile::query_fact_history,
+            commands::signals::declare_schedules,
+            commands::signals::set_schedule,
+            commands::signals::cancel_schedule,
+            commands::signals::take_due_schedules,
+            commands::signals::emit_signal,
+            commands::signals::query_inbox,
+            commands::signals::mark_inbox_read,
+            commands::signals::show_notification,
             domains::documents::load_domain_document,
             domains::documents::save_domain_document,
             domains::documents::remove_domain_document,
@@ -174,6 +182,8 @@ pub fn run() {
             })?;
             app.manage(workspace);
             app.manage(DiagnosticsService::new(app_data_dir));
+            // The scheduler's tick: it reads the workspace, so it starts once that is managed.
+            services::scheduler::start(app.handle().clone());
             Ok(())
         })
         .build(context)

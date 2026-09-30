@@ -15,6 +15,8 @@ pub mod links;
 pub mod primitives;
 pub mod registry;
 pub mod rows;
+pub mod scheduler;
+pub mod signals;
 pub mod text;
 
 use std::path::{Path, PathBuf};
@@ -57,17 +59,18 @@ impl Workspace {
             db,
             dir: dir.to_path_buf(),
         };
-        // What the last run left behind: the grants that lasted a session, and the ledger days and the replaced
-        // facts past their retention.
-        let (sessions, days, history) = workspace.write(|ctx| {
+        // What the last run left behind: the grants that lasted a session, and the ledger days, the replaced facts
+        // and the signals past their retention.
+        let (sessions, days, history, signals) = workspace.write(|ctx| {
             let sessions = grants::sweep_session(ctx)?;
             let days = egress::sweep(ctx.conn, &egress::today())?;
             let history = facts::sweep_history(ctx.conn, hlc::now_ms())?;
-            Ok((sessions, days, history))
+            let signals = signals::sweep(ctx.conn, hlc::now_ms())?;
+            Ok((sessions, days, history, signals))
         })?;
-        if sessions > 0 || days > 0 || history > 0 {
+        if sessions > 0 || days > 0 || history > 0 || signals > 0 {
             log::info!(
-                "Swept {sessions} session grants, {days} ledger rows and {history} replaced facts"
+                "Swept {sessions} session grants, {days} ledger rows, {history} replaced facts and {signals} signals"
             );
         }
         Ok(workspace)

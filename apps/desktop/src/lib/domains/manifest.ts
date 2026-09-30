@@ -59,6 +59,11 @@ export interface DomainBindings<D extends BuiltDomainId> {
 	/** Reads the store again from its rows, after an import changed them under it. */
 	reload?: () => Promise<void>
 	/**
+	 * Binds what the domain hears: its schedules and the signals it answers (`@eden/shared/signals`). The shell calls
+	 * it once when it starts, before anything is loaded, and the answer unbinds.
+	 */
+	subscribe?: () => () => void
+	/**
 	 * The domain's data in formats made for reading, for its export bundle. A domain that declares this owns rows and
 	 * can be exported on its own.
 	 */

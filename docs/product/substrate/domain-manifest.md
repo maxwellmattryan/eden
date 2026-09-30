@@ -4,7 +4,7 @@ status: draft
 summary: What a domain declares to the shell, the isolation rules that keep domains standalone, entity URIs and intents, what enabling, disabling and removing a domain does, the plugin path, and Hearth as a worked example.
 read-this-if: You are adding a domain, changing how domains plug into the shell, or wiring two domains together.
 depends-on: [registry, primitives, grants]
-updated: 2026-09-29
+updated: 2026-09-30
 ---
 
 ## Purpose
@@ -27,11 +27,12 @@ A domain is a manifest plus the code behind it. The shell composes the sidebar, 
 | `captureSources` | 1 | photo, receipt, barcode, share sheet (D-13) |
 | `tools` | 1 | Gardener tools, each with `reads`, `access` and confirm rule |
 | `signals` | 1 | signal names it emits |
-| `notificationKinds` | 1 | with default channel and cadence |
+| `notificationKinds` | 1 | with default channel and cadence; one that names a `signal`, and optionally `when`, is a default rule (`substrate/signals-notifications.md`) |
+| `schedules` | 1 | the repeating schedules it subscribes to: daily at a local time, or every so many seconds |
 | `settings` | 1 | its settings page |
 | `intents` | 1 | domain-owned actions it handles |
 | `integrations` | 2 | connectors it uses, with default access |
-| `deviceCapabilities` | 1 | camera, location, notifications, HealthKit |
+| `deviceCapabilities` | 1 | `camera`, `location-precise`, `os-notifications`, `healthkit` |
 | `palette` | 1 | command-palette verbs and search index contributions |
 | `dayAnnotations` | 2 | Almanac annotation providers |
 | `dailyLine` | 2 | whether it can provide the daily line |
@@ -89,8 +90,9 @@ Built-in domains are manifests compiled into the app. An external plugin is the 
 | `captureSources` | photo, receipt (barcode in Phase 2) |
 | `tools` | suggest-recipes (read), storage-tip (read), capture-haul (write-draft), draft-grocery-list (write-draft), add-stock (write, confirm), plan-week (write-draft) |
 | `signals` | `stock.expiring`, `stock.low`, `grocery.shop-day` |
-| `notificationKinds` | expiring-digest (daily, in-app), low-stock (weekly, in-app), shop-day-reminder (OS, morning of) |
+| `notificationKinds` | expiring-digest (daily, in-app; answers `stock.expiring`), low-stock (weekly, in-app), shop-day-reminder (OS, morning of; answers `grocery.shop-day`) |
+| `schedules` | morning (daily at 08:00) |
 | `intents` | `kitchen.add-to-grocery` |
-| `deviceCapabilities` | camera |
+| `deviceCapabilities` | `camera`, `os-notifications` |
 | `palette` | go to Hearth, add to grocery, capture haul, cook tonight, search stock and recipes |
 | `export` | stock, recipes, grocery lists, storage tips |

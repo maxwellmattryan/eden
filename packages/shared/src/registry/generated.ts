@@ -1250,26 +1250,41 @@ export const DECLARATIONS = {
 				"id": "expiring-digest",
 				"channel": "in-app",
 				"cadence": "daily",
-				"default": true
+				"default": true,
+				"signal": "stock.expiring",
+				"when": null
 			},
 			{
 				"id": "low-stock",
 				"channel": "in-app",
 				"cadence": "weekly",
-				"default": true
+				"default": true,
+				"signal": null,
+				"when": null
 			},
 			{
 				"id": "shop-day-reminder",
 				"channel": "os",
 				"cadence": "morning-of",
-				"default": true
+				"default": true,
+				"signal": "grocery.shop-day",
+				"when": null
+			}
+		],
+		"schedules": [
+			{
+				"id": "morning",
+				"name": "kitchen.morning",
+				"daily": "08:00",
+				"every": null
 			}
 		],
 		"intents": [
 			"kitchen.add-to-grocery"
 		],
 		"deviceCapabilities": [
-			"camera"
+			"camera",
+			"os-notifications"
 		],
 		"palette": {
 			"entries": [
@@ -1487,9 +1502,12 @@ export const DECLARATIONS = {
 				"id": "stale-idea-nudge",
 				"channel": "in-app",
 				"cadence": "weekly",
-				"default": false
+				"default": false,
+				"signal": null,
+				"when": null
 			}
 		],
+		"schedules": [],
 		"intents": [
 			"toolbench.open-idea"
 		],
@@ -1644,23 +1662,44 @@ export const DECLARATIONS = {
 				"id": "severe-alert",
 				"channel": "os",
 				"cadence": "on-issue",
-				"default": true
+				"default": true,
+				"signal": "weather.alert",
+				"when": {
+					"severity": [
+						"severe",
+						"extreme"
+					]
+				}
 			},
 			{
 				"id": "rain-before-plans",
 				"channel": "in-app",
 				"cadence": "evening-before",
-				"default": true
+				"default": true,
+				"signal": null,
+				"when": null
 			},
 			{
 				"id": "frost-warning",
 				"channel": "in-app",
 				"cadence": "evening-before",
-				"default": true
+				"default": true,
+				"signal": null,
+				"when": null
+			}
+		],
+		"schedules": [
+			{
+				"id": "alerts",
+				"name": "weather.alerts",
+				"daily": null,
+				"every": 300
 			}
 		],
 		"intents": [],
-		"deviceCapabilities": [],
+		"deviceCapabilities": [
+			"os-notifications"
+		],
 		"palette": {
 			"entries": [],
 			"search": []

@@ -1988,7 +1988,22 @@ mod tests {
                         Lifetime::Standing,
                     ),
                 )?;
-                crate::substrate::egress::record_on(ctx.conn, "open-meteo", 300, "2026-09-29")
+                crate::substrate::egress::record_on(ctx.conn, "open-meteo", 300, "2026-09-29")?;
+                crate::substrate::scheduler::set(ctx.conn, "kitchen.shop-day", 1)?;
+                crate::substrate::signals::emit(
+                    ctx.conn,
+                    crate::substrate::signals::SignalInput {
+                        name: "stock.expiring".into(),
+                        payload: None,
+                        tier: "T1".into(),
+                        dedupe_key: None,
+                        deliveries: vec![crate::substrate::signals::DeliveryInput {
+                            rule: "kitchen.expiring-digest".into(),
+                            channel: crate::substrate::signals::Channel::InApp,
+                        }],
+                    },
+                )?;
+                Ok(())
             })
             .unwrap();
         let before = count(&second, "grants");
@@ -2012,6 +2027,10 @@ mod tests {
         assert!(all.iter().all(|grant| grant.subject != "openai"));
         assert!(before > all.len() as i64);
         assert_eq!(count(&second, "egress"), 1);
+        // Nor does a replace touch what else is the device's own: its schedules, its signals and its inbox.
+        for table in ["schedules", "signals", "inbox"] {
+            assert_eq!(count(&second, table), 1, "{table}");
+        }
 
         // A domain's replace touches no grant.
         let kitchen = scratch.join("kitchen.zip");

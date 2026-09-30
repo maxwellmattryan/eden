@@ -65,6 +65,7 @@
 			logs: quickLogs,
 			onlog: fn(),
 			oninboxaction: fn(),
+			oninboxclose: fn(),
 			onsync: fn(),
 		},
 		argTypes: {
@@ -82,7 +83,7 @@
 <Story
 	name="Default"
 	{template}
-	play={async ({ canvasElement }) => {
+	play={async ({ canvasElement, args }) => {
 		if (!framed(canvasElement)) return
 		const canvas = canvasOf(canvasElement)
 		await expect(canvas.getByRole('contentinfo', { name: strings.statusBar.label })).toBeVisible()
@@ -102,9 +103,12 @@
 		await waitFor(() => expect(inboxDialog).toBeVisible())
 		await expect(bell).toHaveAttribute('aria-expanded', 'true')
 		await expect(within(inboxDialog).getAllByRole('article')).toHaveLength(unreadNotices.length)
+		// the app hears the inbox close, and not before: the cards keep their unread mark while it is open
+		await expect(args.oninboxclose).not.toHaveBeenCalled()
 		await userEvent.keyboard('{Escape}')
 		await waitFor(() => expect(inboxDialog).not.toBeVisible())
 		await waitFor(() => expect(bell).toHaveFocus())
+		await waitFor(() => expect(args.oninboxclose).toHaveBeenCalledTimes(1))
 		// + opens the embedded Quick Log with the weight field first
 		const plus = canvas.getByRole('button', { name: strings.statusBar.quickLog })
 		await userEvent.click(plus)
@@ -210,6 +214,8 @@
 		)
 		await waitFor(() => expect(dialog).not.toBeVisible())
 		await waitFor(() => expect(bell).toHaveFocus())
+		// an action closes the inbox too, so the app hears that as well
+		await waitFor(() => expect(args.oninboxclose).toHaveBeenCalledTimes(1))
 	}}
 />
 
