@@ -258,6 +258,69 @@ describe('engine', () => {
 		expect(engine.cancelSchedule('weather.alerts')).toBe(false)
 	})
 
+	it('keeps a signal with its cards, once for a key, and marks a card read', () => {
+		const { storage, clock, engine } = setup()
+		const expiring = (day: string) =>
+			engine.emitSignal({
+				name: 'stock.expiring',
+				tier: 'T0',
+				payload: { uris: [], count: 2 },
+				dedupeKey: day,
+				deliveries: [{ rule: 'kitchen.expiring-digest', channel: 'in-app' }],
+			})
+		const first = expiring('2026-09-29')!
+		expect(first.signal).toMatchObject({ name: 'stock.expiring', payload: { uris: [], count: 2 }, at: clock.now })
+		expect(first.deliveries).toEqual([
+			{
+				id: first.deliveries[0]!.id,
+				signalId: first.signal.id,
+				rule: 'kitchen.expiring-digest',
+				channel: 'in-app',
+				read: false,
+				name: 'stock.expiring',
+				payload: { uris: [], count: 2 },
+				tier: 'T0',
+				at: clock.now,
+			},
+		])
+		// The same key again is a dedupe hit: nothing is answered and nothing is written.
+		expect(expiring('2026-09-29')).toBeNull()
+		const second = expiring('2026-09-30')!
+		// A signal no rule answers is kept all the same, with no card.
+		expect(engine.emitSignal({ name: 'idea.stale', tier: 'T1' })?.deliveries).toEqual([])
+
+		// The latest first; a card is read once; the inbox survives a reload.
+		const ids = (cards: { id: string }[]) => cards.map((card) => card.id)
+		expect(ids(engine.queryInbox())).toEqual([second.deliveries[0]!.id, first.deliveries[0]!.id])
+		expect(engine.markInboxRead(ids(first.deliveries))).toBe(1)
+		expect(engine.markInboxRead(ids(first.deliveries))).toBe(0)
+		const again = createEngine(storage, { now: () => clock.now })
+		expect(ids(again.queryInbox({ unreadOnly: true }))).toEqual(ids(second.deliveries))
+		expect(again.queryInbox({ limit: 1 })).toHaveLength(1)
+
+		expect(codeOf(() => engine.emitSignal({ name: 'expiring', tier: 'T0' }))).toBe('signal:invalid')
+		expect(
+			codeOf(() =>
+				engine.emitSignal({
+					name: 'grocery.shop-day',
+					tier: 'T0',
+					deliveries: [
+						{ rule: 'kitchen.shop-day-reminder', channel: 'os' },
+						{ rule: 'kitchen.shop-day-reminder', channel: 'in-app' },
+					],
+				})
+			)
+		).toBe('signal:invalid')
+
+		// Thirty days on the signals stay; a millisecond past that they go with their cards, and the key is free again.
+		clock.now += 30 * 24 * 60 * 60 * 1000
+		engine.emitSignal({ name: 'idea.stale', tier: 'T1' })
+		expect(engine.queryInbox()).toHaveLength(2)
+		clock.now += 1
+		expect(expiring('2026-09-29')).not.toBeNull()
+		expect(engine.queryInbox()).toHaveLength(1)
+	})
+
 	it('keeps grants and the ledger across a reload and tolerates an old document', () => {
 		const { storage, engine } = setup()
 		const granted = engine.grant({
@@ -282,12 +345,15 @@ describe('engine', () => {
 		delete document.facts
 		delete document.factHistory
 		delete document.schedules
+		delete document.signals
+		delete document.inbox
 		storage.map.set(DATA_KEY, JSON.stringify(document))
 		const old = createEngine(storage, { now: () => 1_790_000_000_000 })
 		expect(old.queryGrants()).toEqual([])
 		expect(old.queryEgress()).toEqual([])
 		expect(old.queryFacts()).toEqual([])
 		expect(old.takeDueSchedules()).toEqual([])
+		expect(old.queryInbox()).toEqual([])
 		expect(old.queryEntities({ type: 'calendar-source' })).toHaveLength(1)
 	})
 

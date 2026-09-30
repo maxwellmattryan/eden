@@ -16,6 +16,7 @@
 		"./egress": "./src/egress/index.ts",
 		"./profile": "./src/profile/index.ts",
 		"./scheduler": "./src/scheduler/index.ts",
+		"./signals": "./src/signals/index.ts",
 		"./registry": "./src/registry/index.ts",
 		"./manifest": "./src/manifest/index.ts",
 		"./domains/kitchen": "./src/domains/kitchen/index.ts",

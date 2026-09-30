@@ -25,8 +25,10 @@ import type { Fact, FactHistoryEntry, FactInput, FactPatch, FactQuery } from '..
 import { factsOf, isEntityType, kindsOf } from '../registry/index.js'
 import { declare, setOnce, takeDue, validateDeclared, validateOnce } from '../scheduler/rules.js'
 import type { DeclaredSchedule, FiredSchedule, ScheduleRow } from '../scheduler/types.js'
+import { signalCutoff, validateSignal } from '../signals/rules.js'
+import type { Delivery, Emitted, InboxEntry, InboxQuery, Signal, SignalInput } from '../signals/types.js'
 import { DataError } from './errors.js'
-import { formatStamp, tick, type Hlc } from './hlc.js'
+import { formatStamp, parseStamp, tick, type Hlc } from './hlc.js'
 import { createIdGenerator, isUlid } from './ulid.js'
 import { isResourceId, parseUri, toUri } from './uri.js'
 import {
@@ -91,7 +93,19 @@ interface State {
 	factHistory: FactHistoryEntry[]
 	/** The scheduler (`scheduler.rs`): each named schedule and the instant it is next due. */
 	schedules: ScheduleRow[]
+	/** What happened (`signals.rs`), thirty days. */
+	signals: Omit<Signal, 'at'>[]
+	/** One rule's card for one signal; its words are the signal's. */
+	inbox: InboxRow[]
 }
+
+interface InboxRow extends Delivery {
+	id: string
+	signalId: string
+	read: boolean
+}
+
+const INBOX_LIMIT = { default: 50, max: 200 }
 
 /**
  * A primitive as the crate describes it (`primitives.rs`): its kinds, which are the registry's, and each field with
@@ -204,6 +218,8 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 			facts: [],
 			factHistory: [],
 			schedules: [],
+			signals: [],
+			inbox: [],
 		}
 		// what the first migration seeds in the crate
 		const stamp = formatStamp({ wallMs: 0, counter: 0, node: 0 })
@@ -226,6 +242,8 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 					state.facts ??= []
 					state.factHistory ??= []
 					state.schedules ??= []
+					state.signals ??= []
+					state.inbox ??= []
 					return state
 				}
 			} catch {
@@ -258,6 +276,23 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 			validFrom: before.validFrom,
 			validUntil: before.validUntil,
 			replacedAt,
+		})
+	}
+
+	/** Lets go of the signals past thirty days, and of the cards made of them. */
+	function sweepSignals(state: State): void {
+		const cutoff = signalCutoff(now())
+		state.signals = state.signals.filter((signal) => signal.createdAt >= cutoff)
+		state.inbox = state.inbox.filter((card) => state.signals.some((signal) => signal.id === card.signalId))
+	}
+
+	function entryOf(card: InboxRow, signal: Omit<Signal, 'at'>): InboxEntry {
+		return structuredClone({
+			...card,
+			name: signal.name,
+			payload: signal.payload,
+			tier: signal.tier,
+			at: parseStamp(signal.createdAt)?.wallMs ?? 0,
 		})
 	}
 
@@ -906,6 +941,70 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 				const taken = takeDue(state.schedules, now())
 				state.schedules = taken.rows
 				return taken.fired
+			})
+		},
+
+		// Signals and the inbox (`signals.rs`, D-73): this browser's. The store's rules are `signals/rules.ts`.
+
+		/**
+		 * Keeps a signal with the cards its rules ask for, all of it or none. A signal whose key was already emitted
+		 * under the same name changes nothing and answers `null`.
+		 */
+		emitSignal(input: SignalInput): Emitted | null {
+			const refusal = validateSignal(input)
+			if (refusal) throw new DataError(refusal[0], refusal[1])
+			return write((state) => {
+				sweepSignals(state)
+				const dedupeKey = input.dedupeKey ?? null
+				if (dedupeKey !== null) {
+					if (state.signals.some((signal) => signal.name === input.name && signal.dedupeKey === dedupeKey)) return null
+				}
+				const signal = {
+					id: newId(),
+					name: input.name,
+					payload: structuredClone(input.payload ?? {}),
+					tier: input.tier,
+					dedupeKey,
+					createdAt: stamp(state),
+				}
+				state.signals.push(signal)
+				const cards = (input.deliveries ?? []).map((delivery): InboxRow => ({
+					id: newId(),
+					signalId: signal.id,
+					rule: delivery.rule,
+					channel: delivery.channel,
+					read: false,
+				}))
+				state.inbox.push(...cards)
+				return structuredClone({
+					signal: { ...signal, at: parseStamp(signal.createdAt)?.wallMs ?? 0 },
+					deliveries: cards.map((card) => entryOf(card, signal)),
+				})
+			})
+		},
+
+		/** The cards, the latest first. */
+		queryInbox(filter: InboxQuery = {}): InboxEntry[] {
+			const state = load()
+			const limit = Math.min(Math.max(filter.limit ?? INBOX_LIMIT.default, 1), INBOX_LIMIT.max)
+			const signals = new Map(state.signals.map((signal) => [signal.id, signal]))
+			return state.inbox
+				.filter((card) => !filter.unreadOnly || !card.read)
+				.flatMap((card) => {
+					const signal = signals.get(card.signalId)
+					return signal ? [{ card, signal }] : []
+				})
+				.sort((a, b) => byText(b.signal.createdAt, a.signal.createdAt) || byText(b.card.id, a.card.id))
+				.slice(0, limit)
+				.map(({ card, signal }) => entryOf(card, signal))
+		},
+
+		/** Marks the cards as read. Answers how many were unread. */
+		markInboxRead(ids: string[]): number {
+			return write((state) => {
+				const unread = state.inbox.filter((card) => ids.includes(card.id) && !card.read)
+				for (const card of unread) card.read = true
+				return unread.length
 			})
 		},
 	}

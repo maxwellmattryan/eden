@@ -29,9 +29,9 @@ pub enum EdenError {
     #[error("{0}")]
     Bundle(String),
 
-    /// The grant store, the egress ledger, the profile or the scheduler refused a write. The message starts with a
-    /// stable code (`grant:never`, `grant:invalid`, `egress:never`, `egress:invalid`, `fact:never`, `fact:invalid`,
-    /// `schedule:invalid`), which the frontend reads.
+    /// The grant store, the egress ledger, the profile, the scheduler or the signals refused a write. The message
+    /// starts with a stable code (`grant:never`, `grant:invalid`, `egress:never`, `egress:invalid`, `fact:never`,
+    /// `fact:invalid`, `schedule:invalid`, `signal:invalid`), which the frontend reads.
     #[error("{0}")]
     Refused(String),
 
