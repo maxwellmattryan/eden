@@ -1097,7 +1097,8 @@
 			"confirmNo": "No",
 			"readsNothing": "Nothing"
 		},
-		"openTools": "Browse the tools"
+		"openTools": "Browse the tools",
+		"openAudit": "Open the audit log"
 	},
 	"audit": {
 		"title": "Audit log",
@@ -1129,7 +1130,6 @@
 		},
 		"filteredByFact": "Showing the requests that read this fact.",
 		"open": "Open an entry",
-		"detailLabel": "Entry",
 		"surfaces": {
 			"chat": "Conversation",
 			"domainChat": "Conversation about {domain}",
@@ -1165,8 +1165,12 @@
 			"grade": "Grade",
 			"reads": "Reads"
 		},
+		"hints": {
+			"access": "Whether the tool only reads your data or changes it. A write asks you first.",
+			"grade": "The model grade a tool runs at. A dash means it runs no model.",
+			"reads": "How many kinds of registry data the tool is declared to read. It can see nothing else."
+		},
 		"foot": "{count, plural, one {# tool} other {# tools}}. A plain tool runs no model; a write asks first.",
-		"detailLabel": "Tool",
 		"schema": "Input shape",
 		"status": "Status",
 		"unavailable": "No handler: it cannot run"

@@ -1,25 +1,18 @@
 <script lang="ts">
 	// The tools page (docs/engineering/gardener.md, "Tools"; docs/design/screens.md, `gardener-tools`): every tool the
 	// Gardener has, the substrate's first and then each domain's, one row each with its owner, its access, its grade
-	// and how many registry ids it may read. A row opens the same body the conversation's tool popover shows
-	// (`ToolAbout`), with the input's shape folded beneath. Linked from the Gardener tab and the panel's header.
-	import {
-		DataTable,
-		DetailPopover,
-		DetailSection,
-		PageHeader,
-		domainGlyph,
-		type DataTableCell,
-		type DataTableColumn,
-	} from '@eden/ui-kit'
+	// and how many registry ids it may read. A row unfolds beneath itself to the same body the conversation's tool
+	// popover shows (`ToolAbout`), with the input's shape folded beside it. Linked from the Gardener tab and the
+	// panel's header.
+	import { DataTable, DetailSection, PageHeader, type DataTableCell, type DataTableColumn } from '@eden/ui-kit'
 	import { SUBSTRATE, type GardenerTool } from '@eden/shared/gardener'
 	import { t } from '@eden/shared/i18n'
 	import { manifestFor } from '$lib/domains'
 	import { handlerOf, tools } from '$lib/shell/gardener/handlers'
 	import ToolAbout from '$lib/shell/gardener/ToolAbout.svelte'
 
-	let open = $state(false)
-	let detail = $state<{ tool: GardenerTool; anchor: HTMLElement } | undefined>()
+	// the row that is unfolded, by its index in `shown`
+	let expanded = $state<number>()
 
 	/** Who declares the tool: Eden for the substrate's, the domain by its name otherwise. */
 	function ownerOf(tool: GardenerTool): string {
@@ -39,9 +32,9 @@
 	const columns = $derived<DataTableColumn[]>([
 		{ label: $t('tools.columns.tool') },
 		{ label: $t('tools.columns.owner') },
-		{ label: $t('tools.columns.access') },
-		{ label: $t('tools.columns.grade') },
-		{ label: $t('tools.columns.reads'), numeric: true },
+		{ label: $t('tools.columns.access'), hint: $t('tools.hints.access') },
+		{ label: $t('tools.columns.grade'), hint: $t('tools.hints.grade') },
+		{ label: $t('tools.columns.reads'), hint: $t('tools.hints.reads'), numeric: true },
 	])
 	const rows = $derived<(string | DataTableCell)[][]>(
 		shown.map((tool) => [
@@ -52,53 +45,39 @@
 			String(tool.declaration.reads.length),
 		])
 	)
-
-	function show(index: number, anchor: HTMLElement) {
-		const tool = shown[index]
-		if (!tool) return
-		detail = { tool, anchor }
-		open = true
-	}
 </script>
 
 <div class="page">
-	<PageHeader name={$t('tools.title')} subtitle={$t('tools.subtitle')} icon={domainGlyph('gardener')} />
+	<PageHeader name={$t('tools.title')} subtitle={$t('tools.subtitle')} icon="wrench" />
 	<div class="body">
-		<DataTable {columns} {rows} label={$t('tools.title')} onrow={show} />
+		<DataTable {columns} {rows} label={$t('tools.title')} bind:expanded>
+			{#snippet detail(index)}
+				{@const tool = shown[index]}
+				{#if tool}
+					<div class="detail">
+						<ToolAbout {tool} />
+						{#if !handlerOf(tool)}
+							<DetailSection
+								rows={[
+									{
+										label: $t('tools.status'),
+										value: $t('tools.unavailable'),
+										icon: 'triangle-alert',
+										tone: 'warning',
+									},
+								]}
+							/>
+						{/if}
+						<DetailSection label={$t('tools.schema')} collapsible>
+							<pre class="schema">{JSON.stringify(tool.schema, null, 1)}</pre>
+						</DetailSection>
+					</div>
+				{/if}
+			{/snippet}
+		</DataTable>
 		<p class="quiet">{$t('tools.foot', { values: { count: shown.length } })}</p>
 	</div>
 </div>
-
-{#if detail}
-	{@const tool = detail.tool}
-	<DetailPopover
-		anchor={detail.anchor}
-		bind:open
-		tone="honey"
-		icon="shovel"
-		title={tool.declaration.id}
-		width="md"
-		label={$t('tools.detailLabel')}
-		onclose={() => (detail = undefined)}
-	>
-		<ToolAbout {tool} />
-		{#if !handlerOf(tool)}
-			<DetailSection
-				rows={[
-					{
-						label: $t('tools.status'),
-						value: $t('tools.unavailable'),
-						icon: 'triangle-alert',
-						tone: 'warning',
-					},
-				]}
-			/>
-		{/if}
-		<DetailSection label={$t('tools.schema')} collapsible>
-			<pre class="schema">{JSON.stringify(tool.schema, null, 1)}</pre>
-		</DetailSection>
-	</DetailPopover>
-{/if}
 
 <style>
 	.page {
@@ -111,6 +90,12 @@
 		display: grid;
 		gap: var(--space-4);
 		padding: 0 var(--ed-gutter);
+	}
+	/* the sections side by side where the table is wide, stacked where it is not */
+	.detail {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(calc(var(--space-8) * 8), 1fr));
+		align-items: start;
 	}
 	.schema {
 		margin: 0;

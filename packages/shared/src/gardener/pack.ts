@@ -54,6 +54,8 @@ export interface PackRequest {
 	lang: 'en' | 'ja'
 	domainName?: string
 	grade: ModelGrade
+	/** The reply is read in the panel, so the persona asks for Markdown; a delegated request leaves it off. */
+	markdown?: boolean
 }
 
 export interface SystemBlock {
@@ -223,6 +225,7 @@ export async function buildPack(request: PackRequest, readers: PackReaders): Pro
 	const toolNames = request.tools.map((tool) => tool.wireName)
 	const of = { grade: request.grade, model: request.model.id, zone: request.zone, lang: request.lang, toolNames }
 	if (request.domainName) Object.assign(of, { domainName: request.domainName })
+	if (request.markdown) Object.assign(of, { markdown: true })
 	const stable = persona({ ...of, now: '', canSee: [], locked, trimmed: [] }).stable
 
 	const canSee = () => sections.map((section) => ({ id: section.id, count: section.rows.length }))

@@ -4,7 +4,8 @@
 	// store; hooks.client.ts mounts the same card for an error before the layout exists, so the two never differ.
 	// It is a modal <dialog>, so it opens in the browser's top layer: a sheet, a menu or a popover that was open when
 	// the error came is in that layer too, and a card drawn beneath it would be a crash nobody sees. Escape does not
-	// close it; the only ways out are the two buttons.
+	// close it; the only ways out are the two buttons. Focus lands on the card itself, never on a button: nothing looks
+	// pressed or ringed until Tab is pressed.
 	import { Button } from '@eden/ui-kit'
 	import { t } from '@eden/shared/i18n'
 	import { crashStore } from '@eden/shared/stores'
@@ -31,7 +32,9 @@
 
 	/** Opens the card over everything, whatever else is in the top layer. */
 	function show(dialog: HTMLDialogElement) {
-		if (!dialog.open) dialog.showModal()
+		if (dialog.open) return
+		dialog.showModal()
+		dialog.focus({ preventScroll: true })
 	}
 </script>
 
@@ -40,6 +43,7 @@
 	role="alertdialog"
 	aria-labelledby="crash-title"
 	aria-describedby="crash-text"
+	tabindex="-1"
 	{@attach show}
 	oncancel={(event) => event.preventDefault()}
 	onclose={(event) => show(event.currentTarget)}
@@ -80,6 +84,10 @@
 		background: var(--surface-0);
 		color: var(--text-primary);
 		padding: var(--ed-gutter);
+	}
+	/* takes focus only from show(), so the browser never puts it on a button */
+	.crash:focus {
+		outline: none;
 	}
 	.crash[open] {
 		display: flex;

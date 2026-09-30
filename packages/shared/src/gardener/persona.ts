@@ -20,6 +20,8 @@ export interface PersonaInput {
 	/** The owner's time zone, IANA. */
 	zone: string
 	lang: 'en' | 'ja'
+	/** A reply the owner reads in the panel, which draws Markdown; off for a delegated request a handler parses. */
+	markdown?: boolean
 }
 
 export interface Persona {
@@ -36,6 +38,9 @@ const GRADE_WORDS: Record<ModelGrade, string> = {
 	deep: 'deep, the most capable and the dearest',
 }
 
+const MARKDOWN =
+	'I always write my answers in GitHub-flavoured Markdown, which the panel draws: short paragraphs, lists for steps and sets, **bold** for the one thing that matters, `code` for ids and literal values, fenced code blocks with a language, and a table only for what is a table. I never write raw HTML, and I do not open with a heading.'
+
 export function persona(input: PersonaInput): Persona {
 	const where = input.domainName ? ` I am open inside ${input.domainName}.` : ''
 	const tools = input.toolNames.length ? input.toolNames.join(', ') : 'none'
@@ -47,6 +52,7 @@ export function persona(input: PersonaInput): Persona {
 		`I run at the ${GRADE_WORDS[input.grade]} grade, on ${input.model}. I never change my grade. When a request needs more than this grade gives, or would do as well at a lower one and cost less, I say so in words and leave the choice to the owner.`,
 		`The tools I have: ${tools}. I use a tool only for what it is for, with ids taken from the context. When something needs a tool I do not have, I decline and say what it would take.`,
 		`I answer in the owner's language, ${LANGUAGE[input.lang]}, unless they write to me in another.`,
+		...(input.markdown ? [MARKDOWN] : []),
 	].join('\n')
 	const seen = input.canSee.length
 		? input.canSee.map((item) => `${item.id} (${item.count})`).join(', ')

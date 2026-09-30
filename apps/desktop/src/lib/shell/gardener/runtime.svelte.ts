@@ -27,6 +27,7 @@ import {
 	type MessageBlock,
 	type Pack,
 	type Resolution,
+	type ToolState,
 } from '@eden/shared/gardener'
 import { recordAudit } from '@eden/shared/gardener'
 import { locale, t } from '@eden/shared/i18n'
@@ -157,6 +158,7 @@ export class GardenerRuntime {
 				lang: ctx.lang,
 				domainName: gardenerUi.domain ? get(t)(`domains.${gardenerUi.domain}.name`) : undefined,
 				grade: resolution.grade,
+				markdown: true,
 			},
 			readers
 		)
@@ -330,8 +332,8 @@ export class GardenerRuntime {
 		threads.flush(messageId)
 	}
 
-	/** Streams one request into the reply; answers what came back. */
-	#stream(request: GardenerRequest, replyId: string): Promise<StreamOutcome> {
+	/** Streams one request into the reply, or into nothing shown when there is none; answers what came back. */
+	#stream(request: GardenerRequest, replyId?: string): Promise<StreamOutcome> {
 		return new Promise((resolve) => {
 			const outcome: StreamOutcome = {
 				text: '',
@@ -345,6 +347,7 @@ export class GardenerRuntime {
 			const onEvent = (event: GardenerEvent) => {
 				if (event.type === 'text_delta') {
 					outcome.text += event.text
+					if (!replyId) return
 					threads.patch(replyId, (blocks) => {
 						if (textIndex === -1 || blocks[textIndex]?.kind !== 'text') {
 							textIndex = blocks.length
@@ -399,8 +402,21 @@ export class GardenerRuntime {
 		const tool = toolByWireName(call.name)
 		const handler = tool && handlerOf(tool)
 		const record: AuditTool & { grantId?: string } = { id: call.tool, access: call.access, confirm: null }
-		const index = this.#addBlock(replyId, { kind: 'tool', call, state: tool && handler ? 'pending' : 'cancelled' })
-		const settle = (state: 'done' | 'cancelled', patch: Partial<ToolCall> = {}) =>
+		// a write needs a grant or a confirm; act-external always confirms (grants.md)
+		const needsConfirm =
+			!!tool &&
+			!!handler &&
+			(call.access === 'act-external' ||
+				(call.access === 'write' &&
+					!(await grants.allows({ subject: GRANT_SUBJECT, resource: call.tool, resourceType: 'tool', access: 'write' }))
+						.allowed))
+		// the card waits on the confirm when one is owed, and runs at once when none is
+		const index = this.#addBlock(replyId, {
+			kind: 'tool',
+			call: tool && handler ? call : { ...call, error: `no such tool: ${call.name}` },
+			state: !tool || !handler ? 'failed' : needsConfirm ? 'pending' : 'running',
+		})
+		const settle = (state: ToolState, patch: Partial<ToolCall> = {}) =>
 			threads.patch(replyId, (blocks) =>
 				blocks.map((block, i) =>
 					i === index && block.kind === 'tool' ? { ...block, state, call: { ...block.call, ...patch } } : block
@@ -409,12 +425,6 @@ export class GardenerRuntime {
 		if (!tool || !handler) {
 			return { result: { output: { error: `no such tool: ${call.name}` } }, record }
 		}
-		// a write needs a grant or a confirm; act-external always confirms (grants.md)
-		const needsConfirm =
-			call.access === 'act-external' ||
-			(call.access === 'write' &&
-				!(await grants.allows({ subject: GRANT_SUBJECT, resource: call.tool, resourceType: 'tool', access: 'write' }))
-					.allowed)
 		if (needsConfirm) {
 			const ok = await new Promise<boolean>((resolve) => this.#confirms.set(call.id, resolve))
 			record.confirm = ok ? 'confirmed' : 'cancelled'
@@ -422,6 +432,7 @@ export class GardenerRuntime {
 				settle('cancelled')
 				return { result: { output: { error: 'cancelled by the owner' } }, record }
 			}
+			settle('running')
 			try {
 				const granted = await grants.grant({
 					subject: GRANT_SUBJECT,
@@ -439,21 +450,32 @@ export class GardenerRuntime {
 		}
 		try {
 			const result = 'run' in handler ? await handler.run(call.input, ctx) : await this.#delegate(tool, call.input, ctx)
-			settle('done', { output: result.output })
+			// a handler that answers an error failed as surely as one that threw: the model is told so either way
+			const failure = errorOf(result.output)
+			if (stoodDown(result.output)) settle('cancelled', { output: result.output })
+			else if (failure === undefined) settle('done', { output: result.output })
+			else settle('failed', { output: result.output, error: failure })
 			if (result.card)
-				this.#addBlock(replyId, { kind: 'draft', draft: result.card, state: 'pending', domain: tool.domain })
+				this.#addBlock(replyId, {
+					kind: 'draft',
+					draft: result.card,
+					state: 'pending',
+					domain: tool.domain,
+					callId: call.id,
+				})
 			if (result.proposal) {
 				profile.propose(result.proposal as Parameters<typeof profile.propose>[0])
 				this.#addBlock(replyId, {
 					kind: 'proposal',
 					proposal: result.proposal as Parameters<typeof profile.propose>[0],
 					state: 'pending',
+					callId: call.id,
 				})
 			}
 			return { result, record }
 		} catch (error) {
 			const message = String((error as Error)?.message ?? error)
-			settle('cancelled', { error: message })
+			settle('failed', { error: message })
 			return { result: { output: { error: message } }, record }
 		}
 	}
@@ -542,7 +564,7 @@ export class GardenerRuntime {
 			if (!ok) {
 				audit.outcome = 'declined'
 				await this.#record(audit)
-				return { output: { error: 'declined by the owner' } }
+				return { output: { error: 'declined by the owner', cancelled: true } }
 			}
 		}
 		const messages = withImage(pack.messages, image)
@@ -554,13 +576,8 @@ export class GardenerRuntime {
 			messages,
 			tools: [],
 		}
-		const holder = threads.append('gardener', [{ kind: 'text', text: '' }], requestId)
-		// the delegated reply is read by the handler, not shown: the holder keeps the request's place in the thread
-		const outcome = await this.#stream(request, holder.id)
-		threads.patch(holder.id, () => [
-			{ kind: 'text', text: get(t)('gardener.ranTool', { values: { tool: tool.declaration.id } }) },
-		])
-		threads.flush(holder.id)
+		// the delegated reply is read by the handler and never shown: the tool's own card is its place in the thread
+		const outcome = await this.#stream(request)
 		audit.tokensIn = outcome.usage.tokensIn
 		audit.tokensOut = outcome.usage.tokensOut
 		audit.cacheRead = outcome.usage.cacheRead
@@ -726,6 +743,17 @@ export class GardenerRuntime {
 }
 
 /** The rows behind each id of the chip, from the audit's reads. */
+/** The error a tool's output carries, when it is one: what the model is told with `is_error`. */
+function errorOf(output: unknown): string | undefined {
+	if (typeof output !== 'object' || output === null || !('error' in output)) return undefined
+	return String((output as { error: unknown }).error)
+}
+
+/** The owner stood the tool down part-way (no photo chosen, the cost declined): a cancel, not a failure. */
+function stoodDown(output: unknown): boolean {
+	return typeof output === 'object' && output !== null && (output as { cancelled?: unknown }).cancelled === true
+}
+
 function rowsOf(pack: Pack): Record<string, string[]> {
 	return Object.fromEntries(pack.reads.map((read) => [read.id, read.rows]))
 }

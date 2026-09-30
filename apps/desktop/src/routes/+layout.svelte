@@ -301,6 +301,10 @@
 		grid-template-columns: auto minmax(0, 1fr) minmax(0, auto);
 		grid-template-rows: minmax(0, 1fr) auto;
 		height: 100dvh;
+		/* The shell is the window and the document never scrolls: it holds what is positioned inside it, so nothing
+		   absolute (a visually hidden label deep in a scroller) lays out against the body and lengthens the page */
+		position: relative;
+		overflow: clip;
 		background: var(--surface-0);
 		transition: opacity var(--ed-duration-settle) var(--ed-ease-out);
 	}
@@ -318,6 +322,8 @@
 	.content {
 		grid-row: 1;
 		grid-column: 2;
+		/* positioned, so what is absolute inside scrolls with it */
+		position: relative;
 		overflow: auto;
 		display: flex;
 		flex-direction: column;

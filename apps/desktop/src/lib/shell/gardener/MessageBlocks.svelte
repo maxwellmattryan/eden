@@ -1,10 +1,17 @@
 <script lang="ts">
 	// One message of a thread as the panel shows it: the text as the bubble, and inside it the tool cards with their
-	// confirm, the proposal cards, the drafts and any error (docs/design/ux-patterns.md, "Gardener surfaces"). The
-	// can-see block is the chip row's, not the bubble's.
+	// confirm, the proposal cards and any error (docs/design/ux-patterns.md, "Gardener surfaces"). A draft is its own
+	// message after the bubble, in honey. The can-see block is the chip row's, not the bubble's. A reply is drawn as Markdown; under each message is when it
+	// was sent or received and a glyph that copies its words. A tool the Gardener ran as its own request is a note in
+	// the thread, not a bubble.
 	import { DetailPopover, DetailSection, GardenerMessage, Notice, ProposalCard, ToolCard } from '@eden/ui-kit'
-	import type { Message, MessageBlock } from '@eden/shared/gardener'
-	import { t } from '@eden/shared/i18n'
+	import { openExternal } from '@eden/shared/api'
+	import { stampToDate } from '@eden/shared/data'
+	import { formatMoment } from '@eden/shared/dates'
+	import type { Message, MessageBlock, ToolState } from '@eden/shared/gardener'
+	import { locale, t } from '@eden/shared/i18n'
+	import { settings } from '@eden/shared/settings'
+	import { copyText } from '$lib/clipboard'
 	import { formatValue } from '@eden/shared/profile'
 	import { profile } from '../profile/store.svelte'
 	import { undoToast } from '../undo'
@@ -12,6 +19,7 @@
 	import ToolAbout from './ToolAbout.svelte'
 	import { toolByWireName } from './handlers'
 	import { runtime } from './runtime.svelte'
+	import { threads } from './threads.svelte'
 
 	type Props = { message: Message }
 	let { message }: Props = $props()
@@ -25,8 +33,41 @@
 	const cards = $derived(
 		blocks
 			.map((block, index) => ({ block, index }))
-			.filter(({ block }) => block.kind !== 'text' && block.kind !== 'can-see')
+			.filter(({ block }) => block.kind !== 'text' && block.kind !== 'can-see' && block.kind !== 'draft')
 	)
+	const drafts = $derived(
+		blocks.map((block, index) => ({ block, index })).filter(({ block }) => block.kind === 'draft')
+	)
+	// the message a request is still writing: the last one, while the runtime streams
+	const live = $derived(runtime.streaming && threads.messages.at(-1)?.id === message.id)
+	// a card left running or waiting by a request that is gone (the app closed mid-way) reads as cancelled
+	const stateOf = (state: ToolState): ToolState =>
+		(state === 'running' || state === 'pending') && !runtime.streaming ? 'cancelled' : state
+	// What became of the draft or the proposal a tool call left, for that call's card: found by the call's id, or, in
+	// a message stored before the id was kept, as the first one after the card and before the next tool's.
+	function draftOf(index: number, callId: string): 'pending' | 'committed' | 'discarded' | undefined {
+		let left = blocks.find((block) => (block.kind === 'draft' || block.kind === 'proposal') && block.callId === callId)
+		if (!left) {
+			for (const block of blocks.slice(index + 1)) {
+				if (block.kind === 'tool') break
+				if ((block.kind === 'draft' || block.kind === 'proposal') && !block.callId) {
+					left = block
+					break
+				}
+			}
+		}
+		if (left?.kind === 'draft') return left.state
+		if (left?.kind === 'proposal')
+			return left.state === 'accepted' ? 'committed' : left.state === 'dismissed' ? 'discarded' : 'pending'
+		return undefined
+	}
+	// when it was sent or received: the row's stamp, once the store has answered with one
+	const time = $derived.by(() => {
+		const at = message.createdAt ? stampToDate(message.createdAt) : null
+		if (!at || live) return undefined
+		return formatMoment(at.getTime(), { lang: $locale ?? 'en', clock: settings.clock })
+	})
+	const copy = $derived(text.length && !live ? () => copyText(text.join('\n\n')) : undefined)
 
 	function accept(index: number, proposal: { id: string; type: string }) {
 		const result = profile.accept(proposal.id, $t(`profile.facts.${proposal.type}`))
@@ -55,7 +96,14 @@
 </script>
 
 {#if text.length || cards.length}
-	<GardenerMessage text={text.length ? text : undefined} owner={message.role === 'owner'}>
+	<GardenerMessage
+		text={text.length ? text : undefined}
+		owner={message.role === 'owner'}
+		markdown
+		onlink={(href) => void openExternal(href)}
+		{time}
+		oncopy={copy}
+	>
 		{#each cards as { block, index } (index)}
 			{#if block.kind === 'tool'}
 				<ToolCard
@@ -66,7 +114,8 @@
 					confirm={block.call.access === 'write' || block.call.access === 'act-external'
 						? $t('gardener.confirmTool', { values: { tool: block.call.tool } })
 						: undefined}
-					state={block.state}
+					state={stateOf(block.state)}
+					draft={draftOf(index, block.call.id)}
 					onconfirm={() => runtime.answerTool(block.call.id, true)}
 					oncancel={() => runtime.answerTool(block.call.id, false)}
 					oninfo={(anchor) => showInfo(anchor, block)}
@@ -80,19 +129,23 @@
 					onaccept={() => accept(index, block.proposal)}
 					ondismiss={() => dismiss(index, block.proposal)}
 				/>
-			{:else if block.kind === 'draft'}
-				<DraftCard
-					draft={block.draft}
-					status={block.state}
-					domain={block.domain ?? 'substrate'}
-					onsettle={(state) => runtime.settleDraft(message.id, index, state)}
-				/>
 			{:else if block.kind === 'error'}
 				<Notice tone={block.code === 'budget' ? 'warning' : 'danger'} title={block.message} />
 			{/if}
 		{/each}
 	</GardenerMessage>
 {/if}
+
+{#each drafts as { block, index } (index)}
+	{#if block.kind === 'draft'}
+		<DraftCard
+			draft={block.draft}
+			status={block.state}
+			domain={block.domain ?? 'substrate'}
+			onsettle={(state) => runtime.settleDraft(message.id, index, state)}
+		/>
+	{/if}
+{/each}
 
 {#if info}
 	<DetailPopover

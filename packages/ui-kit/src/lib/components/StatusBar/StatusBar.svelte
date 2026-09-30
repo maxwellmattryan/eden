@@ -193,6 +193,7 @@
 			checked: grade.id === gardener?.grade,
 		}))
 	)
+	const currentGradeIcon = $derived(grades.find((grade) => grade.id === gardener?.grade)?.icon ?? 'chevron-down')
 	function pickGrade(item: MenuItem) {
 		if (item.id) gardener?.onchangegrade?.(item.id)
 	}
@@ -259,7 +260,7 @@
 		{#if gardener}
 			<Chip
 				label={gardener.noKey ? s.gardener.noKeyOnDevice : gardener.label}
-				tone={gardener.noKey ? 'grey' : 'honey'}
+				tone="grey"
 				icon={domainGlyph('gardener')}
 				meter={gardener.noKey ? undefined : gardener.budget?.percent}
 				aria-label={gardenerName}
@@ -268,9 +269,9 @@
 			{#if grades.length}
 				<span class="ed-status-anchor ed-status-grade" bind:this={gradeAnchor}>
 					<IconButton
-						icon="chevron-down"
+						icon={currentGradeIcon}
 						label={s.gardener.switchGrade}
-						size="xs"
+						size="sm"
 						tooltip
 						active={gradeOpen}
 						aria-haspopup="menu"

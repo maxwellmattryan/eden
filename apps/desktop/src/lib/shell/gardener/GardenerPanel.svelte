@@ -32,6 +32,7 @@
 	let key = $state('')
 	let keyBusy = $state(false)
 	let log = $state<HTMLElement>()
+	let foot = $state<HTMLElement>()
 
 	const domainName = $derived(gardenerUi.domain ? $t(manifestFor(gardenerUi.domain)?.name ?? '') : undefined)
 	const title = $derived(
@@ -117,9 +118,12 @@
 	function send(text: string) {
 		void runtime.ask(text)
 	}
-	function newThread() {
+	async function newThread() {
 		threads.close()
 		listOpen = false
+		// the composer mounts again when the list was open, so focus once it is in the DOM
+		await tick()
+		foot?.querySelector('textarea')?.focus()
 	}
 	async function openThread(id: string) {
 		await threads.open(id)
@@ -134,10 +138,6 @@
 		} finally {
 			keyBusy = false
 		}
-	}
-	function openAudit() {
-		gardenerUi.hide()
-		void goto(resolve('/gardener/audit'))
 	}
 	function openBudgets() {
 		settingsUi.show('gardener')
@@ -163,7 +163,6 @@
 			items={chipItems}
 			locked={chipLocked}
 			trimmed={canSee.trimmed}
-			onaudit={openAudit}
 			onexpand={(item) => void expand(item)}
 			onunlock={(id) => (unlocking = id)}
 		>
@@ -195,13 +194,20 @@
 		/>
 		<h2 id="{uid}-title" class="panel-title">{title}</h2>
 		<IconButton
-			icon="shovel"
+			icon="clipboard-list"
+			size="sm"
+			label={$t('gardener.openAudit')}
+			tooltip
+			onclick={() => void goto(resolve('/gardener/audit'))}
+		/>
+		<IconButton
+			icon="wrench"
 			size="sm"
 			label={$t('gardener.openTools')}
 			tooltip
 			onclick={() => void goto(resolve('/gardener/tools'))}
 		/>
-		<IconButton icon="plus" size="sm" label={$t('gardener.newThread')} tooltip onclick={newThread} />
+		<IconButton icon="plus" size="sm" label={$t('gardener.newThread')} tooltip onclick={() => void newThread()} />
 		<IconButton icon="x" size="sm" label={$t('common.close')} tooltip onclick={() => gardenerUi.hide()} />
 	</header>
 
@@ -251,7 +257,7 @@
 				{/each}
 			</Thread>
 		</div>
-		<div class="panel-foot">
+		<div class="panel-foot" bind:this={foot}>
 			<Composer
 				{placeholder}
 				label={placeholder}
@@ -323,11 +329,15 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
+	/* the scrollers are positioned, so what is absolute inside them (a tool card's hidden status word) scrolls with
+	   them and never lays out against the page */
 	.panel-list {
+		position: relative;
 		overflow: auto;
 		grid-row: 2 / 4;
 	}
 	.panel-log {
+		position: relative;
 		overflow: hidden auto;
 		display: grid;
 		align-content: start;
@@ -339,6 +349,10 @@
 	.panel-log > :global(*),
 	.panel-foot > :global(*) {
 		min-width: 0;
+	}
+	/* the panel is the measure: the thread fills it so the gutters match on both sides */
+	.panel-log :global(.ed-thread) {
+		max-width: none;
 	}
 	/* the composer floats at the foot in its own box, so no rule parts it from the log */
 	.panel-foot {

@@ -1081,6 +1081,14 @@
 			"confirmed": "{0}しました",
 			"useLocalModel": "ローカルモデルを使う",
 			"aboutTool": "このツールについて",
+			"toolRunning": "実行中",
+			"toolDone": "完了",
+			"toolFailed": "失敗",
+			"toolCancelled": "中止",
+			"toolWaiting": "確認待ち",
+			"sentAt": "{0} に送信",
+			"receivedAt": "{0} に受信",
+			"copyMessage": "メッセージをコピー",
 			"canSeeSummary": "{1}種類、{0}件",
 			"inContext": "{1}: このリクエストに{0}件",
 			"notShared": "{0}件は未共有",
@@ -1221,7 +1229,8 @@
 			"confirmNo": "いいえ",
 			"readsNothing": "なし"
 		},
-		"openTools": "ツールを見る"
+		"openTools": "ツールを見る",
+		"openAudit": "監査ログを開く"
 	},
 	"audit": {
 		"title": "監査ログ",
@@ -1253,7 +1262,6 @@
 		},
 		"filteredByFact": "この事実を読んだリクエストを表示しています。",
 		"open": "項目を開く",
-		"detailLabel": "項目",
 		"surfaces": {
 			"chat": "会話",
 			"domainChat": "{domain}についての会話",
@@ -1289,8 +1297,12 @@
 			"grade": "グレード",
 			"reads": "読む種類"
 		},
+		"hints": {
+			"access": "データを読むだけか、変更するか。書き込みは先に確認します。",
+			"grade": "ツールが動くモデルのグレード。「—」はモデルを使いません。",
+			"reads": "読めると宣言されたレジストリのデータの種類の数。それ以外は見えません。"
+		},
 		"foot": "{count}個のツール。モデルを使わないツールもあり、書き込みは先に確認します。",
-		"detailLabel": "ツール",
 		"schema": "入力の形",
 		"status": "状態",
 		"unavailable": "ハンドラーがなく、実行できません"

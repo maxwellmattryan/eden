@@ -92,12 +92,25 @@
 		"plug",
 		"keyboard",
 		"terminal",
-		"id-card"
+		"id-card",
+		"wrench",
+		"clipboard-list"
 	],
 	"custom": {
 		"seed": [
 			["path", { "d": "M12 3c4 4 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 2-7 6-11z" }],
 			["path", { "d": "M12 10v8" }]
+		],
+		"gardener": [
+			["path", { "d": "M8.94 11.2A6.93 3.33 0 1 1 15.06 11.2" }],
+			["path", { "d": "M8.7 5.3 9.5 2.6A.8.8 0 0 1 10.3 2h3.4a.8.8 0 0 1 .8.6l.8 2.7" }],
+			["path", { "d": "M8.53 9.6c0-1.5 1.5-2.5 3.47-2.5s3.47 1 3.47 2.5a3.47 3.47 0 0 1-6.94 0z" }],
+			[
+				"path",
+				{
+					"d": "M5.1 21v-1.45a4.27 4.27 0 0 1 3.77-4.25c2.1-.28 4.3-.28 6.4 0a4.27 4.27 0 0 1 3.67 4.23V21c-4.66 1.23-9.28 1.25-13.86 0z"
+				}
+			]
 		]
 	},
 	"domains": {
@@ -118,7 +131,7 @@
 	"shell": {
 		"garden": "sprout",
 		"today": "sunrise",
-		"gardener": "user-round",
+		"gardener": "gardener",
 		"council": "circle-dashed",
 		"vault": "lock",
 		"settings": "settings"

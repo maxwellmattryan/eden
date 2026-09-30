@@ -155,7 +155,8 @@ export interface AuditQuery {
 // The blocks of a message: what the panel renders and what the pack reads back as the thread. They are the
 // frontend's shape alone; the crate keeps them as JSON.
 
-export type ToolState = 'pending' | 'done' | 'cancelled'
+/** pending waits on the owner's confirm; running is the handler at work; failed is an error, cancelled the owner's no. */
+export type ToolState = 'pending' | 'running' | 'done' | 'failed' | 'cancelled'
 export type DraftState = 'pending' | 'committed' | 'discarded'
 
 /** What a `write-draft` tool offers; nothing is stored until the owner commits it. */
@@ -207,8 +208,9 @@ export type MessageBlock =
 			}
 			state: ToolState
 	  }
-	| { kind: 'proposal'; proposal: FactProposal; state: 'pending' | 'accepted' | 'dismissed' }
-	| { kind: 'draft'; draft: DraftCard; state: DraftState; domain?: string }
+	| { kind: 'proposal'; proposal: FactProposal; state: 'pending' | 'accepted' | 'dismissed'; callId?: string }
+	/** `callId` is the tool call that left it, so that call's card can say what became of it. */
+	| { kind: 'draft'; draft: DraftCard; state: DraftState; domain?: string; callId?: string }
 	| {
 			kind: 'can-see'
 			items: { id: string; count: number }[]

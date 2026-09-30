@@ -39,8 +39,12 @@ export function fakeTransport(script: (request: GardenerRequest) => string = () 
 	}
 }
 
-const FAKE_REPLY =
-	'This is the browser: the Gardener runs in the installed app, so I am a scripted reply. Everything else on this panel is real.'
+const FAKE_REPLY = [
+	'This is the **browser**: the Gardener runs in the installed app, so I am a scripted reply.',
+	'- Everything else on this panel is *real*.\n- Replies are drawn as Markdown, `code` included.',
+	'```text\nyarn dev\n```',
+	'More in [the Tauri docs](https://tauri.app).',
+].join('\n\n')
 
 /** The transport for where the app runs. */
 export const transport: Transport = isTauri() ? crateTransport : fakeTransport()

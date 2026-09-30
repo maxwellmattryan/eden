@@ -107,6 +107,18 @@ export interface UiStrings {
 		delegated: (tool: string) => string
 		copyCode: string
 		copied: string
+		/** The spoken word for a tool card's status glyph. */
+		toolRunning: string
+		toolDone: string
+		toolFailed: string
+		toolCancelled: string
+		toolWaiting: string
+		/** The line under the owner's message: when it was sent. */
+		sentAt: (time: string) => string
+		/** The line under a reply: when it was received. */
+		receivedAt: (time: string) => string
+		/** The copy glyph under a message. */
+		copyMessage: string
 		addTask: string
 		createTasks: (n: number) => string
 		addToList: string
@@ -305,6 +317,14 @@ export const defaultStrings: UiStrings = {
 		delegated: (tool) => `Ran ${tool} as its own request.`,
 		copyCode: 'Copy',
 		copied: 'Copied',
+		toolRunning: 'Running',
+		toolDone: 'Done',
+		toolFailed: 'Failed',
+		toolCancelled: 'Cancelled',
+		toolWaiting: 'Waiting on you',
+		sentAt: (time) => `Sent at ${time}`,
+		receivedAt: (time) => `Received at ${time}`,
+		copyMessage: 'Copy message',
 		addTask: 'Add task',
 		createTasks: (n) => (n === 1 ? 'Create 1 task' : `Create ${n} tasks`),
 		addToList: 'Add to the list',

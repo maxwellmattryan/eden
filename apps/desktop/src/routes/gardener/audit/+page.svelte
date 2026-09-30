@@ -1,21 +1,19 @@
 <script lang="ts">
 	// The audit log (product/substrate/ai.md, "Audit log"; docs/design/screens.md, `audit-log`): one row per request,
-	// this device's, ninety days, the outcome coloured. A row opens a popover with the request in a few rows (model,
+	// this device's, ninety days, the outcome coloured. A row unfolds beneath itself to the request in a few rows (model,
 	// grade, tokens, cost, outcome), what it read as the same ReadList the "can see" chip shows (the rows named as a
 	// read opens), the tools it ran with their confirm and the grants that allowed it when there were any, and the
-	// thread it belongs to. Linked from the Gardener tab, from every "can see" chip, and from the profile page.
-	import { onMount } from 'svelte'
+	// thread it belongs to. Linked from the Gardener tab, from the panel's header, and from the profile page.
+	import { onMount, tick } from 'svelte'
 	import { page } from '$app/state'
 	import {
 		Button,
 		DataTable,
-		DetailPopover,
 		DetailSection,
 		EmptyState,
 		InlineError,
 		PageHeader,
 		ReadList,
-		domainGlyph,
 		type DataTableCell,
 		type DataTableColumn,
 		type DetailRow,
@@ -34,10 +32,11 @@
 
 	let entries = $state<AuditEntry[]>([])
 	let failed = $state(false)
-	// the row opened, its anchor, and the labels of what it read as a read opens
-	let open = $state(false)
-	let detail = $state<{ entry: AuditEntry; anchor: HTMLElement } | undefined>()
+	// the row that is unfolded, by its index in `shown`, and the labels of what an entry read, kept by entry and id
+	// as a read opens
+	let expanded = $state<number>()
 	let labels = $state<Record<string, RowLabel[] | undefined>>({})
+	let body = $state<HTMLElement>()
 
 	const format = $derived({ lang: $locale ?? 'en', clock: settings.clock })
 	/** `?fact=<id>` narrows the log to the requests that read that row. */
@@ -45,6 +44,11 @@
 	const shown = $derived(
 		fact ? entries.filter((entry) => entry.reads.some((read) => read.rows.includes(fact))) : entries
 	)
+	// a narrower log is another list: its rows fold
+	$effect(() => {
+		void fact
+		expanded = undefined
+	})
 
 	const OUTCOME: Record<AuditOutcome, { icon: IconName; tone: DataTableCell['tone'] }> = {
 		ok: { icon: 'check', tone: 'positive' },
@@ -95,6 +99,7 @@
 		failed = false
 		try {
 			entries = await queryAudit({ limit: 500 })
+			expanded = undefined
 		} catch {
 			failed = true
 		}
@@ -105,169 +110,147 @@
 		void grants.load()
 	})
 
-	function show(index: number, anchor: HTMLElement) {
-		const entry = shown[index]
-		if (!entry) return
-		labels = {}
-		detail = { entry, anchor }
-		open = true
-	}
-	function showParent(id: string) {
+	/** Unfolds the request this one was delegated from, and brings its row into view. */
+	async function showParent(id: string) {
 		const index = shown.findIndex((entry) => entry.id === id)
-		if (index !== -1 && detail) show(index, detail.anchor)
+		if (index === -1) return
+		expanded = index
+		await tick()
+		body?.querySelectorAll('tbody tr:not(.ed-table-detail)')[index]?.scrollIntoView({ block: 'nearest' })
 	}
 	function openThread(id: string) {
-		open = false
 		gardenerUi.show()
 		void threads.open(id)
 	}
 	const grantOf = (id: string) => grants.grants.find((grant) => grant.id === id)
 
-	// the reads as the ReadList takes them, named as the owner knows them; the rows behind one are read when it opens
-	const readItems = $derived<ReadItem[]>(
-		(detail?.entry.reads ?? []).map((read) => ({ id: read.id, label: registryLabel(read.id), count: read.count }))
-	)
-	const readRows = $derived<Record<string, string[]>>(
-		Object.fromEntries((detail?.entry.reads ?? []).map((read) => [read.id, read.rows]))
-	)
-	async function expand(item: ReadItem) {
-		if (labels[item.id]) return
-		labels = { ...labels, [item.id]: await labelRows(item.id, readRows[item.id] ?? []) }
+	// the reads as the ReadList takes them, named as the owner knows them; the rows behind one are read when it opens.
+	// Each takes its entry, so a row that is folding away keeps showing its own while the next one opens.
+	const readItems = (entry: AuditEntry): ReadItem[] =>
+		entry.reads.map((read) => ({ id: read.id, label: registryLabel(read.id), count: read.count }))
+	const readRows = (entry: AuditEntry, id: string) => entry.reads.find((read) => read.id === id)?.rows ?? []
+	const labelKey = (entry: AuditEntry, id: string) => `${entry.id}:${id}`
+	async function expand(entry: AuditEntry, item: ReadItem) {
+		const key = labelKey(entry, item.id)
+		if (labels[key]) return
+		labels = { ...labels, [key]: await labelRows(item.id, readRows(entry, item.id)) }
 	}
 
-	// the popover's rows, from the entry it shows: the grade as it was declared and as it ran, when those differ
-	const requestRows = $derived<DetailRow[]>(
-		detail
+	// the detail's rows, from the entry it shows: the grade as it was declared and as it ran, when those differ
+	const requestRows = (entry: AuditEntry): DetailRow[] => [
+		{ label: $t('audit.detail.model'), value: entry.model, mono: true },
+		{
+			label: $t('audit.detail.grade'),
+			value:
+				entry.declaredGrade && entry.declaredGrade !== entry.grade
+					? `${gradeLabel(entry.declaredGrade)} → ${gradeLabel(entry.grade)}`
+					: gradeLabel(entry.grade),
+		},
+		{ label: $t('audit.detail.tokens'), value: `${entry.tokensIn} / ${entry.tokensOut}`, mono: true },
+		...(entry.cacheRead ? [{ label: $t('audit.detail.cached'), value: String(entry.cacheRead), mono: true }] : []),
+		{ label: $t('audit.columns.cost'), value: formatCost(entry.costUsd), mono: true },
+		{
+			label: $t('audit.detail.outcome'),
+			value: $t(`audit.outcomes.${entry.outcome}`) + (entry.confirmOutcome ? ` · ${entry.confirmOutcome}` : ''),
+			...OUTCOME[entry.outcome],
+		},
+		...(entry.image
 			? [
-					{ label: $t('audit.detail.model'), value: detail.entry.model, mono: true },
 					{
-						label: $t('audit.detail.grade'),
-						value:
-							detail.entry.declaredGrade && detail.entry.declaredGrade !== detail.entry.grade
-								? `${gradeLabel(detail.entry.declaredGrade)} → ${gradeLabel(detail.entry.grade)}`
-								: gradeLabel(detail.entry.grade),
-					},
-					{
-						label: $t('audit.detail.tokens'),
-						value: `${detail.entry.tokensIn} / ${detail.entry.tokensOut}`,
+						label: $t('audit.detail.image'),
+						value: `${entry.image.width}×${entry.image.height} · ${entry.image.hash.slice(0, 12)}…`,
 						mono: true,
 					},
-					...(detail.entry.cacheRead
-						? [{ label: $t('audit.detail.cached'), value: String(detail.entry.cacheRead), mono: true }]
-						: []),
-					{ label: $t('audit.columns.cost'), value: formatCost(detail.entry.costUsd), mono: true },
-					{
-						label: $t('audit.detail.outcome'),
-						value:
-							$t(`audit.outcomes.${detail.entry.outcome}`) +
-							(detail.entry.confirmOutcome ? ` · ${detail.entry.confirmOutcome}` : ''),
-						...OUTCOME[detail.entry.outcome],
-					},
-					...(detail.entry.image
-						? [
-								{
-									label: $t('audit.detail.image'),
-									value: `${detail.entry.image.width}×${detail.entry.image.height} · ${detail.entry.image.hash.slice(0, 12)}…`,
-									mono: true,
-								},
-							]
-						: []),
 				]
-			: []
-	)
+			: []),
+	]
 </script>
 
 <div class="page">
-	<PageHeader name={$t('audit.title')} subtitle={$t('audit.subtitle')} icon={domainGlyph('gardener')} />
+	<PageHeader name={$t('audit.title')} subtitle={$t('audit.subtitle')} icon="clipboard-list" />
 	{#if failed}
 		<div class="body"><InlineError message={$t('audit.error')} onretry={read} live /></div>
 	{:else if !shown.length}
 		<EmptyState title={$t('audit.empty.title')} text={$t('audit.empty.text')} />
 	{:else}
-		<div class="body">
+		<div class="body" bind:this={body}>
 			{#if fact}
 				<p class="quiet">{$t('audit.filteredByFact')}</p>
 			{/if}
-			<DataTable {columns} {rows} label={$t('audit.title')} onrow={show} />
+			<DataTable {columns} {rows} label={$t('audit.title')} bind:expanded>
+				{#snippet detail(index)}
+					{@const entry = shown[index]}
+					{#if entry}
+						<div class="detail">
+							<DetailSection label={$t('audit.detail.request')} rows={requestRows(entry)} />
+							<DetailSection label={$t('audit.detail.reads')}>
+								{#if entry.reads.length}
+									<ReadList items={readItems(entry)} onexpand={(item) => void expand(entry, item)}>
+										{#snippet expanded(item)}
+											{@const named = labels[labelKey(entry, item.id)]}
+											{#if !readRows(entry, item.id).length}
+												<p class="none">{$t('gardener.noRows')}</p>
+											{:else if !named}
+												<p class="none">…</p>
+											{:else}
+												<ul class="names">
+													{#each named as row (row.id)}<li>{row.label}</li>{/each}
+												</ul>
+											{/if}
+										{/snippet}
+									</ReadList>
+								{:else}
+									<p class="none">—</p>
+								{/if}
+							</DetailSection>
+							{#if entry.tools.length}
+								<DetailSection label={$t('audit.detail.tools')}>
+									<ul class="list">
+										{#each entry.tools as tool, i (i)}
+											<li><code>{tool.id}</code> · {tool.access}{tool.confirm ? ` · ${tool.confirm}` : ''}</li>
+										{/each}
+									</ul>
+								</DetailSection>
+							{/if}
+							{#if entry.grants.length}
+								<DetailSection label={$t('audit.detail.grants')}>
+									<ul class="list">
+										{#each entry.grants as id (id)}
+											{@const grant = grantOf(id)}
+											<li>
+												{grant ? `${grant.resource} · ${grant.access} · ${grant.lifetime} · ${grant.origin}` : id}
+											</li>
+										{/each}
+									</ul>
+								</DetailSection>
+							{/if}
+						</div>
+						{#if entry.parentRequestId || entry.threadId}
+							<div class="actions">
+								{#if entry.parentRequestId}
+									<Button
+										variant="quiet"
+										label={$t('audit.detail.parentOpen')}
+										onclick={() => void showParent(entry.parentRequestId ?? '')}
+									/>
+								{/if}
+								{#if entry.threadId}
+									<Button
+										variant="secondary"
+										icon="sparkles"
+										label={$t('audit.openThread')}
+										onclick={() => entry.threadId && openThread(entry.threadId)}
+									/>
+								{/if}
+							</div>
+						{/if}
+					{/if}
+				{/snippet}
+			</DataTable>
 			<p class="quiet">{$t('audit.retention')}</p>
 		</div>
 	{/if}
 </div>
-
-{#if detail}
-	{@const entry = detail.entry}
-	<DetailPopover
-		anchor={detail.anchor}
-		bind:open
-		tone="ai"
-		icon={domainGlyph('gardener')}
-		title={entry.tool ?? surfaceLabel(entry.surface)}
-		subtitle={entry.tool
-			? `${surfaceLabel(entry.surface)} · ${formatMoment(entry.at, format)}`
-			: formatMoment(entry.at, format)}
-		width="md"
-		label={$t('audit.detailLabel')}
-		onclose={() => (detail = undefined)}
-	>
-		<DetailSection label={$t('audit.detail.request')} rows={requestRows} />
-		<DetailSection label={$t('audit.detail.reads')}>
-			{#if readItems.length}
-				<ReadList items={readItems} onexpand={(item) => void expand(item)}>
-					{#snippet expanded(item)}
-						{@const named = labels[item.id]}
-						{#if !(readRows[item.id] ?? []).length}
-							<p class="none">{$t('gardener.noRows')}</p>
-						{:else if !named}
-							<p class="none">…</p>
-						{:else}
-							<ul class="names">
-								{#each named as row (row.id)}<li>{row.label}</li>{/each}
-							</ul>
-						{/if}
-					{/snippet}
-				</ReadList>
-			{:else}
-				<p class="none">—</p>
-			{/if}
-		</DetailSection>
-		{#if entry.tools.length}
-			<DetailSection label={$t('audit.detail.tools')}>
-				<ul class="list">
-					{#each entry.tools as tool, i (i)}
-						<li><code>{tool.id}</code> · {tool.access}{tool.confirm ? ` · ${tool.confirm}` : ''}</li>
-					{/each}
-				</ul>
-			</DetailSection>
-		{/if}
-		{#if entry.grants.length}
-			<DetailSection label={$t('audit.detail.grants')}>
-				<ul class="list">
-					{#each entry.grants as id (id)}
-						{@const grant = grantOf(id)}
-						<li>{grant ? `${grant.resource} · ${grant.access} · ${grant.lifetime} · ${grant.origin}` : id}</li>
-					{/each}
-				</ul>
-			</DetailSection>
-		{/if}
-		{#snippet footer()}
-			{#if entry.parentRequestId}
-				<Button
-					variant="quiet"
-					label={$t('audit.detail.parentOpen')}
-					onclick={() => showParent(entry.parentRequestId ?? '')}
-				/>
-			{/if}
-			{#if entry.threadId}
-				<Button
-					variant="secondary"
-					icon="sparkles"
-					label={$t('audit.openThread')}
-					onclick={() => entry.threadId && openThread(entry.threadId)}
-				/>
-			{/if}
-		{/snippet}
-	</DetailPopover>
-{/if}
 
 <style>
 	.page {
@@ -280,6 +263,18 @@
 		display: grid;
 		gap: var(--space-4);
 		padding: 0 var(--ed-gutter);
+	}
+	/* the sections side by side where the table is wide, stacked where it is not */
+	.detail {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(calc(var(--space-8) * 8), 1fr));
+		align-items: start;
+	}
+	.actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: var(--space-2);
+		padding: 0 var(--space-3) var(--space-3);
 	}
 	.list,
 	.names {

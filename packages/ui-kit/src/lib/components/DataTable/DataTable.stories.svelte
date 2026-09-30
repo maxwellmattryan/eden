@@ -1,7 +1,8 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
-	import { expect, fn } from 'storybook/test'
+	import { expect, fn, waitFor, within } from 'storybook/test'
 	import { canvasOf } from '../../../storybook/play.js'
+	import DetailSection from '../DetailPopover/DetailSection.svelte'
 	import DataTable, { type DataTableCell, type DataTableColumn } from './DataTable.svelte'
 	import { audit, haul, integrations, stock } from '../../../stories/sample-data.js'
 
@@ -63,6 +64,19 @@
 		['09-29 18:04', 'Toolbench chat', error, '0', { text: '$0.00', mono: true }],
 	]
 
+	// What each outcome row unfolds to.
+	const outcomeDetail = [
+		[
+			{ label: 'Model', value: audit.model, mono: true },
+			{ label: 'Tokens', value: `${audit.tokensIn} / ${audit.tokensOut}`, mono: true },
+		],
+		[
+			{ label: 'Model', value: audit.model, mono: true },
+			{ label: 'Outcome', value: cutShort.text, icon: cutShort.icon, tone: cutShort.tone },
+		],
+		[{ label: 'Outcome', value: error.text, icon: error.icon, tone: error.tone }],
+	]
+
 	const { Story } = defineMeta({
 		title: 'Components/Data/DataTable',
 		component: DataTable,
@@ -118,3 +132,37 @@
 		await expect(args.onrow).toHaveBeenLastCalledWith(1, expect.any(HTMLTableRowElement))
 	}}
 />
+
+<!-- With detail a row unfolds beneath itself, one at a time: a click on the row or its chevron opens and folds it -->
+<Story
+	name="Expandable rows"
+	args={{ label: 'Audit log', columns: outcomeColumns, rows: outcomeRows }}
+	play={async ({ canvasElement, userEvent }) => {
+		const canvas = canvasOf(canvasElement)
+		const first = canvas.getByText(ok.text).closest('tr')!
+		const second = canvas.getByText(cutShort.text).closest('tr')!
+		const chevron = (row: HTMLElement) => within(row).getByRole('button')
+		await expect(chevron(first)).toHaveAttribute('aria-expanded', 'false')
+		await userEvent.click(first)
+		await expect(chevron(first)).toHaveAttribute('aria-expanded', 'true')
+		await waitFor(() => expect(canvas.getByRole('group', { name: 'Request' })).toBeVisible())
+		// another row opens and the first folds
+		await userEvent.click(second)
+		await expect(chevron(first)).toHaveAttribute('aria-expanded', 'false')
+		await expect(chevron(second)).toHaveAttribute('aria-expanded', 'true')
+		await waitFor(() => expect(canvas.getAllByRole('group', { name: 'Request' })).toHaveLength(1))
+		// the chevron is the keyboard's way in
+		chevron(second).focus()
+		await userEvent.keyboard('{Enter}')
+		await expect(chevron(second)).toHaveAttribute('aria-expanded', 'false')
+		await waitFor(() => expect(canvas.queryByRole('group', { name: 'Request' })).toBeNull())
+	}}
+>
+	{#snippet template(args)}
+		<DataTable {...args}>
+			{#snippet detail(index)}
+				<DetailSection label="Request" rows={outcomeDetail[index]} />
+			{/snippet}
+		</DataTable>
+	{/snippet}
+</Story>

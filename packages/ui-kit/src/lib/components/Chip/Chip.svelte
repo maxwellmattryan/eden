@@ -78,9 +78,11 @@
 >
 	{#if status}<span class="ed-chip-dot ed-chip-dot-{status}"></span>{/if}
 	{#if icon}<Icon name={icon} size="sm" />{/if}
-	<span class="ed-chip-label">{label}</span>
-	{#if status}<span class="ed-sr-only">{s.chip.status[status]}</span>{/if}
-	{#if count !== undefined}<span class="ed-chip-count">{count}</span>{/if}
+	<!-- one run of text, so the mono count sits on the label's baseline rather than centred on its own metrics -->
+	<span class="ed-chip-text">
+		<span class="ed-chip-label">{label}</span>{#if status}<span class="ed-sr-only">{s.chip.status[status]}</span
+			>{/if}{#if count !== undefined}<span class="ed-chip-count">{count}</span>{/if}
+	</span>
 	{#if percent !== undefined}
 		<span
 			class="ed-chip-meter"
@@ -197,6 +199,9 @@
 		font: var(--ed-t-data-sm);
 		letter-spacing: var(--ed-t-data-sm-tracking);
 		font-variation-settings: var(--ed-t-data-sm-opsz);
+		/* the shorthand resets the weight; the count keeps the chip's */
+		font-weight: inherit;
+		margin-left: var(--space-1);
 	}
 
 	/* The status dot: healthy is the success green, stale the warning, failed danger, off quiet; the word is beside it */

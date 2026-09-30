@@ -92,7 +92,8 @@
 		const opener = canvas.getByRole('button', { name: trigger })
 		await userEvent.click(opener)
 		const dialog = await canvas.findByRole('dialog', { name: del.title })
-		await expect(dialog.contains(document.activeElement)).toBe(true)
+		// focus is on the sheet itself, never on Cancel or the confirm button
+		await waitFor(() => expect(document.activeElement).toBe(dialog.querySelector('.ed-sheet-panel')))
 		await userEvent.keyboard('{Escape}')
 		await waitFor(() => expect(args.oncancel).toHaveBeenCalledTimes(1))
 		await expect(dialog).not.toBeVisible()

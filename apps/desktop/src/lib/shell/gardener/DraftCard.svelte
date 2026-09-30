@@ -2,14 +2,16 @@
 	// A draft the Gardener left for the owner to commit (product/substrate/ai.md, "Surfaces"; D-74): a task, a plan
 	// of tasks and events, a grocery list, code to copy, or a capture to verify. Nothing is stored before the owner
 	// commits; a commit is an ordinary store write with an undo toast (D-12) and settles the card on its message. The
-	// substrate's parts (tasks, events) are written here; a domain's parts go to the domain that drafted them.
+	// substrate's parts (tasks, events) are written here; a domain's parts go to the domain that drafted them. It is its
+	// own message in the thread: the Gardener's bubble in honey, since this is the Gardener acting (D-40).
 	import { convertFileSrc } from '@tauri-apps/api/core'
-	import { writeText } from '@tauri-apps/plugin-clipboard-manager'
-	import { Badge, Button, CaptureSheet, Icon, type CaptureRow } from '@eden/ui-kit'
+	import { Button, CaptureSheet, GardenerMessage, type CaptureRow } from '@eden/ui-kit'
 	import { isTauri } from '@eden/shared/api'
 	import { createEvent, deleteRows, type TaskInput } from '@eden/shared/data'
+	import { dateIn, instantAt } from '@eden/shared/dates'
 	import type { DraftCard as Draft, DraftState } from '@eden/shared/gardener'
 	import { t } from '@eden/shared/i18n'
+	import { copyText } from '$lib/clipboard'
 	import { manifestFor } from '$lib/domains'
 	import { tasks } from '../today/store.svelte'
 	import { undoToast } from '../undo'
@@ -40,20 +42,29 @@
 		draft.kind === 'capture' && draft.path && isTauri() ? convertFileSrc(draft.path) : undefined
 	)
 
+	const DAY = /^\d{4}-\d{2}-\d{2}$/
+	const TIME = /^\d{2}:\d{2}$/
+	/**
+	 * The todo a drafted task becomes. As a line added on Today is, it is due today when the draft names no day: a todo
+	 * with no due is on no list. A time of day is part of a todo's due, so the two are joined into the instant.
+	 */
 	const toTask = (task: {
 		title: string
 		due?: string
 		notes?: string
 		timeOfDay?: string
 		priority?: 'low' | 'high'
-	}): TaskInput => ({
-		kind: 'todo',
-		title: task.title,
-		due: task.due,
-		timeOfDay: task.timeOfDay,
-		priority: task.priority ?? 'none',
-		notes: task.notes,
-	})
+	}): TaskInput => {
+		const day = task.due && DAY.test(task.due) ? task.due : dateIn(tasks.zone, Date.now())
+		const time = task.timeOfDay && TIME.test(task.timeOfDay) ? task.timeOfDay : undefined
+		return {
+			kind: 'todo',
+			title: task.title,
+			due: time ? new Date(instantAt(day, time, tasks.zone)).toISOString() : day,
+			priority: task.priority ?? 'none',
+			notes: task.notes,
+		}
+	}
 
 	/** The domain's part of a commit, when it has one. */
 	async function domainCommit(card: Draft): Promise<(() => void) | undefined> {
@@ -67,6 +78,8 @@
 		if (busy || settled) return
 		busy = true
 		try {
+			// the rows are read before one is added: a first read that lands after would drop it from the page
+			await tasks.load()
 			const undos: (() => void)[] = []
 			if (draft.kind === 'task') {
 				const { undo } = tasks.addInput(toTask(draft))
@@ -92,8 +105,7 @@
 				const undo = await domainCommit(draft)
 				if (undo) undoToast($t('gardener.draft.groceryCommitted', { values: { count: draft.items.length } }), undo)
 			} else if (draft.kind === 'code') {
-				if (isTauri()) await writeText(draft.code)
-				else await navigator.clipboard.writeText(draft.code)
+				await copyText(draft.code)
 				copied = true
 				busy = false
 				return
@@ -116,17 +128,11 @@
 	}
 </script>
 
-<section class={['draft', settled && 'draft-settled']} aria-label={title}>
-	<div class="draft-head">
-		<Icon
-			name={draft.kind === 'code' ? 'copy' : draft.kind === 'capture' ? 'camera' : 'sparkles'}
-			size="sm"
-			class="draft-icon"
-		/>
-		<span class="draft-title">{title}</span>
-		<span class="draft-badge"><Badge kind="write-draft" /></span>
-	</div>
-
+<GardenerMessage
+	tone="honey"
+	name={title}
+	icon={draft.kind === 'code' ? 'copy' : draft.kind === 'capture' ? 'camera' : 'sparkles'}
+>
 	{#if draft.kind === 'task'}
 		<p class="draft-line">
 			{draft.title}{draft.due ? ` · ${draft.due}` : ''}{draft.timeOfDay ? ` ${draft.timeOfDay}` : ''}
@@ -203,7 +209,7 @@
 			{status === 'committed' ? $t('gardener.draft.committed') : $t('gardener.draft.discarded')}
 		</p>
 	{/if}
-</section>
+</GardenerMessage>
 
 {#if draft.kind === 'capture'}
 	<CaptureSheet
@@ -217,42 +223,6 @@
 {/if}
 
 <style>
-	.draft {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-2);
-		padding: var(--space-3);
-		border-radius: var(--ed-radius-control);
-		border: 1px solid color-mix(in srgb, var(--honey) 30%, transparent);
-		background: var(--honey-muted);
-		color: var(--text-primary);
-		min-width: 0;
-	}
-	.draft-settled {
-		background: var(--surface-1);
-		border-color: var(--ed-card-border);
-	}
-	.draft-head {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
-		color: var(--honey);
-		min-width: 0;
-	}
-	.draft :global(.draft-icon) {
-		flex: none;
-	}
-	.draft-title {
-		font: var(--ed-t-title-sm);
-		letter-spacing: var(--ed-t-title-sm-tracking);
-		min-width: 0;
-		overflow-wrap: anywhere;
-	}
-	.draft-badge {
-		margin-left: auto;
-		flex: none;
-		display: inline-flex;
-	}
 	.draft-line,
 	.draft-result {
 		margin: 0;

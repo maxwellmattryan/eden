@@ -52,4 +52,12 @@ describe('persona', () => {
 		expect(persona({ ...base, lang: 'ja', toolNames: [] }).stable).toContain('Japanese')
 		expect(persona({ ...base, toolNames: [] }).stable).toContain('The tools I have: none.')
 	})
+
+	it('asks for Markdown only where the reply is read in the panel', () => {
+		expect(persona(base).stable).not.toContain('Markdown')
+		const { stable } = persona({ ...base, markdown: true })
+		expect(stable).toContain('I always write my answers in GitHub-flavoured Markdown')
+		expect(stable).toContain('never write raw HTML')
+		expect(stable).not.toContain('!')
+	})
 })

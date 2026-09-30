@@ -22,7 +22,7 @@ export const settingsTabIcons: Record<SettingsTabId, IconName> = {
 	general: 'sliders-horizontal',
 	appearance: 'palette',
 	domains: 'layout-grid',
-	gardener: 'user-round',
+	gardener: 'gardener',
 	privacy: 'shield',
 	notifications: 'bell',
 	integrations: 'plug',

@@ -51,10 +51,16 @@ export function anchor(get: () => AnchorOptions): Attachment<HTMLElement> {
 			}
 			el.style.setProperty('--ed-anchor-room', `${Math.max(0, Math.floor(above ? roomAbove : roomBelow))}px`)
 		}
-		/** Puts the element against the anchor on its side; changes no size. */
+		/**
+		 * Puts the element against the anchor on its side. It is measured at the margin, where it has all the room it
+		 * can ever have: a fixed element with an auto width is as wide as the viewport right of its `left` allows, so
+		 * measuring where it last stood and then moving it would change the very size the observer watches, which is
+		 * the loop the browser reports. The clamp keeps that width available wherever it lands, so placing changes no size.
+		 */
 		const position = () => {
 			if (!target) return
 			const rect = target.getBoundingClientRect()
+			el.style.left = `${margin}px`
 			const width = el.offsetWidth
 			const height = el.offsetHeight
 			const up = above ?? side === 'top'

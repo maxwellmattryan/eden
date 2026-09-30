@@ -55,6 +55,8 @@
 		stroke-linecap: round;
 		stroke-linejoin: round;
 		vertical-align: middle;
+		/* Own layer up front, so the glyph fade never promotes it mid-swap and nudges its neighbours a pixel */
+		will-change: opacity;
 	}
 	.ed-icon-sm {
 		width: var(--icon-sm);

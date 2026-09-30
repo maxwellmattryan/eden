@@ -50,7 +50,7 @@ The pre-paint script reads the localStorage keys in `storageKeys` (`eden:theme`,
 | file | holds |
 |---|---|
 | `styles/theme.css` | `@font-face` for the shipped fonts; the light and dark token blocks; scales, motion, z-order; the composed focus ring; families and the type styles; the accent blocks; `.ed-t-*` classes |
-| `styles/base.css` | reduced-motion overrides; the brand dial; the platform and density blocks; body defaults (including `user-select: none` for the whole app, with editable controls opted back in), selection colour, the paper grain overlay, `.ed-sr-only` |
+| `styles/base.css` | reduced-motion overrides; the brand dial; the platform and density blocks; body defaults (including `user-select: none` for the whole app, with editable controls opted back in; a component whose text is there to be read and kept, a Gardener message, a tool card's text, `Markdown`, opts in with `user-select: text` in its own scoped CSS), selection colour, the paper grain overlay, `.ed-sr-only` |
 | `styles/tailwind.css` | the `@theme inline` mapping and the custom variants |
 | `styles/faces.css` | the alternate faces and `[data-face]` blocks, gallery only |
 | `styles/prepaint.js`, `.storybook/preview-head.html` | the pre-paint script, standalone and inlined |
@@ -126,7 +126,7 @@ Newsreader (upright and italic), Inter and Geist Mono ship from `src/lib/fonts`,
 
 | primitive | does |
 |---|---|
-| `anchor(get)` | positions a `position: fixed` element against an element or a pointer rect; chooses the side once per opening (the preferred one when it fits, else the other, else the roomier) and keeps it, so an element that grows never jumps across its anchor; sets the room on that side as `--ed-anchor-room` for the element to cap its height with, clamps to the viewport, sets `data-side` |
+| `anchor(get)` | positions a `position: fixed` element against an element or a pointer rect; chooses the side once per opening (the preferred one when it fits, else the other, else the roomier) and keeps it, so an element that grows never jumps across its anchor; sets the room on that side as `--ed-anchor-room` for the element to cap its height with, clamps to the viewport, sets `data-side`. It measures the element at the viewport margin, where its auto width has all the room it can get, so placing it from the resize callback never changes the size that callback observes |
 | `dismiss(get)` | Escape, pointer outside, optional focus-out; keeps a stack of open layers so Escape closes the innermost and a click inside a layer above does not count as outside |
 | `trapFocus(get)` | Tab cycling inside a layer and focus return; a `<dialog>` opened with `showModal()` makes the page inert and returns focus natively but does not cycle Tab, so `Sheet` uses the trap for the cycling only. Its `initial` is `auto` by default: the layer's first text control when it has one, else the layer itself, never a button (`design/ux-patterns.md`, "Keyboard and focus") |
 | `smoothSize(get)` | eases a frame from its old size to its new one when the DOM inside its body changes (a MutationObserver, never a ResizeObserver: resizing from inside a resize callback is the loop the browser reports; Web Animations over the panel duration, no fill), so a popover that unfolds a row grows instead of jumping; `Popover` attaches it to its body |

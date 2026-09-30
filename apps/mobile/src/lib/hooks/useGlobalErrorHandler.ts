@@ -1,4 +1,5 @@
 import { logError } from '@eden/shared/api'
+import { isBenignErrorEvent } from '@eden/shared/errors'
 import { crashStore } from '@eden/shared/stores'
 import { markSvelteKitReady } from '../../hooks.client'
 
@@ -6,8 +7,9 @@ import { markSvelteKitReady } from '../../hooks.client'
  * Global handlers for uncaught errors and unhandled rejections: each is logged to diagnostics and to the console, and
  * sets the crash store, which the CrashScreen renders. The console line is written by hand because `preventDefault()`
  * takes the browser's own away, and without it a crash leaves no trace where a developer looks first. Calling it also
- * tells hooks.client.ts that SvelteKit is up. Call once from the layout's onMount; the return value removes the
- * handlers.
+ * tells hooks.client.ts that SvelteKit is up. A browser notice that is not an exception (the ResizeObserver loop) is
+ * left to the browser's own console line and never becomes a crash. Call once from the layout's onMount; the return
+ * value removes the handlers.
  */
 export function useGlobalErrorHandler(): () => void {
 	markSvelteKitReady()
@@ -20,6 +22,7 @@ export function useGlobalErrorHandler(): () => void {
 	}
 
 	function handleError(event: ErrorEvent): void {
+		if (isBenignErrorEvent(event)) return
 		event.preventDefault()
 		record(event.message || 'An unexpected error occurred', event.error?.stack, 'window.onerror', event.error)
 	}
