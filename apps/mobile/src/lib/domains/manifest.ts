@@ -17,6 +17,11 @@ export interface DomainBindings {
 	liveGlyph?: () => IconName | undefined
 	/** Loads the domain's store. */
 	load?: () => Promise<void>
+	/**
+	 * Binds what the domain hears: its schedules and the signals it answers (`@eden/shared/signals`). The shell calls
+	 * it once when it starts, and the answer unbinds.
+	 */
+	subscribe?: () => () => void
 }
 
 export interface DomainManifest extends DomainBindings {

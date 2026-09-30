@@ -72,12 +72,30 @@ export interface ToolDeclaration {
 	reads: readonly ResourceId[]
 }
 
+/**
+ * A notification the domain can send. With a `signal` it is a rule (substrate/signals-notifications.md): the signal
+ * triggers it, `when` is its condition and the channel its action. Its words are the locale keys
+ * `domains.<id>.notifications.<kind>.line` and, for the OS, `.title`.
+ */
 export interface NotificationKindDeclaration {
 	id: string
 	channel: NotificationChannel
 	cadence: string
 	/** Whether it is on before the owner chooses. */
 	default: boolean
+	/** The signal of the domain's own that it answers; `null` for a kind that is declared and answers nothing yet. */
+	signal: string | null
+	/** What the signal's payload must say: each field named is one of the words listed. */
+	when: Readonly<Record<string, readonly string[]>> | null
+}
+
+/** A repeating schedule the shell declares to the scheduler: `daily` at a local `HH:MM`, or `every` so many seconds. */
+export interface ScheduleDeclaration {
+	id: string
+	/** The name the scheduler knows it by: `<domain>.<id>`. */
+	name: string
+	daily: string | null
+	every: number | null
 }
 
 export interface PaletteEntryDeclaration {
@@ -110,6 +128,8 @@ export interface DomainDeclaration {
 	/** The signals it emits. */
 	signals: readonly string[]
 	notificationKinds: readonly NotificationKindDeclaration[]
+	/** The repeating schedules it subscribes to. */
+	schedules: readonly ScheduleDeclaration[]
 	/** The intents it handles, each `<id>.<action>` (D-33). */
 	intents: readonly string[]
 	deviceCapabilities: readonly DeviceCapability[]

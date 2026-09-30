@@ -1,8 +1,8 @@
 <script lang="ts">
 	// The desktop shell (product/substrate/shell.md): the sidebar on the left, the content with its back affordance,
 	// the status bar along the bottom, and the overlays (toast, settings, crash) on top. It mounts the shared pieces
-	// once: settings, i18n, the global error handler, the hourly update check. The splash covers it until they are
-	// ready, then fades out as the shell fades in.
+	// once: settings, i18n, the global error handler, the hourly update check, signals and the scheduler. The splash
+	// covers it until they are ready, then fades out as the shell fades in.
 	import '../app.css'
 	import { onMount, tick } from 'svelte'
 	import { afterNavigate, beforeNavigate, goto } from '$app/navigation'
@@ -27,7 +27,8 @@
 	import SplashScreen from '$lib/components/SplashScreen.svelte'
 	import { shell, shortcutPositions, sidebarGroups, type SidebarItem } from '@eden/shared/manifest'
 	import { rememberPlace, rememberScroll, scrollOf, tabOf } from '@eden/shared/navigation'
-	import { declarations, manifestFor } from '$lib/domains'
+	import { startSignals } from '@eden/shared/signals'
+	import { declarations, manifestFor, manifests } from '$lib/domains'
 	import { grants } from '$lib/shell/grants.svelte'
 	import { weather } from '@eden/shared/weather'
 	import { formatTime } from '@eden/shared/dates'
@@ -160,7 +161,14 @@
 			void grants.load()
 		})()
 		const skyTimer = setInterval(() => void weather.load().catch(() => null), WEATHER_INTERVAL)
+		// Signals and the scheduler (substrate/signals-notifications.md): the domains bind what they hear, their
+		// schedules are declared, and what came due while Eden was closed is taken. The settings are read by now.
+		const stopSignals = startSignals({
+			declarations,
+			bind: manifests.flatMap((manifest) => (manifest.subscribe ? [manifest.subscribe] : [])),
+		})
 		return () => {
+			stopSignals()
 			clearInterval(skyTimer)
 			cleanupErrors()
 			settings.dispose()

@@ -102,6 +102,15 @@
 			},
 			"tabsLabel": "Hearth sections",
 			"saveFailed": "Couldn't save your changes.",
+			"notifications": {
+				"expiringDigest": {
+					"line": "{count, plural, =1 {{first} {when, select, past {is past its date} today {expires today} tomorrow {expires tomorrow} other {expires soon}}} =2 {{first} and {second} {when, select, past {are past their date} today {expire today} tomorrow {expire tomorrow} other {expire soon}}} other {{first} and {more} more {when, select, past {are past their date} today {expire today} tomorrow {expire tomorrow} other {expire soon}}}}"
+				},
+				"shopDayReminder": {
+					"title": "Shop day",
+					"line": "{count, plural, =0 {Shop day today} one {Shop day today, with # item on the list} other {Shop day today, with # items on the list}}"
+				}
+			},
 			"capture": {
 				"action": "Capture a haul",
 				"notYet": "Capture arrives with the Gardener."
@@ -489,7 +498,13 @@
 				"justNow": "Last updated just now",
 				"loading": "Updating…"
 			},
-			"refresh": "Refresh"
+			"refresh": "Refresh",
+			"notifications": {
+				"severeAlert": {
+					"title": "{event}",
+					"line": "{headline}"
+				}
+			}
 		}
 	},
 	"profile": {

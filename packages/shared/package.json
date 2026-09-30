@@ -15,6 +15,7 @@
 		"./grants": "./src/grants/index.ts",
 		"./egress": "./src/egress/index.ts",
 		"./profile": "./src/profile/index.ts",
+		"./refresh": "./src/refresh/index.ts",
 		"./scheduler": "./src/scheduler/index.ts",
 		"./signals": "./src/signals/index.ts",
 		"./registry": "./src/registry/index.ts",

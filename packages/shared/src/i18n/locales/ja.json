@@ -102,6 +102,15 @@
 			},
 			"tabsLabel": "台所のセクション",
 			"saveFailed": "変更を保存できませんでした。",
+			"notifications": {
+				"expiringDigest": {
+					"line": "{first}{count, plural, =1 {} =2 {と{second}} other {ほか{more}件}}{when, select, past {の期限が過ぎています} today {の期限は今日です} tomorrow {の期限は明日です} other {の期限が近づいています}}"
+				},
+				"shopDayReminder": {
+					"title": "買い物の日",
+					"line": "{count, plural, =0 {今日は買い物の日です} other {今日は買い物の日です。リストに#件あります}}"
+				}
+			},
 			"capture": {
 				"action": "買い物を撮る",
 				"notYet": "撮影は庭師とともに届きます。"
@@ -489,7 +498,13 @@
 				"justNow": "たった今更新",
 				"loading": "更新中…"
 			},
-			"refresh": "更新"
+			"refresh": "更新",
+			"notifications": {
+				"severeAlert": {
+					"title": "{event}",
+					"line": "{headline}"
+				}
+			}
 		}
 	},
 	"profile": {

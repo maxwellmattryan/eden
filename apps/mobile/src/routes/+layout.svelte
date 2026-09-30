@@ -2,8 +2,8 @@
 	// The mobile shell (product/substrate/shell.md, Mobile): the page, the bottom tab bar pinned to the viewport
 	// (Garden, Today, the two pinned domains, More), composed from the manifests, and the overlays (toast, the
 	// settings sheet, crash). It mounts the shared
-	// pieces once: settings, i18n, the global error handler. No updater: mobile updates through the stores. The splash
-	// covers it until they are ready, then fades out as the shell fades in.
+	// pieces once: settings, i18n, the global error handler, signals and the scheduler. No updater: mobile updates
+	// through the stores. The splash covers it until they are ready, then fades out as the shell fades in.
 	import '../app.css'
 	import { onMount, tick } from 'svelte'
 	import { afterNavigate, beforeNavigate, goto } from '$app/navigation'
@@ -15,10 +15,11 @@
 	import { shell, tabBar } from '@eden/shared/manifest'
 	import { rememberPlace, rememberScroll, scrollOf, tabOf } from '@eden/shared/navigation'
 	import { settings } from '@eden/shared/settings'
+	import { startSignals } from '@eden/shared/signals'
 	import { weather } from '@eden/shared/weather'
 	import { dismissSplash, splashVisible } from '@eden/shared/stores'
 	import CrashScreen from '$lib/components/CrashScreen.svelte'
-	import { declarations, manifestFor } from '$lib/domains'
+	import { declarations, manifestFor, manifests } from '$lib/domains'
 	import SplashScreen from '$lib/components/SplashScreen.svelte'
 	import { useGlobalErrorHandler } from '$lib/hooks/useGlobalErrorHandler'
 	import SettingsSheet from '$lib/settings/SettingsSheet.svelte'
@@ -83,7 +84,14 @@
 			.then(dismissSplash)
 		void weather.load().catch(() => null)
 		const skyTimer = setInterval(() => void weather.load().catch(() => null), WEATHER_INTERVAL)
+		// Signals and the scheduler (substrate/signals-notifications.md): the domains bind what they hear, their
+		// schedules are declared, and what came due while Eden was closed or in the background is taken.
+		const stopSignals = startSignals({
+			declarations,
+			bind: manifests.flatMap((manifest) => (manifest.subscribe ? [manifest.subscribe] : [])),
+		})
 		return () => {
+			stopSignals()
 			clearInterval(skyTimer)
 			cleanupErrors()
 			settings.dispose()
