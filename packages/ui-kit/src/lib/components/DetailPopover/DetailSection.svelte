@@ -22,29 +22,78 @@
 <script lang="ts">
 	// One section of a DetailPopover: a caption, a definition list of rows on a two-column grid (labels at their widest,
 	// values taking the rest and wrapping anywhere), then whatever the app brings after them (a list, a pre block, a
-	// button). A section with neither rows nor children renders nothing, so a consumer can hand it an empty list.
+	// button). A section with neither rows nor children renders nothing, so a consumer can hand it an empty list. The
+	// caption's row can carry an info glyph whose tooltip says what the section is (`hint`), and a chevron that folds
+	// the body (`collapsible`, closed unless `open`), so a detail keeps its heavier parts a press away.
 	import type { Snippet } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
 	import Icon from '../../icons/Icon.svelte'
+	import { useStrings } from '../../i18n/context.js'
+	import IconButton from '../IconButton/IconButton.svelte'
 
 	type Props = Omit<HTMLAttributes<HTMLDivElement>, 'children'> & {
 		/** The section's caption, in the label style; it names the group for assistive technology. */
 		label?: string
 		/** The label and value pairs. */
 		rows?: DetailRow[]
+		/** A sentence about the section, behind an info glyph beside the caption. */
+		hint?: string
+		/** The body folds behind a chevron in the caption's row. */
+		collapsible?: boolean
+		/** collapsible only: whether the body starts open. */
+		open?: boolean
 		/** Rendered after the rows: lists, pre blocks, the buttons the app brings. */
 		children?: Snippet
 	}
-	let { label, rows = [], children, class: className = '', ...rest }: Props = $props()
+	let {
+		label,
+		rows = [],
+		hint,
+		collapsible = false,
+		open = false,
+		children,
+		class: className = '',
+		...rest
+	}: Props = $props()
 
+	const s = useStrings()
 	const uid = $props.id()
 	const labelId = `${uid}-label`
+	const bodyId = `${uid}-body`
+	// `open` is the starting state only; the chevron owns it from then on
+	// svelte-ignore state_referenced_locally
+	let expanded = $state(open)
+	const shown = $derived(!collapsible || expanded)
 </script>
 
 {#if rows.length || children}
-	<div class={['ed-detail-section', className]} role="group" aria-labelledby={label ? labelId : undefined} {...rest}>
-		{#if label}<p class="ed-detail-label" id={labelId}>{label}</p>{/if}
-		{#if rows.length}
+	<div
+		class={['ed-detail-section', className]}
+		id={collapsible ? bodyId : undefined}
+		role="group"
+		aria-labelledby={label ? labelId : undefined}
+		{...rest}
+	>
+		{#if label || hint || collapsible}
+			<div class="ed-detail-caption">
+				{#if label}<p class="ed-detail-label" id={labelId}>{label}</p>{/if}
+				{#if hint}<IconButton icon="info" size="xs" label={hint} tooltip class="ed-detail-hint" />{/if}
+				{#if collapsible}
+					<IconButton
+						icon={expanded ? 'chevron-up' : 'chevron-down'}
+						size="xs"
+						label={expanded ? s.hide : s.show}
+						tooltip
+						aria-expanded={expanded}
+						aria-controls={bodyId}
+						aria-describedby={label ? labelId : undefined}
+						class="ed-detail-fold"
+						onclick={() => (expanded = !expanded)}
+					/>
+				{/if}
+			</div>
+		{/if}
+		{#if rows.length && shown}
 			<dl class="ed-detail-rows">
 				{#each rows as row, i (i)}
 					<dt class="ed-detail-dt">{row.label}</dt>
@@ -54,7 +103,7 @@
 				{/each}
 			</dl>
 		{/if}
-		{#if children}
+		{#if children && shown}
 			<div class="ed-detail-content">{@render children()}</div>
 		{/if}
 	</div>
@@ -68,6 +117,16 @@
 		min-width: 0;
 		padding: var(--space-3);
 		box-sizing: border-box;
+	}
+	/* the caption's row: the label, then the glyphs, the fold at the end */
+	.ed-detail-caption {
+		display: flex;
+		align-items: center;
+		gap: var(--space-1);
+		min-height: calc(var(--icon-sm) + var(--space-1));
+	}
+	.ed-detail-caption :global(.ed-detail-fold) {
+		margin-left: auto;
 	}
 	.ed-detail-label {
 		margin: 0;
@@ -95,10 +154,10 @@
 		/* the caption sits on the body line's baseline */
 		align-self: baseline;
 	}
+	/* a block of text, not a flex row: the glyph sits inline on the first line, so the value's baseline is the
+	   text's and the caption beside it lines up */
 	.ed-detail-dd {
-		display: flex;
-		align-items: flex-start;
-		gap: var(--space-1);
+		display: block;
 		margin: 0;
 		min-width: 0;
 		font: var(--ed-t-body-sm);
@@ -109,7 +168,6 @@
 		align-self: baseline;
 	}
 	.ed-detail-dd > span {
-		min-width: 0;
 		overflow-wrap: anywhere;
 	}
 	.ed-detail-mono {
@@ -118,9 +176,10 @@
 		font-variation-settings: var(--ed-t-data-sm-opsz);
 		font-variant-numeric: tabular-nums;
 	}
-	/* the glyph sits on the value's first line, in the value's colour */
+	/* the glyph sits on the value's first line, before the text, in the value's colour */
 	.ed-detail-dd :global(.ed-detail-row-glyph) {
-		margin-top: calc((1lh - var(--icon-sm)) / 2);
+		vertical-align: -0.2em;
+		margin-right: var(--space-1);
 	}
 	.ed-detail-positive {
 		color: var(--success);

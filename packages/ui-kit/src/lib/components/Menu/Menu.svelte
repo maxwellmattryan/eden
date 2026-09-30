@@ -9,6 +9,8 @@
 		/** Sentence-case verb. */
 		label: string
 		icon?: IconName
+		/** Marks the current choice: a trailing check and aria-current, beside any leading icon. */
+		checked?: boolean
 		/** Rendered last, after a separator, in the danger colour. */
 		destructive?: boolean
 		/** A hint such as ⌘C, shown in mono; the menu does not bind it. */
@@ -95,11 +97,12 @@
 	}
 
 	$effect(() => {
-		// effect: imperative DOM. The first enabled item takes focus once the panel shows, a microtask after this flush.
+		// effect: imperative DOM. The list takes focus once the panel shows, a microtask after this flush: nothing looks
+		// chosen until the owner presses an arrow, which lands on the first item (ux-patterns.md, "Keyboard and focus").
 		const root = list
 		if (!open || !root) return
 		queueMicrotask(() => {
-			if (open) root.querySelector<HTMLElement>(ROVING.selector)?.focus({ preventScroll: true })
+			if (open) root.focus({ preventScroll: true })
 		})
 	})
 </script>
@@ -114,10 +117,12 @@
 			tabindex="-1"
 			disabled={item.disabled}
 			aria-disabled={item.disabled ? 'true' : undefined}
+			aria-current={item.checked ? 'true' : undefined}
 			onclick={() => pick(item)}
 		>
 			{#if item.icon}<Icon name={item.icon} size={mode === 'sheet' ? 'md' : 'sm'} />{/if}
 			<span class="ed-menu-label">{item.label}</span>
+			{#if item.checked}<Icon name="check" size={mode === 'sheet' ? 'md' : 'sm'} />{/if}
 			{#if item.shortcut}<kbd class="ed-menu-key" data-tertiary>{item.shortcut}</kbd>{/if}
 		</button>
 	{/each}
@@ -132,6 +137,7 @@
 			role="menu"
 			aria-label={name}
 			bind:this={list}
+			tabindex="-1"
 			{@attach roving(() => ROVING)}
 		>
 			{@render rows()}
@@ -139,7 +145,7 @@
 	</Sheet>
 {:else}
 	<Popover bind:open {anchor} {align} role="menu" label={name} {onkeydown}>
-		<div class={['ed-menu', className]} bind:this={list} {@attach roving(() => ROVING)}>
+		<div class={['ed-menu', className]} bind:this={list} tabindex="-1" {@attach roving(() => ROVING)}>
 			{@render rows()}
 		</div>
 	</Popover>
@@ -193,6 +199,10 @@
 		background: var(--surface-2);
 	}
 	/* the ring sits inside the row, so a full-width row on a sheet keeps all of it */
+	/* the list takes focus only on open (tabindex -1), never from Tab, so it draws no ring of its own */
+	.ed-menu:focus-visible {
+		outline: none;
+	}
 	.ed-menu-item:focus-visible {
 		outline: 2px solid transparent;
 		background: var(--surface-2);

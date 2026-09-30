@@ -17,35 +17,65 @@ export interface AnchorOptions {
 
 /**
  * Positions a `position: fixed` element (a top-layer popover, typically) against an anchor: below it by default, above
- * when it does not fit, clamped to the viewport. Sets `data-side="top" | "bottom"` so the unfurl can originate from the
- * anchor. Re-places on resize, scroll, and when the anchor or the element changes size. Re-runs when the options change.
+ * when it does not fit, clamped to the viewport. The side is chosen once per opening and kept, and the room on that
+ * side is set as `--ed-anchor-room` for the element to cap its height with. Sets `data-side="top" | "bottom"` so the
+ * unfurl can originate from the anchor. Re-places on resize, scroll, and when the anchor or the element changes size.
+ * Re-runs when the options change.
  */
 export function anchor(get: () => AnchorOptions): Attachment<HTMLElement> {
 	return (el) => {
 		const options = get()
-		const place = () => {
-			const { anchor: target, side = 'bottom', align = 'start', gap = 6, margin = 8 } = options
+		const { anchor: target, side = 'bottom', align = 'start', gap = 6, margin = 8 } = options
+		// The side is chosen once, when the element is first placed against this anchor, and kept while it stays open:
+		// an element that grows afterwards (a row unfolds) never jumps to the other side of its anchor. It takes the
+		// preferred side when it fits there, the other when it fits there, and otherwise the side with more room. The
+		// room on the chosen side is handed to the element as --ed-anchor-room, so it caps its height and scrolls.
+		let above: boolean | undefined
+		el.style.removeProperty('--ed-anchor-room')
+
+		/** Chooses the side if it is not chosen yet, and sets the room there. Never from a resize callback: it may change the element's size. */
+		const fit = () => {
+			if (!target) return
+			const rect = target.getBoundingClientRect()
+			const roomAbove = rect.top - gap - margin
+			const roomBelow = window.innerHeight - rect.bottom - gap - margin
+			if (above === undefined) {
+				const natural = el.offsetHeight
+				if (!natural) return
+				const fitsBelow = natural <= roomBelow
+				const fitsAbove = natural <= roomAbove
+				above =
+					side === 'top'
+						? fitsAbove || (!fitsBelow && roomAbove >= roomBelow)
+						: !fitsBelow && (fitsAbove || roomAbove > roomBelow)
+			}
+			el.style.setProperty('--ed-anchor-room', `${Math.max(0, Math.floor(above ? roomAbove : roomBelow))}px`)
+		}
+		/** Puts the element against the anchor on its side; changes no size. */
+		const position = () => {
 			if (!target) return
 			const rect = target.getBoundingClientRect()
 			const width = el.offsetWidth
 			const height = el.offsetHeight
-			const viewportWidth = window.innerWidth
-			const viewportHeight = window.innerHeight
-			const fitsBelow = rect.bottom + gap + height <= viewportHeight
-			const fitsAbove = rect.top - gap - height >= 0
-			const above = side === 'top' ? fitsAbove || !fitsBelow : !fitsBelow && fitsAbove
+			const up = above ?? side === 'top'
 			let left = align === 'end' ? rect.right - width : rect.left
-			left = Math.max(margin, Math.min(left, viewportWidth - width - margin))
-			let top = above ? rect.top - gap - height : rect.bottom + gap
-			top = Math.max(margin, Math.min(top, viewportHeight - height - margin))
+			left = Math.max(margin, Math.min(left, window.innerWidth - width - margin))
+			let top = up ? rect.top - gap - height : rect.bottom + gap
+			top = Math.max(margin, Math.min(top, window.innerHeight - height - margin))
 			el.style.top = `${Math.round(top)}px`
 			el.style.left = `${Math.round(left)}px`
-			el.dataset.side = above ? 'top' : 'bottom'
+			el.dataset.side = up ? 'top' : 'bottom'
+		}
+		const place = () => {
+			fit()
+			position()
 		}
 		place()
-		const observer = new ResizeObserver(place)
+		// the element is often shown a moment after this runs (the same flush): the side is chosen once it has a size
+		queueMicrotask(place)
+		const observer = new ResizeObserver(position)
 		observer.observe(el)
-		if (options.anchor instanceof Element) observer.observe(options.anchor)
+		if (target instanceof Element) observer.observe(target)
 		window.addEventListener('resize', place)
 		window.addEventListener('scroll', place, true)
 		return () => {

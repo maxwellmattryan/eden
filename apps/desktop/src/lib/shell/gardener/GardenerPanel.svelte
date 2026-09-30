@@ -1,12 +1,13 @@
 <script lang="ts">
 	// The Gardener's panel (product/substrate/ai.md, "Surfaces"; docs/design/ux-patterns.md, "Gardener surfaces"): a
-	// docked column on the right with the thread list behind a toggle, the conversation, the literal "can see" row
-	// above the composer, and the states in which it cannot answer: no key on this device, the browser, the budget.
+	// docked column on the right with the thread list behind a toggle, the conversation, the composer with the literal
+	// "can see" chip at its foot, and the states in which it cannot answer: no key on this device, the browser, the
+	// budget.
 	// Opened from the sidebar, ⌘G, the status bar's chip or a domain page; a domain opens it on its own threads.
 	import { onMount, tick } from 'svelte'
 	import { goto } from '$app/navigation'
 	import { resolve } from '$app/paths'
-	import { Button, CanSee, ConfirmSheet, Field, IconButton, InlineError, Notice, Thread } from '@eden/ui-kit'
+	import { Button, CanSee, Composer, ConfirmSheet, Field, IconButton, InlineError, Notice, Thread } from '@eden/ui-kit'
 	import { isTauri } from '@eden/shared/api'
 	import type { MessageBlock } from '@eden/shared/gardener'
 	import { t } from '@eden/shared/i18n'
@@ -14,7 +15,6 @@
 	import { settingsUi } from '$lib/settings/settings-ui.svelte'
 	import { grants } from '../grants.svelte'
 	import { undoToast } from '../undo'
-	import Composer from './Composer.svelte'
 	import { labelRows, registryLabel, type RowLabel } from './labels'
 	import { GRANT_SUBJECT } from './types'
 	import MessageBlocks from './MessageBlocks.svelte'
@@ -41,7 +41,22 @@
 	const canSee = $derived(runtime.canSee as Extract<MessageBlock, { kind: 'can-see' }> | undefined)
 	// the chip names each id as the owner knows it (a fact's name), the id itself beside it
 	const chipItems = $derived((canSee?.items ?? []).map((item) => ({ ...item, label: registryLabel(item.id) })))
-	const chipLocked = $derived((canSee?.locked ?? []).map((id) => ({ id, label: registryLabel(id) })))
+	// a locked id the owner has since shared leaves the list: the block is that request's snapshot, the grant is live
+	const chipLocked = $derived(
+		(canSee?.locked ?? [])
+			.filter(
+				(id) =>
+					!grants.grants.some(
+						(grant) =>
+							grant.subject === GRANT_SUBJECT &&
+							grant.resource === id &&
+							grant.access === 'read' &&
+							grant.lifetime === 'standing' &&
+							!grant.deletedAt
+					)
+			)
+			.map((id) => ({ id, label: registryLabel(id) }))
+	)
 	const chipRows = $derived(canSee?.rows ?? {})
 	// a new block empties what the last one's chips showed
 	$effect(() => {
@@ -78,6 +93,7 @@
 	$effect(() => {
 		if (!gardenerUi.open) return
 		void gardenerSetup.load()
+		void grants.load()
 		void threads.load().then(async () => {
 			// the latest conversation of the surface opens, unless the panel was opened to run something
 			if (gardenerUi.pending) return runtime.runPending()
@@ -131,6 +147,42 @@
 	)
 </script>
 
+<!-- the development clamp, once, at the composer's foot: an info glyph whose tooltip says it -->
+{#snippet clampNote()}
+	<IconButton
+		icon="info"
+		size="xs"
+		label={$t('gardener.devClamp', { values: { model: gardenerSetup.map.light.model } })}
+		tooltip
+	/>
+{/snippet}
+
+{#snippet canSeeChip()}
+	{#if canSee}
+		<CanSee
+			items={chipItems}
+			locked={chipLocked}
+			trimmed={canSee.trimmed}
+			onaudit={openAudit}
+			onexpand={(item) => void expand(item)}
+			onunlock={(id) => (unlocking = id)}
+		>
+			{#snippet expanded(item)}
+				{@const rows = labels[item.id]}
+				{#if !(chipRows[item.id] ?? []).length}
+					<p class="rows-none">{$t('gardener.noRows')}</p>
+				{:else if !rows}
+					<p class="rows-none">…</p>
+				{:else}
+					<ul class="rows">
+						{#each rows as row (row.id)}<li>{row.label}</li>{/each}
+					</ul>
+				{/if}
+			{/snippet}
+		</CanSee>
+	{/if}
+{/snippet}
+
 <aside class="panel" aria-labelledby="{uid}-title">
 	<header class="panel-head">
 		<IconButton
@@ -173,9 +225,6 @@
 					/>
 				</form>
 			{/if}
-			{#if gardenerSetup.clamped && inApp}
-				<Notice tone="info" title={$t('gardener.devClamp', { values: { model: gardenerSetup.map.light.model } })} />
-			{/if}
 			{#if blocked}
 				<Notice
 					tone="warning"
@@ -196,33 +245,13 @@
 			</Thread>
 		</div>
 		<div class="panel-foot">
-			{#if canSee}
-				<CanSee
-					items={chipItems}
-					locked={chipLocked}
-					trimmed={canSee.trimmed}
-					onaudit={openAudit}
-					onexpand={(item) => void expand(item)}
-					onunlock={(id) => (unlocking = id)}
-				>
-					{#snippet expanded(item)}
-						{@const rows = labels[item.id]}
-						{#if !(chipRows[item.id] ?? []).length}
-							<p class="rows-none">{$t('gardener.noRows')}</p>
-						{:else if !rows}
-							<p class="rows-none">…</p>
-						{:else}
-							<ul class="rows">
-								{#each rows as row (row.id)}<li>{row.label}</li>{/each}
-							</ul>
-						{/if}
-					{/snippet}
-				</CanSee>
-			{/if}
 			<Composer
 				{placeholder}
+				label={placeholder}
 				disabled={!canAsk || blocked}
-				streaming={runtime.streaming}
+				busy={runtime.streaming}
+				tools={canSee ? canSeeChip : undefined}
+				meta={gardenerSetup.clamped && inApp ? clampNote : undefined}
 				onsend={send}
 				onstop={() => void runtime.cancel()}
 			/>
@@ -304,11 +333,10 @@
 	.panel-foot > :global(*) {
 		min-width: 0;
 	}
+	/* the composer floats at the foot in its own box, so no rule parts it from the log */
 	.panel-foot {
 		display: grid;
-		gap: var(--space-2);
-		padding: var(--space-3);
-		border-top: 1px solid var(--stroke-subtle);
+		padding: var(--space-2) var(--space-3) var(--space-3);
 	}
 	.key {
 		display: grid;
@@ -319,8 +347,6 @@
 		padding-left: var(--space-4);
 		font: var(--ed-t-body-sm);
 		color: var(--text-primary);
-		max-height: 160px;
-		overflow: auto;
 		overflow-wrap: anywhere;
 	}
 	.rows-none {

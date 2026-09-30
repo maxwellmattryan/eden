@@ -87,14 +87,14 @@
 	}}
 />
 
-<!-- The names the owner knows the ids by, with the id in mono beside each -->
+<!-- The names the owner knows the ids by, in place of the ids -->
 <Story
 	name="With labels"
 	args={{ items: labelled(canSee) }}
 	play={async ({ canvasElement }) => {
 		const { panel } = await openPanel(canvasElement)
-		const row = panel.getByRole('button', { name: new RegExp(`^${names[first.id]} ${first.id} ${first.count}$`) })
-		await expect(row).toBeVisible()
+		await expect(panel.getByRole('button', { name: new RegExp(`^${names[first.id]} ${first.count}$`) })).toBeVisible()
+		await expect(panel.queryByText(first.id)).toBeNull()
 	}}
 />
 
@@ -110,7 +110,7 @@
 		).toBeVisible()
 		const group = panel.getByRole('group', { name: s.notSharedLabel })
 		await expect(group).toBeVisible()
-		await expect(within(group).getByText(s.notSharedExplain)).toBeVisible()
+		await expect(within(group).getByRole('button', { name: s.notSharedExplain })).toBeVisible()
 		await expect(within(group).getByText(names[id]!)).toBeVisible()
 		await expect(panel.queryByRole('button', { name: new RegExp(`^${id}`) })).toBeNull()
 		await userEvent.click(within(group).getByRole('button', { name: s.allow }))
@@ -129,31 +129,28 @@
 	}}
 />
 
-<!-- Ids with nothing to read stay behind a quiet toggle, then unfold as grey chips -->
+<!-- Ids with nothing to read are not listed, and the caption counts only the types that are -->
 <Story
 	name="Nothing to read"
 	args={{ items: withEmpty }}
 	play={async ({ canvasElement }) => {
 		const { panel } = await openPanel(canvasElement)
-		const toggle = panel.getByRole('button', { name: s.nothingToRead(2) })
-		await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+		await expect(panel.getByText(s.canSeeSummary(total(withEmpty), 2))).toBeVisible()
 		await expect(panel.queryByText('local-event')).toBeNull()
-		await userEvent.click(toggle)
-		await expect(toggle).toHaveAttribute('aria-expanded', 'true')
-		await expect(panel.getByText('local-event')).toBeVisible()
-		await expect(panel.getByText('task')).toBeVisible()
-		await expect(panel.queryByRole('button', { name: /^local-event/ })).toBeNull()
+		await expect(panel.queryByText('task')).toBeNull()
 	}}
 />
 
-<!-- The consumer's snippet fills the region with the rows themselves: the row is literal, never a summary -->
+<!-- The consumer's snippet fills the region with the rows themselves: the row is literal, never a summary; the panel
+     eases to its new height rather than jumping -->
 <Story
 	name="Expanded"
 	play={async ({ canvasElement }) => {
-		const { panel } = await openPanel(canvasElement)
+		const { panel, dialog } = await openPanel(canvasElement)
 		await userEvent.click(panel.getByRole('button', { name: new RegExp(`^${first.id} ${first.count}$`) }))
 		const region = panel.getByRole('region', { name: new RegExp(`^${first.id} ${first.count}$`) })
 		await expect(region.querySelectorAll('li')).toHaveLength(rows.length)
+		await waitFor(() => expect(dialog.getAnimations().length).toBeGreaterThan(0), { timeout: 1000 })
 	}}
 >
 	{#snippet template(args)}

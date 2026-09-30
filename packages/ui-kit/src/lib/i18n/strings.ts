@@ -57,17 +57,15 @@ export interface UiStrings {
 		canSeeTitle: string
 		/** The panel's first section: the ids with rows to read. */
 		inThisRequest: string
-		/** The toggle over the ids with a count of 0. */
-		nothingToRead: (n: number) => string
 		/** The spoken sentence beside a locked row when the app cannot ask for the grant. */
 		locked: (id: string) => string
-		/** The panel's caption: how many rows, across how many registry ids. */
-		canSeeSummary: (rows: number, types: number) => string
+		/** The panel's caption: how many facts, across how many types. */
+		canSeeSummary: (facts: number, types: number) => string
 		/** The caption's tail when ids are kept out. */
 		notShared: (count: number) => string
 		/** The label of the locked section. */
 		notSharedLabel: string
-		/** The sentence under the locked section's label. */
+		/** The tooltip on the locked section's info glyph. */
 		notSharedExplain: string
 		/** The button at a locked row's end that asks for the grant. */
 		allow: string
@@ -81,8 +79,8 @@ export interface UiStrings {
 		tool: string
 		/** The conversation log's accessible name. */
 		thread: string
-		/** The one-line expansion of a can-see chip when there are no rows to show. */
-		inContext: (count: number | string, id: string) => string
+		/** The one-line expansion of a read when there are no rows to show: the type by name, and how many. */
+		inContext: (count: number | string, name: string) => string
 		/** The caret beside the model chip that opens the grade menu. */
 		switchGrade: string
 		grade: string
@@ -266,12 +264,12 @@ export const defaultStrings: UiStrings = {
 		canSee: 'Can see',
 		canSeeTitle: 'What the Gardener can see',
 		inThisRequest: 'In this request',
-		nothingToRead: (n) => `${n} types with nothing to read`,
 		locked: (id) => `${id}, not shared: needs your grant`,
-		canSeeSummary: (rows, types) => `${rows} rows across ${types} types`,
+		canSeeSummary: (facts, types) => `${facts} facts across ${types} types`,
 		notShared: (count) => `${count} not shared`,
 		notSharedLabel: 'Not shared',
-		notSharedExplain: 'A tool asked for these, but T2 stays out until you allow it.',
+		notSharedExplain:
+			'A tool declared these, but T2 facts stay out of every request until you share them. Allow gives the Gardener a standing read you can revoke at any time.',
 		allow: 'Allow',
 		openAuditLog: 'Open the audit log',
 		aboutTool: 'About this tool',
@@ -281,7 +279,7 @@ export const defaultStrings: UiStrings = {
 		budget: (used, cap) => `${used} of ${cap}`,
 		tool: 'Tool',
 		thread: 'Conversation with the Gardener',
-		inContext: (count, id) => `${count} ${id} rows are in this request.`,
+		inContext: (count, name) => `${name}: ${count} in this request.`,
 		switchGrade: 'Switch the Gardener’s grade',
 		grade: 'Grade',
 		unavailableNoProvider: 'No provider is configured.',

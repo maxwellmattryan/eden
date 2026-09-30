@@ -41,6 +41,18 @@
 
 <Story name="Fab" args={{ icon: 'plus', label: 'Quick Log', fab: true }} parameters={{ platforms: ['mobile'] }} />
 
+<!-- A filled circle at its size: the composer's send button on the Gardener's green, or an accent fill -->
+<Story name="Filled">
+	{#snippet template(args)}
+		<div class="row">
+			<IconButton {...args} icon="arrow-up" label="Send" fill="ai" />
+			<IconButton {...args} icon="square" label="Stop" fill="ai" size="sm" />
+			<IconButton {...args} icon="plus" label="Add" fill="brand" />
+			<IconButton {...args} icon="arrow-up" label="Send" fill="ai" disabled />
+		</div>
+	{/snippet}
+</Story>
+
 <!-- The pressed look while its popover is open; aria-expanded passes through -->
 <Story name="Active" args={{ icon: 'sparkles', label: 'Gardener', active: true, 'aria-expanded': true }} />
 

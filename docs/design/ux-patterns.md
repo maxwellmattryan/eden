@@ -4,7 +4,7 @@ status: draft
 summary: The reusable interaction patterns every screen is built from: navigation, page anatomy, lists and cards, forms and quick-add, the Quick Log sheet, the Capture verification sheet, states, confirmation and risk patterns, Gardener surfaces, notifications, widgets, context menus, mobile adaptations, keyboard and focus.
 read-this-if: You are designing a screen or a component and want to reuse what exists.
 depends-on: [visual-language, product/substrate/shell, product/substrate/grants, product/substrate/ai]
-updated: 2026-09-29
+updated: 2026-09-30
 ---
 
 ## Navigation
@@ -49,7 +49,7 @@ Access levels have badges: `read` shows nothing, `write-draft` shows a pencil, `
 
 ## Gardener surfaces
 
-The panel: a thread list on the left when wide, the conversation, a "can see" chip above the composer with the row count, opening a popover that lists what the request read by name with its rows, what had nothing to read, and what was not shared with the grant one tap away (D-78), a model chip with the budget meter, and a cost preview when the request is unusual (an image, the Council). Replies stream. Tool calls render as compact cards with their access badge; `write` and `act-external` cards carry their confirm inline. Proposal cards for facts carry accept and dismiss. The Council view shows one column per model with the chair synthesis, when enabled, above them. Gardener surfaces use the Gardener's colours so they are never mistaken for the owner's own data: green when it speaks (replies, proposal cards, the "can see" chip), honey when it acts (tool cards, the model chip) (D-40).
+The panel: a thread list on the left when wide, the conversation, and the composer: one bordered box that holds the message, with the "can see" chip at its foot showing the row count and the round send button at the foot's end, Stop while the reply streams; the field has no chrome of its own, the box's stroke is the ring. The chip opens a popover that lists what the request read by name with its rows (an id with nothing to read is not listed) and what was not shared with the grant one tap away (D-78); the audit log opens an entry to the same list. A model chip with the budget meter sits in the status bar, and a cost preview appears when the request is unusual (an image, the Council). Replies stream. Tool calls render as compact cards with their access badge; `write` and `act-external` cards carry their confirm inline. Proposal cards for facts carry accept and dismiss. The Council view shows one column per model with the chair synthesis, when enabled, above them. Gardener surfaces use the Gardener's colours so they are never mistaken for the owner's own data: green when it speaks (replies, proposal cards, the "can see" chip), honey when it acts (tool cards, the model chip) (D-40).
 
 ## Notifications
 
@@ -70,3 +70,5 @@ Bottom tabs (the kit's `BottomTabBar`), sheets for anything modal (`Sheet`), a f
 ## Keyboard and focus
 
 Every action reachable by keyboard; ⌘K is the escape hatch. Focus rings are always visible when navigating by keyboard. Lists support arrow keys, Enter to open, Space to select, and type-ahead. Sheets are the kit's `Sheet`, a `<dialog>`, which traps focus and returns it on close.
+
+Nothing steals focus. A layer that opens (a sheet, a confirm, a popover) moves focus into itself, as it must, but onto the layer, never onto a button: a confirm never opens with Cancel pressed-looking or ringed. The one exception is a layer whose purpose is typing: a form or a field focuses its first text control, so the owner can type at once. A menu focuses its list, not its first item; the first arrow key lands on the item. The kit's `trapFocus` does this by default (`initial: 'auto'`); a component asks for `first` only when its purpose is a choice made by keyboard.

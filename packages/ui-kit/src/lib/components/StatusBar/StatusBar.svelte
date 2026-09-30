@@ -50,6 +50,8 @@
 		id: string
 		/** The grade's name: "Standard". */
 		label: string
+		/** Its glyph in the menu. */
+		icon?: IconName
 	}
 
 	/** One notification behind the bell, shown as an InboxCard. */
@@ -181,13 +183,14 @@
 	function openGardener() {
 		gardener?.onopen?.()
 	}
-	// The grade menu: one item per grade, the current one carrying the check; picking one reports its id.
+	// The grade menu: one item per grade with its glyph, the current one checked; picking one reports its id.
 	const grades = $derived(gardener && !gardener.noKey ? (gardener.grades ?? []) : [])
 	const gradeItems = $derived<MenuItem[]>(
 		grades.map((grade) => ({
 			id: grade.id,
 			label: grade.label,
-			icon: grade.id === gardener?.grade ? 'check' : undefined,
+			icon: grade.icon,
+			checked: grade.id === gardener?.grade,
 		}))
 	)
 	function pickGrade(item: MenuItem) {

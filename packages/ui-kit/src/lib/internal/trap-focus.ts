@@ -1,11 +1,15 @@
 import type { Attachment } from 'svelte/attachments'
-import { focusables } from './focusable.js'
+import { focusables, textControls } from './focusable.js'
 
 export interface TrapOptions {
 	/** When false the attachment does nothing. */
 	active?: boolean
-	/** What to focus on open: the first focusable (default; an element with `autofocus` wins), the container, or an element of your choosing. */
-	initial?: 'first' | 'container' | (() => HTMLElement | null | undefined)
+	/**
+	 * What to focus on open: `auto` (default) lands on the first text control when the layer has one (an element with
+	 * `autofocus` wins) and otherwise on the container, so nothing looks pressed or ringed that the owner did not
+	 * reach for; `first` is the first focusable of any kind; `container`; or an element of your choosing.
+	 */
+	initial?: 'auto' | 'first' | 'container' | (() => HTMLElement | null | undefined)
 	/** Return focus to whatever had it before, on cleanup. Default true. */
 	returnFocus?: boolean
 }
@@ -22,12 +26,15 @@ export function trapFocus(get: () => TrapOptions = () => ({})): Attachment<HTMLE
 		if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1')
 
 		queueMicrotask(() => {
+			const initial = options.initial ?? 'auto'
 			const target =
-				typeof options.initial === 'function'
-					? options.initial()
-					: options.initial === 'container'
+				typeof initial === 'function'
+					? initial()
+					: initial === 'container'
 						? el
-						: (el.querySelector<HTMLElement>('[autofocus]') ?? focusables(el)[0] ?? el)
+						: initial === 'first'
+							? (el.querySelector<HTMLElement>('[autofocus]') ?? focusables(el)[0] ?? el)
+							: (el.querySelector<HTMLElement>('[autofocus]') ?? textControls(el)[0] ?? el)
 			target?.focus({ preventScroll: true })
 		})
 

@@ -14,6 +14,8 @@
 		icon?: IconName
 		tone?: 'positive' | 'warning' | 'danger' | 'neutral'
 		mono?: boolean
+		/** The code style, for an identifier: a model id, a URI. */
+		code?: boolean
 	}
 
 	/** The cell as an object, so the template reads one shape. */
@@ -74,7 +76,12 @@
 					{@const cell = cellOf(raw)}
 					<td
 						class={[
-							{ 'ed-table-num': columns[c]?.numeric, 'ed-table-mono': cell.mono, 'ed-table-muted': columns[c]?.muted },
+							{
+								'ed-table-num': columns[c]?.numeric,
+								'ed-table-mono': cell.mono,
+								'ed-table-code': cell.code,
+								'ed-table-muted': columns[c]?.muted,
+							},
 							cell.tone && `ed-table-${cell.tone}`,
 						]}
 					>
@@ -135,6 +142,11 @@
 		font: var(--ed-t-data);
 		letter-spacing: var(--ed-t-data-tracking);
 		font-variant-numeric: tabular-nums;
+	}
+	.ed-table td.ed-table-code {
+		font: var(--ed-t-code);
+		letter-spacing: var(--ed-t-code-tracking);
+		font-variation-settings: var(--ed-t-code-opsz);
 	}
 	.ed-table .ed-table-muted {
 		color: var(--text-secondary);

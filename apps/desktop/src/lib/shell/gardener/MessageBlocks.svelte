@@ -17,7 +17,6 @@
 	import { formatValue } from '@eden/shared/profile'
 	import { profile } from '../profile/store.svelte'
 	import { undoToast } from '../undo'
-	import { manifestFor } from '$lib/domains'
 	import DraftCard from './DraftCard.svelte'
 	import { toolByWireName } from './handlers'
 	import { runtime } from './runtime.svelte'
@@ -52,12 +51,6 @@
 	let info = $state<{ anchor: HTMLElement; block: ToolBlock } | undefined>()
 	let infoOpen = $state(false)
 	const infoTool = $derived(info ? toolByWireName(info.block.call.name) : undefined)
-	const infoDomain = $derived.by(() => {
-		const domain = info?.block.call.domain
-		if (!domain || domain === 'substrate') return $t('gardener.tool.substrate')
-		const manifest = manifestFor(domain)
-		return manifest ? $t(manifest.name) : domain
-	})
 	const declaredRows = $derived<DetailRow[]>(
 		infoTool
 			? [
@@ -134,7 +127,6 @@
 		tone="honey"
 		icon="shovel"
 		title={info.block.call.tool}
-		subtitle={infoDomain}
 		width="md"
 		onclose={() => (info = undefined)}
 	>
@@ -142,11 +134,11 @@
 			<DetailSection label={$t('gardener.tool.about')}>
 				<p class="tool-text">{infoTool.description}</p>
 			</DetailSection>
-			<DetailSection label={$t('gardener.tool.declared')} rows={declaredRows}>
+			<DetailSection label={$t('gardener.tool.declared')} rows={declaredRows} collapsible>
 				<div class="tool-badge"><Badge kind={info.block.call.access} /></div>
 			</DetailSection>
 		{/if}
-		<DetailSection label={$t('gardener.tool.thisCall')}>
+		<DetailSection label={$t('gardener.tool.thisCall')} collapsible>
 			<dl class="tool-call">
 				<dt>{$t('gardener.tool.input')}</dt>
 				<dd><pre>{json(info.block.call.input)}</pre></dd>

@@ -18,6 +18,7 @@
 	import { dismiss } from '../../internal/dismiss.js'
 	import { FOCUSABLE, focusables } from '../../internal/focusable.js'
 	import { hasTopLayer, portal } from '../../internal/portal.js'
+	import { smoothSize } from '../../internal/smooth-size.js'
 	import { trapFocus } from '../../internal/trap-focus.js'
 
 	export type PopoverCloseReason = 'escape' | 'outside' | 'api'
@@ -116,11 +117,13 @@
 		onDismiss: (why) => requestClose(why === 'focusout' ? 'outside' : why),
 		ignore: () => [anchor],
 	}))}
-	{@attach trapFocus(() => ({ active: open && role === 'dialog', initial: 'first' }))}
+	{@attach trapFocus(() => ({ active: open && role === 'dialog', initial: 'auto' }))}
 	{@attach !topLayer && portal()}
 	{...rest}
 >
-	{@render children()}
+	<!-- the body scrolls inside the frame, so the grain the frame carries (base.css) covers whatever is showing; when
+	     the body changes size the frame eases to it -->
+	<div class="ed-popover-body" {@attach smoothSize(() => ({ active: open }))}>{@render children()}</div>
 </div>
 
 <style>
@@ -132,8 +135,11 @@
 		padding: 0;
 		box-sizing: border-box;
 		max-width: calc(100dvw - 2 * var(--space-2));
-		max-height: calc(100dvh - 2 * var(--space-2));
-		overflow: auto;
+		/* no taller than the viewport, nor than the room on the side of the anchor it opened on (anchor sets it) */
+		max-height: min(calc(100dvh - 2 * var(--space-2)), var(--ed-anchor-room, 100dvh));
+		/* never a display of its own: the UA hides a closed popover with display: none, and a rule here would override
+		   it and leave the closed panel, invisible, over the page */
+		overflow: hidden;
 		border: 1px solid var(--ed-card-border);
 		border-radius: var(--ed-radius-card);
 		background: var(--surface-1);
@@ -148,9 +154,15 @@
 			overlay var(--ed-duration-panel) allow-discrete,
 			display var(--ed-duration-panel) allow-discrete;
 	}
+	/* the body scrolls inside the frame, under the frame's own max height less its border */
+	.ed-popover-body {
+		min-width: 0;
+		max-height: calc(min(100dvh - 2 * var(--space-2), var(--ed-anchor-room, 100dvh)) - 2px);
+		overflow: auto;
+	}
+	/* the frame takes focus only from the trap (tabindex -1), never from Tab, so it draws no ring of its own */
 	.ed-popover:focus-visible {
-		outline: 2px solid transparent;
-		box-shadow: var(--shadow-sheet), var(--focus-ring);
+		outline: none;
 	}
 	/* below the popover API there is no top layer, so the portalled panel needs a stacking order of its own */
 	.ed-popover:not([popover]) {

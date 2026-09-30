@@ -561,7 +561,6 @@
 			"dismissed": "見送りました"
 		},
 		"owners": {
-			"substrate": "Eden",
 			"health": "泉"
 		},
 		"provenance": {
@@ -1077,15 +1076,15 @@
 			"confirmed": "{0}しました",
 			"useLocalModel": "ローカルモデルを使う",
 			"aboutTool": "このツールについて",
-			"canSeeSummary": "{1}種類、{0}行",
+			"canSeeSummary": "{1}種類、{0}件",
+			"inContext": "{1}: このリクエストに{0}件",
 			"notShared": "{0}件は未共有",
 			"notSharedLabel": "未共有",
 			"notSharedChip": "{0}: 庭師と未共有です。許可が必要です。共有する。",
 			"locked": "{0}、未共有: 許可が必要です",
 			"canSeeTitle": "庭師に見えているもの",
 			"inThisRequest": "このリクエストで",
-			"nothingToRead": "読むものがない{0}種類",
-			"notSharedExplain": "ツールが求めましたが、T2はあなたが許可するまで含まれません。",
+			"notSharedExplain": "ツールが求めましたが、T2の項目はあなたが共有するまでどのリクエストにも含まれません。「許可」で庭師に常時の読み取りを与え、いつでも取り消せます。",
 			"allow": "許可"
 		},
 		"statusBar": {
@@ -1146,7 +1145,7 @@
 		"openBudgets": "予算を開く",
 		"saveFailed": "会話を保存できませんでした。",
 		"lockedThread": "この会話はT2のデータを読んだため、今後の文脈には含まれません。",
-		"noRows": "このリクエストに行はありません。",
+		"noRows": "この種類の項目はこのリクエストにありません。",
 		"trimmed": "収めるために省いたもの: {ids}",
 		"cutShort": "トークン上限で途中までです。",
 		"ranTool": "{tool} を単独のリクエストとして実行しました。",
@@ -1239,6 +1238,11 @@
 		"filteredByFact": "この事実を読んだリクエストを表示しています。",
 		"open": "項目を開く",
 		"detailLabel": "項目",
+		"surfaces": {
+			"chat": "会話",
+			"domainChat": "{domain}についての会話",
+			"delegated": "ツールの実行"
+		},
 		"detail": {
 			"model": "モデル",
 			"tokens": "トークン",
@@ -1252,7 +1256,9 @@
 			"parentOpen": "呼び出し元のリクエストを開く",
 			"provider": "プロバイダー",
 			"grade": "グレード",
-			"usage": "使用量"
+			"usage": "使用量",
+			"request": "リクエスト",
+			"cached": "キャッシュ"
 		},
 		"openThread": "会話を開く",
 		"retention": "項目はこの端末に90日間残ります。書き出しや同期はされません。"

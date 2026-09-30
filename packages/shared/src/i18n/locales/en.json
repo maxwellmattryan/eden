@@ -561,7 +561,6 @@
 			"dismissed": "Dismissed"
 		},
 		"owners": {
-			"substrate": "Eden",
 			"health": "Wellspring"
 		},
 		"provenance": {
@@ -1022,7 +1021,7 @@
 		"openBudgets": "Open budgets",
 		"saveFailed": "Couldn't save the conversation.",
 		"lockedThread": "This conversation read T2 data and stays out of future context.",
-		"noRows": "No rows in this request.",
+		"noRows": "No facts of this type in this request.",
 		"trimmed": "Trimmed to fit: {ids}",
 		"cutShort": "Cut short by the token cap.",
 		"ranTool": "Ran {tool} as its own request.",
@@ -1115,6 +1114,11 @@
 		"filteredByFact": "Showing the requests that read this fact.",
 		"open": "Open an entry",
 		"detailLabel": "Entry",
+		"surfaces": {
+			"chat": "Conversation",
+			"domainChat": "Conversation about {domain}",
+			"delegated": "Tool run"
+		},
 		"detail": {
 			"model": "Model",
 			"tokens": "Tokens",
@@ -1128,7 +1132,9 @@
 			"parentOpen": "Open the calling request",
 			"provider": "Provider",
 			"grade": "Grade",
-			"usage": "Usage"
+			"usage": "Usage",
+			"request": "Request",
+			"cached": "Cached"
 		},
 		"openThread": "Open the conversation",
 		"retention": "Entries stay ninety days on this device. They are never exported or synced."

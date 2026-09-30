@@ -1,7 +1,8 @@
 <script lang="ts">
 	// A bare icon control with a required accessible name. `count` adds the bell's badge, a circle on the icon's
 	// top-right corner that widens into a pill only when the number needs it, and folds the number into the name.
-	// `fab` is the floating + on mobile: --fab wide, round, on the accent, so it hovers by the ink wash like any fill and
+	// `fill` makes it a filled circle at its size, on the accent or on the Gardener's green: the composer's send button.
+	// `fab` is the floating + on mobile: a brand fill --fab wide. A fill hovers by the ink wash like any fill and
 	// presses like one under the raised relief. Hover and pressed grounds are circles, never rounded boxes. `tooltip`
 	// shows the label (or another string) on hover and keyboard focus, for a glyph that may not explain itself; with no
 	// `onclick` of its own (an info glyph) a click or tap toggles it too, so the pointer cursor never promises nothing.
@@ -18,7 +19,9 @@
 		label: string
 		/** The bell's unread count: a badge on the icon's corner, read as part of the name. */
 		count?: number
-		/** The floating + on mobile. */
+		/** A filled circle at its size: brand is the accent, ai the Gardener's green (D-40). */
+		fill?: 'brand' | 'ai'
+		/** The floating + on mobile: a brand fill, --fab wide. */
 		fab?: boolean
 		/** md is the platform control (32 desktop, 44 mobile); sm is the 28 px variant for rows and the status bar; xs is a hint beside a label, no taller than its line. */
 		size?: 'xs' | 'sm' | 'md'
@@ -38,6 +41,7 @@
 		icon,
 		label,
 		count = 0,
+		fill,
 		fab = false,
 		size = 'md',
 		active = false,
@@ -50,10 +54,17 @@
 
 	const s = useStrings()
 	const tip = $derived(tooltip === true ? label : typeof tooltip === 'string' ? tooltip : '')
+	const filled = $derived(fab ? 'brand' : fill)
 </script>
 
 <button
-	class={['ed-icon-btn', `ed-icon-btn-${size}`, { 'ed-icon-btn-fab': fab, 'ed-icon-btn-active': active }, className]}
+	class={[
+		'ed-icon-btn',
+		`ed-icon-btn-${size}`,
+		filled && `ed-icon-btn-fill ed-icon-btn-fill-${filled}`,
+		{ 'ed-icon-btn-fab': fab, 'ed-icon-btn-active': active },
+		className,
+	]}
 	{type}
 	aria-label={count ? s.iconButton.withCount(label, count) : label}
 	aria-pressed={pressed}
@@ -127,16 +138,32 @@
 		cursor: default;
 	}
 
-	/* The floating +: a fill, so it hovers by the ink wash */
+	/* A fill: the accent or the Gardener's green under the glyph, hovered and pressed by the ink wash (never a step onto
+	   a surface), pressed under the raised relief like a filled button; the fab is the brand fill at --fab */
+	.ed-icon-btn-fill {
+		background-image: linear-gradient(to bottom, rgba(255, 255, 255, var(--ed-fill-sheen)), rgba(255, 255, 255, 0));
+		box-shadow:
+			inset 0 1px 0 var(--ed-fill-highlight),
+			var(--ed-fill-shadow);
+	}
+	.ed-icon-btn-fill-brand,
+	.ed-icon-btn-fill-brand:not(:disabled):hover,
+	.ed-icon-btn-fill-brand:not(:disabled):active {
+		background: var(--brand-primary);
+		color: var(--on-brand);
+	}
+	.ed-icon-btn-fill-ai,
+	.ed-icon-btn-fill-ai:not(:disabled):hover,
+	.ed-icon-btn-fill-ai:not(:disabled):active {
+		background: var(--ai);
+		color: var(--on-ai);
+	}
 	.ed-icon-btn-fab {
 		width: var(--fab);
 		height: var(--fab);
-		border-radius: var(--radius-full);
-		background: var(--brand-primary);
-		color: var(--on-brand);
 		box-shadow: var(--shadow-sheet);
 	}
-	.ed-icon-btn-fab::after {
+	.ed-icon-btn-fill::after {
 		content: '';
 		position: absolute;
 		inset: 0;
@@ -147,22 +174,20 @@
 		pointer-events: none;
 		z-index: -1;
 	}
-	.ed-icon-btn-fab:not(:disabled):hover,
-	.ed-icon-btn-fab:not(:disabled):active {
-		background: var(--brand-primary);
-		color: var(--on-brand);
-	}
-	.ed-icon-btn-fab:not(:disabled):hover::after {
+	.ed-icon-btn-fill:not(:disabled):hover::after {
 		opacity: 0.08;
 	}
-	.ed-icon-btn-fab:not(:disabled):active::after {
+	.ed-icon-btn-fill:not(:disabled):active::after {
 		opacity: 0.14;
 	}
-	.ed-icon-btn-fab:not(:disabled):active {
+	.ed-icon-btn-fill:not(:disabled):active {
 		box-shadow: var(--ed-press-shadow);
 	}
-	.ed-icon-btn-fab:focus-visible {
+	.ed-icon-btn-fill:focus-visible {
 		box-shadow: var(--focus-ring);
+	}
+	.ed-icon-btn-fill:disabled::after {
+		display: none;
 	}
 
 	/* A circle for one digit that widens into a pill; anchored to the icon box's corner whatever the control size */

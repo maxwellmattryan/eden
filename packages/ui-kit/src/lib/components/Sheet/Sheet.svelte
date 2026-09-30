@@ -25,9 +25,10 @@
 		/** The accessible name, when no visible title is labelled through `labelledby`. */
 		label?: string
 		labelledby?: string
-		/** Where focus lands on open: the first focusable (an `autofocus` element wins), or the panel itself, so a
-		 * sheet that opens on navigation shows no ring until Tab is pressed. */
-		initialFocus?: 'first' | 'container'
+		/** Where focus lands on open: `auto` (the first text control when there is one, else the panel itself, so a
+		 * confirm shows no ring and no pressed button until Tab is pressed), `first` (any focusable; an `autofocus`
+		 * element wins) or `container`. */
+		initialFocus?: 'auto' | 'first' | 'container'
 		/** When false, Escape and the scrim do nothing; the sheet closes only through `open`. */
 		dismissible?: boolean
 		/** Called after the sheet has closed, with why. */
@@ -42,7 +43,7 @@
 		size = 'md',
 		label,
 		labelledby,
-		initialFocus = 'first',
+		initialFocus = 'auto',
 		dismissible = true,
 		onclose,
 		header,

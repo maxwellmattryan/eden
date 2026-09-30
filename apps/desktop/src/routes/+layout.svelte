@@ -181,6 +181,8 @@
 		else if (id === 'gardener') gardenerUi.toggle()
 	}
 
+	const GRADE_ICONS = { light: 'seed', standard: 'sprout', deep: 'tree-deciduous' } as const
+
 	// The status bar's Gardener chip (shell.md, "Status bar"): the conversation's grade and model with the switch,
 	// the budget meter, grey when this device has no key; it opens the panel.
 	const gardenerChip = $derived({
@@ -194,7 +196,11 @@
 				}
 			: undefined,
 		grade: gardenerSetup.grade,
-		grades: GRADES.map((grade) => ({ id: grade, label: $t(`settings.gardener.grades.${grade}`) })),
+		grades: GRADES.map((grade) => ({
+			id: grade,
+			label: $t(`settings.gardener.grades.${grade}`),
+			icon: GRADE_ICONS[grade],
+		})),
 		onchangegrade: (id: string) => settings.setGardenerGrade(id as (typeof GRADES)[number]),
 		onopen: () => gardenerUi.show(),
 	})

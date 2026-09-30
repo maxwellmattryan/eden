@@ -126,9 +126,10 @@ Newsreader (upright and italic), Inter and Geist Mono ship from `src/lib/fonts`,
 
 | primitive | does |
 |---|---|
-| `anchor(get)` | positions a `position: fixed` element against an element or a pointer rect, flips when there is no room, clamps to the viewport, sets `data-side` |
+| `anchor(get)` | positions a `position: fixed` element against an element or a pointer rect; chooses the side once per opening (the preferred one when it fits, else the other, else the roomier) and keeps it, so an element that grows never jumps across its anchor; sets the room on that side as `--ed-anchor-room` for the element to cap its height with, clamps to the viewport, sets `data-side` |
 | `dismiss(get)` | Escape, pointer outside, optional focus-out; keeps a stack of open layers so Escape closes the innermost and a click inside a layer above does not count as outside |
-| `trapFocus(get)` | Tab cycling inside a layer and focus return; a `<dialog>` opened with `showModal()` makes the page inert and returns focus natively but does not cycle Tab, so `Sheet` uses the trap for the cycling only |
+| `trapFocus(get)` | Tab cycling inside a layer and focus return; a `<dialog>` opened with `showModal()` makes the page inert and returns focus natively but does not cycle Tab, so `Sheet` uses the trap for the cycling only. Its `initial` is `auto` by default: the layer's first text control when it has one, else the layer itself, never a button (`design/ux-patterns.md`, "Keyboard and focus") |
+| `smoothSize(get)` | eases a frame from its old size to its new one when the DOM inside its body changes (a MutationObserver, never a ResizeObserver: resizing from inside a resize callback is the loop the browser reports; Web Animations over the panel duration, no fill), so a popover that unfolds a row grows instead of jumping; `Popover` attaches it to its body |
 | `roving(get)` | one tab stop per group, arrows, Home and End, optional first-letter typeahead |
 | `measure(cb)` | rect now, on resize and after fonts load |
 | `portal(target)` | fallback for a WebView without the popover API, behind `hasTopLayer()` |
@@ -185,4 +186,4 @@ The paper grain is a full-size pseudo-element over the page (D-61: `--ed-z-grain
 
 ## Not in the kit
 
-Page-level compositions belong to the app scaffold: the settings modal and its tab rail, the command palette, onboarding pages, the Gardener composer and thread list, Council columns, the activity feed, the Garden's edit mode, the accent picker (OQ-18). The domain glyph family, the app icon and the splash art are design deliverables; `domainGlyph()` isolates the swap.
+Page-level compositions belong to the app scaffold: the settings modal and its tab rail, the command palette, onboarding pages, the Gardener panel and its thread list, Council columns, the activity feed, the Garden's edit mode, the accent picker (OQ-18). The domain glyph family, the app icon and the splash art are design deliverables; `domainGlyph()` isolates the swap.

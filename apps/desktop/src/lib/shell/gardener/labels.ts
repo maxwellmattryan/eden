@@ -47,7 +47,10 @@ export async function labelRows(registryId: string, ids: string[]): Promise<RowL
 	)
 }
 
-/** The registry id's own name for a heading: the fact's name where the profile has one, else the id. */
+/**
+ * The registry id's own name for a heading: the fact's name where the profile has one, else the id read as words
+ * ("stock-item" as "Stock item"), so every row is a name and none is a slug.
+ */
 export function registryLabel(registryId: string): string {
 	const row = resource(registryId)
 	if (row?.category === 'fact') {
@@ -55,5 +58,6 @@ export function registryLabel(registryId: string): string {
 		const label = get(t)(key)
 		if (label !== key) return label
 	}
-	return registryId
+	const words = registryId.replace(/-/g, ' ')
+	return words.charAt(0).toUpperCase() + words.slice(1)
 }

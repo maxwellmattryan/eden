@@ -39,9 +39,9 @@
 	}
 	/** The three grades a v0 Gardener switches between. */
 	const grades = [
-		{ id: 'light', label: 'Light' },
-		{ id: 'standard', label: 'Standard' },
-		{ id: 'deep', label: 'Deep' },
+		{ id: 'light', label: 'Light', icon: 'seed' as const },
+		{ id: 'standard', label: 'Standard', icon: 'sprout' as const },
+		{ id: 'deep', label: 'Deep', icon: 'tree-deciduous' as const },
 	]
 
 	/** A status chip's name is its label followed by the spoken status word. */
@@ -157,9 +157,12 @@
 		await expect(caret).toHaveAttribute('aria-expanded', 'true')
 		const items = within(menu).getAllByRole('menuitem')
 		await expect(items.map((item) => item.textContent?.trim())).toEqual(grades.map((grade) => grade.label))
-		// the current grade carries the check glyph, the others do not
-		await expect(items[1]!.querySelector('.ed-icon')).not.toBeNull()
-		await expect(items[2]!.querySelector('.ed-icon')).toBeNull()
+		// every grade carries its glyph; the current one is also marked current, with a trailing check
+		for (const item of items) await expect(item.querySelector('.ed-icon')).not.toBeNull()
+		await expect(items[1]!).toHaveAttribute('aria-current', 'true')
+		await expect(items[2]!).not.toHaveAttribute('aria-current')
+		await expect(items[1]!.querySelectorAll('.ed-icon')).toHaveLength(2)
+		await expect(items[2]!.querySelectorAll('.ed-icon')).toHaveLength(1)
 		await userEvent.click(within(menu).getByRole('menuitem', { name: 'Deep' }))
 		await expect(args.gardener?.onchangegrade).toHaveBeenCalledWith('deep')
 		await waitFor(() => expect(menu).not.toBeVisible())
