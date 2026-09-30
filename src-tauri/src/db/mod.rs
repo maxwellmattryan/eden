@@ -131,6 +131,7 @@ mod tests {
             "egress",
             "facts",
             "fact_history",
+            "schedules",
         ] {
             assert!(table_exists(&conn, table), "expected the table `{table}`");
         }

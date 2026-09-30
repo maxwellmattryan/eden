@@ -15,6 +15,7 @@ pub mod links;
 pub mod primitives;
 pub mod registry;
 pub mod rows;
+pub mod scheduler;
 pub mod text;
 
 use std::path::{Path, PathBuf};

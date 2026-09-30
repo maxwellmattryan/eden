@@ -3,3 +3,4 @@ pub mod data;
 pub mod diagnostics;
 pub mod privacy;
 pub mod profile;
+pub mod signals;

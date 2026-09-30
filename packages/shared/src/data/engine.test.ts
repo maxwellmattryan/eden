@@ -228,6 +228,36 @@ describe('engine', () => {
 		expect(codeOf(() => home.updateFact(thai.id, { confidence: 0.5 }))).toBe('fact:invalid')
 	})
 
+	it('declares schedules, takes what is due once and keeps a one-shot until it is taken', () => {
+		const { storage, clock, engine } = setup()
+		const start = clock.now
+		engine.declareSchedules([{ name: 'weather.alerts', every: 300 }])
+		engine.setSchedule('kitchen.shop-day', start + 60_000)
+		expect(engine.takeDueSchedules()).toEqual([{ name: 'weather.alerts', dueAt: start }])
+		expect(engine.takeDueSchedules()).toEqual([])
+
+		// An hour on, the alerts missed eleven periods and are due once; the one-shot is due and then gone.
+		clock.now = start + 60 * 60_000
+		expect(engine.takeDueSchedules()).toEqual([
+			{ name: 'kitchen.shop-day', dueAt: start + 60_000 },
+			{ name: 'weather.alerts', dueAt: start + 300_000 },
+		])
+		expect(engine.cancelSchedule('kitchen.shop-day')).toBe(false)
+		engine.setSchedule('kitchen.shop-day', clock.now + 60_000)
+		expect(engine.cancelSchedule('kitchen.shop-day')).toBe(true)
+
+		// The schedules survive a reload, and a declaration that stands moves nothing.
+		const again = createEngine(storage, { now: () => clock.now })
+		again.declareSchedules([{ name: 'weather.alerts', every: 300 }])
+		expect(again.takeDueSchedules()).toEqual([])
+		clock.now += 300_000
+		expect(again.takeDueSchedules()).toHaveLength(1)
+
+		expect(codeOf(() => engine.declareSchedules([{ name: 'weather.alerts', every: 30 }]))).toBe('schedule:invalid')
+		expect(codeOf(() => engine.setSchedule('weather.alerts', clock.now))).toBe('schedule:invalid')
+		expect(engine.cancelSchedule('weather.alerts')).toBe(false)
+	})
+
 	it('keeps grants and the ledger across a reload and tolerates an old document', () => {
 		const { storage, engine } = setup()
 		const granted = engine.grant({
@@ -251,11 +281,13 @@ describe('engine', () => {
 		delete document.egress
 		delete document.facts
 		delete document.factHistory
+		delete document.schedules
 		storage.map.set(DATA_KEY, JSON.stringify(document))
 		const old = createEngine(storage, { now: () => 1_790_000_000_000 })
 		expect(old.queryGrants()).toEqual([])
 		expect(old.queryEgress()).toEqual([])
 		expect(old.queryFacts()).toEqual([])
+		expect(old.takeDueSchedules()).toEqual([])
 		expect(old.queryEntities({ type: 'calendar-source' })).toHaveLength(1)
 	})
 

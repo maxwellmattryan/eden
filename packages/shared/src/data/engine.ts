@@ -23,6 +23,8 @@ import {
 } from '../profile/rules.js'
 import type { Fact, FactHistoryEntry, FactInput, FactPatch, FactQuery } from '../profile/types.js'
 import { factsOf, isEntityType, kindsOf } from '../registry/index.js'
+import { declare, setOnce, takeDue, validateDeclared, validateOnce } from '../scheduler/rules.js'
+import type { DeclaredSchedule, FiredSchedule, ScheduleRow } from '../scheduler/types.js'
 import { DataError } from './errors.js'
 import { formatStamp, tick, type Hlc } from './hlc.js'
 import { createIdGenerator, isUlid } from './ulid.js'
@@ -87,6 +89,8 @@ interface State {
 	facts: Fact[]
 	/** What a fact held before each edit, thirty days. */
 	factHistory: FactHistoryEntry[]
+	/** The scheduler (`scheduler.rs`): each named schedule and the instant it is next due. */
+	schedules: ScheduleRow[]
 }
 
 /**
@@ -199,6 +203,7 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 			egress: [],
 			facts: [],
 			factHistory: [],
+			schedules: [],
 		}
 		// what the first migration seeds in the crate
 		const stamp = formatStamp({ wallMs: 0, counter: 0, node: 0 })
@@ -215,11 +220,12 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 			try {
 				const state = JSON.parse(stored) as State
 				if (isObject(state.rows) && Array.isArray(state.links)) {
-					// A document from before the grant store and the ledger has neither; it reads as if it had them empty.
+					// A document from before a store was added has no list for it; it reads as if it had one, empty.
 					state.grants ??= []
 					state.egress ??= []
 					state.facts ??= []
 					state.factHistory ??= []
+					state.schedules ??= []
 					return state
 				}
 			} catch {
@@ -863,6 +869,44 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 					.filter((row) => !filter.to || row.day <= filter.to)
 					.sort((a, b) => byText(b.day, a.day) || byText(a.destination, b.destination))
 			)
+		},
+
+		// The scheduler (`scheduler.rs`, D-73): this browser's schedules. The rules are `scheduler/rules.ts`.
+
+		/** Makes the repeating schedules what the manifests declare; one that stands as declared keeps its instant. */
+		declareSchedules(declared: DeclaredSchedule[]): void {
+			const refusal = validateDeclared(declared)
+			if (refusal) throw new DataError(refusal[0], refusal[1])
+			write((state) => {
+				state.schedules = declare(state.schedules, declared, now())
+			})
+		},
+
+		/** Sets a one-shot for an instant, or moves it. */
+		setSchedule(name: string, atMs: number): void {
+			write((state) => {
+				const refusal = validateOnce(state.schedules, name, atMs)
+				if (refusal) throw new DataError(refusal[0], refusal[1])
+				state.schedules = setOnce(state.schedules, name, atMs)
+			})
+		},
+
+		/** Takes a one-shot back before it is due. Answers whether there was one. */
+		cancelSchedule(name: string): boolean {
+			return write((state) => {
+				const before = state.schedules.length
+				state.schedules = state.schedules.filter((row) => !(row.name === name && row.kind === 'once'))
+				return state.schedules.length < before
+			})
+		},
+
+		/** What is due now, each moved on as it is taken. */
+		takeDueSchedules(): FiredSchedule[] {
+			return write((state) => {
+				const taken = takeDue(state.schedules, now())
+				state.schedules = taken.rows
+				return taken.fired
+			})
 		},
 	}
 }
