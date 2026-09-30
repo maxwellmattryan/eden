@@ -29,6 +29,8 @@ describe('normalizePlaces', () => {
 			id: '4671654',
 			name: 'Austin',
 			region: 'Texas, United States',
+			admin1: 'Texas',
+			country: 'United States',
 			latitude: 30.26715,
 			longitude: -97.74306,
 		})
@@ -48,7 +50,18 @@ describe('normalizePlaces', () => {
 
 	it('makes a result the home place', () => {
 		const [place] = normalizePlaces({ results: [{ id: 2, name: 'Kyoto', latitude: 35.02, longitude: 135.75 }] })
-		expect(homeFrom(place!)).toEqual({ label: 'Kyoto', latitude: 35.02, longitude: 135.75 })
+		expect(homeFrom(place!)).toEqual({
+			label: 'Kyoto',
+			latitude: 35.02,
+			longitude: 135.75,
+			area: { city: 'Kyoto', region: '', country: '' },
+		})
+		const [austin] = normalizePlaces({
+			results: [
+				{ id: 3, name: 'Austin', latitude: 30.27, longitude: -97.74, admin1: 'Texas', country: 'United States' },
+			],
+		})
+		expect(homeFrom(austin!).area).toEqual({ city: 'Austin', region: 'Texas', country: 'United States' })
 	})
 })
 

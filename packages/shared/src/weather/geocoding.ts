@@ -10,6 +10,9 @@ export interface PlaceResult {
 	name: string
 	/** The region and the country, as far as the service names them: "Texas, United States". */
 	region: string
+	/** The two apart, for `home-area`. */
+	admin1?: string
+	country?: string
 	latitude: number
 	longitude: number
 }
@@ -51,6 +54,8 @@ export function normalizePlaces(raw: GeocodingResponse): PlaceResult[] {
 		id: String(place.id),
 		name: place.name,
 		region: [place.admin1, place.country].filter((part) => part && part !== place.name).join(', '),
+		...(place.admin1 ? { admin1: place.admin1 } : {}),
+		...(place.country ? { country: place.country } : {}),
 		latitude: place.latitude,
 		longitude: place.longitude,
 	}))
@@ -66,5 +71,10 @@ export async function searchPlaces(query: string, language: string): Promise<Pla
 
 /** A result as the home place. */
 export function homeFrom(place: PlaceResult): HomePlace {
-	return { label: place.name, latitude: place.latitude, longitude: place.longitude }
+	return {
+		label: place.name,
+		latitude: place.latitude,
+		longitude: place.longitude,
+		area: { city: place.name, region: place.admin1 ?? '', country: place.country ?? '' },
+	}
 }

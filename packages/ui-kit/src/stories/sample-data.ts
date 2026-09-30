@@ -283,6 +283,53 @@ export const feed = [
 	{ id: 'f-04', line: 'Completed Pull A', when: 'Monday', domain: 'fitness' },
 ] as const
 
+/** What Eden knows about Rowan (design/sample-data.md, "Facts"), in the value shapes of `@eden/shared/profile`. The
+ * rows of Phase 2 types are here for the mockups; the app seeds only the types the owner may assert. */
+export interface SampleFact {
+	type: string
+	value: unknown
+	provenance: 'user-asserted' | 'ai-inferred'
+	confidence?: number
+}
+export const facts: readonly SampleFact[] = [
+	{ type: 'preferred-name', value: 'Rowan', provenance: 'user-asserted' },
+	{ type: 'allergy', value: { kind: 'food', substance: 'tree nuts', severity: 'severe' }, provenance: 'user-asserted' },
+	{
+		type: 'allergy',
+		value: { kind: 'food', substance: 'shellfish', severity: 'moderate' },
+		provenance: 'user-asserted',
+	},
+	{ type: 'dietary-preference', value: 'low-sodium', provenance: 'user-asserted' },
+	{ type: 'medical-dietary-restriction', value: 'low sodium', provenance: 'user-asserted' },
+	{ type: 'disliked-ingredient', value: 'cilantro', provenance: 'ai-inferred', confidence: 0.8 },
+	{ type: 'cuisine-preference', value: { name: 'Japanese', weight: 0.9 }, provenance: 'user-asserted' },
+	{ type: 'cuisine-preference', value: { name: 'Mexican', weight: 0.7 }, provenance: 'user-asserted' },
+	{ type: 'cuisine-preference', value: { name: 'Mediterranean', weight: 0.6 }, provenance: 'user-asserted' },
+	{ type: 'household-size', value: 2, provenance: 'user-asserted' },
+	{ type: 'skill', value: { name: 'Rust', level: 'advanced' }, provenance: 'user-asserted' },
+	{ type: 'skill', value: { name: 'Svelte', level: 'advanced' }, provenance: 'user-asserted' },
+	{ type: 'skill', value: { name: 'PCB design', level: 'beginner' }, provenance: 'user-asserted' },
+	{ type: 'owned-hardware', value: 'Raspberry Pi 5', provenance: 'user-asserted' },
+	{ type: 'owned-hardware', value: 'Synology DS923+', provenance: 'user-asserted' },
+	{ type: 'owned-hardware', value: 'Elgato Key Light', provenance: 'user-asserted' },
+	{ type: 'preferred-tool', value: 'Rust', provenance: 'user-asserted' },
+	{ type: 'preferred-tool', value: 'Svelte', provenance: 'user-asserted' },
+	{ type: 'preferred-tool', value: 'nannou', provenance: 'user-asserted' },
+	{ type: 'preferred-tool', value: 'Neovim', provenance: 'user-asserted' },
+	{ type: 'gym-preference', value: 'Castle Hill Fitness, mornings', provenance: 'user-asserted' },
+	{
+		type: 'training-limitation',
+		value: 'left shoulder impingement, no overhead pressing',
+		provenance: 'user-asserted',
+	},
+	{ type: 'favorite-supplement', value: 'LMNT citrus', provenance: 'user-asserted' },
+	{ type: 'followed-tradition', value: 'Buddhism', provenance: 'user-asserted' },
+	{ type: 'followed-tradition', value: 'Stoicism', provenance: 'user-asserted' },
+	{ type: 'value', value: 'patience', provenance: 'user-asserted' },
+	{ type: 'value', value: 'craft', provenance: 'user-asserted' },
+	{ type: 'value', value: 'generosity', provenance: 'user-asserted' },
+]
+
 /** The "can see" chip for the Hearth chat, by registry id. */
 export const canSee = [
 	{ id: 'stock-item', count: 22 },

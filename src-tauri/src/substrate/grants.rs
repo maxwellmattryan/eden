@@ -13,6 +13,7 @@ use super::entities::json_column;
 use super::hlc;
 use super::ids;
 use super::registry::{self, Tier};
+use super::text::{text_column, text_enum};
 use super::WriteCtx;
 use crate::error::{EdenError, Result};
 
@@ -37,25 +38,6 @@ pub const CAPABILITIES: &[&str] = &[
 ];
 
 const TYPE_ID: &str = "grant";
-
-macro_rules! text_enum {
-    ($(#[$meta:meta])* $name:ident { $($variant:ident = $text:literal),+ $(,)? }) => {
-        $(#[$meta])*
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-        #[serde(rename_all = "kebab-case")]
-        pub enum $name { $($variant),+ }
-
-        impl $name {
-            pub fn as_str(self) -> &'static str {
-                match self { $(Self::$variant => $text),+ }
-            }
-
-            fn parse(text: &str) -> Option<Self> {
-                match text { $($text => Some(Self::$variant),)+ _ => None }
-            }
-        }
-    };
-}
 
 text_enum! {
     /// What kind of thing the resource names: for a model a registry id, for an integration a connector scope, for an
@@ -162,21 +144,6 @@ const COLUMNS: &str = "id, subject, resource, resource_type, access, lifetime, n
 
 fn refused(code: &str, detail: impl std::fmt::Display) -> EdenError {
     EdenError::Refused(format!("grant:{code}: {detail}"))
-}
-
-fn text_column<T>(
-    row: &Row<'_>,
-    index: usize,
-    parse: fn(&str) -> Option<T>,
-) -> rusqlite::Result<T> {
-    let text: String = row.get(index)?;
-    parse(&text).ok_or_else(|| {
-        rusqlite::Error::FromSqlConversionFailure(
-            index,
-            rusqlite::types::Type::Text,
-            format!("not a value of the column: {text:?}").into(),
-        )
-    })
 }
 
 fn from_row(row: &Row<'_>) -> rusqlite::Result<Grant> {

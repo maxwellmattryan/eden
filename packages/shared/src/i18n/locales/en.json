@@ -21,7 +21,9 @@
 			"local": "Local only",
 			"offline": "Offline"
 		},
-		"gardenerNoKey": "No key on this device"
+		"gardenerNoKey": "No key on this device",
+		"profile": "What Eden knows about me",
+		"profileSubtitle": "Facts, where they came from, and who uses them"
 	},
 	"garden": {
 		"edit": "Edit layout",
@@ -81,8 +83,12 @@
 			"ideaCaptured": "{title} captured",
 			"ideaMoved": "{title} moved to {status}",
 			"ideaArchived": "{title} archived",
-			"ideaDeleted": "{title} deleted"
-		}
+			"ideaDeleted": "{title} deleted",
+			"factAdded": "{name} added to what Eden knows",
+			"factChanged": "{name} changed",
+			"factRemoved": "{name} removed from what Eden knows"
+		},
+		"profile": "What Eden knows"
 	},
 	"domains": {
 		"kitchen": {
@@ -486,6 +492,116 @@
 			"refresh": "Refresh"
 		}
 	},
+	"profile": {
+		"add": "Add a fact",
+		"edit": "Edit",
+		"window": "Set a window",
+		"renew": "Renew",
+		"delete": "Delete",
+		"saveFailed": "Couldn't save your changes.",
+		"proposals": "The Gardener noticed",
+		"usedBy": "{count, plural, =0 {not used by the Gardener yet} one {used by # request} other {used by # requests}}",
+		"retention": "Every edit keeps the old value for thirty days, on this device. What you delete leaves the Gardener at once.",
+		"since": "from {date}",
+		"until": "until {date}",
+		"expired": "expired {date}",
+		"weight": "{percent}%",
+		"confidence": "{percent}% sure",
+		"toast": {
+			"added": "{name} added",
+			"changed": "{name} changed",
+			"deleted": "{name} deleted",
+			"renewed": "{name} renewed",
+			"accepted": "{name} saved",
+			"dismissed": "Dismissed"
+		},
+		"owners": {
+			"substrate": "Eden",
+			"health": "Wellspring"
+		},
+		"provenance": {
+			"user-asserted": "You said so",
+			"domain-derived": "{owner} worked it out",
+			"system-derived": "Derived from your home place",
+			"integration": "From {source}",
+			"ai-inferred": "The Gardener noticed"
+		},
+		"facts": {
+			"preferred-name": "Preferred name",
+			"home-area": "Home area",
+			"allergy": "Allergy",
+			"dietary-preference": "Dietary preference",
+			"disliked-ingredient": "Disliked ingredient",
+			"cuisine-preference": "Cuisine preference",
+			"household-size": "Household size",
+			"skill": "Skill",
+			"owned-hardware": "Owned hardware",
+			"preferred-tool": "Preferred tool",
+			"medical-dietary-restriction": "Medical dietary restriction"
+		},
+		"fields": {
+			"city": "City",
+			"region": "Region",
+			"country": "Country",
+			"substance": "Substance",
+			"kind": "Kind",
+			"severity": "Severity",
+			"name": "Name",
+			"level": "Level",
+			"weight": "How much it counts"
+		},
+		"values": {
+			"allergy": {
+				"kind": {
+					"food": "food",
+					"drug": "drug",
+					"environmental": "environmental"
+				},
+				"severity": {
+					"mild": "mild",
+					"moderate": "moderate",
+					"severe": "severe"
+				}
+			},
+			"dietary-preference": {
+				"vegetarian": "vegetarian",
+				"vegan": "vegan",
+				"pescatarian": "pescatarian",
+				"halal": "halal",
+				"kosher": "kosher",
+				"low-sodium": "low sodium",
+				"low-sugar": "low sugar",
+				"gluten-free": "gluten-free",
+				"alcohol-free": "alcohol-free"
+			},
+			"skill": {
+				"level": {
+					"beginner": "beginner",
+					"intermediate": "intermediate",
+					"advanced": "advanced",
+					"expert": "expert"
+				}
+			}
+		},
+		"editor": {
+			"addTitle": "Add a fact",
+			"editTitle": "Edit {name}",
+			"pickType": "What is it about?",
+			"value": "Value",
+			"custom": "Something else",
+			"customPlaceholder": "Your own words",
+			"note": "Note",
+			"noteHelper": "For you; the Gardener never reads it.",
+			"validFrom": "From",
+			"validUntil": "Until",
+			"windowHelper": "Leave both empty for a fact that always holds.",
+			"invalid": "Something is missing or does not fit.",
+			"save": "Save",
+			"cancel": "Cancel",
+			"back": "Back",
+			"single": "One per profile; opens the one you have."
+		}
+	},
 	"settings": {
 		"title": "Settings",
 		"tabs": {
@@ -671,7 +787,12 @@
 				"help": "Every read and confirm already consults the grant store. The list, with revoke and history, arrives later.",
 				"count": "{count, plural, =0 {No standing grants yet.} one {# standing grant.} other {# standing grants.}}"
 			},
-			"error": "The ledger could not be read."
+			"error": "The ledger could not be read.",
+			"profile": {
+				"label": "What Eden knows about me",
+				"help": "Every fact Eden keeps about you, with where it came from and which requests used it. Edit or delete any of them.",
+				"open": "Open"
+			}
 		},
 		"placeholder": {
 			"title": "Not built yet",
@@ -718,6 +839,11 @@
 		"more": {
 			"title": "More",
 			"text": "Toolbench, the Gardener and settings."
+		},
+		"profile": {
+			"title": "Eden knows nothing about you yet",
+			"text": "What you tell it, and what its domains learn, gathers here with where each fact came from.",
+			"action": "Add a fact"
 		}
 	},
 	"uiKit": {}

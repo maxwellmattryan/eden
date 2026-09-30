@@ -4,7 +4,7 @@ status: draft
 summary: The screen inventory for mockups: a template per screen, the shell screens, the domain screens, mobile variants, and the priority order for Claude Design.
 read-this-if: You are drawing mockups or checking that a screen covers its states.
 depends-on: [ux-patterns, sample-data, product/substrate/shell]
-updated: 2026-09-29
+updated: 2026-09-30
 ---
 
 ## Screen template
@@ -26,7 +26,7 @@ Each screen below lists: id, platform, purpose, must show, primary actions, stat
 | `capture-sheet` | both | verify a haul | image, provider named, cost, draft rows with location chips and estimated badges, merge indicators | commit | recognised nothing, provider unavailable | the captured haul |
 | `quick-log-sheet` | both | one-field logging | field, unit chip, last value, sparkline | save | | weight 82.4 |
 | `inbox` | both | notifications | cards by domain and day, inline actions | open, snooze, clear | empty | the two unread cards |
-| `profile` | desktop | What Eden knows about me | facts by domain, provenance, "used by N requests", lock glyphs on T2 | add, edit, delete | empty | the facts table |
+| `profile`, mocked as `Domains/Garden/Profile`, built in `apps/desktop` (Garden → What Eden knows about me) | desktop | What Eden knows about me | facts by domain, provenance, "used by N requests", lock glyphs on T2 | add, edit, delete | empty | the facts table |
 | `grants-ledger` | desktop | permissions (Phase 2 UI) | grants by subject, revoke, history | revoke | | the grants list |
 | `egress-ledger`, built in `apps/desktop` (Settings → Privacy) | desktop | bytes out by destination | a table by destination and day; the Vault → AI row at zero | | | provider, Open-Meteo, Google |
 | `audit-log` | desktop | Gardener requests | one row per request; expand to registry ids and tools | | | the audit entry |

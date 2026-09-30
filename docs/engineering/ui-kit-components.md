@@ -4,7 +4,7 @@ status: draft
 summary: The contract for every component in `@eden/ui-kit`: purpose, props with the bindable ones marked, callbacks, snippets, platform behaviour and the stories each ships, grouped by the wave it is built in.
 read-this-if: You are building, changing or consuming a kit component.
 depends-on: [engineering/ui-kit, design/ux-patterns]
-updated: 2026-09-29
+updated: 2026-09-30
 ---
 
 ## How to read this
@@ -26,7 +26,7 @@ Props are listed by name; `*` marks a bindable prop; every component also takes 
 | `IconButton` | an icon control with a required name; hover and press on a circle | `icon`, `label` (required), `count`, `fab`, `size` (xs, a hint beside a label; sm; md), `active`, `pressed`, `tooltip` (true shows the label, a string shows that string; without `onclick` a click or tap toggles it, for an info glyph) | `onclick` | `fab` is mobile only and presses under the raised relief | Default, With count, Fab, Active, Pressed, Sizes |
 | `Chip` | a pill: unit, filter, integration, model | `label`, `tone` (neutral, accent, ai, honey, grey, outline), `icon`, `count`, `status` (healthy, stale, failed, off; the word is read out), `meter`, `selectable`, `selected*`, `mono` | `onclick`, `onselect(selected)` | | Tones, With icon and count, Status, Meter, Selectable, Mono |
 | `Badge` | access levels and row qualifiers | `kind` (read, write-draft, write, act-external, tier, estimated, origin, warning, ai, danger, neutral), `label`, `level` (1 to 6: a dot in the step's colour before the word) | | `read` renders nothing | All kinds, Levels, In a row |
-| `Field` | a labelled input whose border becomes the focus ring (on the internal `InputWrap`) | `label`, `value*`, `placeholder`, `unit`, `helper`, `error`, `icon`, `mono`, `large`, `type`, `id`; the input's attributes pass through | `oninput`, `onkeydown`; `trailing` snippet | | Default, Unit, Helper, Error, With icon, Large, Mono, Trailing |
+| `Field` | a labelled input whose border becomes the focus ring (on the internal `InputWrap`) | `label`, `value*` (no fallback: it may be bound to a key that is not set yet, and reads as empty; with `type="date"` or a time, the part being typed is marked in the accent, not the system's blue), `placeholder`, `unit`, `helper`, `error`, `icon`, `mono`, `large`, `type`, `id`; the input's attributes pass through | `oninput`, `onkeydown`; `trailing` snippet | | Default, Bound to an unset key, Unit, Helper, Error, With icon, Date, Large, Mono, Trailing |
 | `Segmented` | tabs inside a domain, with a sliding pill | `items` (strings or `{ id, label, icon }`), `selected*`, `iconPosition`, `label` | `onchange` (only on a real change) | | Text, Icons, In a header |
 | `Skeleton` | loading rows matching the final layout | `rows`, `icon` | | one fade-in, no loop | Default, Compact |
 | `Stat` | a figure and its unit: a widget's headline, or one figure among several | `value`, `unit`, `size` (lg 28, the default; md 18, a figure among several in a card; sm 14, a figure in a dense row) | | | Default, With unit, Sizes, Long value |

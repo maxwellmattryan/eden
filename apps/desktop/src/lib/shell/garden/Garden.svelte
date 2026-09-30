@@ -101,7 +101,16 @@
 		name={$t('shell.garden')}
 		{subtitle}
 		icon={domainGlyph('garden')}
-		actions={[{ label: $t('garden.edit'), icon: 'grip-vertical', variant: 'secondary', disabled: true }]}
+		actions={[
+			{
+				id: 'profile',
+				label: $t('garden.profile'),
+				icon: 'id-card',
+				variant: 'secondary',
+				onclick: () => void goto(resolve('/garden/profile')),
+			},
+			{ id: 'edit', label: $t('garden.edit'), icon: 'grip-vertical', variant: 'secondary', disabled: true },
+		]}
 	/>
 	<nav class="quick" aria-label={$t('garden.quickNav')}>
 		<ul class="quick-list">

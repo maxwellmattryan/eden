@@ -110,6 +110,124 @@ describe('engine', () => {
 		expect(engine.queryEgress().map((row) => row.day)).toEqual(['2026-12-30'])
 	})
 
+	it('asserts, edits with history, deletes and restores a fact', () => {
+		const { engine, clock } = setup()
+		const nuts = engine.assertFact({
+			type: 'allergy',
+			value: { kind: 'food', substance: 'tree nuts', severity: 'mild' },
+			provenance: 'user-asserted',
+			note: 'since the picnic',
+		})
+		expect(nuts.uri).toBe(`eden://fact/${nuts.id}`)
+		expect(nuts).toMatchObject({ confidence: null, validFrom: null, deletedAt: null, createdAt: nuts.updatedAt })
+		expect(engine.queryFacts()).toEqual([nuts])
+
+		clock.now += 1000
+		const severe = engine.updateFact(nuts.id, {
+			value: { kind: 'food', substance: 'tree nuts', severity: 'severe' },
+			note: null,
+		})
+		expect(severe.updatedAt > nuts.updatedAt).toBe(true)
+		expect(severe.createdAt).toBe(nuts.createdAt)
+		expect(engine.queryFactHistory(nuts.id)).toEqual([
+			{
+				factId: nuts.id,
+				type: 'allergy',
+				value: nuts.value,
+				note: 'since the picnic',
+				validFrom: null,
+				validUntil: null,
+				replacedAt: severe.updatedAt,
+			},
+		])
+		// An edit that changes only the source keeps nothing.
+		engine.updateFact(nuts.id, { source: 'eden://recipe/x' })
+		expect(engine.queryFactHistory(nuts.id)).toHaveLength(1)
+		// Thirty days on, the history is gone.
+		clock.now += 31 * 24 * 60 * 60 * 1000
+		expect(engine.queryFactHistory(nuts.id)).toEqual([])
+
+		const deleted = engine.deleteFact(nuts.id)
+		expect(deleted.deletedAt).toBe(deleted.updatedAt)
+		expect(engine.queryFacts()).toEqual([])
+		expect(engine.queryFacts({ includeDeleted: true })).toEqual([deleted])
+		expect(engine.deleteFact(nuts.id)).toEqual(deleted)
+		expect(codeOf(() => engine.updateFact(nuts.id, { note: 'x' }))).toBe('not-found')
+		const restored = engine.restoreFact(nuts.id)
+		expect(restored.deletedAt).toBeNull()
+		expect(engine.queryFacts()).toEqual([restored])
+
+		expect(codeOf(() => engine.assertFact({ type: 'recipe' as never, value: 'x', provenance: 'user-asserted' }))).toBe(
+			'fact:invalid'
+		)
+		expect(codeOf(() => engine.assertFact({ type: 'skill', value: 'Rust', provenance: 'ai-inferred' }))).toBe(
+			'fact:invalid'
+		)
+		expect(codeOf(() => engine.updateFact(nuts.id, { colour: 'green' } as never))).toBe('fact:invalid')
+		expect(codeOf(() => engine.updateFact(nuts.id, { provenance: 'integration' } as never))).toBe('fact:invalid')
+		expect(codeOf(() => engine.deleteFact(newId()))).toBe('not-found')
+	})
+
+	it('renews a system-derived fact in place and hands back the effective set', () => {
+		const clock = { now: 1_790_000_000_000 }
+		const home = createEngine(memory(), { now: () => clock.now, node: 0xab, today: () => '2026-09-30' })
+		const area = (city: string) => ({
+			type: 'home-area' as const,
+			value: { city, region: 'Texas', country: 'United States' },
+			provenance: 'system-derived' as const,
+			source: 'setting:home',
+		})
+		const first = home.assertFact(area('Austin'))
+		clock.now += 1000
+		const moved = home.assertFact(area('Houston'))
+		expect(moved.id).toBe(first.id)
+		expect(moved.value).toEqual({ city: 'Houston', region: 'Texas', country: 'United States' })
+		expect(home.queryFacts()).toHaveLength(1)
+		expect(home.queryFactHistory(first.id).map((entry) => entry.value)).toEqual([first.value])
+		expect(codeOf(() => home.assertFact({ type: 'allergy', value: {}, provenance: 'system-derived' }))).toBe(
+			'fact:invalid'
+		)
+
+		// The owner's own word comes first, then the latest; the window is judged by the day.
+		const thai = home.assertFact({
+			type: 'cuisine-preference',
+			value: { name: 'Thai', weight: 0.5 },
+			provenance: 'ai-inferred',
+			confidence: 0.6,
+		})
+		clock.now += 1000
+		const mexican = home.assertFact({
+			type: 'cuisine-preference',
+			value: { name: 'Mexican', weight: 0.7 },
+			provenance: 'ai-inferred',
+			confidence: 0.7,
+		})
+		const japanese = home.assertFact({
+			type: 'cuisine-preference',
+			value: { name: 'Japanese', weight: 0.9 },
+			provenance: 'user-asserted',
+		})
+		const past = home.assertFact({
+			type: 'dietary-preference',
+			value: 'low-sodium',
+			provenance: 'user-asserted',
+			validUntil: '2020-01-31',
+		})
+		const ids = (facts: { id: string }[]) => facts.map((fact) => fact.id)
+		expect(ids(home.queryFacts({ types: ['cuisine-preference'] }))).toEqual([japanese.id, mexican.id, thai.id])
+		expect(ids(home.queryFacts({ owner: 'kitchen' }))).toEqual([japanese.id, mexican.id, thai.id])
+		expect(ids(home.queryFacts({ owner: 'kitchen', includeExpired: true }))).toContain(past.id)
+		expect(ids(home.queryFacts({ at: '2020-01-31', types: ['dietary-preference'] }))).toEqual([past.id])
+		expect(home.queryFacts({ owner: 'weather' })).toEqual([])
+		expect(ids(home.queryFacts({ owner: 'substrate' }))).toEqual([first.id])
+		expect(codeOf(() => home.queryFacts({ at: 'someday' }))).toBe('fact:invalid')
+
+		// The owner's word over what was inferred: the fact becomes theirs and its confidence goes.
+		const owned = home.updateFact(thai.id, { provenance: 'user-asserted' })
+		expect(owned).toMatchObject({ provenance: 'user-asserted', confidence: null })
+		expect(codeOf(() => home.updateFact(thai.id, { confidence: 0.5 }))).toBe('fact:invalid')
+	})
+
 	it('keeps grants and the ledger across a reload and tolerates an old document', () => {
 		const { storage, engine } = setup()
 		const granted = engine.grant({
@@ -121,18 +239,23 @@ describe('engine', () => {
 			origin: 'onboarding',
 		})
 		engine.recordEgress('nws', 10)
+		const named = engine.assertFact({ type: 'preferred-name', value: 'Rowan', provenance: 'user-asserted' })
 		const again = createEngine(storage, { now: () => 1_790_000_000_000 })
 		expect(again.queryGrants()).toEqual([granted])
 		expect(again.queryEgress()).toHaveLength(1)
+		expect(again.queryFacts()).toEqual([named])
 
 		// A document from before the grant store has neither list.
 		const document = JSON.parse(storage.map.get(DATA_KEY)!) as Record<string, unknown>
 		delete document.grants
 		delete document.egress
+		delete document.facts
+		delete document.factHistory
 		storage.map.set(DATA_KEY, JSON.stringify(document))
 		const old = createEngine(storage, { now: () => 1_790_000_000_000 })
 		expect(old.queryGrants()).toEqual([])
 		expect(old.queryEgress()).toEqual([])
+		expect(old.queryFacts()).toEqual([])
 		expect(old.queryEntities({ type: 'calendar-source' })).toHaveLength(1)
 	})
 

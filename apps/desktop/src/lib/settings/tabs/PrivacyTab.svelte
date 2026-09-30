@@ -3,7 +3,9 @@
 	// plain words, the egress ledger of the last seven days with the Vault → AI row at zero (D-71), the never-automated
 	// list (D-8), and how many standing grants there are. The grants ledger with revoke and history arrives in Phase 2.
 	import { onMount } from 'svelte'
-	import { Badge, DataTable, InlineError, type DataTableColumn } from '@eden/ui-kit'
+	import { goto } from '$app/navigation'
+	import { resolve } from '$app/paths'
+	import { Badge, Button, DataTable, InlineError, type DataTableColumn } from '@eden/ui-kit'
 	import { formatDateOf, todayIso } from '@eden/shared/dates'
 	import {
 		DESTINATIONS,
@@ -18,6 +20,7 @@
 	import { t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { grants } from '$lib/shell/grants.svelte'
+	import { settingsUi } from '../settings-ui.svelte'
 	import SettingsRow from './SettingsRow.svelte'
 
 	const DAYS = 7
@@ -65,7 +68,17 @@
 		void grants.load()
 		void read()
 	})
+
+	/** The profile is a page, not a tab: the sheet closes and the Garden's page opens. */
+	function openProfile() {
+		settingsUi.hide()
+		void goto(resolve('/garden/profile'))
+	}
 </script>
+
+<SettingsRow label={$t('settings.privacy.profile.label')} help={$t('settings.privacy.profile.help')}>
+	<Button variant="secondary" icon="id-card" label={$t('settings.privacy.profile.open')} onclick={openProfile} />
+</SettingsRow>
 
 <SettingsRow label={$t('settings.privacy.tiers.label')} help={$t('settings.privacy.tiers.help')}>
 	<dl class="tiers">

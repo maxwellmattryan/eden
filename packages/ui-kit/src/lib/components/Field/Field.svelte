@@ -3,6 +3,8 @@
 	// field, never a suffix in the placeholder. Helper text sits beneath in caption; an error replaces it in danger and
 	// sets aria-invalid. `large` is the Quick Log value: data-lg in Geist Mono, --field-lg tall, a decimal keypad.
 	// The input is controlled (value plus oninput) because the compiler forbids bind:value with a dynamic `type`.
+	// `value` has no fallback on purpose: a bindable with one throws when it is bound to something unset, such as a
+	// key a record does not hold yet, and a form binds its fields to exactly that. Unset reads as empty.
 	import type { Snippet } from 'svelte'
 	import type { HTMLInputAttributes } from 'svelte/elements'
 	import type { IconName } from '../../icons/icons.js'
@@ -16,7 +18,7 @@
 	> & {
 		/** The visible label above the field. Without it, pass `aria-label` so the input still has a name. */
 		label?: string
-		/** The text in the field. Bindable. */
+		/** The text in the field. Bindable, to an unset key too: it reads as empty until something is typed. */
 		value?: string
 		placeholder?: string
 		/** A unit shown as a mono chip inside the field. */
@@ -44,7 +46,7 @@
 	const uid = $props.id()
 	let {
 		label,
-		value = $bindable(''),
+		value = $bindable(),
 		placeholder,
 		unit,
 		helper,
@@ -81,7 +83,7 @@
 			{id}
 			{type}
 			{placeholder}
-			{value}
+			value={value ?? ''}
 			inputmode={large ? 'decimal' : undefined}
 			aria-invalid={error ? 'true' : undefined}
 			aria-describedby={message ? messageId : undefined}
@@ -138,6 +140,58 @@
 		font: var(--ed-t-data-lg);
 		letter-spacing: var(--ed-t-data-lg-tracking);
 		font-variant-numeric: tabular-nums;
+	}
+	/* A date or a time is typed a part at a time, and the part being typed is marked. The browser marks it in the
+	   system's colour (its highlight, or on Apple's systems the system accent), a blue that belongs to no theme; here
+	   it takes the accent the owner chose, with the ink made to be read on it. The muted accent that marks selected
+	   text is too faint on the field's own surface to say which part is in hand.
+	   The rules stay apart on purpose, because a selector an engine does not know drops its whole list. WebKit matches
+	   the part by :focus, as its own stylesheet does, and names the AM/PM part `meridiem`. Chromium no longer matches
+	   :focus on a part from a page's stylesheet (152 parses it and applies nothing), but does match :focus-within,
+	   which for a part with nothing inside it says the same; it names AM/PM `ampm` and has a week part. */
+	.ed-field-input::-webkit-datetime-edit-year-field:focus,
+	.ed-field-input::-webkit-datetime-edit-month-field:focus,
+	.ed-field-input::-webkit-datetime-edit-day-field:focus,
+	.ed-field-input::-webkit-datetime-edit-hour-field:focus,
+	.ed-field-input::-webkit-datetime-edit-minute-field:focus,
+	.ed-field-input::-webkit-datetime-edit-second-field:focus,
+	.ed-field-input::-webkit-datetime-edit-millisecond-field:focus {
+		background: var(--brand-primary);
+		color: var(--on-brand);
+		outline: none;
+	}
+	.ed-field-input::-webkit-datetime-edit-year-field:focus-within,
+	.ed-field-input::-webkit-datetime-edit-month-field:focus-within,
+	.ed-field-input::-webkit-datetime-edit-day-field:focus-within,
+	.ed-field-input::-webkit-datetime-edit-hour-field:focus-within,
+	.ed-field-input::-webkit-datetime-edit-minute-field:focus-within,
+	.ed-field-input::-webkit-datetime-edit-second-field:focus-within,
+	.ed-field-input::-webkit-datetime-edit-millisecond-field:focus-within {
+		background: var(--brand-primary);
+		color: var(--on-brand);
+		outline: none;
+	}
+	.ed-field-input::-webkit-datetime-edit-meridiem-field:focus {
+		background: var(--brand-primary);
+		color: var(--on-brand);
+		outline: none;
+	}
+	.ed-field-input::-webkit-datetime-edit-meridiem-field:focus-within {
+		background: var(--brand-primary);
+		color: var(--on-brand);
+		outline: none;
+	}
+	.ed-field-input::-webkit-datetime-edit-week-field:focus,
+	.ed-field-input::-webkit-datetime-edit-ampm-field:focus {
+		background: var(--brand-primary);
+		color: var(--on-brand);
+		outline: none;
+	}
+	.ed-field-input::-webkit-datetime-edit-week-field:focus-within,
+	.ed-field-input::-webkit-datetime-edit-ampm-field:focus-within {
+		background: var(--brand-primary);
+		color: var(--on-brand);
+		outline: none;
 	}
 	.ed-field-message {
 		margin: 0;

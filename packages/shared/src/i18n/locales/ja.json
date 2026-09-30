@@ -21,7 +21,9 @@
 			"local": "この端末のみ",
 			"offline": "オフライン"
 		},
-		"gardenerNoKey": "この端末にキーがありません"
+		"gardenerNoKey": "この端末にキーがありません",
+		"profile": "Edenが知っていること",
+		"profileSubtitle": "事実と、その出どころと使い道"
 	},
 	"garden": {
 		"edit": "配置を編集",
@@ -81,8 +83,12 @@
 			"ideaCaptured": "{title}を記録",
 			"ideaMoved": "{title}を{status}へ",
 			"ideaArchived": "{title}を保管",
-			"ideaDeleted": "{title}を削除"
-		}
+			"ideaDeleted": "{title}を削除",
+			"factAdded": "{name}を事実に追加",
+			"factChanged": "{name}を変更",
+			"factRemoved": "{name}を事実から削除"
+		},
+		"profile": "Edenが知っていること"
 	},
 	"domains": {
 		"kitchen": {
@@ -486,6 +492,116 @@
 			"refresh": "更新"
 		}
 	},
+	"profile": {
+		"add": "事実を追加",
+		"edit": "編集",
+		"window": "期間を設定",
+		"renew": "更新",
+		"delete": "削除",
+		"saveFailed": "変更を保存できませんでした。",
+		"proposals": "庭師が気づいたこと",
+		"usedBy": "{count, plural, =0 {庭師はまだ使っていません} other {リクエスト#件で使用}}",
+		"retention": "編集のたびに古い値を30日間この端末に残します。削除したものは庭師からすぐに見えなくなります。",
+		"since": "{date}から",
+		"until": "{date}まで",
+		"expired": "{date}に期限切れ",
+		"weight": "{percent}%",
+		"confidence": "確度{percent}%",
+		"toast": {
+			"added": "{name}を追加しました",
+			"changed": "{name}を変更しました",
+			"deleted": "{name}を削除しました",
+			"renewed": "{name}を更新しました",
+			"accepted": "{name}を保存しました",
+			"dismissed": "見送りました"
+		},
+		"owners": {
+			"substrate": "Eden",
+			"health": "泉"
+		},
+		"provenance": {
+			"user-asserted": "あなたが伝えた",
+			"domain-derived": "{owner}が導いた",
+			"system-derived": "自宅の場所から導いた",
+			"integration": "{source}から",
+			"ai-inferred": "庭師が気づいた"
+		},
+		"facts": {
+			"preferred-name": "呼び名",
+			"home-area": "自宅の地域",
+			"allergy": "アレルギー",
+			"dietary-preference": "食事の方針",
+			"disliked-ingredient": "苦手な食材",
+			"cuisine-preference": "好みの料理",
+			"household-size": "世帯の人数",
+			"skill": "スキル",
+			"owned-hardware": "所有する機材",
+			"preferred-tool": "好みのツール",
+			"medical-dietary-restriction": "医療上の食事制限"
+		},
+		"fields": {
+			"city": "市",
+			"region": "地域",
+			"country": "国",
+			"substance": "物質",
+			"kind": "種類",
+			"severity": "重さ",
+			"name": "名前",
+			"level": "レベル",
+			"weight": "重み"
+		},
+		"values": {
+			"allergy": {
+				"kind": {
+					"food": "食物",
+					"drug": "薬物",
+					"environmental": "環境"
+				},
+				"severity": {
+					"mild": "軽度",
+					"moderate": "中度",
+					"severe": "重度"
+				}
+			},
+			"dietary-preference": {
+				"vegetarian": "ベジタリアン",
+				"vegan": "ヴィーガン",
+				"pescatarian": "ペスカタリアン",
+				"halal": "ハラール",
+				"kosher": "コーシャ",
+				"low-sodium": "減塩",
+				"low-sugar": "低糖",
+				"gluten-free": "グルテンフリー",
+				"alcohol-free": "ノンアルコール"
+			},
+			"skill": {
+				"level": {
+					"beginner": "初級",
+					"intermediate": "中級",
+					"advanced": "上級",
+					"expert": "熟練"
+				}
+			}
+		},
+		"editor": {
+			"addTitle": "事実を追加",
+			"editTitle": "{name}を編集",
+			"pickType": "何についての事実ですか?",
+			"value": "値",
+			"custom": "その他",
+			"customPlaceholder": "自分の言葉で",
+			"note": "メモ",
+			"noteHelper": "あなた向けのメモ。庭師は読みません。",
+			"validFrom": "開始",
+			"validUntil": "終了",
+			"windowHelper": "両方空欄なら、ずっと有効な事実になります。",
+			"invalid": "足りないか、形が合いません。",
+			"save": "保存",
+			"cancel": "キャンセル",
+			"back": "戻る",
+			"single": "プロフィールにひとつだけ。既にあるものを開きます。"
+		}
+	},
 	"settings": {
 		"title": "設定",
 		"tabs": {
@@ -671,7 +787,12 @@
 				"help": "読み取りと確認はすでに許可の記録を参照しています。取り消しと履歴のある一覧は後で届きます。",
 				"count": "{count, plural, =0 {継続する許可はまだありません。} other {継続する許可 #件。}}"
 			},
-			"error": "台帳を読めませんでした。"
+			"error": "台帳を読めませんでした。",
+			"profile": {
+				"label": "Edenが知っていること",
+				"help": "Edenがあなたについて保持している事実の一覧。出どころと、それを使ったリクエストが分かり、編集も削除もできます。",
+				"open": "開く"
+			}
 		},
 		"placeholder": {
 			"title": "まだありません",
@@ -718,6 +839,11 @@
 		"more": {
 			"title": "その他",
 			"text": "工房、庭師、設定。"
+		},
+		"profile": {
+			"title": "Edenはまだあなたのことを知りません",
+			"text": "あなたが伝えたことと各ドメインが学んだことが、出どころとともにここに集まります。",
+			"action": "事実を追加"
 		}
 	},
 	"uiKit": {

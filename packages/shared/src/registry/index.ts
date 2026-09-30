@@ -57,6 +57,17 @@ export function tierOf(id: ResourceId): Tier {
 }
 
 /** Whether a row of this entity type may be created. */
+/** Whether the owner may assert a fact of this type: the fact types of Phase 1, their domain built or not. */
+export function isFact(id: string): boolean {
+	const row = byId.get(id)
+	return row?.category === 'fact' && row.live
+}
+
+/** The fact types of an owner, of any phase: what the profile groups under the owner's name. */
+export function factsOf(owner: string): FactId[] {
+	return rows.filter((row) => row.category === 'fact' && row.owner === owner).map((row) => row.id as FactId)
+}
+
 export function isEntityType(id: string): boolean {
 	const row = byId.get(id)
 	return row !== undefined && row.category === 'entity' && row.live
