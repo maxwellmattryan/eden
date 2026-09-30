@@ -43,6 +43,7 @@
 		{
 			"id": "suggest-recipes",
 			"access": "read",
+			"grade": "standard",
 			"reads": [
 				"stock-item",
 				"recipe",
@@ -53,15 +54,22 @@
 				"medical-dietary-restriction"
 			]
 		},
-		{ "id": "storage-tip", "access": "read", "reads": ["stock-item", "storage-tip"] },
-		{ "id": "capture-haul", "access": "write-draft", "reads": [] },
+		{ "id": "storage-tip", "access": "read", "grade": "light", "reads": ["stock-item", "storage-tip"] },
+		{ "id": "capture-haul", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] },
 		{
 			"id": "draft-grocery-list",
 			"access": "write-draft",
+			"grade": "standard",
 			"reads": ["stock-item", "recipe", "grocery-list", "grocery-item"]
 		},
 		{ "id": "add-stock", "access": "write", "confirm": true, "reads": ["stock-item"] },
-		{ "id": "plan-week", "access": "write-draft", "reads": ["stock-item", "recipe", "local-event", "task"] }
+		{
+			"id": "plan-week",
+			"access": "write-draft",
+			"grade": "deep",
+			"needs": ["tools"],
+			"reads": ["stock-item", "recipe", "local-event", "task"]
+		}
 	],
 	"signals": ["stock.expiring", "stock.low", "grocery.shop-day"],
 	"notificationKinds": [

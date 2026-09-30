@@ -1,8 +1,8 @@
 ---
 title: Domain module
 status: draft
-summary: The domain manifest and the resource registry as code: the manifest.json a domain declares itself in, the builder that checks it and generates the registry for TypeScript and Rust, the bindings an app adds, the functions the shell composes itself with, where a domain's code lives, and how isolation is enforced.
-read-this-if: You are adding or changing a domain, a registry row, a widget, a quick action, an intent or a palette entry, or anything in the shell that lists domains.
+summary: The domain manifest and the resource registry as code: the manifest.json a domain declares itself in, the builder that checks it and generates the registry for TypeScript and Rust, the bindings an app adds, the functions the shell composes itself with, model grades and the resolution of a tool to a model, where a domain's code lives, and how isolation is enforced.
+read-this-if: You are adding or changing a domain, a registry row, a widget, a quick action, an intent, a palette entry or a tool's grade, or anything in the shell that lists domains, or sending a request to a model.
 depends-on: [product/substrate/domain-manifest, product/substrate/registry, product/substrate/shell, engineering/app-scaffold, engineering/data-layer]
 updated: 2026-09-30
 ---
@@ -55,7 +55,7 @@ All under `packages/shared/src/`, hand-edited and formatted by Prettier:
 | `notificationKinds` | consumed | `id`, `channel` (`in-app`, `os`), `cadence`, `default`. With `signal` (one of the domain's own) it is a rule, and `when` is its condition: fields, each with the words it may be. Its words are `domains.<id>.notifications.<kind>.line` and, for `os`, `.title` |
 | `schedules` | consumed | `id` with `daily` (`HH:MM`) or `every` (seconds, sixty at least); the scheduler knows it as `<id of the domain>.<id>` |
 | `deviceCapabilities` | consumed | what it needs of the device; `os-notifications` is what an `os` rule needs |
-| `tools`, `captureSources` | declared | checked and generated; their consumers arrive with the Gardener and Capture |
+| `tools`, `captureSources` | declared | checked and generated; their consumers arrive with the Gardener and Capture. A tool is `id`, `access`, `confirm`, `reads`, and, when a model runs it, `grade` (`light`, `standard`, `deep`), `needs` (`tools`, `vision`) and `minContext` in tokens; no grade is a plain tool (D-74, "Model grades") |
 | `parent`, `integrations`, `dayAnnotations`, `dailyLine`, `mobile`, `settings` | planned | the builder refuses them until a domain consumes one. `settings` is Phase 1 in the manifest doc and waits for the Domains tab |
 
 The name, the subtitle, the glyph and a widget's title and prompt are derived from ids (`domains.<id>.name`, `domainGlyph(id)`, `garden.widgets.<widgetId>`, `garden.empty.<widgetId>`, the id in camelCase), so a manifest never repeats them.
@@ -90,6 +90,7 @@ Each error names the file and the id.
 11. A rule that answers a signal the domain does not emit; a condition that is not fields, each with the words it may be, or one on a kind with no signal; an `os` rule in a domain that does not declare `os-notifications`.
 12. A schedule id used twice in a domain; a schedule that is neither `daily` nor `every`, or both; a `daily` that is not a time of day; an `every` that is not a whole number of seconds, sixty at least.
 13. A row that differs from `docs/product/substrate/registry.md`, in either direction: id, category, primitive, owner, tier, and phase where the doc gives one.
+14. A tool field outside `id`, `access`, `confirm`, `reads`, `grade`, `needs`, `minContext`, so a `model` or a `provider` on a tool, which names a grade, never a model (D-74); a grade outside `light`, `standard`, `deep`; a `needs` that is not a list, names something outside `tools` and `vision`, or names one twice; a `minContext` that is not a whole number above zero; `needs` or `minContext` on a tool with no grade.
 
 The doc stays hand-written and the builder keeps it honest. It reads each table by its header names, takes the owner from the section's heading (`` ## Hearth (`kitchen`) ``) or the `owner` column, and the category from the `category` column or the heading above the table. The doc lists the four primitives among the substrate's entity types; in code they are their own category, so `task` is never an entity type.
 
@@ -131,6 +132,24 @@ Each app has `src/lib/domains/manifest.ts` with `defineDomain(id, bindings)`, wh
 | `handlerOf(declarations, intent)` | the domain that handles an intent, or nothing when it is disabled | intent routing |
 
 The shell names no domain. Toolbench sits in the second group because its manifest says `group: "shell"`; Sky's glyph follows the conditions because its bindings carry `liveGlyph`. The rules and the schedules are composed the same way, by `rulesOf(declarations)` in `@eden/shared/signals` and by the runtime that declares each domain's `schedules` (`engineering/signals.md`).
+
+## Model grades
+
+A tool declares a grade and what it needs of a model; which model runs it is resolved when it is asked for (D-74). `@eden/shared/gardener` holds that resolution. It is pure, never throws, and lives in TypeScript because what is derived from the manifests is the frontend's (D-72, D-73); whichever side sends a request is handed the provider and the model. If the tools are ever generated into the crate, `resolve.test.ts` ports as shared vectors.
+
+| export | answers | consumer |
+|---|---|---|
+| `ANTHROPIC_SEED`, `PROVIDERS` | the seeded provider: its models, each with flags, context size and pricing, and its map from grade to model. `providers.ts` is the only place a model id appears | the Gardener tab, every resolution |
+| `gradeMapOf(provider)`, `modelLookup(providers)` | a provider's map as refs; a ref's row across every provider, or nothing | the resolver's callers |
+| `effectiveProvider(seed, edits)` | the seed with the owner's sparse edits laid over it, and the edits that would not hold, which leave the seed's value standing | the Gardener runtime, the Gardener tab |
+| `validateProvider(row)` | what is wrong with a row: ids, flags, context, pricing, a grade mapped to a model the row does not list | the seed's tests, the Gardener tab before it keeps an edit |
+| `priceRatio(candidate, baseline)` | how many times dearer one model is than another, the larger of the input and output ratios | the Gardener tab's warning on a model dearer than the seeded one for its grade |
+| `resolveTool({ tool, domain, overrides, map, models })` | `plain`; or the provider, model, grade it runs at, declared grade, source (`tool-override`, `domain-override`, `map`) and `confirm`; or `unavailable` with `no-provider` or `no-capable-model` and what was missing. Every model passed over is in `skipped` with why, and a model the map names at several grades is there once | every model-backed tool request |
+| `resolveGrade(grade, needs, map, models)` | the same for the conversation, at its grade or at one the owner accepted from a proposal; only a move above that grade confirms | every conversation message |
+
+The per-tool override is keyed `<domain>.<tool>`, the per-domain one by the domain's id. A tool's grade is read from its declaration each time, never cached, so a tool may gain a grade later (OQ-22).
+
+Nothing imports the module yet: there is no request path until the Gardener's runtime. When it arrives, it calls `resolveTool` before every model-backed tool request and `resolveGrade` for the conversation, estimates from the resolved model's pricing row, and never sends while `confirm` is owed; a caller with no owner present, such as a rule, stops there and leaves a card. It writes the audit entry from the result (`declared`, `grade`, `provider`, `model`, `source`, the confirm's outcome) with the thread and the request that called it (`product/substrate/ai.md`, "Audit log"). It also settles whether a tool id is unique across domains: the builder holds one per domain (refusal 7), a grant names a bare tool id (`@eden/shared/grants`), and an override is keyed by both, which is safe either way.
 
 ## Where a domain's code lives
 

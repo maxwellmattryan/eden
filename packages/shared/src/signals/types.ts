@@ -17,6 +17,14 @@ export const DEVICE = 'this-device'
 /** The capability an OS notification needs (docs/product/substrate/grants.md). */
 export const OS_NOTIFICATIONS = 'os-notifications'
 
+/**
+ * The substrate's own signals that are emitted, by the frontend from `@eden/shared/tasks` (D-75): only the names
+ * the Tasks substrate emits are listed, since a name here compiles as one `emit` takes. The rest of the substrate's
+ * list (`event.*`, `attachment.added`, `task.due`) waits on the changes seam and the issues that consume them.
+ */
+export const SUBSTRATE_SIGNALS = ['task.created', 'task.completed'] as const
+export type SubstrateSignal = (typeof SUBSTRATE_SIGNALS)[number]
+
 /** What a signal carries: the URIs of what it is about under `uris`, and a few fields for its rules and its words. */
 export type SignalPayload = Record<string, unknown>
 

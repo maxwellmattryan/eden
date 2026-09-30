@@ -20,6 +20,10 @@ export type ShellTileId = (typeof SHELL)['tiles'][number]['id']
 export type WidgetSize = 's' | 'm' | 'l'
 export type SidebarGroupId = 'today' | 'shell' | 'domains'
 export type ToolAccess = 'read' | 'write-draft' | 'write'
+/** What a model-backed tool asks of a model, lowest first (D-74). Never "tier", which is sensitivity. */
+export type ModelGrade = 'light' | 'standard' | 'deep'
+/** What a tool may need of a model beyond text: to call plain tools, or to see an image. */
+export type ModelFlag = 'tools' | 'vision'
 export type CaptureSource = 'photo' | 'receipt' | 'barcode' | 'share-sheet'
 export type DeviceCapability = 'camera' | 'location-precise' | 'os-notifications' | 'healthkit'
 export type NotificationChannel = 'in-app' | 'os'
@@ -63,13 +67,22 @@ export interface QuickActionDeclaration {
 	icon: string
 }
 
-/** A Gardener tool: what it may read and what it may do (product/substrate/grants.md). */
+/**
+ * A Gardener tool: what it may read and what it may do (product/substrate/grants.md), and, when a model runs it, the
+ * grade it asks for and what it needs of the model (D-74). A tool never names a model.
+ */
 export interface ToolDeclaration {
 	id: string
 	access: ToolAccess
 	/** Whether a write asks first with a confirm sheet. */
 	confirm: boolean
 	reads: readonly ResourceId[]
+	/** `null` for a plain tool: a function, no model. */
+	grade: ModelGrade | null
+	/** What the model must have beyond text; empty for a plain tool. */
+	needs: readonly ModelFlag[]
+	/** The tokens the model's context must hold, when the tool says. */
+	minContext: number | null
 }
 
 /**

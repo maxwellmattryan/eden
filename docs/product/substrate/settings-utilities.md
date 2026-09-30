@@ -4,7 +4,7 @@ status: draft
 summary: The settings modal and its tabs, appearance, language, the updater, diagnostics and crash handling, data actions, keyboard shortcuts, the Domains tab, and what each reuses from Crate.
 read-this-if: You are designing a settings screen or a utility every app needs.
 depends-on: [shell, data, ai, grants]
-updated: 2026-09-29
+updated: 2026-09-30
 ---
 
 ## Settings modal
@@ -16,7 +16,7 @@ Desktop: a modal with a left tab rail, deep-linkable to a tab, following Crate's
 | General | language, measurement system, week start and clock (D-58), date formats, timezone, work hours (D-27), run setup again | 1 |
 | Appearance | theme light, dark or system; accent; font; zoom; reduced motion; sidebar density and subtitles | 1 |
 | Domains | enable, disable, reorder, hide; an experimental section for candidates and plugins (OQ-13) | 1 |
-| Gardener | providers and keys on this device, default model, per-domain override, budgets and the pricing table, the audit log, Council defaults | 1 (Council 2) |
+| Gardener | providers and keys on this device; each provider's models and its map from grade to model (D-74), edited over the seed (`effectiveProvider`, `validateProvider` in `@eden/shared/gardener`); the conversation's default grade; per-domain and per-tool overrides, each naming a model; choosing a model dearer than the seeded one for its grade says by how much (`priceRatio`) and asks first; budgets and the pricing table, the audit log, Council defaults | 1 (Council 2) |
 | Privacy & Grants | the tiers in plain words, the egress ledger of the last seven days, the never-automated list and the count of standing grants (built); the grants ledger (UI in Phase 2), redaction settings, "What Eden knows about me" link (built) | 1 |
 | Notifications | rule toggles, digest time, quiet hours, channels per rule | 1 (editing 2) |
 | Integrations | the catalog with states, connect, reconnect, disconnect; the weather provider (D-56) | 1 |

@@ -82,6 +82,14 @@
 	})
 </script>
 
+<script lang="ts">
+	/** The Leaving story's rows: Delete in a row's menu takes it away, and the row collapses. */
+	let staying = $state<ListRowData[]>(fridge.slice(0, 4))
+	function remove(item: MenuItem, row: ListRowData) {
+		if (item.id === 'delete') staying = staying.filter((entry) => entry.id !== row.id)
+	}
+</script>
+
 {#snippet template(args: ComponentProps<typeof List>)}
 	<div class="col"><List {...args} /></div>
 {/snippet}
@@ -196,6 +204,37 @@
 		await expect(canvas.getAllByRole('row')).toHaveLength(groceries.length)
 	}}
 />
+
+<!-- A row that leaves collapses over the settle duration (a fade under reduced motion); its focus goes to the row that takes its place, or to the one before it when it was last -->
+<Story
+	name="Leaving"
+	parameters={{ platformFrame: 'inline' }}
+	play={async ({ canvasElement }) => {
+		const canvas = canvasOf(canvasElement)
+		const rows = () => canvas.getAllByRole('row')
+		const remove = async (row: HTMLElement) => {
+			row.focus()
+			await userEvent.keyboard('{Shift>}{F10}{/Shift}')
+			await canvas.findByRole('menu')
+			await userEvent.click(canvas.getByRole('menuitem', { name: 'Delete' }))
+		}
+		await expect(rows()).toHaveLength(4)
+		// a middle row: the row after it takes its place and its focus
+		await remove(rows()[1]!)
+		await waitFor(() => expect(rows()).toHaveLength(3))
+		await expect(rows()[1]).toHaveTextContent(fridge[2]!.primary)
+		await expect(rows()[1]).toHaveFocus()
+		// the last row: the one before it takes the focus
+		await remove(rows()[2]!)
+		await waitFor(() => expect(rows()).toHaveLength(2))
+		await expect(rows()[1]).toHaveTextContent(fridge[2]!.primary)
+		await expect(rows()[1]).toHaveFocus()
+	}}
+>
+	{#snippet template()}
+		<div class="col"><List header="Fridge" count={staying.length} rows={staying} onaction={remove} /></div>
+	{/snippet}
+</Story>
 
 <!-- The phone: 44 px rows, the larger text, the menu as a bottom sheet -->
 <Story name="Mobile" parameters={{ platforms: ['mobile'] }} {template} />

@@ -4,7 +4,7 @@ status: draft
 summary: Eden's own calendar over the Event primitive, with a layer stack of event filters and day annotations (holidays, sun and moon, weather, astrology); Google Calendar is a read-only source in Phase 2. Id `calendar`, Phase 2.
 read-this-if: You are working on calendar views, layers, holidays, Google Calendar, or anything that puts something on a date.
 depends-on: [substrate/registry, substrate/primitives, substrate/integrations, domains/weather, substrate/shell, substrate/ai]
-updated: 2026-09-29
+updated: 2026-09-30
 ---
 
 ## 1. Purpose
@@ -40,12 +40,12 @@ Written: none. Read: `home-area` (substrate, T1) to default holiday countries an
 
 ## 5. Gardener tools and guardrails
 
-| tool | reads | access | confirm |
-|---|---|---|---|
-| `find-free-time` | `local-event`, `google-event`, `workout-session`, `outing`, `shop-day`, `task` | read | none |
-| `summarize-week` | the same | read | none |
-| `whats-on-date` | the same, plus `holiday-set`, `ephemeris`, `forecast` | read | none |
-| `create-local-event` | `local-event` | write | confirm sheet naming date, time and place |
+| tool | reads | access | confirm | grade |
+|---|---|---|---|---|
+| `find-free-time` | `local-event`, `google-event`, `workout-session`, `outing`, `shop-day`, `task` | read | none | plain |
+| `summarize-week` | the same | read | none | `standard` |
+| `whats-on-date` | the same, plus `holiday-set`, `ephemeris`, `forecast` | read | none | plain |
+| `create-local-event` | `local-event` | write | confirm sheet naming date, time and place | plain |
 
 Never-do list: never sends invites or touches attendees; never writes to Google before Phase 3, and then only under a per-calendar grant (OQ-6); treats Google event content as untrusted data in any context pack.
 

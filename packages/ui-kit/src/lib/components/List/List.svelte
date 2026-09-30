@@ -12,6 +12,9 @@
 	// mode the rows show no mark at all. The rows are a grid with one tab stop: arrows, Home and End move between rows
 	// and a letter jumps to the next row starting with it; the header's button is outside the grid, as ARIA asks.
 	// The selection is a SvelteSet of row ids; a $derived keeps only the ids still in `rows`, so nothing syncs in an effect.
+	// A row that leaves `rows` collapses (ListRow's `collapse`) and is in the DOM until it has; the grid stays mounted
+	// so the last row can leave too, and it is a grid only while it has rows. A leaving row that holds focus hands it
+	// to the row that takes its place, or to the one before it when it was last (`onleave`).
 	import type { Snippet } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
 	import { untrack } from 'svelte'
@@ -95,9 +98,26 @@
 		const own = row.actions ?? []
 		return selectable && !selecting ? [selectItem, ...own] : own
 	}
+	/** The rows of the grid that are staying: those still in `rows`, by id, so a row on its way out is not counted. */
+	function staying(grid: Element): Element[] {
+		const ids = new Set(rows.map((row) => row.id))
+		return [...grid.children].filter((el) => el instanceof HTMLElement && ids.has(el.dataset.id ?? ''))
+	}
 	function onfocusin(e: FocusEvent) {
 		const row = e.target instanceof Element ? e.target.closest('[role="row"]') : null
-		if (row?.parentElement) focused = [...row.parentElement.children].indexOf(row)
+		if (row?.parentElement) focused = staying(row.parentElement).indexOf(row)
+	}
+	/**
+	 * A leaving row that holds focus hands it on: to the next row that stays, or to the last one when it was last. The
+	 * row says so as its leave begins, before Svelte makes it inert, which would drop the focus on the body.
+	 */
+	function onleave(row: HTMLElement) {
+		if (!row.parentElement || !row.contains(document.activeElement)) return
+		const rest = staying(row.parentElement)
+		let next = row.nextElementSibling
+		while (next && !rest.includes(next)) next = next.nextElementSibling
+		const target = next ?? rest[rest.length - 1]
+		if (target instanceof HTMLElement) target.focus({ preventScroll: true })
 	}
 </script>
 
@@ -113,38 +133,38 @@
 			</span>
 		</div>
 	{/if}
-	{#if rows.length}
-		<div
-			class="ed-list-grid"
-			role="grid"
-			aria-labelledby={header ? headerId : undefined}
-			aria-multiselectable={selecting ? 'true' : undefined}
-			{onfocusin}
-			{@attach roving(() => ({
-				selector: '[role="row"]',
-				orientation: 'vertical',
-				homeEnd: true,
-				typeahead: true,
-				current: () => untrack(() => Math.max(0, focused)),
-			}))}
-		>
-			{#each rows as row (row.id)}
-				<ListRow
-					{...row}
-					inGrid
-					{compact}
-					{selecting}
-					selected={selection.has(row.id)}
-					actions={actionsFor(row)}
-					onopen={() => onopen?.(row)}
-					onaction={(item) => {
-						if (item.id !== selectId) onaction?.(item, row)
-					}}
-					onselect={(on) => toggle(row, on)}
-				/>
-			{/each}
-		</div>
-	{/if}
+	<!-- always mounted, so the last row can leave; a grid only while it has rows -->
+	<div
+		class="ed-list-grid"
+		role={rows.length ? 'grid' : undefined}
+		aria-labelledby={rows.length && header ? headerId : undefined}
+		aria-multiselectable={rows.length && selecting ? 'true' : undefined}
+		{onfocusin}
+		{@attach roving(() => ({
+			selector: '[role="row"]',
+			orientation: 'vertical',
+			homeEnd: true,
+			typeahead: true,
+			current: () => untrack(() => Math.max(0, focused)),
+		}))}
+	>
+		{#each rows as row (row.id)}
+			<ListRow
+				{...row}
+				inGrid
+				{compact}
+				{selecting}
+				selected={selection.has(row.id)}
+				actions={actionsFor(row)}
+				onopen={() => onopen?.(row)}
+				onaction={(item) => {
+					if (item.id !== selectId) onaction?.(item, row)
+				}}
+				onselect={(on) => toggle(row, on)}
+				{onleave}
+			/>
+		{/each}
+	</div>
 	{#if children}<div class="ed-list-extra">{@render children()}</div>{/if}
 </div>
 

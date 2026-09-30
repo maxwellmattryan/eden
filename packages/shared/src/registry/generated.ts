@@ -1192,7 +1192,10 @@ export const DECLARATIONS = {
 					"cuisine-preference",
 					"allergy",
 					"medical-dietary-restriction"
-				]
+				],
+				"grade": "standard",
+				"needs": [],
+				"minContext": null
 			},
 			{
 				"id": "storage-tip",
@@ -1201,13 +1204,21 @@ export const DECLARATIONS = {
 				"reads": [
 					"stock-item",
 					"storage-tip"
-				]
+				],
+				"grade": "light",
+				"needs": [],
+				"minContext": null
 			},
 			{
 				"id": "capture-haul",
 				"access": "write-draft",
 				"confirm": false,
-				"reads": []
+				"reads": [],
+				"grade": "light",
+				"needs": [
+					"vision"
+				],
+				"minContext": null
 			},
 			{
 				"id": "draft-grocery-list",
@@ -1218,7 +1229,10 @@ export const DECLARATIONS = {
 					"recipe",
 					"grocery-list",
 					"grocery-item"
-				]
+				],
+				"grade": "standard",
+				"needs": [],
+				"minContext": null
 			},
 			{
 				"id": "add-stock",
@@ -1226,7 +1240,10 @@ export const DECLARATIONS = {
 				"confirm": true,
 				"reads": [
 					"stock-item"
-				]
+				],
+				"grade": null,
+				"needs": [],
+				"minContext": null
 			},
 			{
 				"id": "plan-week",
@@ -1237,7 +1254,12 @@ export const DECLARATIONS = {
 					"recipe",
 					"local-event",
 					"task"
-				]
+				],
+				"grade": "deep",
+				"needs": [
+					"tools"
+				],
+				"minContext": null
 			}
 		],
 		"signals": [
@@ -1435,7 +1457,10 @@ export const DECLARATIONS = {
 					"skill",
 					"preferred-tool",
 					"owned-hardware"
-				]
+				],
+				"grade": "deep",
+				"needs": [],
+				"minContext": null
 			},
 			{
 				"id": "critique",
@@ -1444,7 +1469,10 @@ export const DECLARATIONS = {
 				"reads": [
 					"idea",
 					"project"
-				]
+				],
+				"grade": "deep",
+				"needs": [],
+				"minContext": null
 			},
 			{
 				"id": "expand-to-plan",
@@ -1454,7 +1482,10 @@ export const DECLARATIONS = {
 					"idea",
 					"project",
 					"task"
-				]
+				],
+				"grade": "deep",
+				"needs": [],
+				"minContext": null
 			},
 			{
 				"id": "find-similar",
@@ -1464,7 +1495,10 @@ export const DECLARATIONS = {
 					"idea",
 					"project",
 					"note"
-				]
+				],
+				"grade": null,
+				"needs": [],
+				"minContext": null
 			},
 			{
 				"id": "estimate-parts-cost",
@@ -1472,7 +1506,10 @@ export const DECLARATIONS = {
 				"confirm": false,
 				"reads": [
 					"parts-list"
-				]
+				],
+				"grade": null,
+				"needs": [],
+				"minContext": null
 			},
 			{
 				"id": "summarize-project",
@@ -1481,7 +1518,10 @@ export const DECLARATIONS = {
 				"reads": [
 					"project",
 					"task"
-				]
+				],
+				"grade": "standard",
+				"needs": [],
+				"minContext": null
 			},
 			{
 				"id": "draft-sketch-scaffold",
@@ -1490,7 +1530,10 @@ export const DECLARATIONS = {
 				"reads": [
 					"sketch",
 					"preferred-tool"
-				]
+				],
+				"grade": "deep",
+				"needs": [],
+				"minContext": null
 			}
 		],
 		"signals": [
@@ -1629,7 +1672,10 @@ export const DECLARATIONS = {
 					"forecast",
 					"home-area",
 					"venue"
-				]
+				],
+				"grade": null,
+				"needs": [],
+				"minContext": null
 			},
 			{
 				"id": "rain-during-plan",
@@ -1641,7 +1687,10 @@ export const DECLARATIONS = {
 					"workout-session",
 					"local-event",
 					"outing"
-				]
+				],
+				"grade": null,
+				"needs": [],
+				"minContext": null
 			},
 			{
 				"id": "sun-and-moon",
@@ -1649,7 +1698,10 @@ export const DECLARATIONS = {
 				"confirm": false,
 				"reads": [
 					"ephemeris"
-				]
+				],
+				"grade": null,
+				"needs": [],
+				"minContext": null
 			}
 		],
 		"signals": [

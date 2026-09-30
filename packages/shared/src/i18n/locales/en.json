@@ -92,7 +92,14 @@
 			"ideaDeleted": "{title} deleted",
 			"factAdded": "{name} added to what Eden knows",
 			"factChanged": "{name} changed",
-			"factRemoved": "{name} removed from what Eden knows"
+			"factRemoved": "{name} removed from what Eden knows",
+			"taskAdded": "{title} added to Today",
+			"taskDone": "{title} done",
+			"taskReopened": "{title} open again",
+			"taskSnoozed": "{title} snoozed",
+			"taskSkipped": "{title} skipped today",
+			"taskTallied": "{title} logged",
+			"taskDeleted": "{title} deleted"
 		},
 		"profile": "What Eden knows"
 	},
@@ -622,6 +629,65 @@
 			"back": "Back",
 			"single": "One per profile; opens the one you have."
 		}
+	},
+	"today": {
+		"addPlaceholder": "Add a task, a routine or a habit",
+		"quickLog": "Quick Log",
+		"quickLogChip": "{action} · {domain}",
+		"sections": {
+			"overdue": "Overdue",
+			"due": "Due today",
+			"routines": "Routines",
+			"habits": "Habits"
+		},
+		"showOverdue": "Show overdue",
+		"hideOverdue": "Hide overdue",
+		"actions": {
+			"done": "Done",
+			"reopen": "Not done",
+			"later": "Later today",
+			"tomorrow": "Tomorrow",
+			"nextWeek": "Next week",
+			"skip": "Skip today",
+			"log": "Log one",
+			"delete": "Delete"
+		},
+		"when": {
+			"today": "Today",
+			"tomorrow": "Tomorrow"
+		},
+		"checklist": "{done} / {total}",
+		"habit": {
+			"tally": "{count} / {target}",
+			"perDay": "today",
+			"perWeek": "this week",
+			"streak": "{streak} in a row"
+		},
+		"repeat": {
+			"daily": "Every day",
+			"everyDays": "Every {n} days",
+			"weekdays": "Every weekday",
+			"weekly": "Every {days}",
+			"everyWeeks": "Every {n} weeks on {days}",
+			"monthly": "Every month",
+			"everyMonths": "Every {n} months",
+			"yearly": "Every year",
+			"everyYears": "Every {n} years"
+		},
+		"target": {
+			"perDay": "{count} / day",
+			"perWeek": "{count} / week"
+		},
+		"toast": {
+			"added": "{title} added.",
+			"done": "{title} done.",
+			"reopened": "{title} is open again.",
+			"snoozed": "{title} moved to {when}.",
+			"skipped": "{title} skipped today.",
+			"logged": "{title}: {count} of {target}.",
+			"deleted": "{title} deleted."
+		},
+		"saveFailed": "Today could not be saved."
 	},
 	"settings": {
 		"title": "Settings",

@@ -4,7 +4,7 @@ status: draft
 summary: The frame everything sits in: layout regions, the sidebar, the Garden dashboard and its widgets, the command palette, navigation history and the back affordance, the status bar, Quick Log surfaces, the notification center, mobile structure, keyboard model and global states.
 read-this-if: You are designing navigation, layout, the dashboard, or anything that appears on every screen.
 depends-on: [domain-manifest, tasks, signals-notifications]
-updated: 2026-09-29
+updated: 2026-09-30
 ---
 
 ## Layout regions
@@ -33,7 +33,9 @@ Every view push goes on a history stack with back and forward, like a browser. T
 
 ## Status bar (Phase 1)
 
-Left: sync state and one chip per integration. Right: the Gardener chip (model name, budget meter, grey when no key on this device), the notification bell with unread count, and the **+** button. On mobile these live behind More and the floating button.
+Left: sync state and one chip per integration. Right: the Gardener chip (the conversation's grade and model with a switch for the grade (D-74), budget meter, grey when no key on this device), the notification bell with unread count, and the **+** button. On mobile these live behind More and the floating button.
+
+The grade switch is not built: the kit's `StatusBarGardener` takes a label, a budget and the no-key state, and gains the switch with the Gardener's runtime as a change to its contract. The words for a tool that is unavailable, and why, arrive with it, and so do the chip's rows in `design/sample-data.md`, `design/ux-patterns.md` and `design/screens.md`.
 
 ## Quick Log surfaces (D-12)
 

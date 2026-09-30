@@ -4,7 +4,7 @@ status: draft
 summary: The traditions and values the owner chooses, bundled and personal readings, a reading log with reflections, the daily line for the splash and the Garden, and optional astrology. Id `spirit`, Phase 2.
 read-this-if: You are working on the daily line, readings, reflection, values or astrology.
 depends-on: [substrate/registry, substrate/tasks, substrate/ai, substrate/shell, substrate/ai]
-updated: 2026-09-27
+updated: 2026-09-30
 ---
 
 ## 1. Purpose
@@ -43,13 +43,13 @@ Read: none from other domains. The `ephemeris` entity from Sky is read for trans
 
 ## 5. Gardener tools and guardrails
 
-| tool | reads | access | confirm |
-|---|---|---|---|
-| `daily-reflection-prompt` | `followed-tradition`, `value`, `reading-log` | read | none |
-| `find-excerpt` | `excerpt`, `reading-source`, `tradition` | read | none |
-| `explain-passage` | `excerpt` | read | none |
-| `draft-reflection` | `reading-log`, `excerpt` | write-draft | editable card |
-| `transits-today` | `astrology-profile`, `ephemeris` | read | T2 grant on `astrology-profile` the first time |
+| tool | reads | access | confirm | grade |
+|---|---|---|---|---|
+| `daily-reflection-prompt` | `followed-tradition`, `value`, `reading-log` | read | none | `standard` |
+| `find-excerpt` | `excerpt`, `reading-source`, `tradition` | read | none | plain |
+| `explain-passage` | `excerpt` | read | none | `standard` |
+| `draft-reflection` | `reading-log`, `excerpt` | write-draft | editable card | `standard` |
+| `transits-today` | `astrology-profile`, `ephemeris` | read | T2 grant on `astrology-profile` the first time | plain |
 
 Never-do list: never proselytises or ranks traditions; labels astrology as non-predictive; uses only public-domain, licensed or owner-added content (OQ-5); never offers psychological or medical advice; never sends birth data to a provider (transits are computed locally; horoscope text, if ever, is fetched by sun sign only, OQ-16).
 

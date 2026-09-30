@@ -4,7 +4,7 @@ status: draft
 summary: The phases from docs to a synced, multi-domain Eden, what each ships, what "done" means, what can slip, and the risks and external dependencies.
 read-this-if: You are planning, scoping, or deciding what to build next.
 depends-on: [vision, decisions, domains/README]
-updated: 2026-09-27
+updated: 2026-09-30
 ---
 
 ## Phases
@@ -23,7 +23,7 @@ updated: 2026-09-27
 - Shell: sidebar with themed names and subtitles, the Garden with static widgets and edit mode, ⌘K, navigation history and the back affordance, the status bar, Quick Log surfaces, the notification center (`substrate/shell.md`).
 - Onboarding wizard with the two T2 grants (`substrate/onboarding.md`).
 - Substrate: the profile store and "What Eden knows about me"; the manifest and resource registries; the grant store (ledger UI in Phase 2); the data layer with export and import; a minimal scheduler with one-shot and daily triggers; the stores for all four primitives with minimal UI (Today, an agenda list, a Place picker, an attachment viewer); signals, the in-app inbox and the activity feed; the egress ledger.
-- The Gardener v0: one provider with the owner's key, global and per-domain chat, declared reads and the "can see" chip, budgets, the audit log, tier exclusion and scrub; no Council.
+- The Gardener v0: one provider with the owner's key, model grades within it and the chip's grade switch (D-74), global and per-domain chat, declared reads and the "can see" chip, budgets, the audit log, tier exclusion and scrub; no Council.
 - Domains: Hearth, Toolbench, Sky.
 
 Cut line: the notification center can ship as a plain list; the Garden edit mode can ship as reorder-only; Toolbench's Lab and Studio can ship as lists without widgets.
@@ -32,8 +32,8 @@ Cut line: the notification center can ship as a plain list; the Garden edit mode
 
 - Almanac as a native component with the layer stack; read-only Google Calendar as the first OAuth grant (D-28); holidays; Sky's annotations.
 - Grants ledger UI; full scheduler with digests and quiet hours; OS notifications on mobile.
-- Today with routines and habits; Vigor with quick logs and the weight trend; Sanctuary with the daily line on the splash.
-- The Council; local models through Ollama on desktop; several providers at once.
+- Today with routines and habits in full; Vigor with quick logs and the weight trend; Sanctuary with the daily line on the splash.
+- The Council; local models through Ollama on desktop; several providers at once, with grade maps that may cross them.
 - Vault v0 with share-sheet export and per-open audit.
 - The mobile shell: Garden, Today, grocery list, stock, Capture with on-device barcode and receipt OCR, Gardener chat, Sky, the inbox and settings.
 

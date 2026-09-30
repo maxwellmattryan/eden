@@ -4,7 +4,7 @@ status: draft
 summary: Places and listings near you on a map, filtered by vibe, with favourites, collections, visits, and a one-tap path from "let's go" to a calendar event. Id `places`, Phase 3.
 read-this-if: You are working on the map, place discovery, vibes, favourites, listings or outings.
 depends-on: [substrate/registry, substrate/primitives, substrate/integrations, substrate/grants, substrate/shell, substrate/ai]
-updated: 2026-09-27
+updated: 2026-09-30
 ---
 
 ## 1. Purpose
@@ -42,11 +42,11 @@ Read: `home-area` (substrate, T1), `dietary-preference` (Hearth, T1; includes al
 
 ## 5. Gardener tools and guardrails
 
-| tool | reads | access | confirm |
-|---|---|---|---|
-| `suggest-places` | `place-profile`, `venue`, `vibe`, `favorite-vibe`, `home-area`, `dietary-preference`, `allergy` | read; provider queries under the location grant | none |
-| `suggest-listings` | `listing`, `favorite-vibe`, `home-area`, `local-event`, `outing` | read | none |
-| `add-to-calendar` | `listing` | write, through the substrate `createEvent` | confirm sheet |
+| tool | reads | access | confirm | grade |
+|---|---|---|---|---|
+| `suggest-places` | `place-profile`, `venue`, `vibe`, `favorite-vibe`, `home-area`, `dietary-preference`, `allergy` | read; provider queries under the location grant | none | `standard` |
+| `suggest-listings` | `listing`, `favorite-vibe`, `home-area`, `local-event`, `outing` | read | none | `standard` |
+| `add-to-calendar` | `listing` | write, through the substrate `createEvent` | confirm sheet | plain |
 
 Never-do list: never sends coordinates finer than city level to a model or provider without a precise-location grant; keeps no location history; never books, reserves or publishes reviews.
 

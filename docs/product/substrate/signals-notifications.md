@@ -27,7 +27,7 @@ Where the clock runs, and how the scheduler divides the work with the refresh co
 
 ## Rules
 
-A rule is **trigger → condition → action**. Triggers are signal names or schedules. Conditions are simple predicates on payload fields and time. Actions are: notify on a channel with a template, create a task, or run a Gardener tool under an existing grant (Phase 2). Domains ship default rules in their manifest. The owner can toggle each in Phase 1 and edit conditions and channels in Phase 2 (Settings → Notifications). Rules never widen a grant.
+A rule is **trigger → condition → action**. Triggers are signal names or schedules. Conditions are simple predicates on payload fields and time. Actions are: notify on a channel with a template, create a task, or run a Gardener tool under an existing grant (Phase 2); a rule never runs a `deep` tool itself and leaves a card for the owner instead (D-74), which needs the inline actions of the notification center, since a card's one action today opens its domain. Domains ship default rules in their manifest. The owner can toggle each in Phase 1 and edit conditions and channels in Phase 2 (Settings → Notifications). Rules never widen a grant.
 
 Built (D-73): a rule is a notification kind with the signal that triggers it, a condition that a payload field is one of some words, and the action of notifying on its channel. The toggles arrive with the notification center; until then a rule is on or off as its manifest says.
 
@@ -61,7 +61,7 @@ Success is silent. Toasts show errors and offer undo. This is Crate's rule and E
 
 ## Phase 1 signal list
 
-Emitted today: `weather.alert`, `stock.expiring` and `grocery.shop-day`, and `scheduler.fired` to subscribers only. The substrate's own are not emitted yet (D-73).
+Emitted today: `weather.alert`, `stock.expiring` and `grocery.shop-day`, and `scheduler.fired` to subscribers only; of the substrate's own, `task.created` and `task.completed`, emitted by the frontend per owner action (D-75), with no rule answering them yet. `task.due` stays unemitted, with the rest of the substrate's list (D-73): reminders, the cards and the rule for a task signal, and the feed on signals are the notification center's.
 
 | signal | emitter | payload |
 |---|---|---|

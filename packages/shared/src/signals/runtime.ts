@@ -16,10 +16,10 @@ import { createBus, type SignalHandler } from './bus.js'
 import { emitSignal } from './client.js'
 import { createPump } from './pump.js'
 import { deliveriesFor, rulesOf, signalTier, type Rule } from './rules.js'
-import type { Emitted, InboxEntry, SignalPayload } from './types.js'
+import type { Emitted, InboxEntry, SignalPayload, SubstrateSignal } from './types.js'
 
-/** A signal a built domain declares that it emits. */
-export type DeclaredSignal = (typeof DECLARATIONS)[BuiltDomainId]['signals'][number]
+/** A signal a built domain declares that it emits, or one of the substrate's own that the frontend emits (D-75). */
+export type DeclaredSignal = (typeof DECLARATIONS)[BuiltDomainId]['signals'][number] | SubstrateSignal
 
 /** What a taken schedule is handed on as. It is the scheduler's own, and transient: no row is kept of it. */
 export const SCHEDULER_FIRED = 'scheduler.fired'

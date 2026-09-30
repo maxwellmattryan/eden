@@ -25,7 +25,7 @@ A domain is a manifest plus the code behind it. The shell composes the sidebar, 
 | `widgets` | 1 | Garden tiles with size (S, M, L), default placement, and the registry ids each reads; widgets compute locally and call a tool when they need the Gardener |
 | `quickActions` | 1 | Quick Log entries (D-12) |
 | `captureSources` | 1 | photo, receipt, barcode, share sheet (D-13) |
-| `tools` | 1 | Gardener tools, each with `reads`, `access` and confirm rule |
+| `tools` | 1 | Gardener tools, each with `reads`, `access` and confirm rule; one a model runs also declares its grade and what it needs of the model (D-74) |
 | `signals` | 1 | signal names it emits |
 | `notificationKinds` | 1 | with default channel and cadence; one that names a `signal`, and optionally `when`, is a default rule (`substrate/signals-notifications.md`) |
 | `schedules` | 1 | the repeating schedules it subscribes to: daily at a local time, or every so many seconds |
@@ -47,6 +47,7 @@ Fields no Phase 1 domain consumes are marked planned and left unimplemented unti
 - A domain never imports another domain's code or reads another domain's tables.
 - Domains communicate through five channels only: **facts** (profile), **primitives** (shared tables by kind), **signals** (pub/sub), **intents** (domain-owned actions), and **typed entity links**. Every other coupling is a bug.
 - A domain's Gardener tools declare their reads as registry ids; the shell rejects a tool that names a resource outside the registry or a T3 resource (D-31, D-14).
+- A tool names a grade, never a model or a provider; which model runs it is the provider's map and the owner's overrides (D-74).
 - Safety filters that guard the owner (allergies) run in the substrate, not in the domain that happens to display the result (D-25).
 
 ## Entity URIs and typed links
@@ -88,7 +89,7 @@ Built-in domains are manifests compiled into the app. An external plugin is the 
 | `widgets` | expiring-soon (S, M; reads `stock-item`), cook-tonight (M; reads `stock-item`, `recipe`, `allergy`, `medical-dietary-restriction`, `dietary-preference`), grocery-quick-add (S; reads `grocery-list`, `grocery-item`) |
 | `quickActions` | capture-haul, add-to-grocery |
 | `captureSources` | photo, receipt (barcode in Phase 2) |
-| `tools` | suggest-recipes (read), storage-tip (read), capture-haul (write-draft), draft-grocery-list (write-draft), add-stock (write, confirm), plan-week (write-draft) |
+| `tools` | suggest-recipes (read, standard), storage-tip (read, light), capture-haul (write-draft, light, needs vision), draft-grocery-list (write-draft, standard), add-stock (write, confirm, plain), plan-week (write-draft, deep, needs tools) |
 | `signals` | `stock.expiring`, `stock.low`, `grocery.shop-day` |
 | `notificationKinds` | expiring-digest (daily, in-app; answers `stock.expiring`), low-stock (weekly, in-app), shop-day-reminder (OS, morning of; answers `grocery.shop-day`) |
 | `schedules` | morning (daily at 08:00) |

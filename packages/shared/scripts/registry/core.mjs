@@ -15,6 +15,11 @@ export const TIERS = ['T0', 'T1', 'T2', 'T3', 'by-kind', 'by-source']
 export const PHASES = [1, 2, 3, 'later']
 const SIZES = ['s', 'm', 'l']
 const ACCESS = ['read', 'write-draft', 'write']
+/** A model-backed tool's grade, lowest first, and what it may need of a model beyond text (D-74). */
+const GRADES = ['light', 'standard', 'deep']
+const MODEL_FLAGS = ['tools', 'vision']
+/** The fields a tool has; `grade`, `needs` and `minContext` only when a model runs it. */
+const TOOL_FIELDS = ['id', 'access', 'confirm', 'reads', 'grade', 'needs', 'minContext']
 const CAPTURE_SOURCES = ['photo', 'receipt', 'barcode', 'share-sheet']
 const DEVICE_CAPABILITIES = ['camera', 'location-precise', 'os-notifications', 'healthkit']
 const CHANNELS = ['in-app', 'os']
@@ -247,6 +252,39 @@ export function build(sources) {
 	function icon(file, what, name) {
 		if (!icons.icons.includes(name)) fail(file, `${what}: "${name}" is not in the kit's icon list`)
 	}
+	/**
+	 * A Gardener tool with a well-formed id: its access and reads, and, when a model runs it, its grade and what it
+	 * needs of the model (D-74). No grade is a plain tool. `within` checks its reads against the declarer's own.
+	 */
+	function toolDeclaration(file, tool, within) {
+		const what = `the tool "${tool.id}"`
+		for (const field of Object.keys(tool)) {
+			if (field === 'model' || field === 'provider')
+				fail(file, `${what}: "${field}" is not a tool field; a tool names a grade, never a model (D-74)`)
+			else if (!TOOL_FIELDS.includes(field)) fail(file, `${what}: "${field}" is not a tool field`)
+		}
+		if (!ACCESS.includes(tool.access))
+			fail(file, `${what} has the access ${JSON.stringify(tool.access)}; one of ${ACCESS.join(', ')}`)
+		const { grade, needs, minContext } = tool
+		if (grade !== undefined && !GRADES.includes(grade))
+			fail(file, `${what} has the grade ${JSON.stringify(grade)}; one of ${GRADES.join(', ')}, or none if plain`)
+		for (const field of ['needs', 'minContext']) {
+			if (grade === undefined && tool[field] !== undefined)
+				fail(file, `${what} declares "${field}" and no grade; a plain tool runs no model`)
+		}
+		if (needs !== undefined && !Array.isArray(needs)) fail(file, `${what} has "needs" that is not a list`)
+		if (minContext !== undefined && !(Number.isInteger(minContext) && minContext > 0))
+			fail(file, `${what} has the minContext ${JSON.stringify(minContext)}; a whole number of tokens, above zero`)
+		return {
+			id: tool.id,
+			access: tool.access,
+			confirm: tool.confirm === true,
+			reads: within(what, tool.reads),
+			grade: grade ?? null,
+			needs: among(file, `${what} needs`, needs, MODEL_FLAGS),
+			minContext: minContext ?? null,
+		}
+	}
 
 	// ---- The domains ----------------------------------------------------------------------------------------------
 
@@ -343,17 +381,7 @@ export function build(sources) {
 		for (const tool of list(data.tools)) {
 			if (typeof tool?.id !== 'string' || !ID.test(tool.id)) fail(file, `${JSON.stringify(tool?.id)} is not a tool id`)
 			else if (tools.some((other) => other.id === tool.id)) fail(file, `the tool "${tool.id}" is declared twice`)
-			else {
-				const what = `the tool "${tool.id}"`
-				if (!ACCESS.includes(tool.access))
-					fail(file, `${what} has the access ${JSON.stringify(tool.access)}; one of ${ACCESS.join(', ')}`)
-				tools.push({
-					id: tool.id,
-					access: tool.access,
-					confirm: tool.confirm === true,
-					reads: within(what, tool.reads),
-				})
-			}
+			else tools.push(toolDeclaration(file, tool, within))
 		}
 
 		const signals = ids(file, '"signals"', data.signals, SIGNAL)

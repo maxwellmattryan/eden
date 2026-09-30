@@ -11,7 +11,7 @@ updated: 2026-09-30
 
 | built | not yet |
 |---|---|
-| the scheduler with `once`, `daily` and `every`; signals with a key that emits once; rules from the manifests; the inbox rows; the alarm; the runtime in both apps; the refresh coordinator; the desktop bell as a plain list with mark-read; OS notifications on desktop behind the capability grant; Sky's alerts and forecast; Hearth's expiring digest and shop-day reminder | the substrate's own signals from the changes seam; the activity feed on signals; grouping, snooze and clearing in the inbox; rule toggles in Settings; quiet hours and digests; weekly and monthly triggers; the inbox and OS notifications on mobile; background execution on mobile; a measurement of the cadence in a hidden window |
+| the scheduler with `once`, `daily` and `every`; signals with a key that emits once; rules from the manifests; the inbox rows; the alarm; the runtime in both apps; the refresh coordinator; the desktop bell as a plain list with mark-read; OS notifications on desktop behind the capability grant; Sky's alerts and forecast; Hearth's expiring digest and shop-day reminder; the task signals, emitted by the frontend (D-75) | the substrate's own signals from the changes seam, the two task signals apart; the activity feed on signals; grouping, snooze and clearing in the inbox; rule toggles in Settings; quiet hours and digests; weekly and monthly triggers; the inbox and OS notifications on mobile; background execution on mobile; a measurement of the cadence in a hidden window |
 
 D-73 records the decisions; this page is how they work.
 
@@ -117,7 +117,7 @@ A manifest also declares its repeating schedules: `"schedules": [{ "id": "alerts
 | `onSchedule(name, handler)` | hears one schedule each time it is taken |
 | `onDelivered(listener)` | hears the cards each emit makes |
 
-A domain binds what it hears in its manifest binding, `subscribe: () => () => void` (`engineering/domain-module.md`, "Bindings"). The name of an emitted signal is typed from the manifests, so a signal no domain declares does not compile.
+A domain binds what it hears in its manifest binding, `subscribe: () => () => void` (`engineering/domain-module.md`, "Bindings"). The name of an emitted signal is typed from the manifests and from the substrate's own list (`SUBSTRATE_SIGNALS` in `signals/types.ts`, a const and not a manifest field: the two task signals, D-75), so a signal nobody declares does not compile.
 
 The pump (`signals/pump.ts`) is what takes: a call while a take is under way does not start a second beside it but asks for one more after, since the alarm, the window's return and the start can arrive together.
 
@@ -173,6 +173,17 @@ Each active alert is emitted as `weather.alert` with its id as the key, so it is
 
 `ensureShopDay()` sets or cancels the one-shot from the list as it is stored: when the shell starts, and after a seed, its undo and a reload. Nothing in the interface sets a shop day yet, so the reminder is reachable only through the sample data.
 
+**Tasks** (`packages/shared/src/tasks/signals.ts`, with the pure part, `taskSignal`, in `rules.ts`). The data layer emits nothing for a task (D-75): the crate cannot see a routine's or a habit's completion, which lives in `progress`, and cannot evaluate the rules. So the frontend emits, once the write has landed, one signal per owner action:
+
+| signal | when | key | payload |
+|---|---|---|---|
+| `task.created` | a task is made for the owner | the id | `uris` (the task's), `kind`, `day`, `title` (clipped to 200 characters) |
+| `task.completed` | a todo, a checklist or a routine is done; a habit's tally meets its target | the id and the day; for a habit, the id and the first day of the period | the same |
+
+The tier is T1, the task row's. A batch (the seed) and an import emit nothing; a failed emit is logged and never fails the write; an undo retracts nothing, and a repeat the same day is dropped by the key. No rule answers a task signal yet: a rule names a signal of its own domain's manifest, so the substrate needs rules of its own first (the notification center's, with `task.due`).
+
+The one rule every later issue follows: any code that creates or completes a task for the owner calls `emitTaskCreated` or `emitTaskCompleted` from `@eden/shared/tasks` after its write, and asks the Today store to reload (`tasks.reload()` in `apps/desktop/src/lib/shell/today/store.svelte.ts`). Code that skips this still writes the task, but no signal is emitted and Today does not show it until the next launch. That is: a domain that makes a task (Hearth's "restock rice", a project's next steps); the palette's "create a task" verb, which calls the store's `add` rather than `createTask` directly, and its go-to-Today; and the Gardener's `create-task` and `complete-task`, which go through the same emitters, while `summarize-day` reads `todayView` rather than keeping a second idea of "due today".
+
 ## Adding one
 
 - **A schedule.** Add it to the manifest's `schedules`, run `yarn registry`, and hear it with `onSchedule` in the domain's `subscribe` binding. A one-shot is `setSchedule(name, at)` at the moment its instant is known, and again whenever that changes.
@@ -193,5 +204,6 @@ Each active alert is emitted as `weather.alert` with its id as the key, so it is
 | `scripts/registry/core.test.mjs` | what the builder refuses of a rule and a schedule |
 | `weather/nws.test.ts` | the alert service's answers, from two captures |
 | `domains/kitchen/digest.test.ts` | the digest and the shop day's morning |
+| `tasks/rules.test.ts` | the two task signals: names, payloads, keys, the clipped title; `signals/rules.test.ts` that a task URI is T1 |
 
 The alarm, the runtime and the OS notification are not under test: they need a window. What is **not measured** is how punctual the alarm and the take are while the window is hidden. The alarm's thread is outside the webview, but macOS may still slow a hidden app (App Nap). Due times are wall-clock instants, so a slowed look is late and never lost. To measure: minimise the `yarn dev` window for twenty minutes and compare the `scheduler: something is due` lines in the log (`RUST_LOG=debug`), and the NWS count in Settings → Privacy, with five-minute steps.

@@ -497,6 +497,33 @@ export const todayTasks: TodayTask[] = [
 	{ id: 't-03', title: 'Morning LMNT', when: '06:50', state: 'done', routine: true },
 ]
 
+/** The two todos' due days (`MM-DD`), for the page and its seed: the dentist since Monday, the card today. */
+export const todayDues: Record<string, string> = { 't-01': '09-28', 't-02': '09-30' }
+
+/** The routine behind the tile's third row: every day at 06:50 since the start of the month, done this morning. */
+export const todayRoutine = {
+	id: 't-03',
+	title: 'Morning LMNT',
+	timeOfDay: '06:50',
+	freq: 'daily' as const,
+	/** `MM-DD`, in the dataset's year. */
+	start: '09-01',
+	/** When it was done today, `HH:MM`. */
+	doneAt: '06:50',
+}
+
+/** The one habit: stretching three times a week, twice so far this week, the two weeks before met. */
+export const todayHabit = {
+	id: 't-04',
+	title: 'Stretch',
+	target: { count: 3, per: 'week' as const },
+	/** The days it was logged (`MM-DD`), once each. */
+	days: ['09-15', '09-17', '09-19', '09-22', '09-24', '09-26', '09-28', '09-29'],
+	/** What the tally reads on Wednesday. */
+	tally: '2 / 3',
+	streak: 2,
+}
+
 /** The Phase 1 default Garden (product/substrate/shell.md): the mockup and the app read this one list. */
 export type GardenWidgetSize = 's' | 'm' | 'l'
 export type GardenDomain = 'weather' | 'today' | 'kitchen' | 'toolbench' | 'fitness' | 'garden'
