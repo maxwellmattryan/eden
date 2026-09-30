@@ -1,7 +1,8 @@
 <script lang="ts">
 	// The dock the Gardener's panel slides into (product/substrate/shell.md: the optional right panel), after Crate's
-	// right sidebar: the column animates its width open and shut, stays mounted until the shut transition ends, and
-	// its inner edge drags between a quarter and a half of the room beside the nav. The width the owner settles on
+	// right sidebar: the column is always in the grid, at no width while shut, so its width has a state to slide open
+	// from as well as shut to; the panel inside mounts on the first open and stays until the shut transition ends.
+	// The inner edge drags between a quarter and a half of the room beside the nav. The width the owner settles on
 	// is kept per device (`settings.gardenerPanelWidth`); dragging turns the transition off so the edge follows the
 	// pointer.
 	import { settings } from '@eden/shared/settings'
@@ -31,7 +32,7 @@
 		return Math.min(max, Math.max(min, value))
 	}
 
-	// effect: imperative DOM — the column is in the tree before it can slide open
+	// effect: imperative DOM — the panel is in the column as it starts to slide open
 	$effect(() => {
 		if (gardenerUi.open) mounted = true
 	})
@@ -45,14 +46,14 @@
 	}
 </script>
 
-{#if mounted}
-	<div class={['dock', !resizing && 'dock-sliding']} style:width="{gardenerUi.open ? width : 0}px" {ontransitionend}>
+<div class={['dock', !resizing && 'dock-sliding']} style:width="{gardenerUi.open ? width : 0}px" {ontransitionend}>
+	{#if mounted}
 		<ResizeHandle onresize={resize} onstart={() => (resizing = true)} onend={() => (resizing = false)} />
 		<div class="dock-inner" style:width="{width}px">
 			<GardenerPanel />
 		</div>
-	</div>
-{/if}
+	{/if}
+</div>
 
 <style>
 	.dock {

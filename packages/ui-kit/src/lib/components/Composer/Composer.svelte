@@ -3,7 +3,8 @@
 	// settled into. The field is bare (no chrome of its own: the box's border becomes the focus ring, as a Field's
 	// does), grows with its lines to about eight, and sends on Enter; Shift+Enter breaks the line. The foot carries
 	// what the app puts beside the message (the "can see" chip) at the start, a quiet caption at the end (a model, a
-	// cost) and the round send button on the Gardener's green (D-40), which turns into Stop while the reply streams.
+	// cost) and the round send button on the Gardener's green (D-40), the Enter glyph since Enter is what sends, which
+	// turns into Stop while the reply streams.
 	// The composer owns its text: it clears itself after `onsend`, and never sends blank space.
 	import type { Snippet } from 'svelte'
 	import type { HTMLTextareaAttributes } from 'svelte/elements'
@@ -80,11 +81,16 @@
 		{#if tools}<div class="ed-composer-tools">{@render tools()}</div>{/if}
 		<div class="ed-composer-end">
 			{#if meta}<div class="ed-composer-meta">{@render meta()}</div>{/if}
-			{#if busy}
-				<IconButton icon="square" label={s.gardener.stop} fill="ai" tooltip onclick={() => onstop?.()} />
-			{:else}
-				<IconButton icon="arrow-up" label={s.gardener.send} fill="ai" tooltip disabled={!canSend} onclick={send} />
-			{/if}
+			<!-- one button for both: the circle stays where it is and keeps its focus, the glyph fades to the other -->
+			<IconButton
+				class={['ed-composer-send', busy && 'ed-composer-send-busy']}
+				icon={busy ? 'square' : 'corner-down-left'}
+				label={busy ? s.gardener.stop : s.gardener.send}
+				fill="ai"
+				tooltip
+				disabled={!busy && !canSend}
+				onclick={() => (busy ? onstop?.() : send())}
+			/>
 		</div>
 	</div>
 </div>
@@ -178,6 +184,26 @@
 		gap: var(--space-2);
 		margin-left: auto;
 		flex: none;
+	}
+	/* Send and Stop are one button; the glyph fades and settles in whenever it changes. Two animations of the same
+	   shape, so turning busy on or off starts one afresh. */
+	.ed-composer-end :global(.ed-composer-send svg) {
+		animation: ed-composer-to-send var(--ed-duration-settle) var(--ed-ease-out);
+	}
+	.ed-composer-end :global(.ed-composer-send-busy svg) {
+		animation-name: ed-composer-to-stop;
+	}
+	@keyframes ed-composer-to-send {
+		from {
+			opacity: 0;
+			transform: scale(0.7);
+		}
+	}
+	@keyframes ed-composer-to-stop {
+		from {
+			opacity: 0;
+			transform: scale(0.7);
+		}
 	}
 	.ed-composer-meta {
 		font: var(--ed-t-caption);

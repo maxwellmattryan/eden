@@ -947,6 +947,11 @@
 				"title": "A dearer model",
 				"text": "This model costs about {ratio}× the seeded one for this grade. Use it anyway?",
 				"verb": "Use it"
+			},
+			"tools": {
+				"label": "Tools",
+				"help": "Every tool the Gardener has: what it does, what it may read, whether it asks first.",
+				"open": "Browse the tools"
 			}
 		}
 	},
@@ -1080,8 +1085,19 @@
 			"substrate": "Eden",
 			"declared": "Declared",
 			"thisCall": "This call",
-			"access": "Access"
-		}
+			"access": "Access",
+			"accessKinds": {
+				"read": "Read",
+				"write-draft": "Draft",
+				"write": "Write",
+				"act-external": "External"
+			},
+			"confirm": "Asks first",
+			"confirmYes": "Yes, with a confirm",
+			"confirmNo": "No",
+			"readsNothing": "Nothing"
+		},
+		"openTools": "Browse the tools"
 	},
 	"audit": {
 		"title": "Audit log",
@@ -1138,5 +1154,21 @@
 		},
 		"openThread": "Open the conversation",
 		"retention": "Entries stay ninety days on this device. They are never exported or synced."
+	},
+	"tools": {
+		"title": "Tools",
+		"subtitle": "Everything the Gardener can do, and what each may read",
+		"columns": {
+			"tool": "Tool",
+			"owner": "From",
+			"access": "Access",
+			"grade": "Grade",
+			"reads": "Reads"
+		},
+		"foot": "{count, plural, one {# tool} other {# tools}}. A plain tool runs no model; a write asks first.",
+		"detailLabel": "Tool",
+		"schema": "Input shape",
+		"status": "Status",
+		"unavailable": "No handler: it cannot run"
 	}
 }

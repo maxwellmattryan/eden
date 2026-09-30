@@ -3,7 +3,7 @@
 	// device, present or absent and never shown back; the provider's map from grade to model, edited over the seed,
 	// a dearer choice than the seed's saying by how much and asking first (`priceRatio`); the per-domain and per-tool
 	// overrides; the monthly cap and the per-request token cap; this month's spend; the development clamp; and the
-	// way to the audit log.
+	// ways to the audit log and the tools page.
 	import { onMount } from 'svelte'
 	import { goto } from '$app/navigation'
 	import { resolve } from '$app/paths'
@@ -140,6 +140,10 @@
 		settingsUi.hide()
 		void goto(resolve('/gardener/audit'))
 	}
+	function openTools() {
+		settingsUi.hide()
+		void goto(resolve('/gardener/tools'))
+	}
 </script>
 
 {#if gardenerSetup.clamped}
@@ -249,6 +253,10 @@
 
 <SettingsRow label={$t('settings.gardener.audit.label')} help={$t('settings.gardener.audit.help')}>
 	<Button variant="secondary" icon="external-link" label={$t('settings.gardener.audit.open')} onclick={openAudit} />
+</SettingsRow>
+
+<SettingsRow label={$t('settings.gardener.tools.label')} help={$t('settings.gardener.tools.help')}>
+	<Button variant="secondary" icon="external-link" label={$t('settings.gardener.tools.open')} onclick={openTools} />
 </SettingsRow>
 
 <Menu

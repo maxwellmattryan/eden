@@ -154,8 +154,13 @@
 			overlay var(--ed-duration-panel) allow-discrete,
 			display var(--ed-duration-panel) allow-discrete;
 	}
-	/* the body scrolls inside the frame, under the frame's own max height less its border */
+	/* the body scrolls inside the frame, under the frame's own max height less its border. It carries the frame's
+	   radius itself: WebKit gives a scroller its own layer, which the frame's rounded clip does not reach, so the
+	   corners went square once the body had something to scroll. And it never rubber-bands: an elastic overscroll
+	   pulls the head band away from the frame's edge and shows the ground behind it. */
 	.ed-popover-body {
+		border-radius: inherit;
+		overscroll-behavior: none;
 		min-width: 0;
 		max-height: calc(min(100dvh - 2 * var(--space-2), var(--ed-anchor-room, 100dvh)) - 2px);
 		overflow: auto;

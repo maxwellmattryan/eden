@@ -2,22 +2,14 @@
 	// One message of a thread as the panel shows it: the text as the bubble, and inside it the tool cards with their
 	// confirm, the proposal cards, the drafts and any error (docs/design/ux-patterns.md, "Gardener surfaces"). The
 	// can-see block is the chip row's, not the bubble's.
-	import {
-		Badge,
-		DetailPopover,
-		DetailSection,
-		GardenerMessage,
-		Notice,
-		ProposalCard,
-		ToolCard,
-		type DetailRow,
-	} from '@eden/ui-kit'
+	import { DetailPopover, DetailSection, GardenerMessage, Notice, ProposalCard, ToolCard } from '@eden/ui-kit'
 	import type { Message, MessageBlock } from '@eden/shared/gardener'
 	import { t } from '@eden/shared/i18n'
 	import { formatValue } from '@eden/shared/profile'
 	import { profile } from '../profile/store.svelte'
 	import { undoToast } from '../undo'
 	import DraftCard from './DraftCard.svelte'
+	import ToolAbout from './ToolAbout.svelte'
 	import { toolByWireName } from './handlers'
 	import { runtime } from './runtime.svelte'
 
@@ -51,24 +43,6 @@
 	let info = $state<{ anchor: HTMLElement; block: ToolBlock } | undefined>()
 	let infoOpen = $state(false)
 	const infoTool = $derived(info ? toolByWireName(info.block.call.name) : undefined)
-	const declaredRows = $derived<DetailRow[]>(
-		infoTool
-			? [
-					{ label: $t('gardener.tool.access'), value: infoTool.declaration.access, mono: true },
-					{
-						label: $t('gardener.tool.grade'),
-						value: infoTool.declaration.grade
-							? $t(`settings.gardener.grades.${infoTool.declaration.grade}`)
-							: $t('gardener.tool.plain'),
-					},
-					{
-						label: $t('gardener.tool.reads'),
-						value: infoTool.declaration.reads.length ? infoTool.declaration.reads.join(', ') : '—',
-						mono: infoTool.declaration.reads.length > 0,
-					},
-				]
-			: []
-	)
 	function showInfo(anchor: HTMLElement, block: ToolBlock) {
 		info = { anchor, block }
 		infoOpen = true
@@ -131,12 +105,7 @@
 		onclose={() => (info = undefined)}
 	>
 		{#if infoTool}
-			<DetailSection label={$t('gardener.tool.about')}>
-				<p class="tool-text">{infoTool.description}</p>
-			</DetailSection>
-			<DetailSection label={$t('gardener.tool.declared')} rows={declaredRows} collapsible>
-				<div class="tool-badge"><Badge kind={info.block.call.access} /></div>
-			</DetailSection>
+			<ToolAbout tool={infoTool} collapsible />
 		{/if}
 		<DetailSection label={$t('gardener.tool.thisCall')} collapsible>
 			<dl class="tool-call">
@@ -156,18 +125,6 @@
 {/if}
 
 <style>
-	.tool-text {
-		margin: 0;
-		font: var(--ed-t-voice);
-		letter-spacing: var(--ed-t-voice-tracking);
-		font-variation-settings: var(--ed-t-voice-opsz);
-		color: var(--text-primary);
-		text-wrap: pretty;
-	}
-	.tool-badge {
-		display: flex;
-		margin-top: var(--space-2);
-	}
 	.tool-call {
 		display: grid;
 		grid-template-columns: max-content minmax(0, 1fr);

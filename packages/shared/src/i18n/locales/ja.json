@@ -947,6 +947,11 @@
 				"title": "高価なモデル",
 				"text": "このモデルはこのグレードの初期設定モデルのおよそ {ratio} 倍の費用です。それでも使いますか？",
 				"verb": "使う"
+			},
+			"tools": {
+				"label": "ツール",
+				"help": "庭師が持つすべてのツール: 何をし、何を読め、先に確認するか。",
+				"open": "ツールを見る"
 			}
 		}
 	},
@@ -1204,8 +1209,19 @@
 			"substrate": "Eden",
 			"declared": "宣言",
 			"thisCall": "この呼び出し",
-			"access": "アクセス"
-		}
+			"access": "アクセス",
+			"accessKinds": {
+				"read": "読み取り",
+				"write-draft": "下書き",
+				"write": "書き込み",
+				"act-external": "外部"
+			},
+			"confirm": "先に確認",
+			"confirmYes": "はい、確認します",
+			"confirmNo": "いいえ",
+			"readsNothing": "なし"
+		},
+		"openTools": "ツールを見る"
 	},
 	"audit": {
 		"title": "監査ログ",
@@ -1262,5 +1278,21 @@
 		},
 		"openThread": "会話を開く",
 		"retention": "項目はこの端末に90日間残ります。書き出しや同期はされません。"
+	},
+	"tools": {
+		"title": "ツール",
+		"subtitle": "庭師にできることと、それぞれが読めるもの",
+		"columns": {
+			"tool": "ツール",
+			"owner": "提供元",
+			"access": "アクセス",
+			"grade": "グレード",
+			"reads": "読む種類"
+		},
+		"foot": "{count}個のツール。モデルを使わないツールもあり、書き込みは先に確認します。",
+		"detailLabel": "ツール",
+		"schema": "入力の形",
+		"status": "状態",
+		"unavailable": "ハンドラーがなく、実行できません"
 	}
 }

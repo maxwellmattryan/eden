@@ -71,7 +71,8 @@
 	{@attach attachTooltip(() => tip, { toggle: !rest.onclick && type === 'button' })}
 	{...rest}
 >
-	<Icon name={icon} size={fab ? 'lg' : size === 'xs' ? 'sm' : 'md'} />
+	<!-- a fill's glyph is the small one: on a ground of its own the full-size glyph crowds the circle -->
+	<Icon name={icon} size={fab ? 'lg' : size === 'xs' || filled ? 'sm' : 'md'} />
 	{#if count}<span class="ed-icon-btn-count" aria-hidden="true">{count}</span>{/if}
 </button>
 
@@ -96,6 +97,7 @@
 		transition:
 			background-color var(--ed-duration-micro) var(--ed-ease-out),
 			color var(--ed-duration-micro) var(--ed-ease-out),
+			opacity var(--ed-duration-micro) var(--ed-ease-out),
 			transform var(--ed-duration-micro) var(--ed-ease-out),
 			box-shadow var(--ed-duration-micro) var(--ed-ease-out);
 	}

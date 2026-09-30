@@ -30,6 +30,7 @@ Each screen below lists: id, platform, purpose, must show, primary actions, stat
 | `grants-ledger` | desktop | permissions (Phase 2 UI) | grants by subject, revoke, history | revoke | | the grants list |
 | `egress-ledger`, built in `apps/desktop` (Settings → Privacy) | desktop | bytes out by destination | a table by destination and day; the Vault → AI row at zero | | | provider, Open-Meteo, Google |
 | `audit-log` | desktop | Gardener requests | one row per request; expand to registry ids and tools | | | the audit entry |
+| `gardener-tools` | desktop | what the Gardener can do | one row per tool: owner, access, grade, reads; a row opens its description, declaration and input shape | open a tool | a tool without a handler | the declared tools |
 | `settings-*` | both | each tab in `product/substrate/settings-utilities.md` | the tab's contents | | | |
 | `vault` | both | T3 attachments | count and lock; after auth, the list | open, share, add | locked | one identity document |
 | `status-bar` | desktop | global state | sync, integration chips, Gardener chip with budget, bell, + | | offline, no key, granted-not-connected | 2.84 of 10.00 |

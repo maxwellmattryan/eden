@@ -194,6 +194,13 @@
 			onclick={() => (listOpen = !listOpen)}
 		/>
 		<h2 id="{uid}-title" class="panel-title">{title}</h2>
+		<IconButton
+			icon="shovel"
+			size="sm"
+			label={$t('gardener.openTools')}
+			tooltip
+			onclick={() => void goto(resolve('/gardener/tools'))}
+		/>
 		<IconButton icon="plus" size="sm" label={$t('gardener.newThread')} tooltip onclick={newThread} />
 		<IconButton icon="x" size="sm" label={$t('common.close')} tooltip onclick={() => gardenerUi.hide()} />
 	</header>

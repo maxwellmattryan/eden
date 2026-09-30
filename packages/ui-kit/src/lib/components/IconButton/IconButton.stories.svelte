@@ -45,10 +45,10 @@
 <Story name="Filled">
 	{#snippet template(args)}
 		<div class="row">
-			<IconButton {...args} icon="arrow-up" label="Send" fill="ai" />
+			<IconButton {...args} icon="corner-down-left" label="Send" fill="ai" />
 			<IconButton {...args} icon="square" label="Stop" fill="ai" size="sm" />
 			<IconButton {...args} icon="plus" label="Add" fill="brand" />
-			<IconButton {...args} icon="arrow-up" label="Send" fill="ai" disabled />
+			<IconButton {...args} icon="corner-down-left" label="Send" fill="ai" disabled />
 		</div>
 	{/snippet}
 </Story>
