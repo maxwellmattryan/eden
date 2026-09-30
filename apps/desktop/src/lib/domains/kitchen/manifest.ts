@@ -1,6 +1,7 @@
 // Hearth's bindings (product/domains/kitchen.md): the page and its tabs, the bodies of its two built Garden tiles,
-// its store. What Hearth declares is in `@eden/shared/domains/kitchen/manifest.json`.
-import { kitchenExtras } from '@eden/shared/domains/kitchen'
+// its store, and what it does on its schedules. What Hearth declares is in
+// `@eden/shared/domains/kitchen/manifest.json`.
+import { bindKitchenSignals, kitchenExtras } from '@eden/shared/domains/kitchen'
 import { get } from 'svelte/store'
 import { goto } from '$app/navigation'
 import { resolve } from '$app/paths'
@@ -39,4 +40,5 @@ export const kitchenManifest = defineDomain('kitchen', {
 		return kitchenExtras(kitchen.data())
 	},
 	seed: () => kitchen.seed(get(t)('domains.kitchen.name')),
+	subscribe: () => bindKitchenSignals(),
 })

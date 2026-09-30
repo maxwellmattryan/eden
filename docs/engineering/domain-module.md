@@ -4,14 +4,14 @@ status: draft
 summary: The domain manifest and the resource registry as code: the manifest.json a domain declares itself in, the builder that checks it and generates the registry for TypeScript and Rust, the bindings an app adds, the functions the shell composes itself with, where a domain's code lives, and how isolation is enforced.
 read-this-if: You are adding or changing a domain, a registry row, a widget, a quick action, an intent or a palette entry, or anything in the shell that lists domains.
 depends-on: [product/substrate/domain-manifest, product/substrate/registry, product/substrate/shell, engineering/app-scaffold, engineering/data-layer]
-updated: 2026-09-29
+updated: 2026-09-30
 ---
 
 ## What this covers
 
 | here | elsewhere |
 |---|---|
-| the manifest as data, the generated registry, the build-time checks, the app bindings, the composition functions, the homes of a domain's code, isolation | the grant store and the egress ledger, which read tiers from the registry; the Gardener's tools and the audit log, which read the declared reads; signals and notifications; the palette, the Garden's catalog and edit mode, and Quick Log as interfaces; the Domains tab, which makes the order and the enabled set the owner's |
+| the manifest as data, the generated registry, the build-time checks, the app bindings, the composition functions, the homes of a domain's code, isolation | the grant store and the egress ledger, which read tiers from the registry; the Gardener's tools and the audit log, which read the declared reads; signals, rules and schedules at work (`engineering/signals.md`); the palette, the Garden's catalog and edit mode, and Quick Log as interfaces; the Domains tab, which makes the order and the enabled set the owner's |
 
 D-68 records the decision; this page is how it works.
 
@@ -21,8 +21,8 @@ A domain is what it **declares** and what an app **binds** to that.
 
 | half | where | holds |
 |---|---|---|
-| declaration | `packages/shared/src/domains/<id>/manifest.json` | data only: resources, reads, widgets, quick actions, tools, signals, intents, palette entries, export sections. The same for every app and for the crate |
-| bindings | `apps/<app>/src/lib/domains/<id>/manifest.ts` | what the data cannot hold: the route, each widget's component and `hasData()`, the live glyph, the store's `load`, `seed`, `reload` and `extras` |
+| declaration | `packages/shared/src/domains/<id>/manifest.json` | data only: resources, reads, widgets, quick actions, tools, signals, rules, schedules, intents, palette entries, export sections. The same for every app and for the crate |
+| bindings | `apps/<app>/src/lib/domains/<id>/manifest.ts` | what the data cannot hold: the route, each widget's component and `hasData()`, the live glyph, the store's `load`, `seed`, `reload` and `extras`, and `subscribe`, which binds what the domain hears |
 
 The declaration is JSON because two languages read it. A JSON import would widen every id to `string`, so the builder writes the declarations out again as `as const` TypeScript, and the types come from that.
 
@@ -51,7 +51,11 @@ All under `packages/shared/src/`, hand-edited and formatted by Prettier:
 | `intents` | consumed | each `<id>.<action>` (D-33) |
 | `palette` | consumed | `entries` that **run** a quick action or an intent, and `search`, the types of its own the palette searches. Going to the domain and to each tab is implied |
 | `export` | consumed | the types of its own in its export |
-| `tools`, `signals`, `notificationKinds`, `captureSources`, `deviceCapabilities` | declared | checked and generated; their consumers arrive with the Gardener, signals, Capture and the grant store |
+| `signals` | consumed | the names it emits, each `subject.verb`; what `emit` accepts is typed from them (`engineering/signals.md`) |
+| `notificationKinds` | consumed | `id`, `channel` (`in-app`, `os`), `cadence`, `default`. With `signal` (one of the domain's own) it is a rule, and `when` is its condition: fields, each with the words it may be. Its words are `domains.<id>.notifications.<kind>.line` and, for `os`, `.title` |
+| `schedules` | consumed | `id` with `daily` (`HH:MM`) or `every` (seconds, sixty at least); the scheduler knows it as `<id of the domain>.<id>` |
+| `deviceCapabilities` | consumed | what it needs of the device; `os-notifications` is what an `os` rule needs |
+| `tools`, `captureSources` | declared | checked and generated; their consumers arrive with the Gardener and Capture |
 | `parent`, `integrations`, `dayAnnotations`, `dailyLine`, `mobile`, `settings` | planned | the builder refuses them until a domain consumes one. `settings` is Phase 1 in the manifest doc and waits for the Domains tab |
 
 The name, the subtitle, the glyph and a widget's title and prompt are derived from ids (`domains.<id>.name`, `domainGlyph(id)`, `garden.widgets.<widgetId>`, `garden.empty.<widgetId>`, the id in camelCase), so a manifest never repeats them.
@@ -83,7 +87,9 @@ Each error names the file and the id.
 8. A default widget the Garden's default layout does not place, and a layout id nothing declares.
 9. A locale key missing from `en.json` or `ja.json`, for anything that is not planned; an icon the kit does not list.
 10. A planned field, and a field it does not know.
-11. A row that differs from `docs/product/substrate/registry.md`, in either direction: id, category, primitive, owner, tier, and phase where the doc gives one.
+11. A rule that answers a signal the domain does not emit; a condition that is not fields, each with the words it may be, or one on a kind with no signal; an `os` rule in a domain that does not declare `os-notifications`.
+12. A schedule id used twice in a domain; a schedule that is neither `daily` nor `every`, or both; a `daily` that is not a time of day; an `every` that is not a whole number of seconds, sixty at least.
+13. A row that differs from `docs/product/substrate/registry.md`, in either direction: id, category, primitive, owner, tier, and phase where the doc gives one.
 
 The doc stays hand-written and the builder keeps it honest. It reads each table by its header names, takes the owner from the section's heading (`` ## Hearth (`kitchen`) ``) or the `owner` column, and the category from the `category` column or the heading above the table. The doc lists the four primitives among the substrate's entity types; in code they are their own category, so `task` is never an entity type.
 
@@ -105,7 +111,9 @@ An entity URI resolves to its owner through `ownerOf`, so a link survives a chan
 
 Each app has `src/lib/domains/manifest.ts` with `defineDomain(id, bindings)`, which joins a declaration to what the app binds. On desktop the widget bindings are typed over the declaration's built widget ids: a widget without a binding does not compile, and neither does a binding for a widget nobody declared. The phone binds a route and a live glyph, and its widgets when its Garden is built.
 
-`src/lib/domains/index.ts` lists the enabled domains in the shell's order and exports their `declarations`. Disabling a domain is leaving it out of that list: its sidebar entry, its tiles, its palette entries and its quick actions go, and its rows stay.
+`subscribe` is where a domain hears its schedules and its signals and registers its mirrors with the refresh coordinator (`engineering/signals.md`). The shell calls it once when it starts, before any store is loaded, so what it binds reads rows and not the domain's store; its answer unbinds.
+
+`src/lib/domains/index.ts` lists the enabled domains in the shell's order and exports their `declarations`. Disabling a domain is leaving it out of that list: its sidebar entry, its tiles, its palette entries, its quick actions, its rules and its schedules go, and its rows stay.
 
 ## Composition
 
@@ -122,18 +130,18 @@ Each app has `src/lib/domains/manifest.ts` with `defineDomain(id, bindings)`, wh
 | `quickActions(declarations)` | the Quick Log's entries | Quick Log |
 | `handlerOf(declarations, intent)` | the domain that handles an intent, or nothing when it is disabled | intent routing |
 
-The shell names no domain. Toolbench sits in the second group because its manifest says `group: "shell"`; Sky's glyph follows the conditions because its bindings carry `liveGlyph`.
+The shell names no domain. Toolbench sits in the second group because its manifest says `group: "shell"`; Sky's glyph follows the conditions because its bindings carry `liveGlyph`. The rules and the schedules are composed the same way, by `rulesOf(declarations)` in `@eden/shared/signals` and by the runtime that declares each domain's `schedules` (`engineering/signals.md`).
 
 ## Where a domain's code lives
 
 | side | path | holds |
 |---|---|---|
-| shared | `packages/shared/src/domains/<id>/` | `manifest.json`, and the pure modules both apps use: types, row mapping, formats |
+| shared | `packages/shared/src/domains/<id>/` | `manifest.json`, and the modules both apps use: types, row mapping, formats, and what the domain does on its schedules (`signals.ts`) |
 | desktop | `apps/desktop/src/lib/domains/<id>/` | `manifest.ts` (bindings), `store.svelte.ts`, `seed.ts`, `views/`, `widgets/` |
 | mobile | `apps/mobile/src/lib/domains/<id>/` | `manifest.ts` (bindings), and its surfaces as they are built |
 | Rust | `src-tauri/src/domains/<id>/` | models, services and commands, for a domain that needs the crate |
 
-Every folder under a `domains/` is a domain, named by its plain id. What belongs to the shell lives in `src/lib/shell/`: the Garden (`shell/garden/`), the activity feed (`shell/feed.svelte.ts`), the undo toast. Sky's model, providers and store predate this layout and stay in `packages/shared/src/weather/`; its manifest is in `domains/weather/`. In the crate, `domains/documents.rs` is the document store and not a domain.
+Every folder under a `domains/` is a domain, named by its plain id. What belongs to the shell lives in `src/lib/shell/`: the Garden (`shell/garden/`), the activity feed (`shell/feed.svelte.ts`), the inbox (`shell/inbox.svelte.ts`), the undo toast. Sky's model, providers and store predate this layout and stay in `packages/shared/src/weather/`; its manifest is in `domains/weather/`. In the crate, `domains/documents.rs` is the document store and not a domain.
 
 ## Isolation
 

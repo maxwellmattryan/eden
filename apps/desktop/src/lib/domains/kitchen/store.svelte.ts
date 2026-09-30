@@ -21,6 +21,8 @@ import {
 import { daysUntil, nowIso } from '@eden/shared/dates'
 import {
 	EMPTY_LIST,
+	ensureShopDay,
+	expiresSoon,
 	KITCHEN,
 	kitchenFromRows,
 	kitchenRows,
@@ -65,8 +67,6 @@ interface Change {
 }
 
 const DOCUMENT = 'kitchen'
-/** Dated on or before the day after tomorrow counts as expiring (the mockup's "on or before Friday" on a Wednesday). */
-const SOON_DAYS = 2
 
 const byExpiry = (a: StockItem, b: StockItem) => (a.expiry ?? '~').localeCompare(b.expiry ?? '~')
 
@@ -92,8 +92,9 @@ export class KitchenStore {
 	readonly suggestedRecipe = $derived(this.expiringTomorrow ? this.recipes[0] : undefined)
 	readonly checked = $derived(this.grocery.items.filter((item) => item.done).length)
 
+	/** Expiring, by the rule the morning's digest counts by (`@eden/shared/domains/kitchen`). */
 	soon(item: StockItem): boolean {
-		return !!item.expiry && daysUntil(item.expiry) <= SOON_DAYS
+		return expiresSoon(item)
 	}
 
 	/** The stock in its four sections, sorted by expiry with what never expires last; empty sections dropped. */
@@ -138,6 +139,15 @@ export class KitchenStore {
 		await this.#queue.settled()
 		this.#loading = undefined
 		await this.load()
+		this.#remind()
+	}
+
+	/** Sets the shop-day reminder again from the list as it is stored, once what is waiting has been sent. */
+	#remind() {
+		void this.#queue
+			.settled()
+			.then(() => ensureShopDay())
+			.catch(() => null)
 	}
 
 	/** What the store holds, as plain data. */
@@ -241,7 +251,7 @@ export class KitchenStore {
 			this.grocery = data.grocery
 			this.#listId = listId
 		}
-		return this.#commit(
+		const undo = this.#commit(
 			{
 				apply: () => show(after),
 				revert: () => show(before),
@@ -251,6 +261,12 @@ export class KitchenStore {
 			'garden.feed.sampleAdded',
 			{ domain: domainName }
 		)
+		// the list was replaced under the reminder, and the undo replaces it again
+		this.#remind()
+		return () => {
+			undo()
+			this.#remind()
+		}
 	}
 
 	/** The list a name stands for: the stock, or the items of the grocery list. */
