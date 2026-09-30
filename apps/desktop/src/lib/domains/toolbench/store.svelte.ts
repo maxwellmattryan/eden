@@ -2,7 +2,7 @@
 // projects. The rows live in the data layer (`@eden/shared/data`), one per idea and project; the store is what the
 // page sees of them. A write changes the store at once and is sent after, in order (`WriteQueue`), and every write
 // hands back an undo for the toast (D-12) and lands in the Garden feed. The brainstorm thread renders stored messages
-// only; the Gardener arrives with its substrate.
+// only; the Gardener's brainstorm appends to it through `appendBrainstorm`.
 import { logError } from '@eden/shared/api'
 import {
 	applyBatch,
@@ -25,6 +25,7 @@ import {
 	toolbenchFromRows,
 	toolbenchRows,
 	toolbenchUris,
+	type BrainstormMessage,
 	type Idea,
 	type IdeaPayload,
 	type IdeaStatus,
@@ -188,6 +189,59 @@ export class ToolbenchStore {
 			{ title: idea.title, status: statusLabel }
 		)
 		return { idea, undo }
+	}
+
+	ideaById(id: string): Idea | undefined {
+		return this.ideas.find((idea) => idea.id === id)
+	}
+
+	projectById(id: string): Project | undefined {
+		return this.projects.find((project) => project.id === id)
+	}
+
+	/**
+	 * Appends what was said in a brainstorm to the idea's thread: the owner's ask and the Gardener's answer, its own
+	 * words kept with the idea (D-76). The idea counts as touched. The undo takes the messages back out.
+	 */
+	appendBrainstorm(id: string, messages: BrainstormMessage[]): { idea: Idea | undefined; undo: Undo } {
+		const idea = this.ideas.find((entry) => entry.id === id)
+		if (!idea || !messages.length) return { idea, undo: () => {} }
+		const before = $state.snapshot(idea)
+		const after: Idea = { ...before, touchedAt: nowIso(), brainstorm: [...before.brainstorm, ...messages] }
+		const put = (next: Idea) => (this.ideas = this.ideas.map((entry) => (entry.id === id ? next : entry)))
+		const payload = ({ id: _id, ...rest }: Idea): IdeaPayload => rest
+		const undo = this.#commit(
+			{
+				apply: () => put(after),
+				revert: () => put(before),
+				write: () => updateEntity(id, payload(after)),
+				unwrite: () => updateEntity(id, payload(before)),
+			},
+			'garden.feed.ideaBrainstormed',
+			{ title: idea.title }
+		)
+		return { idea, undo }
+	}
+
+	/** Adds next steps to a project: what an expanded plan commits. The tasks themselves are the shell's (Today). */
+	addNextSteps(id: string, steps: string[]): { project: Project | undefined; undo: Undo } {
+		const project = this.projects.find((entry) => entry.id === id)
+		if (!project || !steps.length) return { project, undo: () => {} }
+		const before = $state.snapshot(project)
+		const after: Project = { ...before, next: [...before.next, ...steps] }
+		const put = (next: Project) => (this.projects = this.projects.map((entry) => (entry.id === id ? next : entry)))
+		const payload = ({ id: _id, ...rest }: Project): ProjectPayload => rest
+		const undo = this.#commit(
+			{
+				apply: () => put(after),
+				revert: () => put(before),
+				write: () => updateEntity(id, payload(after)),
+				unwrite: () => updateEntity(id, payload(before)),
+			},
+			'garden.feed.projectPlanned',
+			{ name: project.name, count: steps.length }
+		)
+		return { project, undo }
 	}
 
 	remove(id: string): { idea: Idea | undefined; undo: Undo } {

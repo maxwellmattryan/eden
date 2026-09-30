@@ -199,7 +199,7 @@
 		font-variation-settings: var(--ed-t-data-sm-opsz);
 	}
 
-	/* The status dot: healthy is the accent, stale the warning, failed danger, off quiet; the word is beside it */
+	/* The status dot: healthy is the success green, stale the warning, failed danger, off quiet; the word is beside it */
 	.ed-chip-dot {
 		width: var(--space-2);
 		height: var(--space-2);
@@ -208,7 +208,7 @@
 		flex: none;
 	}
 	.ed-chip-dot-healthy {
-		background: var(--brand-primary);
+		background: var(--success);
 	}
 	.ed-chip-dot-stale {
 		background: var(--warning);

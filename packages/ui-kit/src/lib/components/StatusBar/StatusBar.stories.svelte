@@ -37,6 +37,12 @@
 		budget: { used: budget.used, cap: budget.cap, percent: budget.percent },
 		onopen: fn(),
 	}
+	/** The three grades a v0 Gardener switches between. */
+	const grades = [
+		{ id: 'light', label: 'Light' },
+		{ id: 'standard', label: 'Standard' },
+		{ id: 'deep', label: 'Deep' },
+	]
 
 	/** A status chip's name is its label followed by the spoken status word. */
 	const chipNamed = (integration: StatusBarIntegration) => (name: string) => name.startsWith(integration.label)
@@ -131,6 +137,40 @@
 		const canvas = canvasOf(canvasElement)
 		await expect(canvas.getByRole('status')).toHaveTextContent(offline)
 		await expect(canvas.queryByText(sync)).toBeNull()
+	}}
+/>
+
+<!-- The app hands the chip its grades: a caret beside it opens them as a menu, the current one checked; picking
+     another reports its id, and the chip itself still opens the Gardener -->
+<Story
+	name="Grade switch"
+	{template}
+	args={{ gardener: { ...gardener, grade: 'standard', grades, onchangegrade: fn() } }}
+	play={async ({ canvasElement, args }) => {
+		if (!framed(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		const caret = canvas.getByRole('button', { name: strings.gardener.switchGrade })
+		await expect(caret).toHaveAttribute('aria-expanded', 'false')
+		await userEvent.click(caret)
+		const menu = await canvas.findByRole('menu', { name: strings.gardener.grade })
+		await waitFor(() => expect(menu).toBeVisible())
+		await expect(caret).toHaveAttribute('aria-expanded', 'true')
+		const items = within(menu).getAllByRole('menuitem')
+		await expect(items.map((item) => item.textContent?.trim())).toEqual(grades.map((grade) => grade.label))
+		// the current grade carries the check glyph, the others do not
+		await expect(items[1]!.querySelector('.ed-icon')).not.toBeNull()
+		await expect(items[2]!.querySelector('.ed-icon')).toBeNull()
+		await userEvent.click(within(menu).getByRole('menuitem', { name: 'Deep' }))
+		await expect(args.gardener?.onchangegrade).toHaveBeenCalledWith('deep')
+		await waitFor(() => expect(menu).not.toBeVisible())
+		await waitFor(() => expect(caret).toHaveFocus())
+		// the chip keeps the model's name and its meter, and still opens the Gardener
+		const model = canvas.getByRole('button', {
+			name: strings.statusBar.gardenerBudget(budget.model, strings.gardener.budget(budget.used, budget.cap)),
+		})
+		await expect(within(model).getByRole('meter')).toBeVisible()
+		await userEvent.click(model)
+		await expect(args.gardener?.onopen).toHaveBeenCalled()
 	}}
 />
 

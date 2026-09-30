@@ -34,6 +34,8 @@ WCAG 2 ratios measured on the token values. "text" needs 4.5:1, "large" and "non
 | on-honey on honey | `#ffffff` on `#7a5d1c` | 6.16:1 | AA |
 | danger on surface-0 | `#b0413e` on `#f6f4ec` | 5.19:1 | AA |
 | on-danger on danger | `#ffffff` on `#b0413e` | 5.72:1 | AA |
+| success on surface-0 | `#28794a` on `#f6f4ec` | 4.86:1 | AA |
+| success on surface-1 | `#28794a` on `#efede3` | 4.56:1 | AA |
 | warning on surface-0 (large) | `#b8821f` on `#f6f4ec` | 3.05:1 | AA-large |
 | info on surface-0 (large) | `#4a82a6` on `#f6f4ec` | 3.79:1 | AA-large |
 | stroke on surface-0 (non-text) | `#d9d6c8` on `#f6f4ec` | 1.32:1 | fail ⚠ |
@@ -86,6 +88,8 @@ If moss followed the derivation rule instead of its hand-tuned tokens it would g
 | on-honey on honey | `#0f1512` on `#f2d27a` | 12.56:1 | AA |
 | danger on surface-0 | `#e0706c` on `#0f1512` | 5.90:1 | AA |
 | on-danger on danger | `#0f1512` on `#e0706c` | 5.90:1 | AA |
+| success on surface-0 | `#86d9a2` on `#0f1512` | 10.97:1 | AA |
+| success on surface-1 | `#86d9a2` on `#16201b` | 9.92:1 | AA |
 | warning on surface-0 (large) | `#e3b24f` on `#0f1512` | 9.46:1 | AA |
 | info on surface-0 (large) | `#7fb2d6` on `#0f1512` | 8.13:1 | AA |
 | stroke on surface-0 (non-text) | `#2a3730` on `#0f1512` | 1.49:1 | fail ⚠ |

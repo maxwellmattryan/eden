@@ -163,6 +163,57 @@ export class TasksStore {
 		return { task, parsed, undo }
 	}
 
+	/** Adds a task from its fields, as the Gardener's draft card and a plan commit do: the structured `add`. */
+	addInput(input: TaskInput): { task: Task; undo: Undo } {
+		const day = this.#today()
+		const id = newId()
+		const task = this.#fromInput(id, input)
+		const undo = this.#commit(
+			{
+				apply: () => this.tasks.push(task),
+				revert: () => (this.tasks = this.tasks.filter((entry) => entry.id !== id)),
+				write: () =>
+					createTask({ ...input, id }).then((row) => {
+						const stored = toTask(row)
+						this.#replace(stored)
+						return emitTaskCreated(stored, day, settings.weekStart)
+					}),
+				unwrite: () => deleteRows([toUri('task', id)]),
+			},
+			'garden.feed.taskAdded',
+			{ title: task.title }
+		)
+		return { task, undo }
+	}
+
+	/** Adds several tasks in one batch, one feed entry and one undo: a plan's commit. A batch emits no signal (D-75). */
+	addMany(inputs: TaskInput[], feedKey = 'garden.feed.tasksAdded'): { tasks: Task[]; undo: Undo } {
+		const added = inputs.map((input) => ({ id: newId(), input }))
+		const shown = added.map(({ id, input }) => this.#fromInput(id, input))
+		const ids = added.map(({ id }) => id)
+		if (!added.length) return { tasks: [], undo: () => {} }
+		const undo = this.#commit(
+			{
+				apply: () => (this.tasks = [...this.tasks, ...shown]),
+				revert: () => (this.tasks = this.tasks.filter((entry) => !ids.includes(entry.id))),
+				write: () =>
+					applyBatch(
+						added.map(({ id, input }): BatchOp => ({ op: 'createPrimitive', type: 'task', input: { ...input, id } }))
+					).then(({ rows }) => {
+						for (const row of rows) this.#replace(toTask(row as TaskRow))
+					}),
+				unwrite: () => deleteRows(added.map(({ id }) => toUri('task', id))),
+			},
+			feedKey,
+			{ count: added.length }
+		)
+		return { tasks: shown, undo }
+	}
+
+	byId(id: string): Task | undefined {
+		return this.tasks.find((task) => task.id === id)
+	}
+
 	/** Done: a todo or a checklist whole, a routine's occurrence today. `task.completed` follows the write. */
 	complete(id: string): { task: Task | undefined; undo: Undo } {
 		const day = this.#today()

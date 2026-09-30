@@ -37,6 +37,19 @@
 		noKey?: boolean
 		/** Opens the Gardener, or the key setup when there is no key. Without it the chip is a plain label. */
 		onopen?: () => void
+		/** The current grade's id, marked in the grade menu. */
+		grade?: string
+		/** The grades to switch between; given, a caret beside the chip opens them as a menu (hidden without a key). */
+		grades?: StatusBarGrade[]
+		/** Called with the picked grade's id. */
+		onchangegrade?: (id: string) => void
+	}
+
+	/** One grade in the Gardener chip's menu. */
+	export interface StatusBarGrade {
+		id: string
+		/** The grade's name: "Standard". */
+		label: string
 	}
 
 	/** One notification behind the bell, shown as an InboxCard. */
@@ -61,7 +74,8 @@
 	// The global strip at the bottom of the desktop window (substrate/shell.md). Left: the sync line, or the offline
 	// banner in its place, and one chip per integration; a chip opens a small dialog with its detail and the one action
 	// that helps (Connect when it is granted but not connected here, Sync now when it is stale or failed). Right: the
-	// Gardener chip (the model and its budget meter in honey, grey without a key) that opens the Gardener, the bell that
+	// Gardener chip (the model and its budget meter in honey, grey without a key) that opens the Gardener, with a caret
+	// beside it opening the grade menu when the app hands it grades, the bell that
 	// opens the inbox as a stack of InboxCards (the cards keep their unread mark while it is open; the app hears it
 	// close), and + that opens the embedded Quick Log. Every panel is a Popover dialog
 	// unfurling upwards from the bar: Escape or a pointer outside closes it and focus returns to its button. On mobile
@@ -74,6 +88,7 @@
 	import Chip from '../Chip/Chip.svelte'
 	import IconButton from '../IconButton/IconButton.svelte'
 	import InboxCard from '../InboxCard/InboxCard.svelte'
+	import Menu, { type MenuItem } from '../Menu/Menu.svelte'
 	import Popover from '../Popover/Popover.svelte'
 	import QuickLogSheet, { type QuickLog } from '../QuickLogSheet/QuickLogSheet.svelte'
 
@@ -125,6 +140,8 @@
 	let bellOpen = $state(false)
 	let plusAnchor = $state<HTMLElement>()
 	let plusOpen = $state(false)
+	let gradeAnchor = $state<HTMLElement>()
+	let gradeOpen = $state(false)
 
 	const current = $derived(integrations.find((integration) => integration.id === openId))
 	/** The sentence in an integration's popover: its detail, or the plain words for its state. */
@@ -163,6 +180,18 @@
 	}
 	function openGardener() {
 		gardener?.onopen?.()
+	}
+	// The grade menu: one item per grade, the current one carrying the check; picking one reports its id.
+	const grades = $derived(gardener && !gardener.noKey ? (gardener.grades ?? []) : [])
+	const gradeItems = $derived<MenuItem[]>(
+		grades.map((grade) => ({
+			id: grade.id,
+			label: grade.label,
+			icon: grade.id === gardener?.grade ? 'check' : undefined,
+		}))
+	)
+	function pickGrade(item: MenuItem) {
+		if (item.id) gardener?.onchangegrade?.(item.id)
 	}
 	/** The card's actions, each also reporting through `oninboxaction` and closing the inbox. */
 	function inboxActions(item: InboxItem): InboxAction[] | undefined {
@@ -233,6 +262,29 @@
 				aria-label={gardenerName}
 				onclick={gardener.onopen ? openGardener : undefined}
 			/>
+			{#if grades.length}
+				<span class="ed-status-anchor ed-status-grade" bind:this={gradeAnchor}>
+					<IconButton
+						icon="chevron-down"
+						label={s.gardener.switchGrade}
+						size="xs"
+						tooltip
+						active={gradeOpen}
+						aria-haspopup="menu"
+						aria-expanded={gradeOpen}
+						onclick={() => (gradeOpen = !gradeOpen)}
+					/>
+				</span>
+				<Menu
+					bind:open={gradeOpen}
+					anchor={gradeAnchor}
+					align="end"
+					presentation="menu"
+					label={s.gardener.grade}
+					items={gradeItems}
+					onselect={pickGrade}
+				/>
+			{/if}
 		{/if}
 
 		<span class="ed-status-anchor" bind:this={bellAnchor}>
@@ -331,6 +383,10 @@
 		align-items: center;
 		gap: var(--space-2);
 		flex: none;
+	}
+	/* The caret sits tight against the model chip, as one control in two parts */
+	.ed-status-grade {
+		margin-left: calc(-1 * var(--space-1));
 	}
 
 	/* An integration's popover: the sentence in the voice and the one action beneath */

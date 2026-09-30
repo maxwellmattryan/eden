@@ -37,6 +37,8 @@ export interface UiStrings {
 	required: string
 	on: string
 	off: string
+	show: string
+	hide: string
 	step: (current: number, total: number) => string
 	noData: string
 	gardener: {
@@ -49,10 +51,29 @@ export interface UiStrings {
 		dismissedNotStored: string
 		cancelledNothingChanged: string
 		confirmed: (verb: string) => string
+		/** The chip above the composer. */
 		canSee: string
-		contextRows: (count: number | string, id: string) => string
+		/** The title of the panel the chip opens. */
+		canSeeTitle: string
+		/** The panel's first section: the ids with rows to read. */
+		inThisRequest: string
+		/** The toggle over the ids with a count of 0. */
+		nothingToRead: (n: number) => string
+		/** The spoken sentence beside a locked row when the app cannot ask for the grant. */
 		locked: (id: string) => string
+		/** The panel's caption: how many rows, across how many registry ids. */
+		canSeeSummary: (rows: number, types: number) => string
+		/** The caption's tail when ids are kept out. */
+		notShared: (count: number) => string
+		/** The label of the locked section. */
+		notSharedLabel: string
+		/** The sentence under the locked section's label. */
+		notSharedExplain: string
+		/** The button at a locked row's end that asks for the grant. */
+		allow: string
 		openAuditLog: string
+		/** The info glyph on a tool card's head. */
+		aboutTool: string
 		noKeyOnDevice: string
 		useLocalModel: string
 		budgets: string
@@ -62,6 +83,38 @@ export interface UiStrings {
 		thread: string
 		/** The one-line expansion of a can-see chip when there are no rows to show. */
 		inContext: (count: number | string, id: string) => string
+		/** The caret beside the model chip that opens the grade menu. */
+		switchGrade: string
+		grade: string
+		unavailableNoProvider: string
+		unavailableNoCapableModel: (missing: string) => string
+		unavailableNoKey: string
+		budgetReached: string
+		offline: string
+		confirmCost: (estimate: string) => string
+		trimmed: (ids: string) => string
+		runsInApp: string
+		devClamp: (model: string) => string
+		cutShort: string
+		continueReply: string
+		stop: string
+		send: string
+		newThread: string
+		threads: string
+		askPlaceholder: string
+		askInDomain: (domain: string) => string
+		focus: (title: string) => string
+		lockedThread: string
+		includeThread: string
+		delegated: (tool: string) => string
+		copyCode: string
+		copied: string
+		addTask: string
+		createTasks: (n: number) => string
+		addToList: string
+		discard: string
+		committed: string
+		discarded: string
 	}
 	access: {
 		read: string
@@ -196,6 +249,8 @@ export const defaultStrings: UiStrings = {
 	required: 'Required',
 	on: 'On',
 	off: 'Off',
+	show: 'Show',
+	hide: 'Hide',
 	step: (current, total) => `Step ${current} of ${total}`,
 	noData: 'No data yet',
 	gardener: {
@@ -209,9 +264,17 @@ export const defaultStrings: UiStrings = {
 		cancelledNothingChanged: 'Cancelled. Nothing was changed.',
 		confirmed: (verb) => `${verb}. Done.`,
 		canSee: 'Can see',
-		contextRows: (count, id) => `${count} ${id}`,
-		locked: (id) => `${id}, excluded from this request`,
+		canSeeTitle: 'What the Gardener can see',
+		inThisRequest: 'In this request',
+		nothingToRead: (n) => `${n} types with nothing to read`,
+		locked: (id) => `${id}, not shared: needs your grant`,
+		canSeeSummary: (rows, types) => `${rows} rows across ${types} types`,
+		notShared: (count) => `${count} not shared`,
+		notSharedLabel: 'Not shared',
+		notSharedExplain: 'A tool asked for these, but T2 stays out until you allow it.',
+		allow: 'Allow',
 		openAuditLog: 'Open the audit log',
+		aboutTool: 'About this tool',
 		noKeyOnDevice: 'No key on this device',
 		useLocalModel: 'Use local model',
 		budgets: 'Budgets',
@@ -219,6 +282,37 @@ export const defaultStrings: UiStrings = {
 		tool: 'Tool',
 		thread: 'Conversation with the Gardener',
 		inContext: (count, id) => `${count} ${id} rows are in this request.`,
+		switchGrade: 'Switch the Gardener’s grade',
+		grade: 'Grade',
+		unavailableNoProvider: 'No provider is configured.',
+		unavailableNoCapableModel: (missing) => `No model can run this: it needs ${missing}.`,
+		unavailableNoKey: 'No key on this device',
+		budgetReached: 'The monthly budget is reached.',
+		offline: 'Cloud models are unavailable offline.',
+		confirmCost: (estimate) => `This will cost about ${estimate}. Send it?`,
+		trimmed: (ids) => `Trimmed to fit: ${ids}`,
+		runsInApp: 'The Gardener runs in the installed app.',
+		devClamp: (model) => `Development build: every grade runs on ${model}.`,
+		cutShort: 'Cut short by the token cap.',
+		continueReply: 'Continue',
+		stop: 'Stop',
+		send: 'Send',
+		newThread: 'New conversation',
+		threads: 'Conversations',
+		askPlaceholder: 'Ask the Gardener',
+		askInDomain: (domain) => `Ask about ${domain}`,
+		focus: (title) => `About: ${title}`,
+		lockedThread: 'This conversation read T2 data and stays out of future context.',
+		includeThread: 'Include this conversation',
+		delegated: (tool) => `Ran ${tool} as its own request.`,
+		copyCode: 'Copy',
+		copied: 'Copied',
+		addTask: 'Add task',
+		createTasks: (n) => (n === 1 ? 'Create 1 task' : `Create ${n} tasks`),
+		addToList: 'Add to the list',
+		discard: 'Discard',
+		committed: 'Added',
+		discarded: 'Discarded',
 	},
 	access: {
 		read: 'read',

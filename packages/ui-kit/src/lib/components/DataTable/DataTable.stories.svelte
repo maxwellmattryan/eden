@@ -1,8 +1,8 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
-	import { expect } from 'storybook/test'
+	import { expect, fn } from 'storybook/test'
 	import { canvasOf } from '../../../storybook/play.js'
-	import DataTable, { type DataTableColumn } from './DataTable.svelte'
+	import DataTable, { type DataTableCell, type DataTableColumn } from './DataTable.svelte'
 	import { audit, haul, integrations, stock } from '../../../stories/sample-data.js'
 
 	// The egress ledger for the audit day: where bytes went, by destination.
@@ -46,6 +46,23 @@
 		[haul.capturedAt, 'Capture', audit.model, '1,980', '240', haul.cost],
 	]
 
+	// The audit log with an outcome column: a glyph and a tone say how each request ended.
+	const outcomeColumns: DataTableColumn[] = [
+		{ label: 'When', muted: true },
+		{ label: 'Surface' },
+		{ label: 'Outcome' },
+		{ label: 'Tokens', numeric: true },
+		{ label: 'Cost', numeric: true },
+	]
+	const ok: DataTableCell = { text: 'ok', icon: 'check', tone: 'positive' }
+	const error: DataTableCell = { text: 'error', icon: 'triangle-alert', tone: 'danger' }
+	const cutShort: DataTableCell = { text: 'cut short', icon: 'clock', tone: 'warning' }
+	const outcomeRows: (string | DataTableCell)[][] = [
+		[audit.when, audit.surface, ok, String(audit.tokensIn + audit.tokensOut), audit.cost],
+		[haul.capturedAt, 'Capture', cutShort, '2,220', haul.cost],
+		['09-29 18:04', 'Toolbench chat', error, '0', { text: '$0.00', mono: true }],
+	]
+
 	const { Story } = defineMeta({
 		title: 'Components/Data/DataTable',
 		component: DataTable,
@@ -71,3 +88,33 @@
 />
 
 <Story name="Muted column" args={{ label: 'Audit log', columns: auditColumns, rows: auditRows, showCaption: true }} />
+
+<!-- An outcome column: the glyph and its text share a tone, and one cost cell asks for mono on its own -->
+<Story
+	name="Outcome cells"
+	args={{ label: 'Audit log', columns: outcomeColumns, rows: outcomeRows, showCaption: true }}
+	play={async ({ canvasElement }) => {
+		const canvas = canvasOf(canvasElement)
+		await expect(canvas.getByText(ok.text)).toBeVisible()
+		await expect(canvas.getByText(error.text)).toBeVisible()
+		await expect(canvas.getByText(cutShort.text)).toBeVisible()
+	}}
+/>
+
+<!-- With onrow each row is a focusable target: a click, Enter or Space opens it, with its index and its element -->
+<Story
+	name="Clickable rows"
+	args={{ label: 'Audit log', columns: outcomeColumns, rows: outcomeRows, onrow: fn() }}
+	play={async ({ canvasElement, userEvent, args }) => {
+		const canvas = canvasOf(canvasElement)
+		const second = canvas.getByText(cutShort.text).closest('tr')!
+		await expect(second).toHaveAttribute('tabindex', '0')
+		await userEvent.click(second)
+		await expect(args.onrow).toHaveBeenCalledTimes(1)
+		await expect(args.onrow).toHaveBeenLastCalledWith(1, second)
+		second.focus()
+		await userEvent.keyboard('{Enter}')
+		await expect(args.onrow).toHaveBeenCalledTimes(2)
+		await expect(args.onrow).toHaveBeenLastCalledWith(1, expect.any(HTMLTableRowElement))
+	}}
+/>

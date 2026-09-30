@@ -27,6 +27,26 @@ import { declare, setOnce, takeDue, validateDeclared, validateOnce } from '../sc
 import type { DeclaredSchedule, FiredSchedule, ScheduleRow } from '../scheduler/types.js'
 import { signalCutoff, validateSignal } from '../signals/rules.js'
 import type { Delivery, Emitted, InboxEntry, InboxQuery, Signal, SignalInput } from '../signals/types.js'
+import {
+	auditCutoff,
+	validateAudit,
+	validateMessage,
+	validatePolicy,
+	validateThread,
+	validateThreadPatch,
+} from '../gardener/rules.js'
+import type {
+	AuditEntry,
+	AuditEntryInput,
+	AuditQuery,
+	Message,
+	MessageInput,
+	PolicyRow,
+	Thread,
+	ThreadInput,
+	ThreadPatch,
+	ThreadQuery,
+} from '../gardener/runtime-types.js'
 import { DataError } from './errors.js'
 import { formatStamp, parseStamp, tick, type Hlc } from './hlc.js'
 import { createIdGenerator, isUlid } from './ulid.js'
@@ -97,6 +117,13 @@ interface State {
 	signals: Omit<Signal, 'at'>[]
 	/** One rule's card for one signal; its words are the signal's. */
 	inbox: InboxRow[]
+	/** The audit log (`audit.rs`): this browser's, ninety days. */
+	audit: AuditEntry[]
+	/** The Gardener's threads and their messages (`threads.rs`), tombstones included. */
+	threads: Thread[]
+	messages: Message[]
+	/** Workspace policy (`policy.rs`): the Gardener's settings, tombstones included. */
+	policy: PolicyRow[]
 }
 
 interface InboxRow extends Delivery {
@@ -220,6 +247,10 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 			schedules: [],
 			signals: [],
 			inbox: [],
+			audit: [],
+			threads: [],
+			messages: [],
+			policy: [],
 		}
 		// what the first migration seeds in the crate
 		const stamp = formatStamp({ wallMs: 0, counter: 0, node: 0 })
@@ -244,6 +275,13 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 					state.schedules ??= []
 					state.signals ??= []
 					state.inbox ??= []
+					state.audit ??= []
+					state.threads ??= []
+					state.messages ??= []
+					state.policy ??= []
+					// The log is swept when the workspace opens, as in the crate.
+					const cutoff = auditCutoff(now())
+					state.audit = state.audit.filter((entry) => entry.at >= cutoff)
 					return state
 				}
 			} catch {
@@ -1005,6 +1043,215 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 				const unread = state.inbox.filter((card) => ids.includes(card.id) && !card.read)
 				for (const card of unread) card.read = true
 				return unread.length
+			})
+		},
+
+		// The audit log (`audit.rs`; docs/product/substrate/ai.md, "Audit log"): this browser's, never exported.
+
+		/** Keeps one entry, whole. */
+		recordAudit(input: AuditEntryInput): AuditEntry {
+			const refusal = validateAudit(input)
+			if (refusal) throw new DataError(refusal[0], refusal[1])
+			return write((state) => {
+				const id = input.id ?? newId()
+				if (state.audit.some((entry) => entry.id === id)) throw new DataError('audit:invalid', `the id is taken: ${id}`)
+				const entry: AuditEntry = structuredClone({ ...input, id })
+				state.audit.push(entry)
+				return structuredClone(entry)
+			})
+		},
+
+		/** The entries within the filter, the newest first. */
+		queryAudit(filter: AuditQuery = {}): AuditEntry[] {
+			const limit = Math.max(1, Math.min(filter.limit ?? 200, 1000))
+			return structuredClone(
+				load()
+					.audit.filter((entry) => !filter.threadId || entry.threadId === filter.threadId)
+					.filter((entry) => filter.fromMs === undefined || entry.at >= filter.fromMs)
+					.filter((entry) => filter.toMs === undefined || entry.at <= filter.toMs)
+					.sort((a, b) => b.at - a.at || byText(b.id, a.id))
+					.slice(0, limit)
+			)
+		},
+
+		/** Every row id any entry read, with how many entries read it: what a fact's "used by N requests" shows. */
+		auditUsage(): Record<string, number> {
+			const usage: Record<string, number> = {}
+			for (const entry of load().audit) {
+				const rows = new Set(entry.reads.flatMap((read) => read.rows))
+				for (const row of rows) usage[row] = (usage[row] ?? 0) + 1
+			}
+			return usage
+		},
+
+		/** What the entries at or after the instant cost, together. */
+		auditSpend(fromMs: number): number {
+			return load()
+				.audit.filter((entry) => entry.at >= fromMs)
+				.reduce((sum, entry) => sum + entry.costUsd, 0)
+		},
+
+		// Threads and messages (`threads.rs`): stamped rows with tombstones, exported and merged like facts.
+
+		createThread(input: ThreadInput): Thread {
+			const refusal = validateThread(input)
+			if (refusal) throw new DataError(refusal[0], refusal[1])
+			return write((state) => {
+				const id = input.id ?? newId()
+				if (state.threads.some((row) => row.id === id)) throw new DataError('thread:invalid', `the id is taken: ${id}`)
+				const at = stamp(state)
+				const row: Thread = {
+					uri: toUri('thread', id),
+					id,
+					domain: input.domain ?? null,
+					title: input.title,
+					tier: input.tier ?? 'T0',
+					createdAt: at,
+					updatedAt: at,
+					deletedAt: null,
+				}
+				state.threads.push(row)
+				return structuredClone(row)
+			})
+		},
+
+		updateThread(id: string, patch: ThreadPatch): Thread {
+			const refusal = validateThreadPatch(patch)
+			if (refusal) throw new DataError(refusal[0], refusal[1])
+			return write((state) => {
+				const row = state.threads.find((entry) => entry.id === id)
+				if (!row || row.deletedAt) throw notFound(`thread ${id}`)
+				if (patch.title !== undefined) row.title = patch.title
+				if (patch.tier !== undefined) row.tier = patch.tier
+				if ('domain' in patch) row.domain = patch.domain ?? null
+				row.updatedAt = stamp(state)
+				return structuredClone(row)
+			})
+		},
+
+		/** Tombstones the thread and its live messages at the same stamp. Deleting a deleted thread changes nothing. */
+		deleteThread(id: string): Thread {
+			return write((state) => {
+				const row = state.threads.find((entry) => entry.id === id)
+				if (!row) throw notFound(`thread ${id}`)
+				if (!row.deletedAt) {
+					const at = stamp(state)
+					row.updatedAt = at
+					row.deletedAt = at
+					for (const message of state.messages) {
+						if (message.threadId === id && !message.deletedAt) {
+							message.updatedAt = at
+							message.deletedAt = at
+						}
+					}
+				}
+				return structuredClone(row)
+			})
+		},
+
+		/** Lifts the tombstone, and those of the messages deleted with it. Restoring a live thread changes nothing. */
+		restoreThread(id: string): Thread {
+			return write((state) => {
+				const row = state.threads.find((entry) => entry.id === id)
+				if (!row) throw notFound(`thread ${id}`)
+				if (row.deletedAt) {
+					const deletedAt = row.deletedAt
+					const at = stamp(state)
+					row.updatedAt = at
+					row.deletedAt = null
+					for (const message of state.messages) {
+						if (message.threadId === id && message.deletedAt === deletedAt) {
+							message.updatedAt = at
+							message.deletedAt = null
+						}
+					}
+				}
+				return structuredClone(row)
+			})
+		},
+
+		/** The threads, the latest updated first: the live ones unless the query asks for the deleted ones too. */
+		queryThreads(filter: ThreadQuery = {}): Thread[] {
+			return structuredClone(
+				load()
+					.threads.filter((row) => filter.includeDeleted || !row.deletedAt)
+					.filter((row) => !filter.domain || row.domain === filter.domain)
+					.sort((a, b) => byText(b.updatedAt, a.updatedAt) || byText(b.id, a.id))
+			)
+		},
+
+		/** Appends a message to a live thread, which is touched. */
+		appendMessage(input: MessageInput): Message {
+			const refusal = validateMessage(input)
+			if (refusal) throw new DataError(refusal[0], refusal[1])
+			return write((state) => {
+				const thread = state.threads.find((entry) => entry.id === input.threadId)
+				if (!thread || thread.deletedAt) throw new DataError('thread:invalid', `no live thread ${input.threadId}`)
+				const id = input.id ?? newId()
+				if (state.messages.some((row) => row.id === id)) throw new DataError('thread:invalid', `the id is taken: ${id}`)
+				const at = stamp(state)
+				const row: Message = {
+					uri: toUri('message', id),
+					id,
+					threadId: input.threadId,
+					role: input.role,
+					blocks: structuredClone(input.blocks),
+					requestId: input.requestId ?? null,
+					createdAt: at,
+					updatedAt: at,
+					deletedAt: null,
+				}
+				state.messages.push(row)
+				thread.updatedAt = at
+				return structuredClone(row)
+			})
+		},
+
+		/** Replaces the blocks whole, under a new stamp. */
+		updateMessage(id: string, blocks: unknown[]): Message {
+			if (!Array.isArray(blocks)) throw new DataError('thread:invalid', 'blocks are a list')
+			return write((state) => {
+				const row = state.messages.find((entry) => entry.id === id)
+				if (!row || row.deletedAt) throw notFound(`message ${id}`)
+				row.blocks = structuredClone(blocks)
+				row.updatedAt = stamp(state)
+				return structuredClone(row)
+			})
+		},
+
+		/** The live messages of a thread, in id order, which is the order they were made in. */
+		queryMessages(threadId: string): Message[] {
+			return structuredClone(
+				load()
+					.messages.filter((row) => row.threadId === threadId && !row.deletedAt)
+					.sort((a, b) => byText(a.id, b.id))
+			)
+		},
+
+		// Workspace policy (`policy.rs`, D-37): one JSON value per key, renewed in place.
+
+		/** The live row under the key, or nothing. */
+		getPolicy(key: string): PolicyRow | null {
+			const row = load().policy.find((entry) => entry.key === key && !entry.deletedAt)
+			return row ? structuredClone(row) : null
+		},
+
+		/** Sets the value under the key: the row is renewed in place, or made, or its tombstone lifted. */
+		setPolicy(key: string, value: unknown): PolicyRow {
+			const refusal = validatePolicy(key, value)
+			if (refusal) throw new DataError(refusal[0], refusal[1])
+			return write((state) => {
+				const at = stamp(state)
+				const existing = state.policy.find((entry) => entry.key === key)
+				if (existing) {
+					existing.value = structuredClone(value)
+					existing.updatedAt = at
+					existing.deletedAt = null
+					return structuredClone(existing)
+				}
+				const row: PolicyRow = { key, value: structuredClone(value), createdAt: at, updatedAt: at, deletedAt: null }
+				state.policy.push(row)
+				return structuredClone(row)
 			})
 		},
 	}

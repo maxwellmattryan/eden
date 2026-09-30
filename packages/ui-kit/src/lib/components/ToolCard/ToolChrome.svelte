@@ -8,7 +8,9 @@
 	import type { HTMLAttributes } from 'svelte/elements'
 	import type { IconName } from '../../icons/icons.js'
 	import Icon from '../../icons/Icon.svelte'
+	import { useStrings } from '../../i18n/context.js'
 	import Breeze from '../Breeze/Breeze.svelte'
+	import IconButton from '../IconButton/IconButton.svelte'
 
 	type Props = HTMLAttributes<HTMLDivElement> & {
 		/** honey: the Gardener acting; ai: the Gardener speaking. */
@@ -19,6 +21,8 @@
 		heading: string
 		/** The badge at the end of the title line. */
 		badge?: Snippet
+		/** An info glyph after the title, named "About this tool"; called with the button, for a popover to hang on. */
+		oninfo?: (anchor: HTMLElement) => void
 		/** The body: what the card says and shows. */
 		children?: Snippet
 		/** The action row, shown while there is no result. */
@@ -33,6 +37,7 @@
 		icon,
 		heading,
 		badge,
+		oninfo,
 		children,
 		actions,
 		result,
@@ -41,6 +46,7 @@
 		...rest
 	}: Props = $props()
 
+	const s = useStrings()
 	const uid = $props.id()
 	// A card that mounts already done is history: it shows the settled state but does not play the Breeze again.
 	const doneAtMount = untrack(() => done)
@@ -57,6 +63,16 @@
 	<div class="ed-tool-head">
 		<Icon name={icon} size="sm" class="ed-tool-icon" />
 		<span class="ed-tool-title" id="{uid}-title">{heading}</span>
+		{#if oninfo}
+			<IconButton
+				class="ed-tool-info"
+				icon="info"
+				size="xs"
+				label={s.gardener.aboutTool}
+				tooltip
+				onclick={(e) => oninfo(e.currentTarget)}
+			/>
+		{/if}
 		{#if badge}<span class="ed-tool-badge">{@render badge()}</span>{/if}
 	</div>
 	{@render children?.()}
@@ -125,6 +141,10 @@
 		font-variation-settings: var(--ed-t-title-sm-opsz);
 		min-width: 0;
 		overflow-wrap: anywhere;
+	}
+	.ed-tool :global(.ed-tool-info) {
+		flex: none;
+		color: var(--ed-tool-ink);
 	}
 	.ed-tool-badge {
 		margin-left: auto;

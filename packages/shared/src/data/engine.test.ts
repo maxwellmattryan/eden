@@ -644,4 +644,121 @@ describe('engine', () => {
 			codeOf(() => engine.applyBatch([{ op: 'createPrimitive', type: 'attachment' as 'task', input: {} as never }]))
 		).toBe('invalid')
 	})
+
+	it('keeps threads and messages with tombstones, and takes the messages with the thread', () => {
+		const { engine, clock } = setup()
+		const thread = engine.createThread({ title: 'Dinner', domain: 'kitchen' })
+		expect(thread.uri).toBe(`eden://thread/${thread.id}`)
+		expect(thread).toMatchObject({ domain: 'kitchen', tier: 'T0', deletedAt: null, createdAt: thread.updatedAt })
+
+		clock.now += 1000
+		const asked = engine.appendMessage({ threadId: thread.id, role: 'owner', blocks: [{ kind: 'text', text: 'Hi' }] })
+		const answered = engine.appendMessage({ threadId: thread.id, role: 'gardener', blocks: [], requestId: newId() })
+		expect(asked.uri).toBe(`eden://message/${asked.id}`)
+		expect(engine.queryMessages(thread.id)).toEqual([asked, answered])
+		// The thread is touched by a message and is the latest updated.
+		expect(engine.queryThreads()[0]?.updatedAt).toBe(answered.createdAt)
+
+		clock.now += 1000
+		const retitled = engine.updateThread(thread.id, { title: 'Dinner plans', tier: 'T2', domain: null })
+		expect(retitled).toMatchObject({ title: 'Dinner plans', tier: 'T2', domain: null })
+		expect(retitled.updatedAt > thread.updatedAt).toBe(true)
+		const edited = engine.updateMessage(answered.id, [{ kind: 'text', text: 'Dal.' }])
+		expect(edited.blocks).toEqual([{ kind: 'text', text: 'Dal.' }])
+		expect(edited.updatedAt > answered.updatedAt).toBe(true)
+
+		clock.now += 1000
+		const deleted = engine.deleteThread(thread.id)
+		expect(deleted.deletedAt).toBe(deleted.updatedAt)
+		expect(engine.queryThreads()).toEqual([])
+		expect(engine.queryThreads({ includeDeleted: true })).toEqual([deleted])
+		expect(engine.queryMessages(thread.id)).toEqual([])
+		expect(engine.deleteThread(thread.id)).toEqual(deleted)
+		expect(codeOf(() => engine.appendMessage({ threadId: thread.id, role: 'owner', blocks: [] }))).toBe(
+			'thread:invalid'
+		)
+		expect(codeOf(() => engine.appendMessage({ threadId: newId(), role: 'owner', blocks: [] }))).toBe('thread:invalid')
+
+		clock.now += 1000
+		const restored = engine.restoreThread(thread.id)
+		expect(restored.deletedAt).toBeNull()
+		expect(engine.queryMessages(thread.id).map((row) => row.id)).toEqual([asked.id, answered.id])
+		expect(engine.queryMessages(thread.id).every((row) => row.updatedAt === restored.updatedAt)).toBe(true)
+		expect(engine.queryThreads({ domain: 'kitchen' })).toEqual([])
+		expect(engine.restoreThread(thread.id)).toEqual(restored)
+
+		expect(codeOf(() => engine.createThread({ title: ' ' }))).toBe('thread:invalid')
+		expect(codeOf(() => engine.createThread({ title: 'x', tier: 'T3' as 'T2' }))).toBe('thread:invalid')
+		expect(codeOf(() => engine.updateThread(newId(), { title: 'x' }))).toBe('not-found')
+		expect(codeOf(() => engine.updateMessage(newId(), []))).toBe('not-found')
+		expect(codeOf(() => engine.appendMessage({ threadId: thread.id, role: 'bot' as 'owner', blocks: [] }))).toBe(
+			'thread:invalid'
+		)
+	})
+
+	it('renews a policy row in place and refuses a key that is not kebab-case', () => {
+		const { engine, clock } = setup()
+		expect(engine.getPolicy('gardener')).toBeNull()
+		const first = engine.setPolicy('gardener', { monthlyCapUsd: 10 })
+		expect(first).toMatchObject({ key: 'gardener', value: { monthlyCapUsd: 10 }, deletedAt: null })
+		clock.now += 1000
+		const second = engine.setPolicy('gardener', { monthlyCapUsd: 25 })
+		expect(second.createdAt).toBe(first.createdAt)
+		expect(second.updatedAt > first.updatedAt).toBe(true)
+		expect(second.value).toEqual({ monthlyCapUsd: 25 })
+		expect(engine.getPolicy('gardener')).toEqual(second)
+		expect(codeOf(() => engine.setPolicy('Gardener', {}))).toBe('policy:invalid')
+		expect(codeOf(() => engine.setPolicy('gardener.v2', {}))).toBe('policy:invalid')
+	})
+
+	it('keeps the audit log for ninety days, counts the rows read and sums the spend', () => {
+		const { engine, clock } = setup()
+		const rice = newId()
+		const dal = newId()
+		const entry = (at: number, rows: string[], costUsd: number) =>
+			engine.recordAudit({
+				at,
+				surface: 'panel',
+				threadId: null,
+				parentRequestId: null,
+				tool: null,
+				domain: null,
+				declaredGrade: 'standard',
+				grade: 'standard',
+				source: 'map',
+				provider: 'anthropic',
+				model: 'claude-sonnet-5-5',
+				reads: [
+					{ id: 'stock-item', count: rows.length, rows },
+					{ id: 'recipe', count: rows.length, rows },
+				],
+				entities: [],
+				tools: [],
+				confirmOutcome: null,
+				tokensIn: 100,
+				tokensOut: 10,
+				cacheRead: 0,
+				costUsd,
+				outcome: 'ok',
+				grants: [],
+				image: null,
+			})
+		const old = entry(clock.now - 91 * 24 * 60 * 60 * 1000, [rice], 0.5)
+		const a = entry(clock.now - 1000, [rice, dal], 0.25)
+		const b = entry(clock.now, [rice], 0.125)
+		expect(old.id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/)
+		expect(engine.queryAudit()).toEqual([b, a])
+		expect(engine.queryAudit({ fromMs: clock.now })).toEqual([b])
+		expect(engine.queryAudit({ toMs: clock.now - 1000, limit: 1 })).toEqual([a])
+		// A row read twice in one entry counts once for it.
+		expect(engine.auditUsage()).toEqual({ [rice]: 2, [dal]: 1 })
+		expect(engine.auditSpend(clock.now - 1000)).toBe(0.375)
+		expect(engine.auditSpend(clock.now + 1)).toBe(0)
+		expect(codeOf(() => entry(-1, [], 0))).toBe('audit:invalid')
+		expect(codeOf(() => engine.recordAudit({ ...a, outcome: 'lost' as 'ok' }))).toBe('audit:invalid')
+		// Ninety days on, the rest are swept when the workspace opens.
+		clock.now += 90 * 24 * 60 * 60 * 1000 + 1
+		expect(engine.queryAudit()).toEqual([])
+		expect(engine.auditUsage()).toEqual({})
+	})
 })

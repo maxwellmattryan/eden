@@ -62,7 +62,7 @@
 	--on-danger: #ffffff;
 	--warning: #b8821f;
 	--info: #4a82a6;
-	--success: var(--brand-primary);
+	--success: #28794a;
 	--accent-moss: #4f7a5a;
 	--accent-fern: #3e8e5e;
 	--accent-sage: #6f8f7c;
@@ -125,7 +125,7 @@
 	--on-danger: #0f1512;
 	--warning: #e3b24f;
 	--info: #7fb2d6;
-	--success: var(--brand-primary);
+	--success: #86d9a2;
 	--accent-moss: #7fb58a;
 	--accent-fern: #8cd3a0;
 	--accent-sage: #a3c4b1;

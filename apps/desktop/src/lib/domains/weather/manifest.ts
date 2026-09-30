@@ -7,6 +7,7 @@ import { defineDomain } from '../manifest.js'
 import { weather } from '@eden/shared/weather'
 import SunAndMoon from './widgets/SunAndMoon.svelte'
 import WeatherNow from './widgets/WeatherNow.svelte'
+import { weatherTools } from './tools.js'
 
 export const weatherManifest = defineDomain('weather', {
 	routes: { path: '/weather', href: resolve('/weather'), open: () => void goto(resolve('/weather')) },
@@ -17,4 +18,5 @@ export const weatherManifest = defineDomain('weather', {
 	liveGlyph: () => (weather.now ? iconFor(weather.now.condition, weather.now.night) : undefined),
 	load: () => weather.load(),
 	subscribe: () => weather.bind(),
+	tools: weatherTools,
 })

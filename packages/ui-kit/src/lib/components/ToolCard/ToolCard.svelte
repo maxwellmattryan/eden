@@ -30,6 +30,8 @@
 		onconfirm?: () => void
 		/** Called when the owner cancels. */
 		oncancel?: () => void
+		/** Puts an info glyph in the head, named "About this tool"; called with the button so a popover can hang on it. */
+		oninfo?: (anchor: HTMLElement) => void
 		/** pending, done or cancelled (bindable); the buttons set it. */
 		state?: ToolState
 	}
@@ -41,6 +43,7 @@
 		confirm,
 		onconfirm,
 		oncancel,
+		oninfo,
 		state = $bindable('pending'),
 		class: className = '',
 		...rest
@@ -77,6 +80,7 @@
 	done={state === 'done'}
 	{result}
 	actions={confirmable ? confirmRow : undefined}
+	{oninfo}
 	class={className}
 	{...rest}
 >

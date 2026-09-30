@@ -242,6 +242,26 @@
 				"ok": true
 			},
 			{
+				"fg": "success",
+				"bg": "surface-0",
+				"fgHex": "#28794a",
+				"bgHex": "#f6f4ec",
+				"size": "text",
+				"ratio": 4.86,
+				"grade": "AA",
+				"ok": true
+			},
+			{
+				"fg": "success",
+				"bg": "surface-1",
+				"fgHex": "#28794a",
+				"bgHex": "#efede3",
+				"size": "text",
+				"ratio": 4.56,
+				"grade": "AA",
+				"ok": true
+			},
+			{
 				"fg": "warning",
 				"bg": "surface-0",
 				"fgHex": "#b8821f",
@@ -520,6 +540,26 @@
 				"bgHex": "#e0706c",
 				"size": "text",
 				"ratio": 5.9,
+				"grade": "AA",
+				"ok": true
+			},
+			{
+				"fg": "success",
+				"bg": "surface-0",
+				"fgHex": "#86d9a2",
+				"bgHex": "#0f1512",
+				"size": "text",
+				"ratio": 10.97,
+				"grade": "AA",
+				"ok": true
+			},
+			{
+				"fg": "success",
+				"bg": "surface-1",
+				"fgHex": "#86d9a2",
+				"bgHex": "#16201b",
+				"size": "text",
+				"ratio": 9.92,
 				"grade": "AA",
 				"ok": true
 			},

@@ -15,7 +15,7 @@ updated: 2026-09-30
 
 ## Sidebar (Phase 1)
 
-The app mark and wordmark at the head, then three groups under rules: Today; Garden, Gardener and Toolbench; the enabled domains in the owner's order. Settings is pinned at the bottom and opens its sheet without becoming the current item (D-55, D-64). Each domain shows its glyph, themed name and plain subtitle; the subtitle collapses to a tooltip once the owner turns it off (D-2). Domains can be reordered by drag and hidden without being disabled (`substrate/domain-manifest.md`). Badges are rare: unread inbox count on the bell, nothing on domains by default.
+The app mark and wordmark at the head, then three groups under rules: Today; Garden and Toolbench; the enabled domains in the owner's order. The Gardener and Settings are pinned at the bottom with their keys always shown, and each opens its panel or sheet without becoming the current item (D-55, D-64, D-77). Each domain shows its glyph, themed name and plain subtitle; the subtitle collapses to a tooltip once the owner turns it off (D-2). Domains can be reordered by drag and hidden without being disabled (`substrate/domain-manifest.md`). Badges are rare: unread inbox count on the bell, nothing on domains by default.
 
 ## The Garden (Phase 1)
 
@@ -35,7 +35,7 @@ Every view push goes on a history stack with back and forward, like a browser. T
 
 Left: sync state and one chip per integration. Right: the Gardener chip (the conversation's grade and model with a switch for the grade (D-74), budget meter, grey when no key on this device), the notification bell with unread count, and the **+** button. On mobile these live behind More and the floating button.
 
-The grade switch is not built: the kit's `StatusBarGardener` takes a label, a budget and the no-key state, and gains the switch with the Gardener's runtime as a change to its contract. The words for a tool that is unavailable, and why, arrive with it, and so do the chip's rows in `design/sample-data.md`, `design/ux-patterns.md` and `design/screens.md`.
+The grade switch is the kit's `StatusBarGardener` with `grades` and `onchangegrade`; the words for a tool that is unavailable, and why, are the kit's `gardener.unavailable*` strings (`engineering/gardener.md`).
 
 ## Quick Log surfaces (D-12)
 

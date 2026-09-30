@@ -12,6 +12,8 @@
 		type ListRowData,
 		type MenuItem,
 	} from '@eden/ui-kit'
+	import { goto } from '$app/navigation'
+	import { resolve } from '$app/paths'
 	import { locale, t } from '@eden/shared/i18n'
 	import { todayIso } from '@eden/shared/dates'
 	import { formatValue, type Fact, type FactProposal } from '@eden/shared/profile'
@@ -53,6 +55,11 @@
 	let editing = $state<Fact | undefined>()
 	let editingWindow = $state(false)
 
+	/** The audit log, where "used by N requests" leads (product/substrate/ai.md, "Audit log"). */
+	function openAudit() {
+		void goto(resolve('/gardener/audit'))
+	}
+
 	function openAdd() {
 		editing = undefined
 		editingWindow = false
@@ -93,7 +100,10 @@
 		name={$t('shell.profile')}
 		subtitle={$t('shell.profileSubtitle')}
 		icon="id-card"
-		actions={[{ id: 'add', label: $t('profile.add'), icon: 'plus', onclick: openAdd }]}
+		actions={[
+			{ id: 'add', label: $t('profile.add'), icon: 'plus', onclick: openAdd },
+			{ id: 'audit', label: $t('settings.gardener.audit.open'), icon: 'external-link', onclick: openAudit },
+		]}
 	/>
 
 	{#if profile.saveFailed}

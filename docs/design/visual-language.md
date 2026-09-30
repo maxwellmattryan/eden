@@ -78,11 +78,11 @@ Ten accents the owner can pick, replacing `--brand-*` at runtime as in Crate. Li
 |---|---|---|
 | danger | `#B0413E` | `#E0706C` |
 | warning | `#B8821F` | `#E3B24F` |
-| success | the accent | the accent |
+| success | `#28794A` | `#86D9A2` |
 | info | `#4A82A6` | `#7FB2D6` |
 | Gardener surfaces | `--ai` on `--ai-muted` when it speaks, `--honey` on `--honey-muted` when it acts | same |
 
-The Gardener's colours are distinct from the accent so an AI surface is always recognisable whatever accent is chosen: green when it speaks, honey when it acts (D-40).
+The Gardener's colours are distinct from the accent so an AI surface is always recognisable whatever accent is chosen: green when it speaks, honey when it acts (D-40). Success is its own green too, never the accent, so a done check or an ok outcome reads as success under every accent (D-78); it stays beside a check or a word.
 
 ## Typography
 

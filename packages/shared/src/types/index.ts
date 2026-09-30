@@ -25,6 +25,9 @@ export const weekStarts: readonly WeekStart[] = ['monday', 'sunday']
 export type ClockFormat = '24h' | '12h'
 export const clockFormats: readonly ClockFormat[] = ['24h', '12h']
 
+/** The Gardener's conversation grade, which the status-bar chip switches (D-74). */
+export type { ModelGrade } from '../manifest/types.js'
+
 /** The forecast provider the owner chose (D-56); WeatherKit is offered only where it can run (D-57). */
 export type WeatherProvider = 'open-meteo' | 'weatherkit'
 export const weatherProviders: readonly WeatherProvider[] = ['open-meteo', 'weatherkit']

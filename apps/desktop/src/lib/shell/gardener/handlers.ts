@@ -1,0 +1,23 @@
+// Every tool's handler by wire name (docs/engineering/gardener.md, "Tools"): the substrate's own and each enabled
+// domain's from its bindings. A declared tool with no handler is unavailable and says so; `missingHandlers` lists
+// them, and a test asserts the list is empty.
+import { toolIndex, type GardenerTool } from '@eden/shared/gardener'
+import { declarations, manifestFor } from '$lib/domains'
+import { substrateTools } from './substrate-tools.js'
+import type { ToolHandler } from './types.js'
+
+export const tools: readonly GardenerTool[] = toolIndex(declarations)
+
+export function handlerOf(tool: GardenerTool): ToolHandler | undefined {
+	if (tool.domain === 'substrate') return substrateTools[tool.declaration.id]
+	return manifestFor(tool.domain)?.tools?.[tool.declaration.id]
+}
+
+export function toolByWireName(name: string): GardenerTool | undefined {
+	return tools.find((tool) => tool.wireName === name)
+}
+
+/** The declared tools nothing handles, as `<domain>.<id>`. */
+export function missingHandlers(): string[] {
+	return tools.filter((tool) => !handlerOf(tool)).map((tool) => `${tool.domain}.${tool.declaration.id}`)
+}

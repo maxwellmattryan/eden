@@ -53,6 +53,9 @@
 		color: var(--text-primary);
 		box-sizing: border-box;
 		max-width: 100%;
+		min-width: 0;
+		/* a long unbroken word (a URL, an id) breaks rather than widening the thread */
+		overflow-wrap: anywhere;
 	}
 	.ed-msg-ai {
 		background: var(--ai-muted);

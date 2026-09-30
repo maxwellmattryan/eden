@@ -3,6 +3,7 @@
 pub mod handle;
 mod key_provider;
 pub mod schema;
+pub mod secret_store;
 
 use rusqlite::Connection;
 use std::path::Path;
@@ -134,6 +135,10 @@ mod tests {
             "schedules",
             "signals",
             "inbox",
+            "audit_entries",
+            "threads",
+            "messages",
+            "policy",
         ] {
             assert!(table_exists(&conn, table), "expected the table `{table}`");
         }

@@ -178,6 +178,88 @@ export class KitchenStore {
 		return { item, undo }
 	}
 
+	/**
+	 * Adds several stock items in one batch, one feed entry and one undo: what a capture commits and what the
+	 * Gardener's `add-stock` writes. The tip and the expiry are the draft's when it has them.
+	 */
+	addStockRows(
+		rows: { name: string; qty: string; unit?: string; location: StockLocation; expiry?: string; estimated?: boolean }[],
+		source: 'manual' | 'capture' = 'manual'
+	): { items: StockItem[]; undo: Undo } {
+		const items: StockItem[] = rows.map((row) => ({
+			id: newId(),
+			name: row.name,
+			qty: row.qty,
+			unit: row.unit || undefined,
+			location: row.location,
+			expiry: row.expiry || undefined,
+			estimated: row.estimated || undefined,
+			source,
+			sourcedAt: nowIso(),
+		}))
+		if (!items.length) return { items, undo: () => {} }
+		const ids = items.map((item) => item.id)
+		const uris = ids.map((id) => toUri(KITCHEN.stock, id))
+		const undo = this.#commit(
+			{
+				apply: () => (this.stock = [...this.stock, ...items]),
+				revert: () => (this.stock = this.stock.filter((entry) => !ids.includes(entry.id))),
+				write: () =>
+					applyBatch(
+						items.map((item): BatchOp => ({
+							op: 'createEntity',
+							input: { id: item.id, type: KITCHEN.stock, payload: this.#payload(KITCHEN.stock, item) },
+						}))
+					).then(() => undefined),
+				unwrite: () => deleteRows(uris),
+			},
+			source === 'capture' ? 'garden.feed.haulCaptured' : 'garden.feed.stockAddedMany',
+			{ count: items.length }
+		)
+		return { items, undo }
+	}
+
+	/** Puts several items on the grocery list at once: what a drafted list commits. */
+	addGroceryItems(rows: { name: string; qty?: string; note?: string }[]): { items: GroceryItem[]; undo: Undo } {
+		const items: GroceryItem[] = rows.map((row) => ({
+			id: newId(),
+			name: row.name,
+			qty: row.qty ?? '',
+			origin: 'recipe',
+			note: row.note,
+			done: false,
+		}))
+		if (!items.length) return { items, undo: () => {} }
+		this.#ensureList()
+		const ids = items.map((item) => item.id)
+		const uris = ids.map((id) => toUri(KITCHEN.item, id))
+		const undo = this.#commit(
+			{
+				apply: () => (this.grocery.items = [...this.grocery.items, ...items]),
+				revert: () => (this.grocery.items = this.grocery.items.filter((entry) => !ids.includes(entry.id))),
+				write: () =>
+					applyBatch(
+						items.map((item): BatchOp => ({
+							op: 'createEntity',
+							input: { id: item.id, type: KITCHEN.item, payload: this.#payload(KITCHEN.item, item) },
+						}))
+					).then(() => undefined),
+				unwrite: () => deleteRows(uris),
+			},
+			'garden.feed.groceryAddedMany',
+			{ count: items.length }
+		)
+		return { items, undo }
+	}
+
+	recipeById(id: string): Recipe | undefined {
+		return this.recipes.find((recipe) => recipe.id === id)
+	}
+
+	stockById(id: string): StockItem | undefined {
+		return this.stock.find((item) => item.id === id)
+	}
+
 	removeStock(id: string): { item: StockItem | undefined; undo: Undo } {
 		const item = this.stock.find((entry) => entry.id === id)
 		const undo = this.#commit(this.#removed('stock', KITCHEN.stock, [id]), 'garden.feed.stockRemoved', {

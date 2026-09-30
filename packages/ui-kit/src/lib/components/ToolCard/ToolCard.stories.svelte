@@ -99,6 +99,21 @@
 	}}
 />
 
+<!-- With info: an xs glyph between the title and the badge hands its own element to the app, for a popover -->
+<Story
+	name="With info"
+	args={{ oninfo: fn() }}
+	{template}
+	play={async ({ canvasElement, userEvent, args }) => {
+		const canvas = canvasOf(canvasElement)
+		const info = canvas.getAllByRole('button', { name: s.gardener.aboutTool })[0]!
+		await userEvent.click(info)
+		await expect(args.oninfo).toHaveBeenCalledTimes(1)
+		await expect(args.oninfo).toHaveBeenCalledWith(expect.any(HTMLElement))
+		await expect(args.oninfo).toHaveBeenCalledWith(info)
+	}}
+/>
+
 <!-- Settled: the ground has faded to the card ground, the check in the accent, the result in caption -->
 <Story name="Confirmed" args={{ state: 'done' }} {template} />
 
