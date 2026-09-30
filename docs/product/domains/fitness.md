@@ -4,7 +4,7 @@ status: draft
 summary: Workouts and templates, an exercise library, gyms, goals, body metrics with a weight trend, supplements and doses, and a training schedule as routines. Owns the body until Wellspring exists. Id `fitness`, Phase 2.
 read-this-if: You are working on workouts, body metrics, weight logging, gyms or supplements.
 depends-on: [substrate/registry, substrate/primitives, substrate/tasks, substrate/grants, substrate/shell, substrate/ai]
-updated: 2026-09-29
+updated: 2026-09-30
 ---
 
 ## 1. Purpose
@@ -44,14 +44,14 @@ Read: none from other domains.
 
 ## 5. Gardener tools and guardrails
 
-| tool | reads | access | confirm |
-|---|---|---|---|
-| `generate-workout` | `exercise`, `workout-template`, `workout-log`, `equipment`, `fitness-goal`, `training-limitation` | write-draft | a workout card; commit saves a template or starts a session |
-| `log-workout` | `workout-log`, `workout-template` | write | undo |
-| `log-body-metric` | `body-metric` | write | undo (Quick Log) |
-| `took-supplement` | `supplement`, `intake-log` | write | undo (Quick Log) |
-| `progress-summary` | `workout-log`, `body-metric`, `fitness-goal` | read | none |
-| `suggest-progression` | `workout-log`, `workout-template` | read | none |
+| tool | reads | access | confirm | grade |
+|---|---|---|---|---|
+| `generate-workout` | `exercise`, `workout-template`, `workout-log`, `equipment`, `fitness-goal`, `training-limitation` | write-draft | a workout card; commit saves a template or starts a session | `deep` |
+| `log-workout` | `workout-log`, `workout-template` | write | undo | `light` |
+| `log-body-metric` | `body-metric` | write | undo (Quick Log) | plain |
+| `took-supplement` | `supplement`, `intake-log` | write | undo (Quick Log) | plain |
+| `progress-summary` | `workout-log`, `body-metric`, `fitness-goal` | read | none | `standard` |
+| `suggest-progression` | `workout-log`, `workout-template` | read | none | `standard` |
 
 `training-limitation` and `body-metric` are T2, so their grants are requested the first time a tool needs them, in context.
 

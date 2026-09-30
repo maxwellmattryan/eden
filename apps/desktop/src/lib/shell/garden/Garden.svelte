@@ -83,7 +83,8 @@
 	const feed = $derived(
 		activity.entries.map((entry) => ({
 			id: entry.id,
-			icon: manifestFor(entry.domain)?.glyph ?? domainGlyph('garden'),
+			icon:
+				entry.domain === 'today' ? domainGlyph('today') : (manifestFor(entry.domain)?.glyph ?? domainGlyph('garden')),
 			line: $t(entry.key, { values: entry.values }),
 			when: whenOf(entry.at),
 		}))

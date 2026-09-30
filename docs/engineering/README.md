@@ -27,7 +27,7 @@ Engineering started with the UI kit (D-43) ahead of the rest of the docs reachin
 ## Questions the engineering docs must answer
 
 - The Vault: separate store, per-item keys, keychain and Secure Enclave, biometric session, the tests that prove T3 never crosses the AI boundary.
-- The AI runtime: provider adapters, the sidecar pattern from Forge for the Claude Agent SDK, the context-pack assembler with declared reads, the scrub step, budgets, the audit log.
+- The AI runtime: provider adapters, the sidecar pattern from Forge for the Claude Agent SDK, the context-pack assembler with declared reads, the scrub step, budgets, the audit log. Model grades are answered (D-74); the runtime consumes `@eden/shared/gardener` (`engineering/domain-module.md`, "Model grades").
 - Sync: Crate's client-side merge over blobs, extended with end-to-end encryption and a passphrase-derived key; the vendor-agnostic backend trait.
 - The scheduler within mobile background limits, and how punctual the desktop alarm is in a hidden window, which is not measured yet (`engineering/signals.md`, "Testing").
 - The mobile native surface: the Android half of the database key, which is written and not yet run (`engineering/data-layer.md`, "The Android checklist"), the Secure Enclave, biometrics, camera, on-device OCR through Vision and ML Kit, HealthKit and Health Connect, local notifications, the share sheet, background sync.

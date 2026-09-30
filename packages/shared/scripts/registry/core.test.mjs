@@ -229,6 +229,76 @@ describe('build', () => {
 		expect(errors).toContainEqual(expect.stringMatching(/"colour" is not a manifest field/))
 	})
 
+	it('makes a tool with no grade a plain one, and keeps the grade and needs of one a model runs (D-74)', () => {
+		expect(build(sources()).declarations[0].tools).toEqual([
+			{
+				id: 'suggest',
+				access: 'read',
+				confirm: false,
+				reads: ['stock-item', 'favorite-supplement', 'task'],
+				grade: null,
+				needs: [],
+				minContext: null,
+			},
+		])
+		const graded = build(
+			sources((given) =>
+				Object.assign(kitchen(given).tools[0], { grade: 'light', needs: ['vision'], minContext: 8000 })
+			)
+		)
+		expect(graded.errors).toEqual([])
+		expect(graded.declarations[0].tools[0]).toMatchObject({ grade: 'light', needs: ['vision'], minContext: 8000 })
+	})
+
+	describe('refuses a tool', () => {
+		const refused = (fields) => errorsOf((given) => Object.assign(kitchen(given).tools[0], fields))
+
+		it('of a grade outside the three', () => {
+			for (const grade of ['medium', 'Deep', null, 2]) {
+				expect(refused({ grade })).toEqual([
+					`kitchen/manifest.json: the tool "suggest" has the grade ${JSON.stringify(grade)}; one of light, standard, deep, or none if plain`,
+				])
+			}
+		})
+
+		it('that needs what a model cannot have, or the same thing twice', () => {
+			expect(refused({ grade: 'light', needs: ['vision', 'audio'] })).toEqual([
+				'kitchen/manifest.json: the tool "suggest" needs: "audio" is not one of tools, vision',
+			])
+			expect(refused({ grade: 'light', needs: ['tools', 'tools'] })).toEqual([
+				'kitchen/manifest.json: the tool "suggest" needs: "tools" is listed twice',
+			])
+			expect(refused({ grade: 'light', needs: 'vision' })).toEqual([
+				'kitchen/manifest.json: the tool "suggest" has "needs" that is not a list',
+			])
+		})
+
+		it('whose minContext is not a positive whole number', () => {
+			for (const minContext of [0, -1, 1.5, '8000', null]) {
+				expect(refused({ grade: 'deep', minContext })).toEqual([
+					`kitchen/manifest.json: the tool "suggest" has the minContext ${JSON.stringify(minContext)}; a whole number of tokens, above zero`,
+				])
+			}
+		})
+
+		it('that needs a model and has no grade', () => {
+			expect(refused({ needs: ['vision'], minContext: 8000 })).toEqual([
+				'kitchen/manifest.json: the tool "suggest" declares "needs" and no grade; a plain tool runs no model',
+				'kitchen/manifest.json: the tool "suggest" declares "minContext" and no grade; a plain tool runs no model',
+			])
+		})
+
+		it('with a field a tool does not have, and a model named in place of a grade', () => {
+			expect(refused({ timeout: 30 })).toEqual([
+				'kitchen/manifest.json: the tool "suggest": "timeout" is not a tool field',
+			])
+			expect(refused({ grade: 'deep', model: 'a-model', provider: 'a-provider' })).toEqual([
+				'kitchen/manifest.json: the tool "suggest": "model" is not a tool field; a tool names a grade, never a model (D-74)',
+				'kitchen/manifest.json: the tool "suggest": "provider" is not a tool field; a tool names a grade, never a model (D-74)',
+			])
+		})
+	})
+
 	it('makes a rule of a notification kind with a signal, and refuses one that cannot hold', () => {
 		const rule = (change = () => {}) =>
 			sources((given) => {

@@ -4,7 +4,7 @@ status: draft
 summary: One consistent fictional dataset for every mockup: an owner, facts, stock by location, a captured haul, recipes, a grocery list, ideas and projects, a calendar week with layers, a weather week, workouts and a weight series, places and listings, daily lines, notifications, feed and audit entries.
 read-this-if: You are drawing a mockup or seeding an empty state with sample data.
 depends-on: [product/domains/README]
-updated: 2026-09-29
+updated: 2026-09-30
 ---
 
 ## The owner
@@ -33,7 +33,7 @@ Rowan Hale, they/them, a developer in Austin, Texas. Home is a `home` Place in H
 
 ## Today
 
-Wednesday's tasks, as the Today widget shows them: "Book the dentist" (overdue since Mon 09-28), "Renew library card" (due today), "Morning LMNT" (a routine, done 06:50). In code: `todayTasks`.
+Wednesday's tasks, as the Today widget shows them: "Book the dentist" (overdue since Mon 09-28), "Renew library card" (due today), "Morning LMNT" (a routine, done 06:50). In code: `todayTasks`, which stays the tile's three rows, with the two due days in `todayDues`. The page and its seed read two more exports: the routine's detail (`todayRoutine`: every day at 06:50 since 09-01, done at 06:50 this morning) and the one habit (`todayHabit`: "Stretch", three times a week, logged on 09-28 and 09-29 so far this week, so the tally reads 2 / 3, and the two weeks before met, a streak of two).
 
 ## The Garden
 

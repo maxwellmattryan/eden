@@ -4,7 +4,7 @@ status: draft
 summary: One permission model for integrations, the Gardener's reads and actions, plugins and device capabilities; defaults, confirmation patterns by access level, the never-automated list, per-device exceptions and the ledger.
 read-this-if: You are designing anything that reads personal data on behalf of a model or a service, or anything that acts on the world.
 depends-on: [privacy, registry]
-updated: 2026-09-29
+updated: 2026-09-30
 ---
 
 ## Purpose
@@ -15,7 +15,7 @@ Every question of the form "may X see or do Y" is answered by a grant. Integrati
 
 | field | values |
 |---|---|
-| `subject` | an integration id (`google-calendar`), an AI provider or model id, a plugin id (later), a device capability holder (`this-device`) |
+| `subject` | an integration id (`google-calendar`), an AI provider or model id (the resolved one, D-74), a plugin id (later), a device capability holder (`this-device`) |
 | `resource` | for AI: a registry id (fact type, entity type or kind, D-31); for integrations: a connector scope (`calendar:<id>:read`); for actions: a tool id; for devices: `camera`, `location-precise`, `os-notifications`, `healthkit` |
 | `resourceType` | which of those the resource is: `registry`, `scope`, `tool`, `capability` (D-70) |
 | `access` | `read`, `write-draft`, `write`, `act-external`; `never` is a verdict, not a grant anyone holds |
@@ -46,6 +46,8 @@ Allergy and medical-restriction checks are deterministic and local. Recipe and g
 | `write` | a confirm sheet naming the entities that will change, with undo after; Quick Log writes skip the sheet and rely on undo (D-12) |
 | `act-external` | a confirm sheet naming the destination and showing the exact payload; never batched, never remembered as standing |
 | `never` | the action is not offered; the tool is not registered |
+
+A tool request that resolves to `deep`, or above its declared grade, is confirmed before it is sent, with its estimate (D-74). That confirm is about cost and comes before the request; the confirm of its access level is about what the tool writes and comes with its answer, so one request may owe both.
 
 ## The never-automated list
 

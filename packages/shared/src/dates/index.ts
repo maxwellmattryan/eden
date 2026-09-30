@@ -4,6 +4,8 @@
 // module is pure: the language, the clock (D-58) and, for the times of a place, its timezone arrive as a `DateFormat`.
 import type { ClockFormat } from '../types/index.js'
 
+export * from './days.js'
+
 /** How a date or a time is written: the locale, the owner's clock and, when it is not the device's, the timezone. */
 export interface DateFormat {
 	lang: string

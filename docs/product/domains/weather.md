@@ -41,11 +41,11 @@ Written: none. Read: `home-area` (substrate, T1) for the Gardener; the `home` Pl
 
 ## 5. Gardener tools and guardrails
 
-| tool | reads | access | confirm |
-|---|---|---|---|
-| `forecast` | `forecast`, `home-area`, `venue` | read | none |
-| `rain-during-plan` | `forecast`, `home-area`, `workout-session`, `local-event`, `outing` | read | none |
-| `sun-and-moon` | `ephemeris` | read | none |
+| tool | reads | access | confirm | grade |
+|---|---|---|---|---|
+| `forecast` | `forecast`, `home-area`, `venue` | read | none | plain |
+| `rain-during-plan` | `forecast`, `home-area`, `workout-session`, `local-event`, `outing` | read | none | plain |
+| `sun-and-moon` | `ephemeris` | read | none | plain |
 
 Never-do list: never sends coordinates finer than city level (D-60) to a model or a provider unless a precise-location grant exists; keeps no location history; never claims certainty beyond the provider's own confidence.
 

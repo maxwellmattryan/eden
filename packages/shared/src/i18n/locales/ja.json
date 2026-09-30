@@ -92,7 +92,14 @@
 			"ideaDeleted": "{title}を削除",
 			"factAdded": "{name}を事実に追加",
 			"factChanged": "{name}を変更",
-			"factRemoved": "{name}を事実から削除"
+			"factRemoved": "{name}を事実から削除",
+			"taskAdded": "{title}を今日に追加",
+			"taskDone": "{title}を完了",
+			"taskReopened": "{title}を未完了に戻す",
+			"taskSnoozed": "{title}を延期",
+			"taskSkipped": "{title}を今日はスキップ",
+			"taskTallied": "{title}を記録",
+			"taskDeleted": "{title}を削除"
 		},
 		"profile": "Edenが知っていること"
 	},
@@ -622,6 +629,65 @@
 			"back": "戻る",
 			"single": "プロフィールにひとつだけ。既にあるものを開きます。"
 		}
+	},
+	"today": {
+		"addPlaceholder": "タスク、ルーティン、習慣を追加",
+		"quickLog": "クイックログ",
+		"quickLogChip": "{action} · {domain}",
+		"sections": {
+			"overdue": "期限切れ",
+			"due": "今日の予定",
+			"routines": "ルーティン",
+			"habits": "習慣"
+		},
+		"showOverdue": "期限切れを表示",
+		"hideOverdue": "期限切れを隠す",
+		"actions": {
+			"done": "完了",
+			"reopen": "未完了に戻す",
+			"later": "今日の後で",
+			"tomorrow": "明日",
+			"nextWeek": "来週",
+			"skip": "今日はスキップ",
+			"log": "1回記録",
+			"delete": "削除"
+		},
+		"when": {
+			"today": "今日",
+			"tomorrow": "明日"
+		},
+		"checklist": "{done} / {total}",
+		"habit": {
+			"tally": "{count} / {target}",
+			"perDay": "今日",
+			"perWeek": "今週",
+			"streak": "{streak}回連続"
+		},
+		"repeat": {
+			"daily": "毎日",
+			"everyDays": "{n}日ごと",
+			"weekdays": "毎平日",
+			"weekly": "毎週{days}",
+			"everyWeeks": "{n}週ごと {days}",
+			"monthly": "毎月",
+			"everyMonths": "{n}か月ごと",
+			"yearly": "毎年",
+			"everyYears": "{n}年ごと"
+		},
+		"target": {
+			"perDay": "{count} / 日",
+			"perWeek": "{count} / 週"
+		},
+		"toast": {
+			"added": "{title}を追加しました。",
+			"done": "{title}を完了しました。",
+			"reopened": "{title}を未完了に戻しました。",
+			"snoozed": "{title}を{when}に延期しました。",
+			"skipped": "{title}を今日はスキップしました。",
+			"logged": "{title}: {target}回中{count}回。",
+			"deleted": "{title}を削除しました。"
+		},
+		"saveFailed": "今日の変更を保存できませんでした。"
 	},
 	"settings": {
 		"title": "設定",

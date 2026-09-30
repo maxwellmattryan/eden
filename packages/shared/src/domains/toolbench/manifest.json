@@ -30,13 +30,18 @@
 	"quickActions": [{ "id": "capture-idea", "label": "domains.toolbench.ideas.capture", "icon": "lightbulb" }],
 	"captureSources": [],
 	"tools": [
-		{ "id": "brainstorm", "access": "read", "reads": ["idea", "skill", "preferred-tool", "owned-hardware"] },
-		{ "id": "critique", "access": "read", "reads": ["idea", "project"] },
-		{ "id": "expand-to-plan", "access": "write-draft", "reads": ["idea", "project", "task"] },
+		{
+			"id": "brainstorm",
+			"access": "read",
+			"grade": "deep",
+			"reads": ["idea", "skill", "preferred-tool", "owned-hardware"]
+		},
+		{ "id": "critique", "access": "read", "grade": "deep", "reads": ["idea", "project"] },
+		{ "id": "expand-to-plan", "access": "write-draft", "grade": "deep", "reads": ["idea", "project", "task"] },
 		{ "id": "find-similar", "access": "read", "reads": ["idea", "project", "note"] },
 		{ "id": "estimate-parts-cost", "access": "read", "reads": ["parts-list"] },
-		{ "id": "summarize-project", "access": "read", "reads": ["project", "task"] },
-		{ "id": "draft-sketch-scaffold", "access": "write-draft", "reads": ["sketch", "preferred-tool"] }
+		{ "id": "summarize-project", "access": "read", "grade": "standard", "reads": ["project", "task"] },
+		{ "id": "draft-sketch-scaffold", "access": "write-draft", "grade": "deep", "reads": ["sketch", "preferred-tool"] }
 	],
 	"signals": ["idea.stale", "project.updated"],
 	"notificationKinds": [{ "id": "stale-idea-nudge", "channel": "in-app", "cadence": "weekly", "default": false }],

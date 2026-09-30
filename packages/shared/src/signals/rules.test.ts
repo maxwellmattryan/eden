@@ -80,6 +80,8 @@ describe('signal rules', () => {
 		expect(signalTier({ uris: [] })).toBe('T0')
 		expect(signalTier({ uris: [uri('stock-item'), uri('grocery-list')] })).toBe('T0')
 		expect(signalTier({ uris: [uri('stock-item'), uri('idea')] })).toBe('T1')
+		// a task is T1 by its primitive's row, whatever its kind: what the task signals carry (D-75)
+		expect(signalTier({ uris: [uri('task')] })).toBe('T1')
 		expect(signalTier({ uris: [uri('idea'), uri('device'), uri('stock-item')] })).toBe('T2')
 		// An Event's tier is its kind's, which the URI does not say; and what is not known is not told either.
 		expect(signalTier({ uris: [uri('stock-item'), uri('event')] })).toBe('T2')

@@ -72,6 +72,39 @@
 				`width: ${(t * width).toFixed(2)}px; margin-inline-end: ${(-u * gap).toFixed(2)}px; opacity: ${t}; overflow: hidden`,
 		}
 	}
+
+	/** What the leave takes: whether the row is a list's, and who to tell as it begins. */
+	interface Leave {
+		inGrid: boolean
+		onleave?: (row: HTMLElement) => void
+	}
+
+	/**
+	 * A row's leave from a list: its height, its vertical padding and its bottom border close over the settle
+	 * duration with its opacity (quintOut, the token's ease-out), so the rows beneath settle up as it goes. A zero
+	 * settle duration, which is reduced motion, fades instead, over the micro duration. Only a list's rows leave this
+	 * way: a row on its own goes at once. Local, so a page that leaves takes its rows with it without a word. The list
+	 * is told first, while the row can still hold focus: Svelte makes a leaving element inert right after.
+	 */
+	function collapse(node: HTMLElement, { inGrid, onleave }: Leave): TransitionConfig {
+		if (!inGrid) return { duration: 0 }
+		onleave?.(node)
+		const style = getComputedStyle(node)
+		const duration = parseFloat(style.getPropertyValue('--ed-duration-settle')) || 0
+		if (!duration) {
+			return { duration: parseFloat(style.getPropertyValue('--ed-duration-micro')) || 0, css: (t) => `opacity: ${t}` }
+		}
+		const height = node.getBoundingClientRect().height
+		const top = parseFloat(style.paddingTop) || 0
+		const bottom = parseFloat(style.paddingBottom) || 0
+		const border = parseFloat(style.borderBottomWidth) || 0
+		return {
+			duration,
+			easing: quintOut,
+			css: (t) =>
+				`overflow: hidden; min-height: 0; height: ${(t * height).toFixed(2)}px; padding-top: ${(t * top).toFixed(2)}px; padding-bottom: ${(t * bottom).toFixed(2)}px; border-bottom-width: ${(t * border).toFixed(2)}px; opacity: ${t}`,
+		}
+	}
 </script>
 
 <script lang="ts">
@@ -80,7 +113,9 @@
 	// ContextMenu key) open the same menu; Enter or a double-click opens the row. Selection is a mode (D-41): outside
 	// it the row shows no mark and gives up no space; while the list is `selecting` a round mark slides in at the
 	// leading edge and a click or Space toggles the row onto brand-muted. Inside List the row is a grid row with one
-	// gridcell and the list manages its tab stop; on its own it is a list item and its own tab stop.
+	// gridcell and the list manages its tab stop, and it leaves with a collapse (`collapse` above); on its own it is a
+	// list item and its own tab stop.
+	import { tick } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
 	import type { AnchorLike } from '../../internal/anchor.js'
 	import Icon from '../../icons/Icon.svelte'
@@ -107,6 +142,8 @@
 			onaction?: (item: MenuItem) => void
 			/** The row toggled in select mode, with its new state. */
 			onselect?: (selected: boolean) => void
+			/** Set by List: the row's leave from the list has begun, before it goes inert; the list moves its focus on. */
+			onleave?: (row: HTMLElement) => void
 		}
 	let {
 		id,
@@ -126,6 +163,7 @@
 		onopen,
 		onaction,
 		onselect,
+		onleave,
 		class: className = '',
 		...rest
 	}: Props = $props()
@@ -156,6 +194,14 @@
 	function toggle() {
 		selected = !selected
 		onselect?.(selected)
+	}
+	/**
+	 * A pick reaches the caller once the menu has closed and handed focus back: a pick that removes the row would
+	 * otherwise pause the row, and the menu with it, before the menu could close.
+	 */
+	async function pick(item: MenuItem) {
+		await tick()
+		onaction?.(item)
 	}
 
 	function onclick(e: MouseEvent) {
@@ -233,7 +279,7 @@
 				onclick={(e) => openMenu(e.currentTarget, 'end', false)}
 			/>
 		</span>
-		<Menu bind:open={menuOpen} anchor={menuAnchor} align={menuAlign} label={name} items={actions} onselect={onaction} />
+		<Menu bind:open={menuOpen} anchor={menuAnchor} align={menuAlign} label={name} items={actions} onselect={pick} />
 	{/if}
 	{#if selecting && selected && !inGrid}<span class="ed-sr-only">{s.selectedRow}</span>{/if}
 {/snippet}
@@ -242,6 +288,7 @@
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
 	bind:this={root}
+	out:collapse={{ inGrid, onleave }}
 	class={[
 		'ed-row',
 		{

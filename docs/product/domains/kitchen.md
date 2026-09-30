@@ -44,14 +44,14 @@ Read: `medical-dietary-restriction` (Wellspring, T2; the owner may assert it in 
 
 ## 5. Gardener tools and guardrails
 
-| tool | reads | access | confirm |
-|---|---|---|---|
-| `suggest-recipes` | `stock-item`, `recipe`, `dietary-preference`, `disliked-ingredient`, `cuisine-preference`, `allergy`, `medical-dietary-restriction` | read | none |
-| `storage-tip` | `stock-item`, `storage-tip` | read | none |
-| `capture-haul` | none (image only) | write-draft | the verification sheet |
-| `draft-grocery-list` | `stock-item`, `recipe`, `grocery-list`, `grocery-item` | write-draft | editable list card |
-| `add-stock` | `stock-item` | write | confirm sheet; Quick Log path uses undo |
-| `plan-week` | `stock-item`, `recipe`, `local-event`, `task` | write-draft | a plan card; commit creates `shop-day` Events and tasks through the substrate API (D-33) |
+| tool | reads | access | confirm | grade |
+|---|---|---|---|---|
+| `suggest-recipes` | `stock-item`, `recipe`, `dietary-preference`, `disliked-ingredient`, `cuisine-preference`, `allergy`, `medical-dietary-restriction` | read | none | `standard` |
+| `storage-tip` | `stock-item`, `storage-tip` | read | none | `light` |
+| `capture-haul` | none (image only) | write-draft | the verification sheet | `light`, needs `vision` |
+| `draft-grocery-list` | `stock-item`, `recipe`, `grocery-list`, `grocery-item` | write-draft | editable list card | `standard` |
+| `add-stock` | `stock-item` | write | confirm sheet; Quick Log path uses undo | plain |
+| `plan-week` | `stock-item`, `recipe`, `local-event`, `task` | write-draft | a plan card; commit creates `shop-day` Events and tasks through the substrate API (D-33) | `deep`, needs `tools` |
 
 Never-do list: never suggests anything containing an allergen or a restricted ingredient, and every suggestion passes the local safety filter before display regardless of what the model saw (D-25); never gives nutrition or medical advice beyond label facts; never orders groceries; never sends a photo before the confirm sheet (D-29).
 

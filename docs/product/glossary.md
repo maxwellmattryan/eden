@@ -4,7 +4,7 @@ status: draft
 summary: Every fixed term in Eden, the domain names in English and Japanese with their plain ids and subtitles, and the metaphor policy that decides what gets a themed name.
 read-this-if: You are naming anything, writing copy, or unsure what a word means in these docs.
 depends-on: []
-updated: 2026-09-27
+updated: 2026-09-30
 ---
 
 ## Core terms
@@ -16,6 +16,8 @@ updated: 2026-09-27
 | **workspace** | The per-user store: everything one person's Eden holds. One user per workspace (D-22). |
 | **fact** | A typed statement about the owner in the profile (`allergy`, `gym-preference`). Has a tier, a provenance and an owner. |
 | **tier** | Sensitivity level T0 (harmless), T1 (personal), T2 (sensitive), T3 (restricted). Defined once in `substrate/privacy.md`. |
+| **grade** | What a model-backed tool asks of a model: `light`, `standard` or `deep`. Each provider maps a grade to one of its models (D-74). Never "tier", which is sensitivity. |
+| **model-backed tool** | A Gardener tool that sends a request to a model, and so declares a grade. A plain tool is a function and declares none (D-74). |
 | **resource** | Anything a grant or a declared read can name: a fact type, an entity type or a primitive kind. All live in `substrate/registry.md`. |
 | **registry id** | The kebab-case id of a resource (`stock-item`, `allergy`, `shop-day`). No domain prefix, no dots. |
 | **primitive** | One of the four shared entity types: Task, Event, Place, Attachment. |

@@ -4,7 +4,7 @@ status: draft
 summary: Capture any idea and grow the good ones into projects; keep homelab devices, generative-art sketches and technical notes in one workbench. Id `toolbench`, Phase 1.
 read-this-if: You are working on ideas, projects, the homelab, the studio, or technical notes.
 depends-on: [substrate/registry, substrate/primitives, substrate/tasks, substrate/ai, substrate/shell, substrate/ai]
-updated: 2026-09-27
+updated: 2026-09-30
 ---
 
 ## 1. Purpose
@@ -42,15 +42,15 @@ Written: `skill` T1 (name, level), `owned-hardware` T1, `preferred-tool` T1 (lan
 
 ## 5. Gardener tools and guardrails
 
-| tool | reads | access | confirm |
-|---|---|---|---|
-| `brainstorm` | `idea`, `skill`, `preferred-tool`, `owned-hardware` | read | none |
-| `critique` | `idea`, `project` | read | none |
-| `expand-to-plan` | `idea`, `project`, `task` | write-draft | a plan card; commit creates tasks linked to the project |
-| `find-similar` | `idea`, `project`, `note` | read | none |
-| `estimate-parts-cost` | `parts-list` | read | none |
-| `summarize-project` | `project`, `task` | read | none |
-| `draft-sketch-scaffold` | `sketch`, `preferred-tool` | write-draft | text to copy; never writes a file |
+| tool | reads | access | confirm | grade |
+|---|---|---|---|---|
+| `brainstorm` | `idea`, `skill`, `preferred-tool`, `owned-hardware` | read | none | `deep` |
+| `critique` | `idea`, `project` | read | none | `deep` |
+| `expand-to-plan` | `idea`, `project`, `task` | write-draft | a plan card; commit creates tasks linked to the project | `deep` |
+| `find-similar` | `idea`, `project`, `note` | read | none | plain (OQ-22) |
+| `estimate-parts-cost` | `parts-list` | read | none | plain |
+| `summarize-project` | `project`, `task` | read | none | `standard` |
+| `draft-sketch-scaffold` | `sketch`, `preferred-tool` | write-draft | text to copy; never writes a file | `deep` |
 
 Never-do list: never sees credentials, keys or tokens (Lab holds hostnames only, and `device` is T2, so reading it needs a grant); never runs commands or writes files; never creates a GitHub issue without a per-request confirm.
 
@@ -98,7 +98,7 @@ Stale threshold in days; default idea category; render folder path; whether Lab 
 
 Non-goals: an IDE, an issue tracker, kanban, dev-environment orchestration (that is Forge), code hosting, running scripts, a general note-taking app.
 
-Open: OQ-9, for whether Rings would live here.
+Open: OQ-9, for whether Rings would live here; OQ-22, for whether `find-similar` gains a graded mode.
 
 ## Registry rows
 

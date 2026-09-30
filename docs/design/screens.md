@@ -19,7 +19,7 @@ Each screen below lists: id, platform, purpose, must show, primary actions, stat
 | `onboarding-1..10` | both | first launch | step indicator, back, skip | continue | steps 5, 7, 8 are the ones that matter | Rowan's home, key entry, the two T2 grants with the "can see" chip |
 | `garden`, mocked as `Domains/Garden/Garden`, built in `apps/desktop` (edit mode pending) | both | the dashboard | quick-nav row, widget grid, activity feed, daily line | edit mode, ⌘K | first run empty, edit mode, offline | the Phase 1 default layout (`gardenLayout`) |
 | `garden-edit` | desktop | arrange widgets | drag handles, resize, catalog sheet by domain | done | | |
-| `today` | both | tasks and routines | overdue, due today, routines, habits, Quick Log strip, quick-add | add, done, snooze | empty, overdue | Wednesday's task and routines |
+| `today`, built in `apps/desktop`, mocked as `Domains/Today/Today` (the mirror of the page, under the owner's exception to D-54) | both | tasks and routines | overdue (closed until opened), due today, routines, habits, Quick Log strip, quick-add with parsed chips | add, done, snooze, skip, tally, delete, each with undo | empty, overdue, parsed quick-add | Wednesday's tasks, the routine done and the habit at 2 / 3 |
 | `palette` | desktop | ⌘K | verbs, fuzzy results, recents | run | no results | "log weight 82.4", "go to almanac" |
 | `gardener-panel` | both | the assistant | thread list, conversation, "can see" chip row, model chip with budget meter, composer | send, expand chip | no key, offline, budget exhausted, tool confirm | the Hearth audit entry as a conversation |
 | `council` | desktop | side-by-side models | columns per model, cost preview, optional chair | run | | a "which recipe tonight" question to two models |
