@@ -1,5 +1,6 @@
 // What a source of weather is (D-56, D-59): a forecast provider the owner chooses, and the supplementary sources
 // beside it. Each normalizes its own response into the model; nothing past this boundary knows a provider's shape.
+import { recordEgress, requestBytes, type Destination } from '../egress/index.js'
 import type { HomePlace } from '../types/index.js'
 import type { AirQuality, Allergens, Forecast, ProviderId } from './model.js'
 
@@ -46,11 +47,20 @@ export interface AllergenSource {
 
 export const TIMEOUT_MS = 10_000
 
-/** A GET that gives up after ten seconds and reads every failure as the source being offline. */
-export async function getJson<T>(source: string, url: string, headers?: Record<string, string>): Promise<T> {
+/**
+ * A GET that gives up after ten seconds and reads every failure as the source being offline. The request is entered
+ * in the egress ledger as it leaves, answered or not (D-71).
+ */
+export async function getJson<T>(
+	source: string,
+	destination: Destination,
+	url: string,
+	headers?: Record<string, string>
+): Promise<T> {
 	const controller = new AbortController()
 	const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
 	try {
+		recordEgress(destination, requestBytes(url))
 		const response = await fetch(url, { signal: controller.signal, headers })
 		if (!response.ok) throw new OfflineError(source, `${source} answered ${response.status}`)
 		return (await response.json()) as T

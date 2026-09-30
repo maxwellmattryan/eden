@@ -44,7 +44,7 @@ updated: 2026-09-29
 - **Full bundle**: an archive with a `manifest.json` (version, counts, hashes), one JSONL file per entity type and per primitive, `facts.jsonl` with provenance, `grants.json`, `settings.json`, an `attachments/` folder for T0–T2 files, an optional `vault/` section encrypted with its own passphrase, and a generated `README.md` that indexes the bundle in plain language.
 - **Per-domain export**: the same layout for one domain, plus friendlier formats where they fit (CSV for stock and grocery lists, Markdown for recipes, ideas and notes).
 - Mirrors are excluded; overlays are included with their `source` + `externalId` so they reattach after import.
-- Export never includes secrets, device grants or diagnostics.
+- Export never includes secrets, device-capability grants, session grants, the egress ledger or diagnostics (D-70, D-71).
 
 ## Import
 
@@ -80,6 +80,8 @@ Automatic local backups on a schedule (daily by default) to a folder the owner p
 | activity feed | 30 days |
 | fact edit history | 30 days |
 | diagnostics | last 100 entries |
+| egress ledger | 90 days, on this device |
+| session grants | until the app closes |
 | tombstones | until every device acknowledges, plus 30 days |
 | forecasts and other mirrors | until refreshed, or 7 days |
 

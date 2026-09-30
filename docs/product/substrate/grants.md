@@ -4,7 +4,7 @@ status: draft
 summary: One permission model for integrations, the Gardener's reads and actions, plugins and device capabilities; defaults, confirmation patterns by access level, the never-automated list, per-device exceptions and the ledger.
 read-this-if: You are designing anything that reads personal data on behalf of a model or a service, or anything that acts on the world.
 depends-on: [privacy, registry]
-updated: 2026-09-27
+updated: 2026-09-29
 ---
 
 ## Purpose
@@ -17,12 +17,13 @@ Every question of the form "may X see or do Y" is answered by a grant. Integrati
 |---|---|
 | `subject` | an integration id (`google-calendar`), an AI provider or model id, a plugin id (later), a device capability holder (`this-device`) |
 | `resource` | for AI: a registry id (fact type, entity type or kind, D-31); for integrations: a connector scope (`calendar:<id>:read`); for actions: a tool id; for devices: `camera`, `location-precise`, `os-notifications`, `healthkit` |
-| `access` | `read`, `write-draft`, `write`, `act-external`, `never` |
+| `resourceType` | which of those the resource is: `registry`, `scope`, `tool`, `capability` (D-70) |
+| `access` | `read`, `write-draft`, `write`, `act-external`; `never` is a verdict, not a grant anyone holds |
 | `lifetime` | `standing`, `session` (until the app closes), `per-request` |
 | `narrowing` | optional: calendar ids, label ids (later), a place, a date range |
-| `grantedAt`, `by` | stamp and origin: onboarding, settings, an inline confirm sheet |
+| `origin`, stamps | onboarding, settings, an inline confirm sheet; created and updated stamps, and a tombstone when revoked |
 
-Grants are workspace policy and **sync** (D-37), with two exceptions listed below.
+Grants are workspace policy and **sync** (D-37), with the exceptions listed below. The store's rules, what it refuses and what a check answers are D-70; `engineering/data-layer.md` has the table.
 
 ## Defaults
 
@@ -55,11 +56,12 @@ These are `never` for every subject, cannot be granted, and appear in `settings-
 | what | why | state shown |
 |---|---|---|
 | device-capability grants (camera, precise location, OS notifications, HealthKit) | the OS grants them per device | "not granted on this device", asked in context |
+| session grants | they last until the app closes, which is one device's event | ended when the workspace opens again (D-70) |
 | secrets: bring-your-own-key API keys, connection tokens | T3, never sync before Phase 3 | "Gardener configured, no key on this device"; "granted, not connected here" for integrations, each with a one-tap fix in the status bar |
 
 ## Ledger
 
-The grant store ships in Phase 1 because every read and confirm consults it. The ledger UI (Settings → Privacy & Grants) arrives in Phase 2: a list grouped by subject, with resource, access, lifetime, origin and date; revoke in place; a history of grants and revocations. Revoking a grant ends future reads immediately and never retroactively changes stored data.
+The grant store ships in Phase 1 because every read and confirm consults it; Settings → Privacy shows the count of standing grants beside the egress ledger. The ledger UI arrives in Phase 2: a list grouped by subject, with resource, access, lifetime, origin and date; revoke in place; a history of grants and revocations, which the tombstones already keep. Revoking a grant ends future reads immediately and never retroactively changes stored data.
 
 ## Interaction with the audit log
 

@@ -11,6 +11,8 @@ pub struct AppInfo {
     pub environment: String,
     pub is_dev: bool,
     pub data_dir: String,
+    /// Where the updater asks for the latest build, so the egress ledger can count the check; `None` in development.
+    pub updater_endpoint: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

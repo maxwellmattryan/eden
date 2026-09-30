@@ -170,5 +170,35 @@ pub fn get_migrations() -> Vec<&'static str> {
         VALUES ('00000000000000000000000001', 'calendar-source', '{"kind":"local"}',
                 '0000000000000000-00000000-00000000', '0000000000000000-00000000-00000000');
         "#,
+        // Migration 2: the grant store (docs/product/substrate/grants.md, D-70) and the egress ledger (D-71). A grant
+        // is workspace policy with stamps and a tombstone like any row; the ledger is this device's alone, one row per
+        // destination and local day, and no row of it is ever the Vault's.
+        r#"
+        CREATE TABLE grants (
+            id            TEXT PRIMARY KEY NOT NULL CHECK (length(id) = 26),
+            subject       TEXT NOT NULL CHECK (length(subject) > 0),
+            resource      TEXT NOT NULL CHECK (length(resource) > 0),
+            resource_type TEXT NOT NULL CHECK (resource_type IN ('registry', 'scope', 'tool', 'capability')),
+            access        TEXT NOT NULL CHECK (access IN ('read', 'write-draft', 'write', 'act-external')),
+            lifetime      TEXT NOT NULL CHECK (lifetime IN ('standing', 'session', 'per-request')),
+            narrowing     TEXT CHECK (narrowing IS NULL OR json_valid(narrowing)),
+            origin        TEXT NOT NULL CHECK (origin IN ('onboarding', 'settings', 'confirm')),
+            created_at    TEXT NOT NULL,
+            updated_at    TEXT NOT NULL,
+            deleted_at    TEXT,
+            CHECK (access <> 'act-external' OR lifetime = 'per-request')
+        );
+        CREATE INDEX grants_subject_live ON grants (subject, resource_type, resource) WHERE deleted_at IS NULL;
+        CREATE UNIQUE INDEX grants_live_key ON grants (subject, resource_type, resource, access)
+            WHERE deleted_at IS NULL AND lifetime <> 'per-request';
+
+        CREATE TABLE egress (
+            destination TEXT NOT NULL CHECK (length(destination) > 0 AND destination <> 'vault-ai'),
+            day         TEXT NOT NULL CHECK (length(day) = 10),
+            requests    INTEGER NOT NULL DEFAULT 0 CHECK (requests >= 0),
+            bytes_out   INTEGER NOT NULL DEFAULT 0 CHECK (bytes_out >= 0),
+            PRIMARY KEY (destination, day)
+        ) WITHOUT ROWID;
+        "#,
     ]
 }

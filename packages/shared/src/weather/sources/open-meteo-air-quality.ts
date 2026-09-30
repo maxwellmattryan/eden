@@ -84,7 +84,9 @@ export const openMeteoAirQuality: AirQualitySource = {
 	id: 'open-meteo-air-quality',
 	name: OPEN_METEO_AIR,
 	fetch: async (place) =>
-		normalizeAirQuality(await getJson<OpenMeteoAirResponse>(OPEN_METEO_AIR, airUrl(place, AIR_FIELDS))),
+		normalizeAirQuality(
+			await getJson<OpenMeteoAirResponse>(OPEN_METEO_AIR, 'open-meteo-air-quality', airUrl(place, AIR_FIELDS))
+		),
 }
 
 export const openMeteoPollen: AllergenSource = {
@@ -94,6 +96,7 @@ export const openMeteoPollen: AllergenSource = {
 		normalizePollen(
 			await getJson<OpenMeteoAirResponse>(
 				OPEN_METEO_AIR,
+				'open-meteo-air-quality',
 				airUrl(
 					place,
 					POLLEN.map((pollen) => pollen.field)

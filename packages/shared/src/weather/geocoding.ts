@@ -59,7 +59,9 @@ export function normalizePlaces(raw: GeocodingResponse): PlaceResult[] {
 /** Places by name; nothing for a query too short to search. Rejects with `OfflineError` when the service cannot answer. */
 export async function searchPlaces(query: string, language: string): Promise<PlaceResult[]> {
 	if (query.trim().length < MIN_QUERY) return []
-	return normalizePlaces(await getJson<GeocodingResponse>(OPEN_METEO, searchUrl(query, language)))
+	return normalizePlaces(
+		await getJson<GeocodingResponse>(OPEN_METEO, 'open-meteo-geocoding', searchUrl(query, language))
+	)
 }
 
 /** A result as the home place. */

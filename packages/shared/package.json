@@ -12,6 +12,8 @@
 		"./settings": "./src/settings/index.ts",
 		"./persistence": "./src/persistence/index.ts",
 		"./data": "./src/data/index.ts",
+		"./grants": "./src/grants/index.ts",
+		"./egress": "./src/egress/index.ts",
 		"./registry": "./src/registry/index.ts",
 		"./manifest": "./src/manifest/index.ts",
 		"./domains/kitchen": "./src/domains/kitchen/index.ts",

@@ -51,6 +51,91 @@ describe('engine', () => {
 		expect(engine.queryEntities({ type: 'recipe' }).map((row) => row.payload)).toEqual([{ tags: ['quick'] }])
 	})
 
+	it('grants, renews, revokes and checks', () => {
+		const { engine } = setup()
+		const check = { subject: 'anthropic', resource: 'allergy', resourceType: 'registry', access: 'read' } as const
+		expect(engine.checkGrant(check)).toEqual({ allowed: false, reason: 'no-grant' })
+		expect(engine.checkGrant({ ...check, resource: 'recipe' })).toEqual({ allowed: true, reason: 'default' })
+
+		const granted = engine.grant({ ...check, lifetime: 'standing', origin: 'onboarding' })
+		expect(granted.uri).toBe(`eden://grant/${granted.id}`)
+		expect(granted).toMatchObject({ narrowing: null, deletedAt: null, createdAt: granted.updatedAt })
+		expect(engine.checkGrant(check)).toEqual({ allowed: true, reason: 'grant', grantId: granted.id })
+
+		const renewed = engine.grant({ ...check, lifetime: 'session', origin: 'confirm', narrowing: { a: 1 } })
+		expect(renewed.id).toBe(granted.id)
+		expect(renewed).toMatchObject({ lifetime: 'session', origin: 'confirm', narrowing: { a: 1 } })
+		expect(renewed.updatedAt > granted.updatedAt).toBe(true)
+		expect(engine.queryGrants()).toHaveLength(1)
+
+		const revoked = engine.revoke(granted.id)
+		expect(revoked.deletedAt).toBe(revoked.updatedAt)
+		expect(engine.queryGrants()).toEqual([])
+		expect(engine.queryGrants({ includeRevoked: true })).toEqual([revoked])
+		expect(engine.revoke(granted.id)).toEqual(revoked)
+		expect(engine.checkGrant(check).reason).toBe('no-grant')
+
+		expect(
+			codeOf(() => engine.grant({ ...check, resource: 'identity-document', lifetime: 'standing', origin: 'settings' }))
+		).toBe('grant:never')
+		expect(
+			codeOf(() => engine.grant({ ...check, access: 'write-draft', lifetime: 'standing', origin: 'settings' }))
+		).toBe('grant:invalid')
+		expect(codeOf(() => engine.checkGrant({ ...check, resource: 'secret-sauce' }))).toBe('grant:invalid')
+		expect(codeOf(() => engine.revoke(newId()))).toBe('not-found')
+		expect(engine.checkGrant({ ...check, resource: 'pay', resourceType: 'tool', access: 'write' }).reason).toBe('never')
+	})
+
+	it('records egress by destination and day and refuses vault-ai', () => {
+		const storage = memory()
+		const day = { today: '2026-09-29' }
+		const engine = createEngine(storage, { now: () => 1_790_000_000_000, node: 0xab, today: () => day.today })
+		engine.recordEgress('open-meteo', 120)
+		engine.recordEgress('open-meteo', 80)
+		engine.recordEgress('nws', 0)
+		day.today = '2026-09-30'
+		engine.recordEgress('open-meteo', 5)
+		expect(engine.queryEgress()).toEqual([
+			{ destination: 'open-meteo', day: '2026-09-30', requests: 1, bytesOut: 5 },
+			{ destination: 'nws', day: '2026-09-29', requests: 1, bytesOut: 0 },
+			{ destination: 'open-meteo', day: '2026-09-29', requests: 2, bytesOut: 200 },
+		])
+		expect(engine.queryEgress({ from: '2026-09-30' })).toHaveLength(1)
+		expect(engine.queryEgress({ to: '2026-09-29' })).toHaveLength(2)
+		expect(codeOf(() => engine.recordEgress('vault-ai', 1))).toBe('egress:never')
+		expect(codeOf(() => engine.recordEgress('Open Meteo', 1))).toBe('egress:invalid')
+		// Ninety days on, the old days are gone.
+		day.today = '2026-12-30'
+		engine.recordEgress('nws', 1)
+		expect(engine.queryEgress().map((row) => row.day)).toEqual(['2026-12-30'])
+	})
+
+	it('keeps grants and the ledger across a reload and tolerates an old document', () => {
+		const { storage, engine } = setup()
+		const granted = engine.grant({
+			subject: 'anthropic',
+			resource: 'allergy',
+			resourceType: 'registry',
+			access: 'read',
+			lifetime: 'standing',
+			origin: 'onboarding',
+		})
+		engine.recordEgress('nws', 10)
+		const again = createEngine(storage, { now: () => 1_790_000_000_000 })
+		expect(again.queryGrants()).toEqual([granted])
+		expect(again.queryEgress()).toHaveLength(1)
+
+		// A document from before the grant store has neither list.
+		const document = JSON.parse(storage.map.get(DATA_KEY)!) as Record<string, unknown>
+		delete document.grants
+		delete document.egress
+		storage.map.set(DATA_KEY, JSON.stringify(document))
+		const old = createEngine(storage, { now: () => 1_790_000_000_000 })
+		expect(old.queryGrants()).toEqual([])
+		expect(old.queryEgress()).toEqual([])
+		expect(old.queryEntities({ type: 'calendar-source' })).toHaveLength(1)
+	})
+
 	it('survives a reload, and keeps its node', () => {
 		const { storage, engine } = setup()
 		const created = engine.createEntity({ type: 'recipe', payload: { name: 'Dal' } })

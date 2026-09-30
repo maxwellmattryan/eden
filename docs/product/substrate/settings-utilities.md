@@ -17,7 +17,7 @@ Desktop: a modal with a left tab rail, deep-linkable to a tab, following Crate's
 | Appearance | theme light, dark or system; accent; font; zoom; reduced motion; sidebar density and subtitles | 1 |
 | Domains | enable, disable, reorder, hide; an experimental section for candidates and plugins (OQ-13) | 1 |
 | Gardener | providers and keys on this device, default model, per-domain override, budgets and the pricing table, the audit log, Council defaults | 1 (Council 2) |
-| Privacy & Grants | the tiers in plain words, the grants ledger (UI in Phase 2), the egress ledger, the never-automated list, redaction settings, "What Eden knows about me" link | 1 |
+| Privacy & Grants | the tiers in plain words, the egress ledger of the last seven days, the never-automated list and the count of standing grants (built); the grants ledger (UI in Phase 2), redaction settings, "What Eden knows about me" link | 1 |
 | Notifications | rule toggles, digest time, quiet hours, channels per rule | 1 (editing 2) |
 | Integrations | the catalog with states, connect, reconnect, disconnect; the weather provider (D-56) | 1 |
 | Shortcuts | rebind, chords, conflicts, reset | 2 |

@@ -21,6 +21,7 @@
 	import { t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { manifests } from '$lib/domains'
+	import { grants } from '$lib/shell/grants.svelte'
 	import SettingsRow from './SettingsRow.svelte'
 
 	const ARCHIVE = [{ name: 'Eden', extensions: ['zip'] }]
@@ -111,7 +112,7 @@
 			if (mode === 'replace' && result.scope.kind === 'full' && result.settings) {
 				await settings.restore(result.settings)
 			}
-			await Promise.all(manifests.map((manifest) => manifest.reload?.()))
+			await Promise.all([...manifests.map((manifest) => manifest.reload?.()), grants.reload()])
 			summary = result
 			archive = undefined
 		} catch (error) {

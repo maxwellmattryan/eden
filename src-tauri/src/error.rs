@@ -29,6 +29,11 @@ pub enum EdenError {
     #[error("{0}")]
     Bundle(String),
 
+    /// The grant store or the egress ledger refused a write. The message starts with a stable code (`grant:never`,
+    /// `grant:invalid`, `egress:never`, `egress:invalid`), which the frontend reads.
+    #[error("{0}")]
+    Refused(String),
+
     #[error("Zip error: {0}")]
     Zip(#[from] zip::result::ZipError),
 

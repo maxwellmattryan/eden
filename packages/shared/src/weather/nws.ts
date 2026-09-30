@@ -2,6 +2,7 @@
 // keyless, US only, one GET for the point. Open-Meteo carries no alerts. Any failure, including a point outside the
 // US, reads as no alerts, so the forecast never waits on this call. The point is rounded like every coordinate that
 // leaves the device (D-60).
+import { recordEgress, requestBytes } from '../egress/index.js'
 import { rounded } from './coordinates.js'
 
 export type AlertSeverity = 'extreme' | 'severe' | 'moderate' | 'minor' | 'unknown'
@@ -49,7 +50,9 @@ export async function fetchAlerts(latitude: number, longitude: number): Promise<
 	const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
 	try {
 		const point = `${rounded(latitude)},${rounded(longitude)}`
-		const response = await fetch(`${ENDPOINT}?point=${point}`, {
+		const url = `${ENDPOINT}?point=${point}`
+		recordEgress('nws', requestBytes(url))
+		const response = await fetch(url, {
 			signal: controller.signal,
 			headers: { Accept: 'application/geo+json' },
 		})

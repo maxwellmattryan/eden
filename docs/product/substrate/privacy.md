@@ -65,7 +65,7 @@ Grants gate → fields excluded by tier → deterministic scrub of emails, phone
 |---|---|---|
 | What Eden knows about me: every fact, its provenance, who wrote it, which AI requests used it; edit and delete | Garden → profile | 1 |
 | Audit log: every AI request with registry ids read, tools run, tokens and cost | Settings → Gardener | 1 |
-| Egress ledger: bytes out by destination and day; the Vault → AI row is always zero | Settings → Privacy | 1 |
+| Egress ledger: requests and bytes out by destination and day, the bytes being what Eden hands over (D-71); the Vault → AI row is always zero | Settings → Privacy | 1 |
 | Grants ledger: list, revoke, history | Settings → Privacy & Grants | store 1, UI 2 |
 | Purge: one integration, one domain, or the whole workspace, with export first | Settings → Sync & Data | 1 |
 | Per-open Vault audit naming the actor | Vault | 2 |

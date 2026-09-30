@@ -186,5 +186,6 @@ export const openMeteo: ForecastProvider = {
 	id: 'open-meteo',
 	name: OPEN_METEO,
 	available: () => Promise.resolve(true),
-	fetch: async (request) => normalizeOpenMeteo(await getJson<OpenMeteoResponse>(OPEN_METEO, forecastUrl(request))),
+	fetch: async (request) =>
+		normalizeOpenMeteo(await getJson<OpenMeteoResponse>(OPEN_METEO, 'open-meteo', forecastUrl(request))),
 }
