@@ -1113,6 +1113,15 @@
 			"cost": "Cost",
 			"outcome": "Outcome"
 		},
+		"hints": {
+			"surface": "Where the request came from: the conversation, a domain's conversation, or a tool run on its own.",
+			"tool": "The tool the request ran, if it ran one.",
+			"grade": "The model grade the request ran at. A dash means it ran no model.",
+			"model": "The model that answered.",
+			"tokens": "Tokens sent to the model, then tokens it wrote back.",
+			"cost": "What the request cost, in US dollars.",
+			"outcome": "How the request ended."
+		},
 		"outcomes": {
 			"ok": "ok",
 			"refusal": "refused",

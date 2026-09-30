@@ -40,6 +40,8 @@ export interface UiStrings {
 	show: string
 	hide: string
 	step: (current: number, total: number) => string
+	/** The name of a glyph that explains a label, such as a table column's info button. */
+	about: (name: string) => string
 	noData: string
 	gardener: {
 		name: string
@@ -262,6 +264,7 @@ export const defaultStrings: UiStrings = {
 	show: 'Show',
 	hide: 'Hide',
 	step: (current, total) => `Step ${current} of ${total}`,
+	about: (name) => `About ${name}`,
 	noData: 'No data yet',
 	gardener: {
 		name: 'Gardener',

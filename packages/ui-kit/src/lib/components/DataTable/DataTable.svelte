@@ -8,7 +8,7 @@
 		label: string
 		numeric?: boolean
 		muted?: boolean
-		/** A sentence explaining the column, in a tooltip on its header (hover, focus, or a tap). */
+		/** A sentence explaining the column, as a tooltip on an info glyph beside its header. */
 		hint?: string
 	}
 
@@ -63,7 +63,6 @@
 	import { useStrings } from '../../i18n/context.js'
 	import { smoothSize } from '../../internal/smooth-size.js'
 	import IconButton from '../IconButton/IconButton.svelte'
-	import { tooltip } from '../Tooltip/tooltip.js'
 
 	type Props = Omit<HTMLTableAttributes, 'children'> & {
 		/** The columns, in order; `numeric` sets mono with tabular figures, `muted` dims the column to text-secondary. */
@@ -121,14 +120,15 @@
 		<tr>
 			{#each columns as column, c (`${column.label}-${c}`)}
 				<th scope="col">
-					{#if column.hint}
-						<!-- a tap shows it too: a tooltip alone never appears on touch -->
-						<span class="ed-table-hint" tabindex="0" {@attach tooltip(column.hint, { side: 'top', toggle: true })}
-							>{column.label}</span
-						>
-					{:else}
+					<span class="ed-table-head">
 						{column.label}
-					{/if}
+						{#if column.hint}<IconButton
+								icon="info"
+								size="xs"
+								label={s.about(column.label)}
+								tooltip={column.hint}
+							/>{/if}
+					</span>
 				</th>
 			{/each}
 			{#if detail}<td class="ed-table-fold-head"></td>{/if}
@@ -218,13 +218,10 @@
 		border-bottom: 1px solid var(--stroke-subtle);
 		white-space: nowrap;
 	}
-	.ed-table-hint {
-		cursor: help;
-		border-radius: var(--ed-radius-control);
-	}
-	.ed-table-hint:focus-visible {
-		outline: 2px solid transparent;
-		box-shadow: var(--focus-ring);
+	.ed-table-head {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-1);
 	}
 	.ed-table td {
 		height: var(--ed-row);

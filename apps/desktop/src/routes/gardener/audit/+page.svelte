@@ -74,13 +74,13 @@
 
 	const columns = $derived<DataTableColumn[]>([
 		{ label: $t('audit.columns.when'), muted: true },
-		{ label: $t('audit.columns.surface') },
-		{ label: $t('audit.columns.tool') },
-		{ label: $t('audit.columns.grade') },
-		{ label: $t('audit.columns.model') },
-		{ label: $t('audit.columns.tokens'), numeric: true },
-		{ label: $t('audit.columns.cost'), numeric: true },
-		{ label: $t('audit.columns.outcome') },
+		{ label: $t('audit.columns.surface'), hint: $t('audit.hints.surface') },
+		{ label: $t('audit.columns.tool'), hint: $t('audit.hints.tool') },
+		{ label: $t('audit.columns.grade'), hint: $t('audit.hints.grade') },
+		{ label: $t('audit.columns.model'), hint: $t('audit.hints.model') },
+		{ label: $t('audit.columns.tokens'), hint: $t('audit.hints.tokens'), numeric: true },
+		{ label: $t('audit.columns.cost'), hint: $t('audit.hints.cost'), numeric: true },
+		{ label: $t('audit.columns.outcome'), hint: $t('audit.hints.outcome') },
 	])
 	const rows = $derived<(string | DataTableCell)[][]>(
 		shown.map((item) => [
@@ -148,7 +148,7 @@
 		},
 		{ label: $t('audit.detail.tokens'), value: `${entry.tokensIn} / ${entry.tokensOut}`, mono: true },
 		...(entry.cacheRead ? [{ label: $t('audit.detail.cached'), value: String(entry.cacheRead), mono: true }] : []),
-		{ label: $t('audit.columns.cost'), value: formatCost(entry.costUsd), mono: true },
+		{ label: $t('audit.columns.cost'), hint: $t('audit.hints.cost'), value: formatCost(entry.costUsd), mono: true },
 		{
 			label: $t('audit.detail.outcome'),
 			value: $t(`audit.outcomes.${entry.outcome}`) + (entry.confirmOutcome ? ` · ${entry.confirmOutcome}` : ''),
