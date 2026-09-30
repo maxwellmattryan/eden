@@ -50,7 +50,7 @@ The pre-paint script reads the localStorage keys in `storageKeys` (`eden:theme`,
 | file | holds |
 |---|---|
 | `styles/theme.css` | `@font-face` for the shipped fonts; the light and dark token blocks; scales, motion, z-order; the composed focus ring; families and the type styles; the accent blocks; `.ed-t-*` classes |
-| `styles/base.css` | reduced-motion overrides; the brand dial; the platform and density blocks; body defaults, selection colour, the paper grain overlay, `.ed-sr-only` |
+| `styles/base.css` | reduced-motion overrides; the brand dial; the platform and density blocks; body defaults (including `user-select: none` for the whole app, with editable controls opted back in), selection colour, the paper grain overlay, `.ed-sr-only` |
 | `styles/tailwind.css` | the `@theme inline` mapping and the custom variants |
 | `styles/faces.css` | the alternate faces and `[data-face]` blocks, gallery only |
 | `styles/prepaint.js`, `.storybook/preview-head.html` | the pre-paint script, standalone and inlined |

@@ -95,8 +95,8 @@ fn write_key_file(path: &Path, key: &str) -> Result<()> {
 #[cfg(target_os = "ios")]
 struct KeychainKeyProvider;
 
-/// Where the key sits in the Keychain. The service is deliberately not the app's identifier, which is a placeholder
-/// (D-52): a change of identifier must not orphan the key. The item lands in the app's default access group, so no
+/// Where the key sits in the Keychain. The service is deliberately not the app's identifier (D-69): a change of
+/// identifier must not orphan the key. The item lands in the app's default access group, so no
 /// `keychain-access-groups` entitlement is needed.
 #[cfg(target_os = "ios")]
 const KEYCHAIN_SERVICE: &str = "eden.sqlcipher";
@@ -164,11 +164,11 @@ fn store_key(key: &str) -> Result<()> {
 
 // Android: the Keystore, through Kotlin.
 
-/// The JNI name of the Kotlin helper. It follows the Android namespace, which follows the app's identifier, a
-/// placeholder until D-52 is settled: when the identifier changes, this constant and the `package` line of
-/// `android/EdenDbKey.kt` change with it.
+/// The JNI name of the Kotlin helper. It follows the Android namespace, which follows the app's identifier (D-69):
+/// this constant and the `package` line of `gen/android/app/src/main/java/com/palekodama/eden/EdenDbKey.kt` change
+/// together, never alone.
 #[cfg(target_os = "android")]
-const DB_KEY_CLASS: &str = "dev/mattmaxwell/eden/EdenDbKey";
+const DB_KEY_CLASS: &str = "com/palekodama/eden/EdenDbKey";
 
 #[cfg(target_os = "android")]
 struct AndroidKeystoreKeyProvider;

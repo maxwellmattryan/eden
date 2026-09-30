@@ -286,8 +286,6 @@
 		border-bottom: 1px solid var(--stroke-subtle);
 		color: var(--text-primary);
 		cursor: default;
-		user-select: none;
-		-webkit-user-select: none;
 		transition: background-color var(--ed-duration-micro) var(--ed-ease-out);
 	}
 	.ed-row:last-child {

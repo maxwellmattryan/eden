@@ -1,14 +1,16 @@
 <script lang="ts">
 	// The sun-and-moon tile: today's light and the moon, computed on-device, in the place's time and on the owner's
-	// clock (D-58); offline, when the light is from.
+	// clock (D-58), and how old the forecast it is read from is.
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import WidgetRows from '$lib/shell/WidgetRows.svelte'
 	import { formatTime } from '@eden/shared/dates'
 	import { weather } from '@eden/shared/weather'
+	import { updatedLine } from '$lib/domains/weather/updated'
 
 	const lang = $derived($locale ?? 'en')
 	const format = $derived({ lang, clock: settings.clock, timeZone: weather.timeZone })
+	const updated = $derived(updatedLine($t, lang))
 	const rows = $derived(
 		weather.sun
 			? [
@@ -31,9 +33,7 @@
 </script>
 
 <WidgetRows {rows} />
-{#if weather.offline && weather.lastGood}
-	<p class="meta">{$t('garden.lastUpdated', { values: { time: formatTime(weather.lastGood, format) } })}</p>
-{/if}
+{#if updated}<p class="meta">{updated}</p>{/if}
 
 <style>
 	.meta {

@@ -5,14 +5,15 @@
 	// pieces once: settings, i18n, the global error handler. No updater: mobile updates through the stores. The splash
 	// covers it until they are ready, then fades out as the shell fades in.
 	import '../app.css'
-	import { onMount } from 'svelte'
-	import { goto } from '$app/navigation'
+	import { onMount, tick } from 'svelte'
+	import { afterNavigate, beforeNavigate, goto } from '$app/navigation'
 	import { resolve } from '$app/paths'
 	import { page } from '$app/state'
 	import { env } from '$env/dynamic/public'
 	import { BottomTabBar, ToastHost, UiKitProvider, domainGlyph, type BottomTab, type GlyphId } from '@eden/ui-kit'
 	import { initializeI18n, locale, t, uiKitStrings } from '@eden/shared/i18n'
 	import { shell, tabBar } from '@eden/shared/manifest'
+	import { rememberPlace, rememberScroll, scrollOf, tabOf } from '@eden/shared/navigation'
 	import { settings } from '@eden/shared/settings'
 	import { weather } from '@eden/shared/weather'
 	import { dismissSplash, splashVisible } from '@eden/shared/stores'
@@ -52,11 +53,27 @@
 			}),
 		{ id: shell.tabs.more.id, label: $t(shell.tabs.more.name), icon: 'menu' },
 	])
-	const current = $derived(page.route.id?.split('/')[1] || 'garden')
+	const current = $derived(tabOf(page.route))
 
 	function onselect(id: string) {
 		openOf(id)?.()
 	}
+
+	// Each tab's scroll position is kept as it is left and put back when it is returned to, over the router's own
+	// scroll to the top, and the place itself is remembered for the next launch (`@eden/shared/navigation`).
+	beforeNavigate((navigation) => {
+		if (navigation.to) rememberScroll(tabOf(navigation.from?.route), window.scrollY)
+	})
+	afterNavigate(async (navigation) => {
+		if (navigation.to) rememberPlace(navigation.to.url.pathname)
+		if (navigation.type === 'enter' || tabOf(navigation.from?.route) === tabOf(navigation.to?.route)) return
+		const top = scrollOf(tabOf(navigation.to?.route))
+		const restore = () => window.scrollTo(0, top)
+		await tick()
+		restore()
+		// once more a frame on, for a page whose content mounts after the navigation settles
+		requestAnimationFrame(restore)
+	})
 
 	onMount(() => {
 		const cleanupErrors = useGlobalErrorHandler()
@@ -70,6 +87,7 @@
 			clearInterval(skyTimer)
 			cleanupErrors()
 			settings.dispose()
+			weather.dispose()
 		}
 	})
 </script>

@@ -1,6 +1,6 @@
 name: eden-app
 options:
-  bundleIdPrefix: dev.mattmaxwell.eden
+  bundleIdPrefix: com.palekodama.eden
   deploymentTarget:
     iOS: 16.0
 fileGroups: [../../src]
@@ -11,7 +11,7 @@ settingGroups:
   app:
     base:
       PRODUCT_NAME: Eden
-      PRODUCT_BUNDLE_IDENTIFIER: dev.mattmaxwell.eden
+      PRODUCT_BUNDLE_IDENTIFIER: com.palekodama.eden
       DEVELOPMENT_TEAM: 883V548CV2
 targetTemplates:
   app:

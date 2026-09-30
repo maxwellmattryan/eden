@@ -1,7 +1,7 @@
 {
 	"version": "0.1.0-dev",
 	"productName": "Eden Dev",
-	"identifier": "dev.mattmaxwell.eden.dev",
+	"identifier": "com.palekodama.eden.dev",
 	"bundle": {
 		"icon": [
 			"icons/dev/32x32.png",

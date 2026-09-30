@@ -1,6 +1,6 @@
 {
 	"productName": "Eden Staging",
-	"identifier": "dev.mattmaxwell.eden.staging",
+	"identifier": "com.palekodama.eden.staging",
 	"bundle": {
 		"createUpdaterArtifacts": true,
 		"icon": [

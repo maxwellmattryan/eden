@@ -4,8 +4,8 @@
 	// once: settings, i18n, the global error handler, the hourly update check. The splash covers it until they are
 	// ready, then fades out as the shell fades in.
 	import '../app.css'
-	import { onMount } from 'svelte'
-	import { afterNavigate, goto } from '$app/navigation'
+	import { onMount, tick } from 'svelte'
+	import { afterNavigate, beforeNavigate, goto } from '$app/navigation'
 	import { resolve } from '$app/paths'
 	import { page } from '$app/state'
 	import { env } from '$env/dynamic/public'
@@ -26,6 +26,7 @@
 	import CrashScreen from '$lib/components/CrashScreen.svelte'
 	import SplashScreen from '$lib/components/SplashScreen.svelte'
 	import { shell, shortcutPositions, sidebarGroups, type SidebarItem } from '@eden/shared/manifest'
+	import { rememberPlace, rememberScroll, scrollOf, tabOf } from '@eden/shared/navigation'
 	import { declarations, manifestFor } from '$lib/domains'
 	import { weather } from '@eden/shared/weather'
 	import { formatTime } from '@eden/shared/dates'
@@ -85,7 +86,7 @@
 			action: true,
 		}))
 	)
-	const current = $derived(page.route.id?.split('/')[1] || 'garden')
+	const current = $derived(tabOf(page.route))
 
 	// Offline: the banner takes the sync line's place while the forecast is a mirror from an earlier fetch
 	// (product/substrate/shell.md, "Global states").
@@ -101,9 +102,26 @@
 
 	// How far the in-app history goes: the back arrow shows only when there is somewhere to go (shell.md).
 	let depth = $state(0)
-	afterNavigate((navigation) => {
+	// The content scrolls in `main`, not the window, so the router's own restoration never reaches it: each sidebar
+	// tab's position is kept as it is left and put back when it is returned to, and the place itself is remembered
+	// for the next launch (`@eden/shared/navigation`). A move within a tab (Hearth's tabs) keeps its own position.
+	let main = $state<HTMLElement>()
+	beforeNavigate((navigation) => {
+		if (main && navigation.to) rememberScroll(tabOf(navigation.from?.route), main.scrollTop)
+	})
+	afterNavigate(async (navigation) => {
 		if (navigation.type === 'link' || navigation.type === 'goto') depth += 1
 		else if (navigation.type === 'popstate') depth = Math.max(0, depth - 1)
+		if (navigation.to) rememberPlace(navigation.to.url.pathname)
+		if (navigation.type === 'enter' || tabOf(navigation.from?.route) === tabOf(navigation.to?.route)) return
+		const top = scrollOf(tabOf(navigation.to?.route))
+		const restore = () => {
+			if (main) main.scrollTop = top
+		}
+		await tick()
+		restore()
+		// once more a frame on, for a page whose content mounts after the navigation settles
+		requestAnimationFrame(restore)
 	})
 	const onback = $derived(depth > 0 ? () => history.back() : undefined)
 
@@ -144,6 +162,7 @@
 			clearInterval(skyTimer)
 			cleanupErrors()
 			settings.dispose()
+			weather.dispose()
 			if (timer) clearInterval(timer)
 		}
 	})
@@ -156,7 +175,7 @@
 <UiKitProvider strings={uiKitStrings($locale)}>
 	<div class={['shell', $splashVisible && 'shell-waiting']}>
 		<Sidebar {groups} {pinned} brand={$t('app.name')} subtitles={settings.subtitles} {current} {onselect} />
-		<main class="content">
+		<main class="content" bind:this={main}>
 			<div class="content-back"><BackButton {onback} /></div>
 			{@render children()}
 		</main>

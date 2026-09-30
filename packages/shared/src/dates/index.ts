@@ -145,3 +145,26 @@ export function relativeDay(iso: string): 'today' | 'yesterday' | 'earlier' {
 	if (day === daysFromToday(-1)) return 'yesterday'
 	return 'earlier'
 }
+
+export type AgoUnit = 'second' | 'minute' | 'hour' | 'day'
+const MINUTE = 60 * 1000
+const HOUR = 60 * MINUTE
+
+/**
+ * How long ago an instant was, in the coarsest whole unit that fits: seconds under a minute, then minutes, hours and
+ * days. An instant still ahead of `now` reads as zero seconds. `now` is passed so a page's ticking clock decides when
+ * the age moves on.
+ */
+export function ago(iso: string | number, now: number): { value: number; unit: AgoUnit } {
+	const elapsed = Math.max(0, now - new Date(iso).getTime())
+	if (elapsed < MINUTE) return { value: Math.floor(elapsed / 1000), unit: 'second' }
+	if (elapsed < HOUR) return { value: Math.floor(elapsed / MINUTE), unit: 'minute' }
+	if (elapsed < DAY) return { value: Math.floor(elapsed / HOUR), unit: 'hour' }
+	return { value: Math.floor(elapsed / DAY), unit: 'day' }
+}
+
+/** `5 minutes ago`, `yesterday`, `now` under a minute: the age of an instant in the language given. */
+export function formatAgo(iso: string | number, lang: string, now: number): string {
+	const { value, unit } = ago(iso, now)
+	return new Intl.RelativeTimeFormat(lang, { numeric: 'auto' }).format(value === 0 ? 0 : -value, unit)
+}

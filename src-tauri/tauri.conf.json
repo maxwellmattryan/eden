@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Eden",
   "version": "0.1.0",
-  "identifier": "dev.mattmaxwell.eden",
+  "identifier": "com.palekodama.eden",
   "build": {
     "beforeDevCommand": "yarn workspace @eden/desktop dev",
     "devUrl": "http://localhost:1420",

@@ -9,7 +9,7 @@ updated: 2026-09-29
 
 ## Shape
 
-Two channels, `staging` and `production` (D-52). A tag `vX.Y.Z-staging.N` releases to staging, a tag `vX.Y.Z` to production; the tag is cut by `scripts/tag.sh`, and `.github/workflows/cd.release.yml` builds, drafts a GitHub Release and publishes to the bucket `eden-releases`. Desktop updates poll `https://storage.googleapis.com/eden-releases/<channel>/latest.json` through the channel guard in `src-tauri/src/updater.rs`, so a staging build never takes a production update and a dev build never updates. The download page at `eden.mattmaxwell.dev` (`web/`, GitHub Pages) reads `<channel>/downloads.json`. iOS ships ad-hoc from the BBX team, never through App Store Connect; Windows is unsigned for now.
+Two channels, `staging` and `production` (D-52). A tag `vX.Y.Z-staging.N` releases to staging, a tag `vX.Y.Z` to production; the tag is cut by `scripts/tag.sh`, and `.github/workflows/cd.release.yml` builds, drafts a GitHub Release and publishes to the bucket `eden-releases`. Desktop updates poll `https://storage.googleapis.com/eden-releases/<channel>/latest.json` through the channel guard in `src-tauri/src/updater.rs`, so a staging build never takes a production update and a dev build never updates. The download page at `eden.palekodama.studio` (`web/`, GitHub Pages) reads `<channel>/downloads.json`. iOS ships ad-hoc from the BBX team, never through App Store Connect; Windows is unsigned for now.
 
 Every step below is gated in the workflow: with no secrets a run still produces unsigned desktop bundles and a draft release, skips iOS, and stops before the bucket. Set the secrets in the repository settings as they are obtained.
 
@@ -31,7 +31,7 @@ Every step below is gated in the workflow: with no secrets a run still produces 
 1. A GCP project (any name), billing on; the bucket is public and costs cents.
 2. `gcloud storage buckets create gs://eden-releases --location=us-central1 --uniform-bucket-level-access`
 3. Public reads: `gcloud storage buckets add-iam-policy-binding gs://eden-releases --member=allUsers --role=roles/storage.objectViewer`
-4. CORS for the download page and local previews, from a file `cors.json` containing `[{"origin":["https://eden.mattmaxwell.dev","http://localhost:*"],"method":["GET"],"responseHeader":["Content-Type"],"maxAgeSeconds":3600}]`: `gcloud storage buckets update gs://eden-releases --cors-file=cors.json`
+4. CORS for the download page and local previews, from a file `cors.json` containing `[{"origin":["https://eden.palekodama.studio","http://localhost:*"],"method":["GET"],"responseHeader":["Content-Type"],"maxAgeSeconds":3600}]`: `gcloud storage buckets update gs://eden-releases --cors-file=cors.json`
 5. A service account `eden-releases@<project>.iam.gserviceaccount.com` with `roles/storage.objectAdmin` on the bucket only: `gcloud storage buckets add-iam-policy-binding gs://eden-releases --member=serviceAccount:<sa> --role=roles/storage.objectAdmin`
 6. A JSON key: `gcloud iam service-accounts keys create key.json --iam-account=<sa>`; its contents become `GCS_SERVICE_ACCOUNT_KEY`. Delete the local file.
 
@@ -55,10 +55,10 @@ The workflow's macOS build reads them; the "verify the updater endpoint" step th
 
 ## iOS, ad-hoc from the BBX team
 
-The identifier is still the placeholder (D-52); do the App ID steps after the studio domain is chosen, or accept re-registering.
+The identifier is `com.palekodama.eden` (D-69).
 
 1. An Apple Distribution certificate on the BBX team (`APPLE_TEAM_ID`), exported as `.p12`: `IOS_DIST_CERTIFICATE_P12_BASE64`, `IOS_DIST_CERTIFICATE_PASSWORD`.
-2. App IDs registered on the team: the base identifier from `tauri.conf.json` and the same with `.staging`. An App ID is unique across all of Apple: once registered on the BBX team it cannot be registered by a personal team until it is deleted here, which is why the ad-hoc route matters.
+2. App IDs registered on the team: `com.palekodama.eden` and `com.palekodama.eden.staging` (Xcode registers `com.palekodama.eden.dev` itself the first time `yarn dev:ios` runs on a device). An App ID is unique across all of Apple: once registered on the BBX team it cannot be registered by a personal team until it is deleted here, which is why the ad-hoc route matters.
 3. Every device that will install builds registered by UDID; an ad-hoc provisioning profile per App ID listing them. The profile file: `IOS_PROVISIONING_PROFILE_BASE64` (`base64 -i profile.mobileprovision`); its name as shown in the portal: `IOS_PROVISIONING_PROFILE_NAME`. Today the workflow carries one profile; a staging release therefore needs the profile of the App ID the tag targets, or a second pair of secrets when both channels ship (an issue).
 4. Never create an App Store Connect record for either App ID: that would tie the identifier to the BBX team's store presence. Ad-hoc installs happen from the download page on the device: Safari opens the `itms-services://` link, the manifest names the IPA in the bucket.
 
@@ -68,7 +68,7 @@ The identifier is still the placeholder (D-52); do the App ID steps after the st
 
 Sky can use Apple's WeatherKit through the native framework (D-57). The bridge and its commands are in every Apple build; what is missing until these steps are done is the entitlement, so WeatherKit refuses and Sky falls back to Open-Meteo with a note. Nothing else depends on them. The minimum systems are macOS 13 and iOS 16.
 
-1. In the developer portal, on the BBX team, open each App ID (the base identifier, `.dev` and `.staging`) and enable WeatherKit twice: under Capabilities and under App Services. With the identifier still a placeholder (D-52) this is done again when it changes.
+1. In the developer portal, on the BBX team, open each App ID (the base identifier, `.dev` and `.staging`) and enable WeatherKit twice: under Capabilities and under App Services.
 2. iOS: add `com.apple.developer.weatherkit` (`true`) to `src-tauri/gen/apple/eden-app_iOS/eden-app_iOS.entitlements`, regenerate the ad-hoc profile so it carries the capability, and update `IOS_PROVISIONING_PROFILE_BASE64`.
 3. macOS: add the same key to `src-tauri/Entitlements.plist`, create a Developer ID provisioning profile per App ID, and embed it through `bundle.macOS.files` (`embedded.provisionprofile`) in the channel overlay; CI needs the profile as a secret. The key must not be added before the profile exists: a restricted entitlement without a matching profile stops a signed app from launching.
 4. Verify on a signed build on a real Mac and a real iPhone: choose Apple Weather in Settings → Integrations and confirm the forecast and Apple's attribution. The simulator is not a reliable test.
@@ -84,10 +84,10 @@ When it exists: `keytool -genkeypair -v -keystore eden-release.keystore -alias e
 ## The download page
 
 1. Repository settings → Pages → Source "GitHub Actions". `.github/workflows/cd.web.yml` deploys `web/` on every push to `develop` that touches it.
-2. Custom domain `eden.mattmaxwell.dev`: DNS `CNAME eden → maxwellmattryan.github.io`; `web/CNAME` already carries the name, so Pages keeps it across deploys. Enforce HTTPS once the certificate is issued.
+2. Custom domain `eden.palekodama.studio`: on the `palekodama.studio` zone, DNS `CNAME eden → maxwellmattryan.github.io`; `web/CNAME` already carries the name, so Pages keeps it across deploys. Enforce HTTPS once the certificate is issued.
 3. The page fetches `downloads.json` from the bucket per channel (`?channel=staging`) and falls back to GitHub Releases.
 
-The domain moves with one edit to `web/CNAME` and the DNS record (D-52).
+The domain moves with one edit to `web/CNAME` and the DNS record (D-69).
 
 ## Cutting a release
 

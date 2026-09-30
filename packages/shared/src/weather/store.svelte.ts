@@ -56,6 +56,7 @@ const STALE_MS = 30 * 60 * 1000
 const AIR_STALE_MS = 60 * 60 * 1000
 const ALLERGENS_STALE_MS = 3 * 60 * 60 * 1000
 const HOURS_SHOWN = 12
+const MINUTE_MS = 60 * 1000
 /** Six days back and seven on reach every day of the calendar week, whichever day it starts on. */
 const PAST_DAYS = 6
 const FORECAST_DAYS = 7
@@ -72,6 +73,8 @@ export class WeatherStore {
 	data = $state<WeatherData | null>(null)
 	/** The instant the page reads the forecast at, moved on by every load and refresh. */
 	at = $state(Date.now())
+	/** The minute, for what moves with the clock and not with the forecast: the sun's place, the reading's age. */
+	clock = $state(Date.now())
 
 	readonly lastGood = $derived(this.data?.fetchedAt)
 	/** The active alerts the owner has not dismissed. */
@@ -122,6 +125,7 @@ export class WeatherStore {
 	}
 
 	#reading: Promise<void> | null = null
+	#ticker: ReturnType<typeof setInterval> | null = null
 
 	/** The mirror is missing, older than the refresh interval, for another place, or from another provider's choice. */
 	get stale(): boolean {
@@ -145,7 +149,14 @@ export class WeatherStore {
 		})
 		await this.#reading
 		this.at = Date.now()
+		this.#ticker ??= setInterval(() => (this.clock = Date.now()), MINUTE_MS)
 		if (this.stale) await this.refresh()
+	}
+
+	/** Stops the minute. */
+	dispose() {
+		if (this.#ticker) clearInterval(this.#ticker)
+		this.#ticker = null
 	}
 
 	/** The forecast from the chosen provider, or from the default with a note when the chosen one cannot answer. */
@@ -178,10 +189,11 @@ export class WeatherStore {
 	}
 
 	/**
-	 * Fetches the forecast and the alerts for the home place, then the supplementary slots that are due. A failure of
-	 * the forecast keeps the last good one and flags offline; a failure of a supplement marks its slot alone.
+	 * Fetches the forecast and the alerts for the home place, then the supplementary slots that are due, or every slot
+	 * when the owner asks for everything at once (`force`). A failure of the forecast keeps the last good one and flags
+	 * offline; a failure of a supplement marks its slot alone.
 	 */
-	async refresh(): Promise<void> {
+	async refresh({ force = false }: { force?: boolean } = {}): Promise<void> {
 		if (this.loading) return
 		this.loading = true
 		const place = $state.snapshot(settings.home)
@@ -194,10 +206,10 @@ export class WeatherStore {
 			const fetchedAt = nowIso()
 			const now = Date.now()
 			const [airQuality, allergens] = await Promise.all([
-				previous && !slotStale(previous.airQuality, AIR_STALE_MS, now)
+				previous && !force && !slotStale(previous.airQuality, AIR_STALE_MS, now)
 					? previous.airQuality
 					: fillSlot(airQualitySources, place, fetchedAt),
-				previous && !slotStale(previous.allergens, ALLERGENS_STALE_MS, now)
+				previous && !force && !slotStale(previous.allergens, ALLERGENS_STALE_MS, now)
 					? previous.allergens
 					: fillSlot(allergenSources, place, fetchedAt),
 			])
@@ -206,6 +218,7 @@ export class WeatherStore {
 			const dismissed = (previous?.dismissed ?? []).filter((id) => alerts.some((alert) => alert.id === id))
 			this.data = { fetchedAt, place, forecast: { ...forecast, days }, alerts, airQuality, allergens, dismissed }
 			this.at = now
+			this.clock = now
 			this.offline = false
 			await save<WeatherData>(DOCUMENT, { version: VERSION, data: $state.snapshot(this.data) }).catch(() => null)
 		} catch (error) {
