@@ -38,7 +38,7 @@ import {
 	type StockLocation,
 	type StockPayload,
 } from '@eden/shared/domains/kitchen'
-import { garden } from '../garden/store.svelte.js'
+import { feed } from '../../shell/feed.svelte.js'
 import { parseGrocery, parseStock } from './parse.js'
 import { seedData } from './seed.js'
 
@@ -337,11 +337,11 @@ export class KitchenStore {
 	#commit(change: Change, feedKey?: string, values?: Record<string, string | number>): Undo {
 		change.apply()
 		this.#queue.enqueue(change.write)
-		const entry = feedKey ? garden.record('kitchen', feedKey, values) : undefined
+		const entry = feedKey ? feed.record('kitchen', feedKey, values) : undefined
 		return () => {
 			change.revert()
 			this.#queue.enqueue(change.unwrite)
-			if (entry) garden.forget(entry.id)
+			if (entry) feed.forget(entry.id)
 		}
 	}
 }

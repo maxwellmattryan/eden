@@ -1540,6 +1540,8 @@ mod tests {
         second
             .write(|ctx| primitives::create(ctx, &PLACE, home("The old flat")))
             .unwrap();
+        // The two clocks are independent: within one millisecond the node decides, so the later home is made later
+        std::thread::sleep(std::time::Duration::from_millis(2));
         first
             .write(|ctx| primitives::create(ctx, &PLACE, home("The new house")))
             .unwrap();

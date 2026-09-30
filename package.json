@@ -18,7 +18,7 @@
 		"dev:web": "yarn workspace @eden/desktop dev",
 		"dev:ios": "cross-env EDEN_ENV=development TAURI_DEV_HOST=$(ipconfig getifaddr en0) tauri ios dev --config src-tauri/tauri.dev.conf.json --features mobile",
 		"dev:android": "cross-env EDEN_ENV=development TAURI_DEV_HOST=$(ipconfig getifaddr en0) tauri android dev --config src-tauri/tauri.dev.conf.json --features mobile",
-		"build": "yarn workspace @eden/ui-kit run build && yarn workspace @eden/desktop run build && yarn workspace @eden/mobile run build",
+		"build": "yarn registry:check && yarn workspace @eden/ui-kit run build && yarn workspace @eden/desktop run build && yarn workspace @eden/mobile run build",
 		"build:production": "cross-env EDEN_ENV=production tauri build --config src-tauri/tauri.prod.conf.json --features desktop",
 		"build:staging": "cross-env EDEN_ENV=staging tauri build --config src-tauri/tauri.staging.conf.json --features desktop",
 		"build:ios:adhoc": "cross-env EDEN_ENV=production tauri ios build --config src-tauri/tauri.prod.conf.json --export-method ad-hoc --features mobile",
@@ -38,6 +38,8 @@
 		"storybook:build": "yarn workspace @eden/ui-kit build-storybook",
 		"tokens": "yarn workspace @eden/ui-kit tokens",
 		"icons": "yarn workspace @eden/ui-kit icons",
+		"registry": "yarn workspace @eden/shared registry",
+		"registry:check": "yarn workspace @eden/shared registry:check",
 		"tauri": "tauri",
 		"bump": "node scripts/version.mjs",
 		"changelog:prepare": "node scripts/changelog.mjs prepare",
@@ -47,7 +49,8 @@
 	"lint-staged": {
 		"*.{ts,js,mjs,svelte,json,css,md,yml,yaml,html}": "prettier --write",
 		"*.{ts,js,mjs,svelte}": "eslint --cache --fix",
-		"packages/ui-kit/src/lib/tokens/*.json": "yarn tokens && yarn icons && git add packages/ui-kit/src/lib/styles packages/ui-kit/src/lib/tokens packages/ui-kit/src/lib/icons/icons.ts packages/ui-kit/.storybook/preview-head.html"
+		"packages/ui-kit/src/lib/tokens/*.json": "yarn tokens && yarn icons && git add packages/ui-kit/src/lib/styles packages/ui-kit/src/lib/tokens packages/ui-kit/src/lib/icons/icons.ts packages/ui-kit/.storybook/preview-head.html",
+		"packages/shared/src/{domains/*/manifest,registry/*,manifest/shell}.json": "node packages/shared/scripts/build-registry.mjs --add"
 	},
 	"devDependencies": {
 		"@eslint/compat": "2.1.1",

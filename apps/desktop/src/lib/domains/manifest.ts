@@ -1,54 +1,57 @@
-// The seed of the domain manifest as code (docs/product/substrate/domain-manifest.md), deliberately small: only the
-// fields the shell composes from today, which are the sidebar entry, the Garden's widgets, the quick-nav row and the
-// quick actions. Resources, reads, tools, signals, intents and the palette arrive with the registry work, which will
-// grow this type rather than replace it.
+// The domain manifest as code (docs/engineering/domain-module.md). What a domain declares is data, written in its
+// manifest.json in `@eden/shared` and checked by the registry builder; what it binds to that here is this app's:
+// the route, the widgets' components, the store. `defineDomain` joins the two, and the shell composes the sidebar,
+// the Garden and the palette's index from the result and nothing else.
 import type { Component } from 'svelte'
 import type { ResolvedPathname } from '$app/types'
 import type { BundleExtra } from '@eden/shared/data'
-import type { DomainId, IconName, WidgetSize } from '@eden/ui-kit'
+import {
+	declarationOf,
+	type BuiltDomainId,
+	type BuiltWidgetId,
+	type DomainDeclaration,
+	type QuickActionDeclaration,
+	type TabId,
+	type WidgetDeclaration as DeclaredWidget,
+} from '@eden/shared/manifest'
+import { domainGlyph, type IconName } from '@eden/ui-kit'
 
 /** The route ids a domain may own; a page with tabs takes the tab as an optional parameter. */
 export type DomainRoute = '/kitchen/[[tab]]' | '/toolbench/[[tab]]' | '/weather'
 
-/** A Garden tile the domain contributes; it computes locally from the domain's store, never from a model. */
-export interface WidgetDeclaration {
-	/** The tile id in the Garden layout (`expiring-soon`). */
-	id: string
-	size: WidgetSize
-	/** The locale key of the tile's title. */
-	title: string
-	/** The locale key of the one-line prompt shown until the domain has data for the tile. */
-	empty: string
-	/** The quiet footer action: its locale key and what it opens. */
-	action?: { label: string; open: () => void }
+/** What the app binds to a declared widget; the tile computes locally from the domain's store, never from a model. */
+export interface WidgetBinding {
 	/** The body, rendered while `hasData()` is true; without one the tile always shows its prompt. */
 	body?: Component
 	hasData?: () => boolean
+	/** The quiet footer action: its locale key and what it opens. */
+	action?: { label: string; open: () => void }
 }
 
+/** A Garden tile the domain contributes: what it declares, and what is bound to it. */
+export interface WidgetDeclaration extends DeclaredWidget, WidgetBinding {}
+
 /** A Quick Log entry the domain registers (D-12). */
-export interface QuickAction {
-	id: string
-	/** The locale key of the entry's label. */
-	label: string
+export interface QuickAction extends QuickActionDeclaration {
 	icon: IconName
 }
 
-export interface DomainManifest {
-	/** The plain, permanent id (`kitchen`), never the display name. */
-	id: DomainId
-	/** The locale keys of the themed name and its plain subtitle (D-2). */
-	name: string
-	subtitle: string
-	/** `domainGlyph(id)`. */
-	glyph: IconName
-	/**
-	 * The page: its route id, its href through `resolve()` for the sidebar, `open()` for a button (a `goto` with the
-	 * `resolve()` call inline, which is what the navigation lint accepts), and its tab ids in order when it has tabs.
-	 */
-	routes: { path: DomainRoute; href: ResolvedPathname; open: () => void; tabs?: readonly string[] }
-	widgets: WidgetDeclaration[]
-	quickActions: QuickAction[]
+export interface DomainRoutes<Tab extends string = string> {
+	path: DomainRoute
+	/** The href through `resolve()`, for the sidebar. */
+	href: ResolvedPathname
+	/** For a button: a `goto` with the `resolve()` call inline, which is what the navigation lint accepts. */
+	open: () => void
+	/** Opens one of the declared tabs; a domain with tabs binds it, for the palette. */
+	openTab?: (tab: Tab) => void
+}
+
+export interface DomainBindings<D extends BuiltDomainId> {
+	routes: DomainRoutes<TabId<D>>
+	/** One binding for each widget the domain declares and has built; a missing one does not compile. */
+	widgets: Record<BuiltWidgetId<D>, WidgetBinding>
+	/** A glyph that follows the domain's state, in place of its own, while there is one. */
+	liveGlyph?: () => IconName | undefined
 	/** Loads the domain's store; the Garden calls it for every domain, the domain's own page for itself. */
 	load?: () => Promise<void>
 	/** Seeds the store from the kit's sample dataset and returns the undo; behind the empty states' "Add sample data". */
@@ -60,4 +63,43 @@ export interface DomainManifest {
 	 * can be exported on its own.
 	 */
 	extras?: () => Promise<BundleExtra[]>
+}
+
+export interface DomainManifest extends Omit<DomainBindings<BuiltDomainId>, 'routes' | 'widgets'> {
+	/** Everything the domain declares: its resources and reads, its tools, its intents, its palette entries. */
+	declaration: DomainDeclaration
+	/** The plain, permanent id (`kitchen`), never the display name. */
+	id: BuiltDomainId
+	/** The locale keys of the themed name and its plain subtitle (D-2). */
+	name: string
+	subtitle: string
+	/** `domainGlyph(id)`. */
+	glyph: IconName
+	routes: DomainRoutes
+	/** The ids of the page's tabs, in order. */
+	tabs: readonly string[]
+	/** The widgets that are built, each with its binding. */
+	widgets: WidgetDeclaration[]
+	quickActions: QuickAction[]
+}
+
+export function defineDomain<D extends BuiltDomainId>(id: D, bindings: DomainBindings<D>): DomainManifest {
+	const declaration: DomainDeclaration = declarationOf(id)
+	const { routes, widgets, ...rest } = bindings
+	const bound: Partial<Record<string, WidgetBinding>> = widgets
+	return {
+		...rest,
+		declaration,
+		id,
+		name: declaration.name,
+		subtitle: declaration.subtitle,
+		glyph: domainGlyph(id),
+		routes: routes as DomainRoutes,
+		tabs: declaration.tabs.map((tab) => tab.id),
+		widgets: declaration.widgets
+			.filter((widget) => !widget.planned)
+			.map((widget) => ({ ...widget, ...bound[widget.id] })),
+		// the registry builder checked each icon against the kit's list
+		quickActions: declaration.quickActions.map((action) => ({ ...action, icon: action.icon as IconName })),
+	}
 }

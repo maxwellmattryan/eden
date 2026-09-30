@@ -16,7 +16,7 @@
 		ToastHost,
 		UiKitProvider,
 		domainGlyph,
-		iconFor,
+		type GlyphId,
 		type SidebarEntry,
 	} from '@eden/ui-kit'
 	import { checkForUpdate } from '@eden/shared/api/updater'
@@ -25,7 +25,8 @@
 	import { dismissSplash, splashVisible } from '@eden/shared/stores'
 	import CrashScreen from '$lib/components/CrashScreen.svelte'
 	import SplashScreen from '$lib/components/SplashScreen.svelte'
-	import { manifests } from '$lib/domains'
+	import { shell, shortcutPositions, sidebarGroups, type SidebarItem } from '@eden/shared/manifest'
+	import { declarations, manifestFor } from '$lib/domains'
 	import { weather } from '@eden/shared/weather'
 	import { formatTime } from '@eden/shared/dates'
 	import { detectOs, formatShortcut } from '@eden/shared/shortcuts'
@@ -46,72 +47,44 @@
 	/** Sky's times are the place's (D-58). */
 	const skyFormat = $derived({ ...format, timeZone: weather.timeZone })
 
-	// Today; Garden, Gardener and Toolbench; then the enabled domains from their manifests, each group under a rule
-	// (D-64); the owner's order arrives with the Domains tab. The ⌘ positions count the places only: the Gardener has
-	// its own key.
-	const domains = $derived(manifests.filter((m) => m.id !== 'toolbench'))
-	const toolbench = $derived(manifests.filter((m) => m.id === 'toolbench'))
-	const hrefs = {
+	// The groups come from the manifests and from what the shell declares for itself: Today; Garden, Gardener and
+	// Toolbench; then the domains, each group under a rule (D-64). The owner's order and what they hid arrive with
+	// the Domains tab. The ⌘ positions count the places only: the Gardener has its own key.
+	const composed = sidebarGroups(declarations, shell)
+	const position = shortcutPositions(composed)
+	/** Where the places that are the shell's own lead. */
+	const places: Partial<Record<string, ReturnType<typeof resolve>>> = {
 		today: resolve('/today'),
 		garden: resolve('/garden'),
-	} as const
+	}
 
-	const position = $derived(
-		new Map(['today', 'garden', ...[...toolbench, ...domains].map((m) => m.id)].map((id, i) => [id, i + 1]))
-	)
-	const entry = (manifest: (typeof manifests)[number]): SidebarEntry => ({
-		id: manifest.id,
-		name: $t(manifest.name),
-		subtitle: $t(manifest.subtitle),
-		// Sky's glyph is live: it follows the current conditions (weather.md).
-		icon: manifest.id === 'weather' && weather.now ? iconFor(weather.now.condition, weather.now.night) : manifest.glyph,
-		shortcut: keys(String(position.get(manifest.id))),
-		href: manifest.routes.href,
-	})
+	function entry(item: SidebarItem): SidebarEntry {
+		const manifest = item.kind === 'domain' ? manifestFor(item.id) : undefined
+		const at = position.get(item.id)
+		return {
+			id: item.id,
+			name: $t(item.name),
+			subtitle: $t(item.subtitle),
+			// a domain's glyph may be live: Sky's follows the current conditions (weather.md)
+			icon: manifest ? (manifest.liveGlyph?.() ?? manifest.glyph) : domainGlyph(item.id as GlyphId),
+			shortcut: item.place ? (at ? keys(String(at)) : undefined) : item.key ? keys(item.key) : undefined,
+			href: manifest ? manifest.routes.href : places[item.id],
+		}
+	}
 
-	const groups = $derived<SidebarEntry[][]>([
-		[
-			{
-				id: 'today',
-				name: $t('shell.today'),
-				subtitle: $t('shell.todaySubtitle'),
-				icon: domainGlyph('today'),
-				shortcut: keys('1'),
-				href: hrefs.today,
-			},
-		],
-		[
-			{
-				id: 'garden',
-				name: $t('shell.garden'),
-				subtitle: $t('shell.gardenSubtitle'),
-				icon: domainGlyph('garden'),
-				shortcut: keys('2'),
-				href: hrefs.garden,
-			},
-			{
-				id: 'gardener',
-				name: $t('shell.gardener'),
-				subtitle: $t('shell.gardenerSubtitle'),
-				icon: domainGlyph('gardener'),
-				shortcut: keys('G'),
-			},
-			...toolbench.map(entry),
-		],
-		...(domains.length ? [domains.map(entry)] : []),
-	])
+	const groups = $derived<SidebarEntry[][]>(composed.map((group) => group.items.map(entry)))
 	/** The places, in ⌘ order. */
 	const items = $derived(groups.flat().filter((item) => item.href))
-	const pinned = $derived<SidebarEntry[]>([
-		{
-			id: 'settings',
-			name: $t('shell.settings'),
-			subtitle: $t('shell.settingsSubtitle'),
-			icon: domainGlyph('settings'),
-			shortcut: keys(','),
+	const pinned = $derived<SidebarEntry[]>(
+		shell.sidebar.pinned.map((item) => ({
+			id: item.id,
+			name: $t(item.name),
+			subtitle: $t(item.subtitle),
+			icon: domainGlyph(item.id as GlyphId),
+			shortcut: item.key ? keys(item.key) : undefined,
 			action: true,
-		},
-	])
+		}))
+	)
 	const current = $derived(page.route.id?.split('/')[1] || 'garden')
 
 	// Offline: the banner takes the sync line's place while the forecast is a mirror from an earlier fetch

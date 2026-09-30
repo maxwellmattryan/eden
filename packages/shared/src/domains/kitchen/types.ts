@@ -1,5 +1,6 @@
 // Hearth's shapes (product/domains/kitchen.md). The store holds them with their ids; a row's payload is the same
 // shape without the id, which the row carries itself.
+import type { EntityTypeId } from '../../registry/index.js'
 
 export type StockLocation = 'fridge' | 'freezer' | 'pantry' | 'counter'
 /** The four locations, fixed so capture can place items without a picker (kitchen.md, "Entities"). */
@@ -68,7 +69,7 @@ export const KITCHEN = {
 	recipe: 'recipe',
 	list: 'grocery-list',
 	item: 'grocery-item',
-} as const
+} as const satisfies Record<string, EntityTypeId>
 
 export type StockPayload = Omit<StockItem, 'id'>
 export type RecipePayload = Omit<Recipe, 'id'>

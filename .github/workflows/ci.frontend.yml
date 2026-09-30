@@ -31,6 +31,7 @@ jobs:
       - run: yarn workspace @eden/ui-kit tokens:check
       - run: yarn workspace @eden/ui-kit icons:check
       - run: yarn workspace @eden/ui-kit fonts:check
+      - run: yarn registry:check
       - run: yarn run check
 
   test:

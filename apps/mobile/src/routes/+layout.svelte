@@ -1,6 +1,7 @@
 <script lang="ts">
 	// The mobile shell (product/substrate/shell.md, Mobile): the page, the bottom tab bar pinned to the viewport
-	// (Garden, Today, Hearth, Sky, More), and the overlays (toast, the settings sheet, crash). It mounts the shared
+	// (Garden, Today, the two pinned domains, More), composed from the manifests, and the overlays (toast, the
+	// settings sheet, crash). It mounts the shared
 	// pieces once: settings, i18n, the global error handler. No updater: mobile updates through the stores. The splash
 	// covers it until they are ready, then fades out as the shell fades in.
 	import '../app.css'
@@ -9,12 +10,14 @@
 	import { resolve } from '$app/paths'
 	import { page } from '$app/state'
 	import { env } from '$env/dynamic/public'
-	import { BottomTabBar, ToastHost, UiKitProvider, domainGlyph, iconFor, type BottomTab } from '@eden/ui-kit'
+	import { BottomTabBar, ToastHost, UiKitProvider, domainGlyph, type BottomTab, type GlyphId } from '@eden/ui-kit'
 	import { initializeI18n, locale, t, uiKitStrings } from '@eden/shared/i18n'
+	import { shell, tabBar } from '@eden/shared/manifest'
 	import { settings } from '@eden/shared/settings'
 	import { weather } from '@eden/shared/weather'
 	import { dismissSplash, splashVisible } from '@eden/shared/stores'
 	import CrashScreen from '$lib/components/CrashScreen.svelte'
+	import { declarations, manifestFor } from '$lib/domains'
 	import SplashScreen from '$lib/components/SplashScreen.svelte'
 	import { useGlobalErrorHandler } from '$lib/hooks/useGlobalErrorHandler'
 	import SettingsSheet from '$lib/settings/SettingsSheet.svelte'
@@ -24,32 +27,35 @@
 	/** How often the shell asks the weather store whether its forecast is stale, so the tab glyph keeps up. */
 	const WEATHER_INTERVAL = 10 * 60 * 1000
 
-	const hrefs = {
-		garden: resolve('/garden'),
-		today: resolve('/today'),
-		kitchen: resolve('/kitchen'),
-		weather: resolve('/weather'),
-		more: resolve('/more'),
-	} as const
-	type TabId = keyof typeof hrefs
+	// Garden and Today, then the domains pinned until the owner chooses their own two (Hearth and Sky), then More,
+	// which holds the rest.
+	const bar = tabBar(declarations, shell)
+	/** Where the tabs that are the shell's own lead. */
+	const places: Partial<Record<string, () => void>> = {
+		garden: () => void goto(resolve('/garden')),
+		today: () => void goto(resolve('/today')),
+		[shell.tabs.more.id]: () => void goto(resolve('/more')),
+	}
+	const openOf = (id: string) => manifestFor(id)?.routes?.open ?? places[id]
 
 	const tabs = $derived<BottomTab[]>([
-		{ id: 'garden', label: $t('shell.garden'), icon: domainGlyph('garden') },
-		{ id: 'today', label: $t('shell.today'), icon: domainGlyph('today') },
-		{ id: 'kitchen', label: $t('domains.kitchen.name'), icon: domainGlyph('kitchen') },
-		{
-			id: 'weather',
-			label: $t('domains.weather.name'),
-			// Sky's glyph is live: it follows the current conditions (weather.md).
-			icon: weather.now ? iconFor(weather.now.condition, weather.now.night) : domainGlyph('weather'),
-		},
-		{ id: 'more', label: $t('shell.more'), icon: 'menu' },
+		...bar.tabs
+			.filter((item) => openOf(item.id))
+			.map((item) => {
+				const manifest = item.kind === 'domain' ? manifestFor(item.id) : undefined
+				return {
+					id: item.id,
+					label: $t(item.name),
+					// a domain's glyph may be live: Sky's follows the current conditions (weather.md)
+					icon: manifest ? (manifest.liveGlyph?.() ?? manifest.glyph) : domainGlyph(item.id as GlyphId),
+				}
+			}),
+		{ id: shell.tabs.more.id, label: $t(shell.tabs.more.name), icon: 'menu' },
 	])
 	const current = $derived(page.route.id?.split('/')[1] || 'garden')
 
 	function onselect(id: string) {
-		const href = hrefs[id as TabId]
-		if (href) goto(href)
+		openOf(id)?.()
 	}
 
 	onMount(() => {

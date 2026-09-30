@@ -1,0 +1,30 @@
+{
+	"note": "What the shell declares for itself: the built domains in their Phase 1 order, the places and actions of the sidebar that are not domains (D-64), the phone's tab bar with the two domains pinned until the owner chooses, the Garden tiles no domain owns, and the Garden's default layout (product/substrate/shell.md).",
+	"domains": ["kitchen", "toolbench", "weather"],
+	"sidebar": {
+		"groups": ["today", "shell", "domains"],
+		"entries": [
+			{ "id": "today", "group": "today", "order": 0, "place": true },
+			{ "id": "garden", "group": "shell", "order": 0, "place": true },
+			{ "id": "gardener", "group": "shell", "order": 5, "place": false, "key": "G" }
+		],
+		"pinned": [{ "id": "settings", "key": "," }]
+	},
+	"tabs": { "places": ["garden", "today"], "pinned": ["kitchen", "weather"], "more": "more" },
+	"tiles": [
+		{ "id": "today", "glyph": "today", "sizes": ["m"], "reads": ["task"] },
+		{ "id": "daily-line", "glyph": "garden", "sizes": ["m"], "reads": [] },
+		{ "id": "quick-log", "glyph": "fitness", "sizes": ["s"], "reads": ["body-metric"] }
+	],
+	"gardenDefault": [
+		"weather-now",
+		"today",
+		"expiring-soon",
+		"cook-tonight",
+		"resurfaced-idea",
+		"active-projects",
+		"sun-and-moon",
+		"daily-line",
+		"quick-log"
+	]
+}

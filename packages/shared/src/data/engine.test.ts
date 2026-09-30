@@ -73,6 +73,9 @@ describe('engine', () => {
 		for (const bad of [
 			() => engine.createEntity({ type: 'Recipe', payload: {} }),
 			() => engine.createEntity({ type: 'task', payload: {} }),
+			// well formed, and in no registry; then a type of Phase 2, which nothing may create yet
+			() => engine.createEntity({ type: 'gadget', payload: {} }),
+			() => engine.createEntity({ type: 'workout-log', payload: {} }),
 			() => engine.createEntity({ id: 'r-01', type: 'recipe', payload: {} }),
 			() => engine.createEntity({ id, type: 'recipe', payload: {} }),
 			() => engine.createEntity({ type: 'recipe', payload: [] as unknown as object }),

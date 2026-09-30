@@ -1,5 +1,6 @@
 // Toolbench's shapes (product/domains/toolbench.md). The store holds them with their ids; a row's payload is the
 // same shape without the id, which the row carries itself.
+import type { EntityTypeId } from '../../registry/index.js'
 
 export type IdeaStatus = 'idea' | 'exploring' | 'building' | 'archived'
 export const IDEA_STATUSES: readonly IdeaStatus[] = ['idea', 'exploring', 'building', 'archived']
@@ -46,7 +47,7 @@ export interface ToolbenchData {
 }
 
 /** The registry ids of Toolbench's entity types (product/substrate/registry.md). */
-export const TOOLBENCH = { idea: 'idea', project: 'project' } as const
+export const TOOLBENCH = { idea: 'idea', project: 'project' } as const satisfies Record<string, EntityTypeId>
 
 export type IdeaPayload = Omit<Idea, 'id'>
 export type ProjectPayload = Omit<Project, 'id'>

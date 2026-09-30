@@ -1,0 +1,45 @@
+{
+	"id": "weather",
+	"phase": 1,
+	"sidebar": { "group": "domains", "order": 20, "visible": true },
+	"tabs": [],
+	"resources": {
+		"facts": [],
+		"entities": [
+			{ "id": "forecast", "tier": "T0" },
+			{ "id": "alert", "tier": "T0" },
+			{ "id": "ephemeris", "tier": "T0" },
+			{ "id": "air-quality", "tier": "T0" },
+			{ "id": "allergens", "tier": "T0" }
+		],
+		"kinds": []
+	},
+	"reads": ["home-area", "workout-session", "outing"],
+	"widgets": [
+		{ "id": "weather-now", "sizes": ["s", "m"], "default": true, "reads": ["forecast"] },
+		{ "id": "sun-and-moon", "sizes": ["s"], "default": true, "reads": ["ephemeris"] },
+		{ "id": "week-outlook", "sizes": ["m"], "reads": ["forecast"], "planned": true },
+		{ "id": "good-day-for", "sizes": ["s"], "reads": ["forecast", "air-quality", "allergens"], "planned": true }
+	],
+	"quickActions": [],
+	"captureSources": [],
+	"tools": [
+		{ "id": "forecast", "access": "read", "reads": ["forecast", "home-area", "venue"] },
+		{
+			"id": "rain-during-plan",
+			"access": "read",
+			"reads": ["forecast", "home-area", "workout-session", "local-event", "outing"]
+		},
+		{ "id": "sun-and-moon", "access": "read", "reads": ["ephemeris"] }
+	],
+	"signals": ["weather.alert", "weather.rain-before-plan", "weather.frost"],
+	"notificationKinds": [
+		{ "id": "severe-alert", "channel": "os", "cadence": "on-issue" },
+		{ "id": "rain-before-plans", "channel": "in-app", "cadence": "evening-before" },
+		{ "id": "frost-warning", "channel": "in-app", "cadence": "evening-before" }
+	],
+	"intents": [],
+	"deviceCapabilities": [],
+	"palette": { "entries": [], "search": [] },
+	"export": []
+}

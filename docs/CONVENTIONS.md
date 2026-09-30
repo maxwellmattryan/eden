@@ -46,14 +46,14 @@ The front matter is the summary; the first H2 starts the content. `depends-on` l
 
 - Update `docs/INDEX.md` in the same change as any doc you add, rename, or whose status you change. INDEX status must equal the doc's front matter.
 - Decisions live in `docs/product/decisions.md` with ids (`D-n` decided, `OQ-n` open). Docs cite ids; they never restate a decision or an open question. A decision is never deleted or silently rewritten: a superseded entry stays in place with a "superseded by D-n" note.
-- Every fact type, entity type and primitive kind has a row in `docs/product/substrate/registry.md` with a category, an owner and a tier. Declared AI reads, grants and audit entries reference registry ids only. Kind ids carry no domain prefix and no dot.
+- Every fact type, entity type and primitive kind has a row in `docs/product/substrate/registry.md` with a category, an owner and a tier, and the same row in a manifest; `yarn registry:check` fails when the two differ. Declared AI reads, grants and audit entries reference registry ids only. Kind ids carry no domain prefix and no dot.
 - Never duplicate substrate content in a domain doc. Link it.
 - No domain doc references another domain's entity except through a substrate primitive, a fact, an intent, a signal, or a typed entity link.
 - Vocabulary is fixed in `docs/product/glossary.md`. In particular: "event" is the calendar primitive, pub/sub messages are "signals", the T3 attachment store is the "Vault", the per-user store is the "workspace".
 - Metaphor policy: domains carry themed display names with a plain subtitle; substrate and utility names stay plain. See the glossary before naming anything.
 - Filenames are kebab-case. Split a doc that passes roughly 400 lines.
 - Substrate docs tag sections as Phase 1 or later. Manifest fields no Phase 1 domain consumes are marked planned.
-- Generated files are never hand-edited: the kit's `src/lib/styles/*`, `tokens/tokens.ts`, `tokens/tokens-report.md`, `icons/icons.ts` and `.storybook/preview-head.html`. Change `tokens.json` or `icon-list.json` and run the generator; CI checks for drift.
+- Generated files are never hand-edited: the kit's `src/lib/styles/*`, `tokens/tokens.ts`, `tokens/tokens-report.md`, `icons/icons.ts` and `.storybook/preview-head.html`, and the registry's `packages/shared/src/registry/generated.ts` and `src-tauri/src/substrate/registry_generated.rs`. Change `tokens.json`, `icon-list.json` or a domain's `manifest.json` and run the generator; CI checks for drift.
 - Code conventions live in `docs/engineering/ui-kit.md`. This file holds doc conventions only.
 - Never commit or push unless the owner explicitly asks. Changes stay in the working tree until the owner commits them; an instruction to commit covers that one commit only.
 - Commits are authored solely by the repo owner. No co-author trailers, no generated-with footers.

@@ -1,0 +1,50 @@
+{
+	"id": "toolbench",
+	"phase": 1,
+	"sidebar": { "group": "shell", "order": 10, "visible": true },
+	"tabs": ["ideas", "projects", "lab", "studio", "notes"],
+	"resources": {
+		"facts": [
+			{ "id": "skill", "tier": "T1" },
+			{ "id": "owned-hardware", "tier": "T1" },
+			{ "id": "preferred-tool", "tier": "T1" }
+		],
+		"entities": [
+			{ "id": "idea", "tier": "T1" },
+			{ "id": "project", "tier": "T1" },
+			{ "id": "device", "tier": "T2" },
+			{ "id": "parts-list", "tier": "T1" },
+			{ "id": "sketch", "tier": "T1" },
+			{ "id": "note", "tier": "T1" },
+			{ "id": "brainstorm-session", "tier": "T1" }
+		],
+		"kinds": [{ "id": "render", "primitive": "attachment", "tier": "T0" }]
+	},
+	"reads": [],
+	"widgets": [
+		{ "id": "resurfaced-idea", "sizes": ["s"], "default": true, "reads": ["idea"] },
+		{ "id": "active-projects", "sizes": ["m"], "default": true, "reads": ["project"] },
+		{ "id": "recent-renders", "sizes": ["m"], "reads": ["sketch", "render"], "planned": true },
+		{ "id": "lab-status", "sizes": ["s"], "reads": ["device"], "planned": true }
+	],
+	"quickActions": [{ "id": "capture-idea", "label": "domains.toolbench.ideas.capture", "icon": "lightbulb" }],
+	"captureSources": [],
+	"tools": [
+		{ "id": "brainstorm", "access": "read", "reads": ["idea", "skill", "preferred-tool", "owned-hardware"] },
+		{ "id": "critique", "access": "read", "reads": ["idea", "project"] },
+		{ "id": "expand-to-plan", "access": "write-draft", "reads": ["idea", "project", "task"] },
+		{ "id": "find-similar", "access": "read", "reads": ["idea", "project", "note"] },
+		{ "id": "estimate-parts-cost", "access": "read", "reads": ["parts-list"] },
+		{ "id": "summarize-project", "access": "read", "reads": ["project", "task"] },
+		{ "id": "draft-sketch-scaffold", "access": "write-draft", "reads": ["sketch", "preferred-tool"] }
+	],
+	"signals": ["idea.stale", "project.updated"],
+	"notificationKinds": [{ "id": "stale-idea-nudge", "channel": "in-app", "cadence": "weekly", "default": false }],
+	"intents": ["toolbench.open-idea"],
+	"deviceCapabilities": [],
+	"palette": {
+		"entries": [{ "verb": "run", "quickAction": "capture-idea" }],
+		"search": ["idea", "project", "note"]
+	},
+	"export": ["idea", "project", "device", "parts-list", "sketch", "note", "brainstorm-session"]
+}

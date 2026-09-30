@@ -55,7 +55,7 @@ Never-do list: never sends coordinates finer than city level (D-60) to a model o
 
 **Mobile (Phase 2)**: the same view as a tab candidate; Sky is pinned by default.
 
-**Garden widgets**: `weather-now` (S, M; default on), `week-outlook` (M), `sun-moon` (S), `good-day-for` (S).
+**Garden widgets**: `weather-now` (S, M; default on), `week-outlook` (M), `sun-and-moon` (S), `good-day-for` (S).
 
 **Palette**: go to Sky, "weather in <place>".
 

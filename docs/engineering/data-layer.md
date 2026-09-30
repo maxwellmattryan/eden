@@ -1,7 +1,7 @@
 ---
 title: Data layer
 status: draft
-summary: The workspace database and everything over it: the SQLCipher file and its key on each platform, the schema and its conventions, the append-only migrations, stamps and ids, the registry seed, the IPC boundary command by command, the frontend module and its browser fallback, how a store sits on rows, the export bundle, the import, and how it is tested.
+summary: The workspace database and everything over it: the SQLCipher file and its key on each platform, the schema and its conventions, the append-only migrations, stamps and ids, the registry, the IPC boundary command by command, the frontend module and its browser fallback, how a store sits on rows, the export bundle, the import, and how it is tested.
 read-this-if: You are reading or writing the owner's data from Rust or from an app, adding a table, a migration, a command or an entity type, moving a store onto rows, or touching export, import or the database key.
 depends-on: [product/substrate/data, product/substrate/primitives, product/substrate/registry, engineering/app-scaffold]
 updated: 2026-09-29
@@ -11,7 +11,7 @@ updated: 2026-09-29
 
 | built | not yet |
 |---|---|
-| the encrypted database and its key providers; the schema; stamps, ids and URIs; entities, the four primitives, links, snapshots, batches; the commands and `@eden/shared/data`; Hearth and Toolbench on rows; export and import, full and per domain; Settings → Sync and data | facts, grants, signals, audit and the Vault (their own issues); the registry generated from manifests; scheduled backups (they need the scheduler); sync (Phase 3); the mobile interface for export and import; a recovery screen for a database that will not open |
+| the encrypted database and its key providers; the schema; stamps, ids and URIs; entities, the four primitives, links, snapshots, batches; the commands and `@eden/shared/data`; Hearth and Toolbench on rows; export and import, full and per domain; Settings → Sync and data | facts, grants, signals, audit and the Vault (their own issues); scheduled backups (they need the scheduler); sync (Phase 3); the mobile interface for export and import; a recovery screen for a database that will not open |
 
 The Garden's feed and Sky's mirror stay in the document store (`engineering/app-scaffold.md`, "Persistence"): they are this device's, and out of every export.
 
@@ -100,9 +100,9 @@ The clock lives in `meta` and ticks once for each logical write, inside the writ
 
 Ids made within one process only ever grow, so the order of ids is the order of creation, and a query returns rows by id. A create accepts an id the caller made: that is how a store shows a row before the write returns. The Rust and the TypeScript implementations are tested against the same vectors.
 
-## The registry seed
+## The registry
 
-`substrate/registry.rs` lists the Phase 1 rows of `product/substrate/registry.md` by hand: every entity type and every kind, with its owner. A create names a registered type or kind or is refused. A per-domain bundle holds what the registry says the domain owns. An import accepts any well-formed id, so a bundle from a newer build loses nothing; the types this build does not know are named in the import's summary. The seed is replaced when the registry is generated from the domains' manifests.
+`substrate/registry.rs` answers from the rows in `substrate/registry_generated.rs`, which `yarn registry` writes from the domains' manifests and checks against `product/substrate/registry.md` (`engineering/domain-module.md`): every fact type, entity type and kind, with its owner, its tier and its phase. A create names a live type or kind, one of Phase 1, or is refused. A per-domain bundle holds what the registry says the domain owns. An import accepts any well-formed id, so a bundle from a newer build loses nothing; the types this build does not know are named in the import's summary.
 
 ## The IPC boundary
 
@@ -158,7 +158,7 @@ Every write records what it changed (`substrate/changes.rs`: the URI and one of 
 | `legacy.ts` | the one-time import of an old document |
 | `text.ts` | CSV and Markdown for the formats made for reading |
 
-**The browser fallback.** `yarn dev:web` serves the app without the crate. There each call goes to the engine, which keeps one JSON document in localStorage under `eden:data:v1` and follows the crate's rules with real ids and stamps, so a store cannot tell the difference. It differs in three ways: it does not know the registry of entity types and accepts any well-formed one, it cannot attach a file, and it cannot write or read a bundle (both reject with `unavailable`). It is a second implementation of the API, so a rule added to the crate is added to the engine and to both test suites.
+**The browser fallback.** `yarn dev:web` serves the app without the crate. There each call goes to the engine, which keeps one JSON document in localStorage under `eden:data:v1` and follows the crate's rules with real ids and stamps, so a store cannot tell the difference. It reads the same registry (`@eden/shared/registry`), so it refuses the types and the kinds the crate refuses. It differs in two ways: it cannot attach a file, and it cannot write or read a bundle (both reject with `unavailable`). It is a second implementation of the API, so a rule added to the crate is added to the engine and to both test suites.
 
 ### A store on rows
 

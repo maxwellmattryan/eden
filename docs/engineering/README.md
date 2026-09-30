@@ -16,6 +16,7 @@ Engineering started with the UI kit (D-43) ahead of the rest of the docs reachin
 - The UI kit: location, exports, tokens pipeline, conventions, Storybook, gates (`engineering/ui-kit.md`).
 - The per-component contract: props, bindables, callbacks, snippets, stories (`engineering/ui-kit-components.md`).
 - The monorepo layout: `apps/desktop`, `apps/mobile`, `packages/ui-kit`, `packages/shared` and the one crate at `src-tauri` with the `desktop` and `mobile` features, plus where a domain's code goes on each side (D-51, D-53, `engineering/app-scaffold.md`).
+- The domain module: the manifest as data, the bindings an app adds, the registry generated from the manifests and checked at build time, the functions the shell composes itself with, and isolation by lint (D-68, `engineering/domain-module.md`).
 - Release channels, updater signing, CI and CD, following Crate's release strategy (D-52, `engineering/release.md`).
 - The database: one SQLCipher file with its key per platform, the primitive tables and one table for every domain entity (D-67), tombstones and hybrid logical clocks from day one, mirrors flagged, migrations append-only as in Crate (`engineering/data-layer.md`).
 - The IPC boundary: the substrate API as commands, and the module the apps call them through (`engineering/data-layer.md`, "The IPC boundary").
@@ -23,8 +24,6 @@ Engineering started with the UI kit (D-43) ahead of the rest of the docs reachin
 
 ## Questions the engineering docs must answer
 
-- The domain module structure: how a manifest is expressed in code, how a domain's Svelte views, stores, Rust models, services and commands are laid out, and how the shell composes them.
-- The resource registry as code: generated from manifests, validated at build time, the source for grant and audit checks.
 - The Vault: separate store, per-item keys, keychain and Secure Enclave, biometric session, the tests that prove T3 never crosses the AI boundary.
 - The AI runtime: provider adapters, the sidecar pattern from Forge for the Claude Agent SDK, the context-pack assembler with declared reads, the scrub step, budgets, the audit log.
 - Sync: Crate's client-side merge over blobs, extended with end-to-end encryption and a passphrase-derived key; the vendor-agnostic backend trait.
