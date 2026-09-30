@@ -166,12 +166,14 @@
 	}
 	if (given) choose(given.type as LiveFactId)
 
-	function back() {
-		if (editing) {
-			open = false
-			return
-		}
-		type = undefined
+	/** Whether the quiet button steps back to the list of types: only while adding, once a type is chosen. On the
+	 * list itself, and when editing a fact, there is nothing behind the sheet's step, so the button cancels. */
+	const canStepBack = $derived(type !== undefined && !editing)
+
+	/** The quiet button: back to the list of types, or out of the sheet. Its label and what it does share one test. */
+	function leave() {
+		if (canStepBack) type = undefined
+		else open = false
 	}
 
 	function save() {
@@ -256,8 +258,8 @@
 		<div class="actions">
 			<Button
 				variant="quiet"
-				label={type && !editing ? $t('profile.editor.back') : $t('profile.editor.cancel')}
-				onclick={back}
+				label={canStepBack ? $t('profile.editor.back') : $t('profile.editor.cancel')}
+				onclick={leave}
 			/>
 			{#if type}
 				<Button variant="primary" label={$t('profile.editor.save')} icon="check" disabled={!canSave} onclick={save} />
