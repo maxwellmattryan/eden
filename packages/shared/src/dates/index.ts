@@ -138,6 +138,13 @@ export function formatDate(iso: string, lang: string): string {
 	return new Intl.DateTimeFormat(lang, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(iso))
 }
 
+/** A calendar date (`YYYY-MM-DD`) as a short line, "30 Sept", whatever timezone the device is in. */
+export function formatDateOf(isoDate: string, lang: string): string {
+	return new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(
+		new Date(`${isoDate}T12:00:00Z`)
+	)
+}
+
 /** Whether an instant fell today, yesterday, or earlier, in local time. */
 export function relativeDay(iso: string): 'today' | 'yesterday' | 'earlier' {
 	const day = toIsoDate(new Date(iso))

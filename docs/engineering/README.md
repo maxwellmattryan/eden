@@ -21,6 +21,7 @@ Engineering started with the UI kit (D-43) ahead of the rest of the docs reachin
 - The database: one SQLCipher file with its key per platform, the primitive tables and one table for every domain entity (D-67), tombstones and hybrid logical clocks from day one, mirrors flagged, migrations append-only as in Crate (`engineering/data-layer.md`).
 - The IPC boundary: the substrate API as commands, and the module the apps call them through (`engineering/data-layer.md`, "The IPC boundary").
 - Export and import: the bundle's layout, merge and replace (`engineering/data-layer.md`, "The bundle").
+- The grant store and the egress ledger: the check every read and confirm asks, what stays on a device, what Eden counts as bytes out (D-70, D-71, `engineering/data-layer.md`, "Grants", "The egress ledger").
 
 ## Questions the engineering docs must answer
 

@@ -47,6 +47,9 @@ export interface AppInfo {
 	environment: string
 	isDev: boolean
 	dataDir: string
+	/** Where the updater asks for the latest build, so the egress ledger can count the check; `null` in development
+	 * and in a browser. */
+	updaterEndpoint: string | null
 }
 
 export type DiagnosticLevel = 'error' | 'warning'

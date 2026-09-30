@@ -1,9 +1,6 @@
 // The data layer as the apps call it (docs/engineering/data-layer.md, "The IPC boundary"): under Tauri each function
 // is one command of the crate, and in a plain browser the same call goes to the engine over localStorage.
-import { invoke } from '@tauri-apps/api/core'
-import { isTauri } from '../api/tauri.js'
-import { createEngine, type Engine } from './engine.js'
-import { DataError } from './errors.js'
+import { call } from './call.js'
 import type {
 	AttachInput,
 	AttachmentPatch,
@@ -30,20 +27,6 @@ import type {
 	TaskPatch,
 	TaskRow,
 } from './types.js'
-
-let engine: Engine | undefined
-
-/** The engine over localStorage, made on first use. It rejects where there is no storage at all. */
-function fallback(): Engine {
-	if (typeof localStorage === 'undefined') throw new DataError('unavailable', 'no storage to keep the data in')
-	return (engine ??= createEngine(localStorage))
-}
-
-/** The command under Tauri, the engine elsewhere; the engine's errors reject as the command's would. */
-async function call<T>(command: string, args: Record<string, unknown>, local: (engine: Engine) => T): Promise<T> {
-	if (isTauri()) return invoke<T>(command, args)
-	return local(fallback())
-}
 
 export function createEntity<T extends object>(input: EntityInput<T>): Promise<Entity<T>> {
 	return call('create_entity', { input }, (engine) => engine.createEntity(input))

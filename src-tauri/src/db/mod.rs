@@ -127,6 +127,8 @@ mod tests {
             "places",
             "attachments",
             "links",
+            "grants",
+            "egress",
         ] {
             assert!(table_exists(&conn, table), "expected the table `{table}`");
         }

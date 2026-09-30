@@ -28,6 +28,7 @@
 	import { shell, shortcutPositions, sidebarGroups, type SidebarItem } from '@eden/shared/manifest'
 	import { rememberPlace, rememberScroll, scrollOf, tabOf } from '@eden/shared/navigation'
 	import { declarations, manifestFor } from '$lib/domains'
+	import { grants } from '$lib/shell/grants.svelte'
 	import { weather } from '@eden/shared/weather'
 	import { formatTime } from '@eden/shared/dates'
 	import { detectOs, formatShortcut } from '@eden/shared/shortcuts'
@@ -156,6 +157,7 @@
 			checkForUpdate().catch(() => null)
 			timer = setInterval(() => checkForUpdate().catch(() => null), UPDATE_INTERVAL)
 			void weather.load().catch(() => null)
+			void grants.load()
 		})()
 		const skyTimer = setInterval(() => void weather.load().catch(() => null), WEATHER_INTERVAL)
 		return () => {

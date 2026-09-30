@@ -2,11 +2,22 @@
 // database; this is the same API over one JSON document in the storage it is given, with real ids and real stamps,
 // so a store cannot tell the difference. It follows the crate's rules (`src-tauri/src/substrate/*`), the registry
 // among them, with one exception: it cannot attach a file, because a browser has no path to copy from.
+import { todayIso } from '../dates/index.js'
+import { VAULT_AI, type EgressQuery, type EgressRow } from '../egress/types.js'
+import { checkShape, decide, validateGrant } from '../grants/rules.js'
+import {
+	NEVER_AUTOMATED,
+	type Grant,
+	type GrantCheck,
+	type GrantDecision,
+	type GrantInput,
+	type GrantQuery,
+} from '../grants/types.js'
 import { isEntityType, kindsOf } from '../registry/index.js'
 import { DataError } from './errors.js'
 import { formatStamp, tick, type Hlc } from './hlc.js'
 import { createIdGenerator, isUlid } from './ulid.js'
-import { parseUri, toUri } from './uri.js'
+import { isResourceId, parseUri, toUri } from './uri.js'
 import {
 	RELATIONS,
 	type BatchOp,
@@ -44,7 +55,12 @@ export interface EngineOptions {
 	newId?: () => string
 	/** This device's node; a random one is made and kept when it is left out. */
 	node?: number
+	/** The local day the ledger files a request under; today when it is left out. */
+	today?: () => string
 }
+
+/** How long a day stays in the ledger, as in the crate. */
+export const EGRESS_RETENTION_DAYS = 90
 
 type Fields = Record<string, unknown>
 type StoredRow = Omit<Row, 'links'> & Fields
@@ -54,6 +70,10 @@ interface State {
 	markers: string[]
 	rows: Record<string, StoredRow>
 	links: Link[]
+	/** The grant store (`grants.rs`), revocations included. */
+	grants: Grant[]
+	/** The egress ledger (`egress.rs`), one row per destination and day. */
+	egress: EgressRow[]
 }
 
 /**
@@ -153,10 +173,18 @@ export type Engine = ReturnType<typeof createEngine>
 export function createEngine(storage: EngineStorage, options: EngineOptions = {}) {
 	const now = options.now ?? Date.now
 	const newId = options.newId ?? createIdGenerator()
+	const today = options.today ?? todayIso
 
 	function fresh(): State {
 		const node = options.node ?? ((crypto.getRandomValues(new Uint32Array(1))[0] ?? 0) | 1) >>> 0
-		const state: State = { clock: { wallMs: 0, counter: 0, node }, markers: [], rows: {}, links: [] }
+		const state: State = {
+			clock: { wallMs: 0, counter: 0, node },
+			markers: [],
+			rows: {},
+			links: [],
+			grants: [],
+			egress: [],
+		}
 		// what the first migration seeds in the crate
 		const stamp = formatStamp({ wallMs: 0, counter: 0, node: 0 })
 		state.rows[LOCAL_CALENDAR_SOURCE] = {
@@ -171,7 +199,12 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 		if (stored) {
 			try {
 				const state = JSON.parse(stored) as State
-				if (isObject(state.rows) && Array.isArray(state.links)) return state
+				if (isObject(state.rows) && Array.isArray(state.links)) {
+					// A document from before the grant store and the ledger has neither; it reads as if it had them empty.
+					state.grants ??= []
+					state.egress ??= []
+					return state
+				}
 			} catch {
 				// An unreadable document is a fresh start; this is a preview, not the owner's workspace.
 			}
@@ -536,5 +569,128 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 					.sort((a, b) => byText(a.owner, b.owner) || byText(a.uri, b.uri) || byText(a.relation, b.relation))
 			)
 		},
+
+		// The grant store (`grants.rs`, D-70): the crate's rules, from `../grants/rules.js`.
+
+		/** Gives a grant. A standing or session grant that is already there is renewed rather than doubled. */
+		grant(input: GrantInput): Grant {
+			const refusal = validateGrant(input)
+			if (refusal) throw new DataError(refusal[0], refusal[1])
+			return write((state) => {
+				const narrowing = input.narrowing == null ? null : structuredClone(input.narrowing)
+				if (input.lifetime !== 'per-request') {
+					const existing = state.grants.find(
+						(grant) =>
+							!grant.deletedAt &&
+							grant.lifetime !== 'per-request' &&
+							grant.subject === input.subject &&
+							grant.resourceType === input.resourceType &&
+							grant.resource === input.resource &&
+							grant.access === input.access
+					)
+					if (existing) {
+						existing.lifetime = input.lifetime
+						existing.narrowing = narrowing
+						existing.origin = input.origin
+						existing.updatedAt = stamp(state)
+						return structuredClone(existing)
+					}
+				}
+				if (input.id !== undefined && !isUlid(input.id)) throw invalid(`not an id: ${JSON.stringify(input.id)}`)
+				const id = input.id ?? newId()
+				if (state.grants.some((grant) => grant.id === id))
+					throw new DataError('grant:invalid', `the id is taken: ${id}`)
+				const at = stamp(state)
+				const grant: Grant = {
+					uri: toUri('grant', id),
+					id,
+					subject: input.subject,
+					resource: input.resource,
+					resourceType: input.resourceType,
+					access: input.access,
+					lifetime: input.lifetime,
+					narrowing,
+					origin: input.origin,
+					createdAt: at,
+					updatedAt: at,
+					deletedAt: null,
+				}
+				state.grants.push(grant)
+				return structuredClone(grant)
+			})
+		},
+
+		/** Ends a grant. Revoking a revoked grant changes nothing. */
+		revoke(id: string): Grant {
+			return write((state) => {
+				const grant = state.grants.find((entry) => entry.id === id)
+				if (!grant) throw notFound(`grant ${id}`)
+				if (!grant.deletedAt) {
+					grant.updatedAt = stamp(state)
+					grant.deletedAt = grant.updatedAt
+				}
+				return structuredClone(grant)
+			})
+		},
+
+		/** The grants, by id: the live ones unless the query asks for the revoked ones too. */
+		queryGrants(filter: GrantQuery = {}): Grant[] {
+			return structuredClone(
+				load()
+					.grants.filter((grant) => filter.includeRevoked || !grant.deletedAt)
+					.filter((grant) => !filter.subject || grant.subject === filter.subject)
+					.filter((grant) => !filter.resource || grant.resource === filter.resource)
+					.filter((grant) => !filter.resourceType || grant.resourceType === filter.resourceType)
+					.sort((a, b) => byText(a.id, b.id))
+			)
+		},
+
+		/** Whether the subject may do this now, and by what right. */
+		checkGrant(check: GrantCheck): GrantDecision {
+			if (!(NEVER_AUTOMATED as readonly string[]).includes(check.resource)) {
+				const refusal = checkShape(check)
+				if (refusal) throw new DataError(refusal[0], refusal[1])
+			}
+			return decide(check, load().grants)
+		},
+
+		// The egress ledger (`egress.rs`, D-71): this browser's, by destination and local day.
+
+		/** Counts one request to the destination today, with the bytes it hands over. */
+		recordEgress(destination: string, bytesOut: number): void {
+			if (destination === VAULT_AI) throw new DataError('egress:never', 'nothing in the Vault goes to a model')
+			if (!isResourceId(destination)) {
+				throw new DataError('egress:invalid', `not a destination: ${JSON.stringify(destination)}`)
+			}
+			write((state) => {
+				const day = today()
+				const first = shiftDay(day, -EGRESS_RETENTION_DAYS)
+				state.egress = state.egress.filter((row) => row.day >= first)
+				const row = state.egress.find((entry) => entry.destination === destination && entry.day === day)
+				if (row) {
+					row.requests += 1
+					row.bytesOut += Math.max(0, Math.round(bytesOut))
+				} else {
+					state.egress.push({ destination, day, requests: 1, bytesOut: Math.max(0, Math.round(bytesOut)) })
+				}
+			})
+		},
+
+		/** The rows within the days asked for, the latest day first and the destinations in order within it. */
+		queryEgress(filter: EgressQuery = {}): EgressRow[] {
+			return structuredClone(
+				load()
+					.egress.filter((row) => !filter.from || row.day >= filter.from)
+					.filter((row) => !filter.to || row.day <= filter.to)
+					.sort((a, b) => byText(b.day, a.day) || byText(a.destination, b.destination))
+			)
+		},
 	}
+}
+
+/** An ISO date `days` from another, in local time. */
+function shiftDay(isoDate: string, days: number): string {
+	const [y, m, d] = isoDate.split('-').map(Number)
+	const date = new Date(y ?? 1970, (m ?? 1) - 1, (d ?? 1) + days)
+	return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }

@@ -614,6 +614,65 @@
 				"export": "The archive could not be written."
 			}
 		},
+		"privacy": {
+			"tiers": {
+				"label": "How sensitive data is treated",
+				"help": "Every fact, entity and kind carries one tier, set once in the registry and enforced everywhere: storage, sync, export and the Gardener.",
+				"t0": {
+					"name": "Harmless",
+					"text": "Preferences and public facts: cuisines, recipes, stock, forecasts. The Gardener may read them when a tool declares them."
+				},
+				"t1": {
+					"name": "Personal",
+					"text": "Ideas, notes, workouts, your home area, calendar events. Read the same way."
+				},
+				"t2": {
+					"name": "Sensitive",
+					"text": "Allergies, body metrics, medical appointments, the home Place. The Gardener sees one only under a grant you give."
+				},
+				"t3": {
+					"name": "Restricted",
+					"text": "Keys, tokens, identity documents, account numbers. Kept in the Vault or the keychain and never shown to a model."
+				}
+			},
+			"egress": {
+				"label": "What left this device",
+				"help": "Every request Eden made in the last seven days, by where it went and the day. Bytes out count the request's address and body, not its headers; requests are counted apart. Apple's WeatherKit and the updater add their own traffic around what Eden hands them.",
+				"retention": "The ledger keeps ninety days and stays on this device.",
+				"columns": {
+					"destination": "Destination",
+					"day": "Day",
+					"requests": "Requests",
+					"bytes": "Bytes out"
+				}
+			},
+			"destinations": {
+				"open-meteo": "Open-Meteo",
+				"open-meteo-air-quality": "Open-Meteo Air Quality",
+				"open-meteo-geocoding": "Open-Meteo Geocoding",
+				"nws": "National Weather Service",
+				"weatherkit": "Apple WeatherKit",
+				"updater": "Updates",
+				"vault-ai": "Vault → AI"
+			},
+			"never": {
+				"label": "Never automated",
+				"help": "No integration, model or plugin can be granted these, whatever you allow elsewhere.",
+				"items": {
+					"messages": "Sending email or messages as you",
+					"payments": "Payments and transfers",
+					"deleteExternal": "Deleting data in another service",
+					"externalSettings": "Changing account settings in another service",
+					"acceptTerms": "Accepting terms on your behalf"
+				}
+			},
+			"grants": {
+				"label": "Grants",
+				"help": "Every read and confirm already consults the grant store. The list, with revoke and history, arrives later.",
+				"count": "{count, plural, =0 {No standing grants yet.} one {# standing grant.} other {# standing grants.}}"
+			},
+			"error": "The ledger could not be read."
+		},
 		"placeholder": {
 			"title": "Not built yet",
 			"text": "This tab arrives with its substrate."

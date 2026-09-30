@@ -28,7 +28,7 @@ Each screen below lists: id, platform, purpose, must show, primary actions, stat
 | `inbox` | both | notifications | cards by domain and day, inline actions | open, snooze, clear | empty | the two unread cards |
 | `profile` | desktop | What Eden knows about me | facts by domain, provenance, "used by N requests", lock glyphs on T2 | add, edit, delete | empty | the facts table |
 | `grants-ledger` | desktop | permissions (Phase 2 UI) | grants by subject, revoke, history | revoke | | the grants list |
-| `egress-ledger` | desktop | bytes out by destination | a table by destination and day; the Vault → AI row at zero | | | provider, Open-Meteo, Google |
+| `egress-ledger`, built in `apps/desktop` (Settings → Privacy) | desktop | bytes out by destination | a table by destination and day; the Vault → AI row at zero | | | provider, Open-Meteo, Google |
 | `audit-log` | desktop | Gardener requests | one row per request; expand to registry ids and tools | | | the audit entry |
 | `settings-*` | both | each tab in `product/substrate/settings-utilities.md` | the tab's contents | | | |
 | `vault` | both | T3 attachments | count and lock; after auth, the list | open, share, add | locked | one identity document |

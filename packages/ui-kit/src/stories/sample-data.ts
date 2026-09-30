@@ -305,6 +305,14 @@ export const audit = {
 	outcome: 'ok',
 }
 
+/** The egress ledger for the audit day (design/sample-data.md, "Audit and grants"): where bytes went, by destination. */
+export const egress = [
+	{ destination: 'Anthropic (Hearth chat)', day: '09-30', requests: 4, bytesOut: '18.2 kB' },
+	{ destination: 'Open-Meteo', day: '09-30', requests: 12, bytesOut: '41.0 kB' },
+	{ destination: 'Google Work', day: '09-30', requests: 2, bytesOut: '3.1 kB' },
+	{ destination: 'Vault → AI', day: '09-30', requests: 0, bytesOut: '0 B' },
+]
+
 export const integrations = [
 	{ id: 'google-work', label: 'Google Work', status: 'healthy' as const, detail: 'Synced 07:38' },
 	{ id: 'open-meteo', label: 'Open-Meteo', status: 'healthy' as const, detail: 'Forecast from 07:40' },

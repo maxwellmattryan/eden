@@ -3,6 +3,7 @@ import {
 	ago,
 	dayOfMonth,
 	formatAgo,
+	formatDateOf,
 	formatHour,
 	hourOfDay,
 	formatMoment,
@@ -91,5 +92,12 @@ describe('ago', () => {
 		expect(formatAgo(before(30 * 1000), 'en', NOW)).toBe('30 seconds ago')
 		expect(formatAgo(NOW, 'en', NOW)).toBe('now')
 		expect(formatAgo(before(5 * 60 * 1000), 'ja', NOW)).toBe('5 分前')
+	})
+})
+
+describe('formatDateOf', () => {
+	it('renders the calendar date whatever the timezone', () => {
+		expect(formatDateOf('2026-09-29', 'en')).toMatch(/^29 Sept?$|^Sept? 29$/)
+		expect(formatDateOf('2026-01-01', 'ja')).toBe('1月1日')
 	})
 })

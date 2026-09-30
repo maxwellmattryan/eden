@@ -110,6 +110,8 @@ Inbox (unread 2): "Spinach and avocados expire tomorrow" (Hearth), "Showers from
 
 Audit entry: 09-30 07:31, surface Hearth chat, model claude-sonnet, read `stock-item` 22, `recipe` 3, `dietary-preference` 1, `allergy` 2, `medical-dietary-restriction` 1, tool `suggest-recipes` read, 3 120 tokens in, 410 out, 1.1 cents, outcome ok. Grants: `allergy` read standing (onboarding), `medical-dietary-restriction` read standing (onboarding), camera on this device, Google "Work" calendar read (desktop only; the phone shows "granted, not connected here"). Budget: 2.84 of 10.00 USD this month.
 
+Egress ledger for 09-30: Anthropic (Hearth chat) 4 requests, 18.2 kB out; Open-Meteo 12 requests, 41.0 kB; Google Work 2 requests, 3.1 kB; Vault → AI 0 requests, 0 B.
+
 ## Japanese screenshots
 
 Sidebar: 今日, 庭, 台所, 空, 工房, 暦, 活力, 聖域, 野原, 庭師, 設定. The daily line in Japanese: 「足るを知る」.

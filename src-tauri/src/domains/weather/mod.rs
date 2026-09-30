@@ -4,8 +4,11 @@
 use std::sync::atomic::{AtomicU8, Ordering};
 
 use serde::{Deserialize, Serialize};
+use tauri::State;
 
 use crate::error::{EdenError, Result};
+use crate::substrate::egress;
+use crate::substrate::Workspace;
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 mod weatherkit;
@@ -140,8 +143,15 @@ pub fn weatherkit_status() -> WeatherKitStatus {
     }
 }
 
+/// What Eden hands Apple for one forecast, as the egress ledger counts it (D-71): the rounded coordinates and the day
+/// counts. The framework's own traffic around them is Apple's and not visible here.
+fn handed_over(latitude: f64, longitude: f64, past_days: u8, forecast_days: u8) -> u64 {
+    format!("{latitude},{longitude},{past_days},{forecast_days}").len() as u64
+}
+
 #[tauri::command]
 pub async fn weatherkit_forecast(
+    workspace: State<'_, Workspace>,
     latitude: f64,
     longitude: f64,
     past_days: u8,
@@ -153,17 +163,20 @@ pub async fn weatherkit_forecast(
         ));
     }
     let (latitude, longitude) = (rounded(latitude), rounded(longitude));
+    let (past_days, forecast_days) = (past_days.min(9), forecast_days.clamp(1, 10));
     // The bridge blocks until WeatherKit answers, so it runs off the async runtime's threads and never on the main one.
     let answer = tauri::async_runtime::spawn_blocking(move || {
-        native::forecast(
-            latitude,
-            longitude,
-            past_days.min(9),
-            forecast_days.clamp(1, 10),
-        )
+        native::forecast(latitude, longitude, past_days, forecast_days)
     })
     .await
     .map_err(EdenError::Tauri)?;
+    // The request left whether or not it was answered; a ledger that cannot be written never costs the forecast.
+    if native::COMPILED {
+        let bytes = handed_over(latitude, longitude, past_days, forecast_days);
+        if let Err(error) = workspace.write(|ctx| egress::record(ctx.conn, "weatherkit", bytes)) {
+            log::warn!("WeatherKit: the egress ledger was not written: {error}");
+        }
+    }
     let result = answer.and_then(|json| parse(&json));
     VERIFIED.store(if result.is_ok() { 1 } else { 2 }, Ordering::Relaxed);
     if let Err(error) = &result {
@@ -223,5 +236,12 @@ mod tests {
     fn rounds_coordinates_to_two_decimals() {
         assert_eq!(rounded(30.305), 30.31);
         assert_eq!(rounded(-97.7351), -97.74);
+    }
+
+    #[test]
+    fn weatherkit_bytes_are_what_eden_hands_over() {
+        // "30.31,-97.74,6,7"
+        assert_eq!(handed_over(30.31, -97.74, 6, 7), 16);
+        assert_eq!(handed_over(0.0, 0.0, 0, 1), 7);
     }
 }

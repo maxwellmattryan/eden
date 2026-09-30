@@ -18,6 +18,7 @@ use zip::write::SimpleFileOptions;
 
 use super::attachments::{hash_file, hex};
 use super::entities::{self, Entity, EntityQuery};
+use super::grants::{self, Grant, GrantsFile};
 use super::hlc::{self, Hlc};
 use super::ids::{self, Uri};
 use super::links::{self, Link};
@@ -32,6 +33,9 @@ const FORMAT_VERSION: u32 = 1;
 const MANIFEST: &str = "manifest.json";
 const README: &str = "README.md";
 const SETTINGS: &str = "settings.json";
+const GRANTS: &str = "grants.json";
+/// The type the manifest counts grants under.
+const GRANT: &str = "grant";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
@@ -170,6 +174,8 @@ struct Collected {
     counts: BTreeMap<String, u64>,
     /// The ids of the live attachments, whose files go with them.
     attachments: Vec<String>,
+    /// The grants a full bundle carries, revocations included.
+    grants: Vec<Grant>,
     schema_version: i64,
     node: String,
 }
@@ -248,6 +254,10 @@ fn collect(conn: &Connection, scope: &Scope) -> Result<Collected> {
         files: Vec::new(),
         counts: BTreeMap::new(),
         attachments: Vec::new(),
+        grants: match scope {
+            Scope::Full => grants::exportable(conn)?,
+            Scope::Domain { .. } => Vec::new(),
+        },
         schema_version: crate::db::schema_version(conn)?,
         node: format!("{:08x}", hlc::node_id(conn)?),
     };
@@ -327,7 +337,8 @@ fn readme(manifest: &Manifest) -> String {
          | `entities/*.jsonl` | one file for each type of thing a domain keeps, one row a line |\n\
          | `attachments/` | the files of the attachments, named by the id of their row |\n\
          | `friendly/` | the same data in formats made for reading: CSV and Markdown |\n\
-         | `facts.jsonl`, `grants.json`, `settings.json` | what Eden knows about you, what it may do, and your settings |\n\n\
+         | `grants.json` | the grants: who may see or do what, and the ones you ended |\n\
+         | `facts.jsonl`, `settings.json` | what Eden knows about you (empty until the profile exists), and your settings |\n\n\
          A file is only present when there is something to put in it.\n\n\
          ## Rows\n\n",
     );
@@ -390,12 +401,22 @@ pub fn export(workspace: &Workspace, request: ExportRequest) -> Result<ExportRes
     let mut collected = workspace.read(|conn| collect(conn, &scope))?;
 
     if scope == Scope::Full {
-        // Facts and grants have no store yet; the files are there so the layout does not change when they do.
+        // Facts have no store yet; the file is there so the layout does not change when they do.
         collected
             .files
             .push(("facts.jsonl".into(), Vec::new(), None));
-        let grants = serde_json::to_vec_pretty(&json!({ "grants": [] }))?;
-        collected.files.push(("grants.json".into(), grants, None));
+        // Grants leave by id with their stamps, revocations included, so a merge can tell what was ended.
+        let grants = std::mem::take(&mut collected.grants);
+        let tombstones = grants
+            .iter()
+            .filter(|grant| grant.deleted_at.is_some())
+            .count() as u64;
+        let rows = grants.len() as u64;
+        collected.counts.insert(GRANT.into(), rows - tombstones);
+        let bytes = serde_json::to_vec_pretty(&GrantsFile { grants })?;
+        collected
+            .files
+            .push((GRANTS.into(), bytes, Some((rows, tombstones))));
         if let Some(settings) = request.settings.filter(|settings| !settings.is_null()) {
             let bytes = serde_json::to_vec_pretty(&settings)?;
             collected.files.push((SETTINGS.into(), bytes, None));
@@ -728,6 +749,62 @@ fn tombstone(conn: &Connection, table: &str, id: &str, stamp: &str) -> Result<()
     Ok(())
 }
 
+/// The grants of a bundle, each checked as a row is: an id, stamps, and nothing that never leaves a device.
+fn parse_grants(bytes: &[u8]) -> Result<Vec<Grant>> {
+    let file: GrantsFile = serde_json::from_slice(bytes)
+        .map_err(|e| bundle_error("unreadable", format!("{GRANTS}: {e}")))?;
+    for grant in &file.grants {
+        grants::validate_imported(grant)
+            .map_err(|detail| bundle_error("unreadable", format!("{GRANTS}: {detail}")))?;
+    }
+    Ok(file.grants)
+}
+
+/// A grant of the bundle against the one here, by the rule rows follow. A live grant that finds its key taken by
+/// another id yields to the later of the two: the other is ended, or this one arrives ended.
+fn apply_grant(ctx: &mut WriteCtx, grant: &Grant, summary: &mut ImportSummary) -> Result<()> {
+    let conn = ctx.conn;
+    let deleted = grant.deleted_at.is_some();
+    let local = state(conn, "grants", &grant.id)?;
+    let decision = decide(
+        local
+            .as_ref()
+            .map(|(stamp, deleted)| (stamp.as_str(), *deleted)),
+        &grant.updated_at,
+        deleted,
+        true,
+    );
+    let mut row = grant.clone();
+    if !deleted && matches!(decision, Decision::Insert | Decision::Replace) {
+        if let Some((rival_id, rival_stamp)) = grants::rival(conn, grant)? {
+            let next = hlc::next(conn)?;
+            if grant.updated_at > rival_stamp {
+                tombstone(conn, "grants", &rival_id, &next)?;
+            } else {
+                row.updated_at = next.clone();
+                row.deleted_at = Some(next);
+            }
+            summary.tombstoned += 1;
+        }
+    }
+    match decision {
+        Decision::Insert | Decision::Replace => {
+            grants::put(conn, &row)?;
+            if decision == Decision::Insert {
+                summary.inserted += 1;
+            } else {
+                summary.updated += 1;
+            }
+        }
+        Decision::Tombstone => {
+            tombstone(conn, "grants", &grant.id, &grant.updated_at)?;
+            summary.updated += 1;
+        }
+        Decision::Keep => summary.skipped += 1,
+    }
+    Ok(())
+}
+
 fn apply(ctx: &mut WriteCtx, incoming: &Incoming, summary: &mut ImportSummary) -> Result<()> {
     let conn = ctx.conn;
     let table = table_for(&incoming.type_id).name;
@@ -833,6 +910,11 @@ fn clear(conn: &Connection, scope: &Scope) -> Result<Vec<String>> {
         Scope::Domain { .. } => Some(entity_types(conn, scope)?),
     };
     delete("entities", "type", types)?;
+    // A domain's bundle carries no grants, so only a replace of the whole workspace clears them; the ledger is this
+    // device's and no import touches it.
+    if *scope == Scope::Full {
+        grants::clear(conn)?;
+    }
     Ok(removed_files)
 }
 
@@ -850,6 +932,7 @@ pub fn import(workspace: &Workspace, path: &Path, mode: Mode) -> Result<ImportSu
 
     // Everything is read and checked before anything is written.
     let mut incoming = Vec::new();
+    let mut incoming_grants = Vec::new();
     let mut files = Vec::new();
     let mut settings = None;
     for file in &manifest.files {
@@ -866,6 +949,8 @@ pub fn import(workspace: &Workspace, path: &Path, mode: Mode) -> Result<ImportSu
             files.push((id.to_string(), entry(&mut archive, &file.path)?));
         } else if file.path == SETTINGS {
             settings = serde_json::from_slice(&entry(&mut archive, SETTINGS)?).ok();
+        } else if file.path == GRANTS {
+            incoming_grants = parse_grants(&entry(&mut archive, GRANTS)?)?;
         }
     }
 
@@ -910,6 +995,7 @@ pub fn import(workspace: &Workspace, path: &Path, mode: Mode) -> Result<ImportSu
             std::iter::once(row.text("updatedAt").to_string())
                 .chain(row.links.iter().map(|link| link.updated_at.clone()))
         })
+        .chain(incoming_grants.iter().map(|grant| grant.updated_at.clone()))
         .max();
     let removed_files = workspace.write(|ctx| {
         if let Some(latest) = &latest {
@@ -921,6 +1007,9 @@ pub fn import(workspace: &Workspace, path: &Path, mode: Mode) -> Result<ImportSu
         };
         for row in &incoming {
             apply(ctx, row, &mut summary)?;
+        }
+        for grant in &incoming_grants {
+            apply_grant(ctx, grant, &mut summary)?;
         }
         Ok(removed)
     })?;
@@ -940,6 +1029,9 @@ mod tests {
     use crate::db::testing::temp_dir;
     use crate::substrate::attachments::{attach, AttachInput};
     use crate::substrate::entities::EntityInput;
+    use crate::substrate::grants::{
+        Access, GrantInput, GrantQuery, Lifetime, Origin, ResourceType,
+    };
     use crate::substrate::links::LinkInput;
     use crate::substrate::primitives::{EVENT, TASK};
     use crate::substrate::rows;
@@ -964,8 +1056,27 @@ mod tests {
         }
     }
 
+    fn grant_of(
+        subject: &str,
+        resource: &str,
+        resource_type: ResourceType,
+        lifetime: Lifetime,
+    ) -> GrantInput {
+        GrantInput {
+            id: None,
+            subject: subject.into(),
+            resource: resource.into(),
+            resource_type,
+            access: Access::Read,
+            lifetime,
+            narrowing: None,
+            origin: Origin::Onboarding,
+        }
+    }
+
     /// A workspace with something of everything: rows in every table, tombstones, links live and removed, an
-    /// overlay, a mirror, and an attachment with its file.
+    /// overlay, a mirror, an attachment with its file, and grants standing, revoked, for the session and for the
+    /// device.
     fn populated(scratch: &Path) -> Workspace {
         let workspace = Workspace::in_memory();
         let photo = scratch.join("haul.jpg");
@@ -1021,6 +1132,15 @@ mod tests {
                     json!({ "kind": "todo", "title": "A private errand", "notes": "do not export" }),
                 )?;
                 rows::delete(ctx, gone["uri"].as_str().unwrap())?;
+
+                grants::grant(ctx, grant_of("anthropic", "allergy", ResourceType::Registry, Lifetime::Standing))?;
+                let ended = grants::grant(
+                    ctx,
+                    grant_of("anthropic", "medical-dietary-restriction", ResourceType::Registry, Lifetime::Standing),
+                )?;
+                grants::revoke(ctx, &ended.id)?;
+                grants::grant(ctx, grant_of("anthropic", "body-metric", ResourceType::Registry, Lifetime::Session))?;
+                grants::grant(ctx, grant_of("this-device", "camera", ResourceType::Capability, Lifetime::Standing))?;
                 Ok(dal)
             })
             .unwrap();
@@ -1166,6 +1286,7 @@ mod tests {
         assert_eq!(manifest.counts["recipe"], 1);
         assert_eq!(manifest.counts["task"], 1);
         assert_eq!(manifest.counts["forecast"], 1);
+        assert_eq!(manifest.counts[GRANT], 1);
         assert_eq!(result.counts, manifest.counts);
         let recipes = manifest
             .files
@@ -1197,6 +1318,23 @@ mod tests {
         assert_eq!(removed.iter().filter(|removed| **removed).count(), 1);
         assert_eq!(removed.len(), 2);
 
+        // The grants leave with their revocations, and never the session's or the device's.
+        let grants_file = manifest
+            .files
+            .iter()
+            .find(|file| file.path == GRANTS)
+            .unwrap();
+        assert_eq!(
+            (grants_file.rows, grants_file.tombstones),
+            (Some(2), Some(1))
+        );
+        let grants_text = text(&files, GRANTS);
+        assert!(
+            grants_text.contains("allergy") && grants_text.contains("medical-dietary-restriction")
+        );
+        assert!(!grants_text.contains("body-metric") && !grants_text.contains("camera"));
+        assert!(!grants_text.contains("session") && !grants_text.contains("capability"));
+
         assert!(text(&files, README).contains("| recipe | 1 |"));
         cleanup(&scratch, &[&workspace]);
     }
@@ -1213,7 +1351,7 @@ mod tests {
         let summary = import(&second, &scratch.join("a.zip"), Mode::Merge).unwrap();
         // The local calendar source is in every workspace, the same row: it is the one skipped.
         assert_eq!(summary.skipped, 1);
-        assert_eq!(summary.inserted, 11);
+        assert_eq!(summary.inserted, 13);
         assert_eq!((summary.updated, summary.tombstoned), (0, 0));
         assert_eq!(summary.settings, Some(json!({ "measurement": "metric" })));
         assert_eq!(summary.backup_path, None);
@@ -1255,8 +1393,17 @@ mod tests {
         assert_eq!(std::fs::read(file).unwrap(), b"not really a photo");
 
         // Importing the same bundle again changes nothing, and says so.
+        // The grants landed as they were: the standing one answers a check, the ended one stays ended.
+        let live = second
+            .read(|conn| grants::query(conn, &GrantQuery::default()))
+            .unwrap();
+        assert_eq!(live.len(), 1);
+        assert_eq!(live[0].resource, "allergy");
+        assert_eq!(count(&second, "grants"), 2);
+
+        // Importing the same bundle again changes nothing, and says so.
         let again = import(&second, &scratch.join("a.zip"), Mode::Merge).unwrap();
-        assert_eq!((again.inserted, again.updated, again.skipped), (0, 0, 12));
+        assert_eq!((again.inserted, again.updated, again.skipped), (0, 0, 14));
         cleanup(&scratch, &[&first, &second]);
     }
 
@@ -1279,7 +1426,7 @@ mod tests {
         let summary = import(&second, &scratch.join("a.zip"), Mode::Replace).unwrap();
         assert_eq!(
             (summary.inserted, summary.updated, summary.skipped),
-            (12, 0, 0)
+            (14, 0, 0)
         );
 
         // What was there went into the backup before it was cleared, and the backup is a bundle.
@@ -1648,6 +1795,175 @@ mod tests {
         }
         assert!(parse("primitives/recipe.jsonl", &line(&|_| {})).is_err());
         assert!(parse("entities/Recipe.jsonl", &line(&|_| {})).is_err());
+    }
+
+    #[test]
+    fn a_replace_clears_grants_and_leaves_the_ledger() {
+        let scratch = temp_dir("bundle-grants-replace");
+        let first = populated(&scratch);
+        export_to(&first, &scratch.join("a.zip"), Scope::Full);
+
+        let second = populated(&scratch);
+        second
+            .write(|ctx| {
+                grants::grant(
+                    ctx,
+                    grant_of(
+                        "openai",
+                        "allergy",
+                        ResourceType::Registry,
+                        Lifetime::Standing,
+                    ),
+                )?;
+                crate::substrate::egress::record_on(ctx.conn, "open-meteo", 300, "2026-09-29")
+            })
+            .unwrap();
+        let before = count(&second, "grants");
+        import(&second, &scratch.join("a.zip"), Mode::Replace).unwrap();
+
+        // What the bundle carries replaced what was here; the device's own camera grant stayed, and its ledger.
+        let all = second
+            .read(|conn| {
+                grants::query(
+                    conn,
+                    &GrantQuery {
+                        include_revoked: true,
+                        ..Default::default()
+                    },
+                )
+            })
+            .unwrap();
+        let resources: Vec<&str> = all.iter().map(|grant| grant.resource.as_str()).collect();
+        assert_eq!(all.len(), 3, "{resources:?}");
+        assert!(resources.contains(&"camera") && !resources.contains(&"body-metric"));
+        assert!(all.iter().all(|grant| grant.subject != "openai"));
+        assert!(before > all.len() as i64);
+        assert_eq!(count(&second, "egress"), 1);
+
+        // A domain's replace touches no grant.
+        let kitchen = scratch.join("kitchen.zip");
+        export_to(
+            &first,
+            &kitchen,
+            Scope::Domain {
+                domain: "kitchen".into(),
+            },
+        );
+        second
+            .write(|ctx| {
+                grants::grant(
+                    ctx,
+                    grant_of(
+                        "openai",
+                        "allergy",
+                        ResourceType::Registry,
+                        Lifetime::Standing,
+                    ),
+                )
+            })
+            .unwrap();
+        import(&second, &kitchen, Mode::Replace).unwrap();
+        assert_eq!(count(&second, "grants"), 4);
+        cleanup(&scratch, &[&first, &second]);
+    }
+
+    #[test]
+    fn two_live_grants_with_one_key_keep_the_later() {
+        let scratch = temp_dir("bundle-grant-rivals");
+        // Two devices each grant the same read, at different times, under different ids.
+        let earlier = Workspace::in_memory();
+        earlier
+            .write(|ctx| {
+                grants::grant(
+                    ctx,
+                    grant_of(
+                        "anthropic",
+                        "allergy",
+                        ResourceType::Registry,
+                        Lifetime::Standing,
+                    ),
+                )
+            })
+            .unwrap();
+        export_to(&earlier, &scratch.join("earlier.zip"), Scope::Full);
+        let later = Workspace::in_memory();
+        // A write first, so the grant's stamp is past the other device's even within the same millisecond.
+        later
+            .write(|ctx| entities::create(ctx, entity("recipe", json!({ "name": "Dal" }))))
+            .unwrap();
+        let kept = later
+            .write(|ctx| {
+                grants::grant(
+                    ctx,
+                    grant_of(
+                        "anthropic",
+                        "allergy",
+                        ResourceType::Registry,
+                        Lifetime::Standing,
+                    ),
+                )
+            })
+            .unwrap();
+
+        // The earlier one arrives at the later one's device, and yields.
+        let summary = import(&later, &scratch.join("earlier.zip"), Mode::Merge).unwrap();
+        assert_eq!((summary.inserted, summary.tombstoned), (1, 1));
+        let live = later
+            .read(|conn| grants::query(conn, &GrantQuery::default()))
+            .unwrap();
+        assert_eq!(live.len(), 1);
+        assert_eq!(live[0].id, kept.id);
+        assert_eq!(count(&later, "grants"), 2);
+
+        // The later one arrives at the earlier one's device, with the earlier one's own grant already ended.
+        export_to(&later, &scratch.join("later.zip"), Scope::Full);
+        let summary = import(&earlier, &scratch.join("later.zip"), Mode::Merge).unwrap();
+        assert!(summary.updated + summary.tombstoned >= 1);
+        assert_eq!(count(&earlier, "grants"), 2);
+        let live = earlier
+            .read(|conn| grants::query(conn, &GrantQuery::default()))
+            .unwrap();
+        assert_eq!(live.len(), 1);
+        assert_eq!(live[0].id, kept.id);
+        cleanup(&scratch, &[&earlier, &later]);
+    }
+
+    #[test]
+    fn a_bundle_with_a_device_grant_is_refused() {
+        let good = json!({
+            "uri": "eden://grant/01J9ZQ4M3T8R5V2X7Y6W1B0CDE", "id": "01J9ZQ4M3T8R5V2X7Y6W1B0CDE",
+            "subject": "anthropic", "resource": "allergy", "resourceType": "registry", "access": "read",
+            "lifetime": "standing", "narrowing": null, "origin": "onboarding",
+            "createdAt": "0000000000000001-00000000-00000001", "updatedAt": "0000000000000001-00000000-00000001",
+            "deletedAt": null,
+        });
+        let file = |change: &dyn Fn(&mut Value)| {
+            let mut grant = good.clone();
+            change(&mut grant);
+            json!({ "grants": [grant] }).to_string().into_bytes()
+        };
+        assert_eq!(parse_grants(&file(&|_| {})).unwrap().len(), 1);
+        assert!(parse_grants(br#"{ "grants": [] }"#).unwrap().is_empty());
+
+        let changes: [&dyn Fn(&mut Value); 7] = [
+            &|grant| grant["resourceType"] = json!("capability"),
+            &|grant| grant["lifetime"] = json!("session"),
+            &|grant| grant["id"] = json!("g-01"),
+            &|grant| grant["uri"] = json!("eden://grant/01J9ZQ4M3T8R5V2X7Y6W1B0CDF"),
+            &|grant| grant["updatedAt"] = json!("yesterday"),
+            &|grant| grant["deletedAt"] = json!("0000000000000009-00000000-00000001"),
+            &|grant| {
+                grant["access"] = json!("act-external");
+            },
+        ];
+        for change in changes {
+            let error = parse_grants(&file(change)).unwrap_err().to_string();
+            assert!(
+                error.starts_with("bundle:unreadable: grants.json"),
+                "{error}"
+            );
+        }
+        assert!(parse_grants(b"[]").is_err());
     }
 
     #[test]

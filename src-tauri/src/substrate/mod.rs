@@ -5,7 +5,9 @@ pub mod attachments;
 pub mod batch;
 pub mod bundle;
 pub mod changes;
+pub mod egress;
 pub mod entities;
+pub mod grants;
 pub mod hlc;
 pub mod ids;
 pub mod links;
@@ -49,10 +51,20 @@ impl Workspace {
         let db = db::open(dir)?;
         let version = db.read(db::schema_version)?;
         log::info!("Workspace open (schema version {version})");
-        Ok(Self {
+        let workspace = Self {
             db,
             dir: dir.to_path_buf(),
-        })
+        };
+        // What the last run left behind: the grants that lasted a session, and ledger days past their retention.
+        let (sessions, days) = workspace.write(|ctx| {
+            let sessions = grants::sweep_session(ctx)?;
+            let days = egress::sweep(ctx.conn, &egress::today())?;
+            Ok((sessions, days))
+        })?;
+        if sessions > 0 || days > 0 {
+            log::info!("Swept {sessions} session grants and {days} ledger rows");
+        }
+        Ok(workspace)
     }
 
     /// The app data dir.
