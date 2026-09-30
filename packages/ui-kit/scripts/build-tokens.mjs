@@ -341,6 +341,14 @@ function baseCss() {
 		'-webkit-font-smoothing: antialiased',
 		'position: relative',
 		'isolation: isolate',
+		'user-select: none',
+		'-webkit-user-select: none',
+	])
+	out +=
+		'\n/* The app is a tool, not a page: nothing selects except the text a caret can land in. Editable controls opt back in (WebKit does not let an input escape an unselectable ancestor on its own). */\n'
+	out += block('input, textarea, [contenteditable]:not([contenteditable="false"])', [
+		'user-select: text',
+		'-webkit-user-select: text',
 	])
 	out += block('::selection', ['background: var(--brand-muted)', 'color: var(--text-primary)'])
 	out +=

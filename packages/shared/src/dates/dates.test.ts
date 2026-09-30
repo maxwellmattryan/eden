@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { dayOfMonth, formatHour, hourOfDay, formatMoment, formatTime, formatWeekdayOf } from './index.js'
+import {
+	ago,
+	dayOfMonth,
+	formatAgo,
+	formatHour,
+	hourOfDay,
+	formatMoment,
+	formatTime,
+	formatWeekdayOf,
+} from './index.js'
 
 const EVENING = '2026-09-30T23:05:00Z'
 const MIDNIGHT = '2026-09-30T05:00:00Z'
@@ -57,5 +66,30 @@ describe('formatWeekdayOf', () => {
 		expect(formatWeekdayOf('2026-09-30', 'ja')).toBe('水曜日')
 		expect(formatWeekdayOf('2026-09-30', 'en', 'short')).toBe('Wed')
 		expect(dayOfMonth('2026-10-04')).toBe(4)
+	})
+})
+
+describe('ago', () => {
+	const NOW = Date.parse('2026-09-30T12:00:00Z')
+	const before = (ms: number) => NOW - ms
+
+	it('takes the coarsest whole unit that fits', () => {
+		expect(ago(before(30 * 1000), NOW)).toEqual({ value: 30, unit: 'second' })
+		expect(ago(before(5 * 60 * 1000), NOW)).toEqual({ value: 5, unit: 'minute' })
+		expect(ago(before(90 * 60 * 1000), NOW)).toEqual({ value: 1, unit: 'hour' })
+		expect(ago(before(26 * 60 * 60 * 1000), NOW)).toEqual({ value: 1, unit: 'day' })
+	})
+
+	it('reads an instant ahead of now as zero seconds', () => {
+		expect(ago(NOW + 5000, NOW)).toEqual({ value: 0, unit: 'second' })
+	})
+
+	it('writes the age in the language given', () => {
+		expect(formatAgo(before(5 * 60 * 1000), 'en', NOW)).toBe('5 minutes ago')
+		expect(formatAgo(before(60 * 60 * 1000), 'en', NOW)).toBe('1 hour ago')
+		expect(formatAgo(before(24 * 60 * 60 * 1000), 'en', NOW)).toBe('yesterday')
+		expect(formatAgo(before(30 * 1000), 'en', NOW)).toBe('30 seconds ago')
+		expect(formatAgo(NOW, 'en', NOW)).toBe('now')
+		expect(formatAgo(before(5 * 60 * 1000), 'ja', NOW)).toBe('5 分前')
 	})
 })

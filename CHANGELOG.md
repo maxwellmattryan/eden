@@ -21,4 +21,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The bundle identifier is `com.palekodama.eden` (`.dev` and `.staging` for the channels) and the download page is `eden.palekodama.studio`, now that the studio has a name (D-69)
 - Hearth and Toolbench keep their data in the workspace database, one row for each record. What they held before is brought over once on first launch and the old document is removed. A write that fails is held and sent again on retry, with the writes behind it in order

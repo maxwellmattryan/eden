@@ -58,10 +58,12 @@
 <script lang="ts">
 	// Sky's glyph is live: it follows the current conditions in the sidebar, the page header and the Now widget.
 	// Until the domain glyph family is drawn (its resting glyph is a sun peeking from behind a cloud) each condition
-	// maps to the nearest Lucide icon, and the change crossfades through Icon.
+	// maps to the nearest Lucide icon, and the change crossfades through Icon. `tooltip` shows the name on hover, the
+	// visible form of the label, where the glyph stands alone in a row (the hours strip).
 	import type { SVGAttributes } from 'svelte/elements'
 	import Icon from '../../icons/Icon.svelte'
 	import { useStrings } from '../../i18n/context.js'
+	import { tooltip as attachTooltip } from '../Tooltip/tooltip.js'
 
 	type Props = Omit<SVGAttributes<SVGSVGElement>, 'name'> & {
 		/** The current condition. */
@@ -72,12 +74,15 @@
 		size?: 'sm' | 'md' | 'lg'
 		/** The accessible name. Defaults to the condition's name, "Clear night" for a sunny night. */
 		label?: string
+		/** A tooltip on hover and keyboard focus: true shows the name, a string shows that string. */
+		tooltip?: boolean | string
 	}
 	let {
 		condition = 'partly-cloudy',
 		night = false,
 		size = 'md',
 		label,
+		tooltip = false,
 		class: className = '',
 		...rest
 	}: Props = $props()
@@ -85,6 +90,7 @@
 	const s = useStrings()
 	const name = $derived(iconFor(condition, night))
 	const text = $derived(label ?? (night && condition === 'sunny' ? s.sky.clearNight : s.sky[LABEL[condition]]))
+	const tip = $derived(tooltip === true ? text : typeof tooltip === 'string' ? tooltip : '')
 </script>
 
-<Icon {name} {size} label={text} class={className} {...rest} />
+<Icon {name} {size} label={text} class={className} {@attach attachTooltip(() => tip)} {...rest} />

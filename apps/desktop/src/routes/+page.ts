@@ -1,7 +1,11 @@
 import { redirect } from '@sveltejs/kit'
 import { resolve } from '$app/paths'
+import { lastPlace } from '@eden/shared/navigation'
+import { manifests } from '$lib/domains'
 
-// The root has no page of its own: the Garden is home (product/substrate/shell.md).
+// The root has no page of its own: the place the owner was last at, while it is still one, else the Garden, which is
+// home (product/substrate/shell.md).
 export function load() {
-	redirect(307, resolve('/garden'))
+	const known = [resolve('/today'), resolve('/garden'), ...manifests.map((manifest) => manifest.routes.href)]
+	redirect(307, lastPlace(known) ?? resolve('/garden'))
 }

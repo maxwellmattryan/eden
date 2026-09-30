@@ -40,7 +40,9 @@
 		type MenuItem,
 		type SkyFieldParams,
 	} from '@eden/ui-kit'
+	import { cubicOut } from 'svelte/easing'
 	import { openExternal } from '@eden/shared/api'
+	import { updatedLine } from '$lib/domains/weather/updated'
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { dayOfMonth, formatHour, hourOfDay, formatMoment, formatTime, formatWeekdayOf } from '@eden/shared/dates'
@@ -203,13 +205,9 @@
 			hint: $t('domains.weather.motif.hint', { values }),
 		}
 	})
-	// The sun moves with the clock, not with the forecast: the minute is read here and the readings stay the mirror's.
-	const MINUTE_MS = 60 * 1000
-	let clock = $state(Date.now())
-	$effect(() => {
-		const tick = setInterval(() => (clock = Date.now()), MINUTE_MS)
-		return () => clearInterval(tick)
-	})
+	// The sun moves with the clock, not with the forecast: the store's minute is read here and the readings stay the
+	// mirror's.
+	const clock = $derived(weather.clock)
 	/** The sun on its day: the two times as they are written, and the sentence that says where it stands. */
 	const sun = $derived.by(() => {
 		if (!weather.sun) return undefined
@@ -219,6 +217,8 @@
 		return { sunrise, sunset, now: clock, labels: values, label: $t(`domains.weather.sunArc.${state}`, { values }) }
 	})
 	const lastGood = $derived(weather.lastGood ? formatTime(weather.lastGood, format) : undefined)
+	/** How old the reading is, on the minute; it closes the sources at the foot of the page. */
+	const updated = $derived(updatedLine($t, lang))
 	/** Each day of the calendar week with everything the forecast says of it; a day without a reading has no facts. */
 	const week = $derived(
 		weather.week.map(({ date, today, day }) => {
@@ -276,7 +276,8 @@
 	const details = $derived.by<Detail[]>(() => {
 		if (!now) return []
 		const wind = speed(now.windSpeed, settings.measurement)
-		const uv = today?.uvMax ?? now.uv
+		// the reading now, not the day's peak: the week's facts carry the peak, and after sunset it reads zero
+		const uv = now.uv
 		return [
 			{
 				id: 'feels',
@@ -420,6 +421,21 @@
 		going = []
 		buttonLeaving = false
 	}
+	/**
+	 * The alerts button's place closes and opens over the settle duration (zero under reduced motion), so the control
+	 * beside it slides rather than jumps: its width and the gap after it go together, with its opacity.
+	 */
+	function collapse(node: HTMLElement) {
+		const width = node.getBoundingClientRect().width
+		const gap = parseFloat(getComputedStyle(node.parentElement ?? node).columnGap) || 0
+		const duration = parseFloat(getComputedStyle(node).getPropertyValue('--ed-duration-settle')) || 0
+		return {
+			duration,
+			easing: cubicOut,
+			css: (t: number) =>
+				`overflow: hidden; width: ${t * width}px; margin-inline-end: ${(t - 1) * gap}px; opacity: ${t}`,
+		}
+	}
 	/** The button takes the colour of the gravest alert behind it. */
 	const gravest = $derived(notices.some((notice) => notice.tone === 'danger') ? 'danger' : 'warning')
 	const about = (name: string) => $t('domains.weather.hint.about', { values: { name } })
@@ -493,6 +509,7 @@
 		if (weather.alerts.length) {
 			list.push({ id: 'alerts', icon: 'triangle-alert', text: $t('domains.weather.sources.alerts') })
 		}
+		if (updated) list.push({ id: 'updated', icon: 'clock', text: updated })
 		return list
 	})
 </script>
@@ -532,6 +549,7 @@
 				<span
 					class={['anchor', 'alerts', `alerts-${gravest}`, { 'alerts-leaving': buttonLeaving }]}
 					bind:this={alertsAnchor}
+					transition:collapse
 				>
 					{#if buttonLeaving}<Breeze onend={onbuttongone} />{/if}
 					<IconButton
@@ -560,6 +578,17 @@
 					</div>
 				</Popover>
 			{/if}
+			<!-- one control fetches everything the page polls again; the arrows turn while it does, and the tooltip says so -->
+			<span class={['anchor', { 'refresh-busy': weather.loading }]}>
+				<IconButton
+					icon="refresh-cw"
+					size="xs"
+					label={weather.loading ? $t('domains.weather.updated.loading') : $t('domains.weather.refresh')}
+					tooltip
+					aria-busy={weather.loading}
+					onclick={() => void weather.refresh({ force: true })}
+				/>
+			</span>
 		{/snippet}
 	</PageHeader>
 
@@ -654,7 +683,8 @@
 							{#each weather.hours as hour (hour.time)}
 								<li class="hour" class:hour-wet={hour.precipChance >= 50}>
 									<span class="hour-time">{formatHour(hour.time, format)}</span>
-									<SkyGlyph condition={hour.condition} night={hour.night} size="md" class="hour-glyph" />
+									<!-- the glyph is the one thing in the row without words: its name on hover -->
+									<SkyGlyph condition={hour.condition} night={hour.night} size="md" class="hour-glyph" tooltip />
 									<span class="mono">{weather.temperature(hour.temp)}°</span>
 									<span class="hour-precip"
 										>{$t('domains.weather.precip', { values: { value: hour.precipChance } })}</span
@@ -909,6 +939,15 @@
 	}
 	.anchor {
 		display: inline-flex;
+	}
+	/* The arrows turn clockwise while a refresh runs; under reduced motion the duration is zero and they stand still */
+	.refresh-busy :global(.ed-icon) {
+		animation: refresh-turn calc(var(--ed-duration-breeze) * 1.5) linear infinite;
+	}
+	@keyframes refresh-turn {
+		to {
+			transform: rotate(1turn);
+		}
 	}
 	/* Leaving: the button fades and draws in a little where it stands, and the Breeze rises beside it */
 	.alerts {

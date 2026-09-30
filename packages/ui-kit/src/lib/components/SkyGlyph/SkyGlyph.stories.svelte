@@ -56,3 +56,6 @@
 		</div>
 	{/snippet}
 </Story>
+
+<!-- The name on hover, for a glyph that stands alone in a row: the hours strip. -->
+<Story name="With a tooltip" args={{ tooltip: true }} />

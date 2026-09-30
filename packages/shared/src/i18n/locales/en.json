@@ -27,7 +27,6 @@
 		"edit": "Edit layout",
 		"quickNav": "Quick navigation",
 		"activity": "Activity",
-		"lastUpdated": "Last updated {time}",
 		"widgets": {
 			"weatherNow": "Now",
 			"today": "Today",
@@ -409,7 +408,7 @@
 				"feelsLike": "What the air feels like on skin. Wind strips heat away and humid air slows sweat from evaporating, so it can differ from the thermometer.",
 				"humidity": "Relative humidity: the water vapour in the air as a percentage of the most it can hold at this temperature. Warm air can hold more, so the same percentage means more moisture on a hot day.",
 				"dewPoint": "A temperature, not a percentage: cool the air to this point and its moisture condenses into dew. It measures the moisture actually in the air. From about 18 °C (65 °F) the air feels muggy.",
-				"uv": "The strength of the sun's skin-burning ultraviolet light at today's peak, on the World Health Organization's scale. From 3 up, protection is advised. Thin cloud lets most of it through.",
+				"uv": "The strength of the sun's skin-burning ultraviolet light right now, on the World Health Organization's scale; the week shows each day's peak. From 3 up, protection is advised. Thin cloud lets most of it through.",
 				"pressure": "The weight of the air above, adjusted to sea level so places at different heights compare. The average is about 1013 hPa (29.92 inHg); falling pressure often brings wind and rain.",
 				"visibility": "The farthest distance at which a large dark object can be seen against the sky. Below 1 km (0.6 mi) it counts as fog.",
 				"pm25": "Fine particles under 2.5 micrometres, from smoke and exhaust. Small enough to reach deep into the lungs.",
@@ -478,7 +477,13 @@
 				"message": "Couldn't reach {provider}.",
 				"lastGood": "Showing the forecast from {time}.",
 				"banner": "Offline. Showing the forecast from {time}."
-			}
+			},
+			"updated": {
+				"ago": "Last updated {ago}",
+				"justNow": "Last updated just now",
+				"loading": "Updating…"
+			},
+			"refresh": "Refresh"
 		}
 	},
 	"settings": {

@@ -29,7 +29,7 @@ Default layout in Phase 1: weather-now (Sky), today (Tasks), expiring-soon and c
 
 ## Navigation history and back
 
-Every view push goes on a history stack with back and forward, like a browser. The back affordance is a small arrow at the top left of the main area that appears only when there is somewhere to go back to, with a breadcrumb on hover. Entity URIs are deep links: opening `eden://recipe/<id>` from the feed, a notification or ⌘K pushes the recipe view. The stack restores on launch.
+Every view push goes on a history stack with back and forward, like a browser. The back affordance is a small arrow at the top left of the main area that appears only when there is somewhere to go back to, with a breadcrumb on hover. Entity URIs are deep links: opening `eden://recipe/<id>` from the feed, a notification or ⌘K pushes the recipe view. The last place restores on launch; restoring the stack itself is later.
 
 ## Status bar (Phase 1)
 
