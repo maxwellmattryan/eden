@@ -485,13 +485,13 @@ export const kitchenTools: Record<string, ToolHandler> = {
 				return { output: { error: 'Nothing to change: pass `changes`, `remove` or both.' } }
 			const missing = [...changes.map((row) => String(row.id ?? '')), ...remove].filter((id) => !kitchen.stockById(id))
 			if (missing.length) return unknown('stock item', 'stock-item', missing)
-			const placed = changes.find(
+			const misplaced = changes.find(
 				(row) => 'location' in row && !(LOCATIONS as readonly unknown[]).includes(row.location)
 			)
-			if (placed)
+			if (misplaced)
 				return {
 					output: {
-						error: `\`location\` is one of ${LOCATIONS.join(', ')}, not ${JSON.stringify(placed.location)}. Nothing was changed.`,
+						error: `\`location\` is one of ${LOCATIONS.join(', ')}, not ${JSON.stringify(misplaced.location)}. Nothing was changed.`,
 					},
 				}
 			const names = (list: string[]) => list.map((id) => ({ id, name: kitchen.stockById(id)?.name ?? '' }))
