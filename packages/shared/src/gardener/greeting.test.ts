@@ -30,10 +30,11 @@ describe('the greeting', () => {
 			const pools = locale.gardener.greeting as Record<string, Record<string, { named: string; plain: string }>>
 			expect(Object.keys(pools).sort(), lang).toEqual(Object.keys(GREETINGS).sort())
 			for (const pool of Object.keys(GREETINGS) as GreetingPool[]) {
-				expect(Object.keys(pools[pool]), `${lang} ${pool}`).toEqual(
+				const greetings = pools[pool] ?? {}
+				expect(Object.keys(greetings), `${lang} ${pool}`).toEqual(
 					Array.from({ length: GREETINGS[pool] }, (_, index) => String(index + 1))
 				)
-				for (const greeting of Object.values(pools[pool])) {
+				for (const greeting of Object.values(greetings)) {
 					expect(greeting.named).toContain('{name}')
 					expect(greeting.plain).not.toContain('{name}')
 				}

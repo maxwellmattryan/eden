@@ -147,7 +147,7 @@ export class WeatherStore {
 
 	#reading: Promise<void> | null = null
 	/** The rows Sky's types hold, as of the last read or write: what a write may have to drop. */
-	#held: Entity[] = []
+	#held: readonly Pick<Entity, 'uri' | 'type' | 'source' | 'externalId'>[] = []
 	/** The writes, one at a time, so each knows the rows the one before it left. */
 	#writing: Promise<void> = Promise.resolve()
 	#ticker: ReturnType<typeof setInterval> | null = null
@@ -185,7 +185,7 @@ export class WeatherStore {
 			queryEntities<SlotPayload<AirQuality>>({ type: SKY.airQuality }),
 			queryEntities<SlotPayload<Allergens>>({ type: SKY.allergens }),
 		])
-		this.#held = [...forecasts, ...alerts, ...airQuality, ...allergens] as Entity[]
+		this.#held = [...forecasts, ...alerts, ...airQuality, ...allergens]
 		return { forecasts, alerts, airQuality, allergens }
 	}
 
@@ -292,7 +292,7 @@ export class WeatherStore {
 				const batch = ops()
 				if (batch.length === 0) return
 				const { rows } = await applyBatch(batch)
-				if (whole) this.#held = rows as Entity[]
+				if (whole) this.#held = rows
 			} catch (error) {
 				await logError('weather', 'Could not write the mirror', String(error)).catch(() => null)
 				await this.#rows().catch(() => null)
