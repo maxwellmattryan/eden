@@ -7,13 +7,28 @@
 	import { onMount, tick } from 'svelte'
 	import { goto } from '$app/navigation'
 	import { resolve } from '$app/paths'
-	import { Button, CanSee, Composer, ConfirmSheet, Field, IconButton, InlineError, Notice, Thread } from '@eden/ui-kit'
+	import {
+		Button,
+		CanSee,
+		Composer,
+		ConfirmSheet,
+		Field,
+		GardenerMessage,
+		Greeting,
+		IconButton,
+		InlineError,
+		Notice,
+		Sprouting,
+		Thread,
+	} from '@eden/ui-kit'
 	import { isTauri } from '@eden/shared/api'
-	import type { MessageBlock } from '@eden/shared/gardener'
+	import { hourOfDay } from '@eden/shared/dates'
+	import { gardenerPanelState, greetingKey, segmentsOf, type MessageBlock } from '@eden/shared/gardener'
 	import { t } from '@eden/shared/i18n'
 	import { manifestFor } from '$lib/domains'
 	import { settingsUi } from '$lib/settings/settings-ui.svelte'
 	import { grants } from '../grants.svelte'
+	import { profile } from '../profile/store.svelte'
 	import { undoToast } from '../undo'
 	import { labelRows, registryLabel, type RowLabel } from './labels'
 	import { GRANT_SUBJECT } from './types'
@@ -90,18 +105,57 @@
 	const canAsk = $derived((inApp ? gardenerSetup.hasKey : true) && !gardenerSetup.failed)
 	const blocked = $derived(gardenerSetup.percent >= 100 && gardenerSetup.capUsd > 0)
 
+	// An empty conversation opens with a greeting: one of the locale's lines, by the hour and a roll made anew for
+	// each new conversation, with the owner's preferred name when the profile holds one. It waits for the panel to
+	// settle (the latest conversation may be about to open) and for the profile, so it never flashes or changes.
+	let settled = $state(false)
+	let roll = $state(Math.random())
+	const ownerName = $derived.by(() => {
+		const fact = profile.facts.find((entry) => entry.type === 'preferred-name' && !profile.isExpired(entry))
+		return typeof fact?.value === 'string' ? fact.value.trim() || undefined : undefined
+	})
+	const greeting = $derived(
+		$t(greetingKey(hourOfDay(Date.now()), roll, !!ownerName), { values: { name: ownerName ?? '' } })
+	)
+	const greets = $derived(settled && profile.ready && !threads.current && canAsk && !blocked)
+
 	// The panel reads the threads once it opens, and runs what it was opened to run.
 	$effect(() => {
 		if (!gardenerUi.open) return
 		void gardenerSetup.load()
 		void grants.load()
-		void threads.load().then(async () => {
-			// the latest conversation of the surface opens, unless the panel was opened to run something
-			if (gardenerUi.pending) return runtime.runPending()
-			const latest = threads.of(gardenerUi.domain)[0]
-			if (!threads.current && latest) await threads.open(latest.id)
-		})
+		void profile.load()
+		// what the app closed on last time is written to the audit log before anything new is asked
+		void runtime.settleOpen()
+		void threads
+			.load()
+			.then(async () => {
+				// the conversation the panel was left on opens, a new one staying new, and the surface's latest when
+				// none was kept or it is gone; unless the panel was opened to run something
+				if (gardenerUi.pending) return runtime.runPending()
+				if (threads.current) return
+				const kept = gardenerPanelState().thread
+				if (kept === null) return
+				const id = threads.threads.some((entry) => entry.id === kept) ? kept : threads.of(gardenerUi.domain)[0]?.id
+				if (id) await threads.open(id)
+			})
+			.finally(() => (settled = true))
 	})
+	// The Gardener is awaited with nothing yet to show (D-80): the owner's message is being packed, or the reply has
+	// begun and holds no words and no card. One row for both, so the sprout grows on without starting over; once the
+	// reply has something, the bubble takes its place and draws its own sprout between rounds.
+	const waiting = $derived.by(() => {
+		const thread = threads.current?.id
+		if (!thread) return false
+		if (runtime.preparing === thread) return !runtime.pending
+		const last = threads.messages.at(-1)
+		return (
+			runtime.live?.threadId === thread &&
+			runtime.live.messageId === last?.id &&
+			!segmentsOf(last.blocks as MessageBlock[]).length
+		)
+	})
+
 	// The log follows the reply as it streams, while the owner is at its foot: scrolled up to read, they are left
 	// there. Sending a message or opening a thread goes to the foot again. Whether they are at the foot is read
 	// against the height the log had before it grew, at the moment it grows, so a scroll is never raced.
@@ -114,6 +168,7 @@
 		void threads.messages.length
 		void threads.messages.at(-1)?.blocks
 		void runtime.streaming
+		void waiting
 		const thread = threads.current?.id
 		if (thread !== shownThread) toFoot = true
 		shownThread = thread
@@ -139,6 +194,7 @@
 	}
 	async function newThread() {
 		threads.close()
+		roll = Math.random()
 		listOpen = false
 		// the composer mounts again when the list was open, so focus once it is in the DOM
 		await tick()
@@ -203,15 +259,16 @@
 
 <aside class="panel" aria-labelledby="{uid}-title">
 	<header class="panel-head">
+		<h2 id="{uid}-title" class="panel-title">{title}</h2>
 		<IconButton
 			icon="list"
 			size="sm"
 			label={$t('gardener.threads')}
 			pressed={listOpen}
+			disabled={!listOpen && !threads.of(gardenerUi.domain).length}
 			tooltip
 			onclick={() => (listOpen = !listOpen)}
 		/>
-		<h2 id="{uid}-title" class="panel-title">{title}</h2>
 		<IconButton
 			icon="clipboard-list"
 			size="sm"
@@ -232,10 +289,10 @@
 
 	{#if listOpen}
 		<div class="panel-list">
-			<ThreadList domain={gardenerUi.domain} onopen={(id) => void openThread(id)} />
+			<ThreadList domain={gardenerUi.domain} onopen={(id) => void openThread(id)} onempty={() => (listOpen = false)} />
 		</div>
 	{:else}
-		<div class="panel-log" bind:this={log}>
+		<div class={['panel-log', greets && 'panel-log-empty']} bind:this={log}>
 			{#if !inApp}
 				<Notice tone="info" title={$t('gardener.runsInApp')} />
 			{:else if gardenerSetup.ready && !gardenerSetup.hasKey}
@@ -270,10 +327,12 @@
 			{#if threads.current?.tier === 'T2'}
 				<Notice tone="info" icon="lock" title={$t('gardener.lockedThread')} />
 			{/if}
+			{#if greets}<Greeting text={greeting} name={ownerName} />{/if}
 			<Thread label={$t('gardener.conversation')}>
 				{#each threads.messages as message (message.id)}
 					<MessageBlocks {message} />
 				{/each}
+				{#if waiting}<GardenerMessage><Sprouting size="md" /></GardenerMessage>{/if}
 			</Thread>
 		</div>
 		<div class="panel-foot" bind:this={foot}>
@@ -354,6 +413,7 @@
 		position: relative;
 		overflow: auto;
 		grid-row: 2 / 4;
+		padding: var(--space-3);
 	}
 	.panel-log {
 		position: relative;
@@ -363,6 +423,11 @@
 		gap: var(--space-3);
 		padding: var(--space-3);
 		overflow-wrap: anywhere;
+	}
+	/* an empty conversation: the greeting takes the space the notices leave and centres in it */
+	.panel-log-empty {
+		display: flex;
+		flex-direction: column;
 	}
 	/* a grid item's min-width is its content's: a long unbroken word would widen the column */
 	.panel-log > :global(*),

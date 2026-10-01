@@ -118,6 +118,11 @@ export function updateMessage(id: string, blocks: unknown[]): Promise<Message> {
 	return call('update_message', { id, blocks }, (engine) => engine.updateMessage(id, blocks))
 }
 
+/** Tombstones one message of a thread: a reply the owner asked for again. */
+export function deleteMessage(id: string): Promise<Message> {
+	return call('delete_message', { id }, (engine) => engine.deleteMessage(id))
+}
+
 /** The live messages of a thread, in the order they were made. */
 export function queryMessages(threadId: string): Promise<Message[]> {
 	return call('query_messages', { threadId }, (engine) => engine.queryMessages(threadId))

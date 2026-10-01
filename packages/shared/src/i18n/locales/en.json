@@ -1009,11 +1009,36 @@
 		"ask": "Ask the Gardener",
 		"askPlaceholder": "Ask the Gardener",
 		"askInDomain": "Ask about {domain}",
+		"greeting": {
+			"any": {
+				"1": { "named": "What's up, {name}?", "plain": "What's up?" },
+				"2": { "named": "What's on your mind, {name}?", "plain": "What's on your mind?" },
+				"3": { "named": "Where shall we start, {name}?", "plain": "Where shall we start?" },
+				"4": { "named": "What needs tending, {name}?", "plain": "What needs tending?" }
+			},
+			"morning": {
+				"1": { "named": "Good morning, {name}.", "plain": "Good morning." },
+				"2": { "named": "Up with the sun, {name}?", "plain": "Up with the sun?" }
+			},
+			"afternoon": {
+				"1": { "named": "Good afternoon, {name}.", "plain": "Good afternoon." },
+				"2": { "named": "How's the day going, {name}?", "plain": "How's the day going?" }
+			},
+			"evening": {
+				"1": { "named": "Good evening, {name}.", "plain": "Good evening." },
+				"2": { "named": "How was today, {name}?", "plain": "How was today?" }
+			},
+			"night": {
+				"1": { "named": "Still up, {name}?", "plain": "Still up?" },
+				"2": { "named": "A quiet hour, {name}.", "plain": "A quiet hour." }
+			}
+		},
 		"send": "Send",
 		"stop": "Stop",
 		"threads": "Conversations",
 		"newThread": "New conversation",
 		"deleteThread": "Delete conversation",
+		"deleteSelected": "Delete selected",
 		"noThreads": "No conversations yet.",
 		"runsInApp": "The Gardener runs in the installed app. This is a scripted reply.",
 		"noKey": {
@@ -1029,6 +1054,11 @@
 		"noRows": "No facts of this type in this request.",
 		"trimmed": "Trimmed to fit: {ids}",
 		"cutShort": "Cut short by the token cap.",
+		"interrupted": {
+			"title": "This reply was interrupted.",
+			"text": "Eden closed before it finished. What arrived is kept."
+		},
+		"retry": "Retry",
 		"ranTool": "Ran {tool} as its own request.",
 		"confirmTool": "Run {tool}",
 		"toolRun": {
@@ -1047,7 +1077,8 @@
 		},
 		"toast": {
 			"logged": "{value} logged.",
-			"deleted": "{title} deleted."
+			"deleted": "{title} deleted.",
+			"deletedMany": "{count} conversations deleted."
 		},
 		"draft": {
 			"task": "A task to add",

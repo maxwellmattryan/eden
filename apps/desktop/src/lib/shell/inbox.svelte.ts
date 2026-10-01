@@ -15,6 +15,7 @@ import {
 	messageValues,
 	notificationKeys,
 	onDelivered,
+	onWithdrawn,
 	OS_NOTIFICATIONS,
 	queryInbox,
 	showNotification,
@@ -53,6 +54,7 @@ export class InboxStore {
 	load(): Promise<void> {
 		if (!this.#loading) {
 			onDelivered((cards) => this.#arrived(cards))
+			onWithdrawn((ids) => (this.cards = this.cards.filter((card) => !ids.includes(card.id))))
 			this.#loading = this.#read()
 		}
 		return this.#loading

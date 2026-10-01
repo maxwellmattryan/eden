@@ -2,7 +2,9 @@
 // one audit entry. The conversation's grade resolves to a model, the pack is built from the declared reads of the
 // tools in reach, the request streams from the crate, and each tool call runs its handler: a plain one inline, a
 // write one behind its card's confirm, a model-backed one as a delegated request of its own with its own entry.
-// The runtime never sends while a confirm is owed and never sends what the budget does not allow.
+// The runtime never sends while a confirm is owed and never sends what the budget does not allow. A reply carries a
+// `writing` block while its request runs, and the request's audit entry is kept on the device as open until it
+// settles: a request the app closed on leaves a reply that reads as interrupted and an entry recorded as such.
 import { get } from 'svelte/store'
 import { toast } from '@eden/ui-kit'
 import { isTauri } from '@eden/shared/api'
@@ -13,6 +15,7 @@ import {
 	estimateBefore,
 	estimateCost,
 	formatCost,
+	openRequests,
 	requestTokenCap,
 	resolveGrade,
 	resolveTool,
@@ -24,9 +27,11 @@ import {
 	type GardenerEvent,
 	type GardenerRequest,
 	type GardenerTool,
+	type Message,
 	type MessageBlock,
 	type Pack,
 	type Resolution,
+	type Thread,
 	type ToolState,
 } from '@eden/shared/gardener'
 import { recordAudit } from '@eden/shared/gardener'
@@ -59,6 +64,9 @@ const MAX_ROUNDS = 6
 const OUTPUT_RESERVE = 4096
 const DELEGATED_OUTPUT = 2048
 const WARNED_KEY = 'eden:gardener-warned'
+/** The errors a second try may clear: the network, a rate limit, an overloaded provider. */
+const RETRYABLE: readonly string[] = ['network', '429', '529']
+const unsettled = openRequests(() => localStorage)
 
 interface Usage {
 	tokensIn: number
@@ -84,12 +92,19 @@ const sum = (a: Usage, b: Usage): Usage => ({
 
 export class GardenerRuntime {
 	streaming = $state(false)
+	/** The reply the request is writing, and its thread, while one runs. */
+	live = $state<{ threadId: string; messageId: string } | undefined>()
+	/** The thread being answered before its reply exists: the pack is being built and the budget read. */
+	preparing = $state<string | undefined>()
 	/** A confirm the sheet shows; nothing is sent while it is owed. */
 	pending = $state<ConfirmRequest | undefined>()
 	/** Why the last ask could not run, as a kit string key, or nothing. */
 	error = $state<string | undefined>()
 
 	#cancel: (() => Promise<boolean>) | undefined
+	/** An ask or a retry is on its way to a request: a second one waits its turn by not starting. */
+	#asking = false
+	#settled: Promise<void> | undefined
 	/** The confirms owed on tool cards, by call id; not state, nothing renders from it. */
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- a plain map: nothing reads it reactively
 	#confirms = new Map<string, (ok: boolean) => void>()
@@ -103,11 +118,11 @@ export class GardenerRuntime {
 		return undefined
 	})
 
-	#context(requestId: string): ToolContext {
+	#context(requestId: string, thread: Thread): ToolContext {
 		const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
 		return {
-			domain: threads.current?.domain ?? undefined,
-			threadId: threads.current?.id ?? '',
+			domain: thread.domain ?? undefined,
+			threadId: thread.id,
 			requestId,
 			grade: gardenerSetup.grade,
 			lang: (get(locale) ?? 'en') as 'en' | 'ja',
@@ -118,35 +133,95 @@ export class GardenerRuntime {
 		}
 	}
 
-	/** The owner asks; the reply streams into the thread. */
-	async ask(text: string): Promise<void> {
-		const message = text.trim()
-		if (!message || this.streaming) return
-		await Promise.all([gardenerSetup.load(), threads.load(), grants.load()])
+	/**
+	 * Records the requests the app closed on (D-76): what is still open when nothing can be running was interrupted.
+	 * Once, before the first request and when the panel first opens.
+	 */
+	settleOpen(): Promise<void> {
+		return (this.#settled ??= (async () => {
+			const entries = unsettled.take()
+			for (const entry of entries) await recordAudit(entry).catch(() => null)
+			if (entries.length) void gardenerSetup.refreshSpend()
+		})())
+	}
+
+	/** Whether a request can be made at all: everything read, and a key on this device. */
+	async #ready(): Promise<boolean> {
+		await Promise.all([gardenerSetup.load(), threads.load(), grants.load(), this.settleOpen()])
 		this.error = undefined
 		// the browser has no key and no crate: its scripted stream still exercises the thread and the log
 		if (!gardenerSetup.hasKey && isTauri()) {
 			this.error = 'noKey'
-			return
+			return false
 		}
-		if (!threads.current) threads.newThread(gardenerUi.domain, message)
+		return true
+	}
+
+	/** The owner asks; the reply streams into the thread. */
+	async ask(text: string): Promise<void> {
+		const message = text.trim()
+		if (!message || this.streaming || this.#asking) return
+		this.#asking = true
+		try {
+			if (!(await this.#ready())) return
+			const thread = threads.current ?? threads.newThread(gardenerUi.domain, message)
+			threads.append('owner', [{ kind: 'text', text: message }], undefined, thread)
+			await this.#answer(thread, message)
+		} finally {
+			this.#asking = false
+			this.preparing = undefined
+		}
+	}
+
+	/** Whether a reply can be asked for again: the thread's last message, right after the owner's, nothing running. */
+	canRetry(messageId: string): boolean {
+		const at = threads.messages.findIndex((entry) => entry.id === messageId)
+		return !this.streaming && at > 0 && at === threads.messages.length - 1 && threads.messages[at - 1]?.role === 'owner'
+	}
+
+	/** Whether an error block is one a second try may clear. */
+	retryable(code: string): boolean {
+		return RETRYABLE.includes(code)
+	}
+
+	/** The owner asks again: the reply that was cut off or failed is deleted for good, and the message is answered anew. */
+	async retry(messageId: string): Promise<void> {
+		if (this.#asking || !this.canRetry(messageId)) return
+		this.#asking = true
+		try {
+			const thread = threads.current
+			if (!thread || !(await this.#ready()) || threads.current?.id !== thread.id || !this.canRetry(messageId)) return
+			const message = textOf(threads.messages.at(-2))
+			if (!message) return
+			threads.removeMessages([messageId])
+			await this.#answer(thread, message)
+		} finally {
+			this.#asking = false
+			this.preparing = undefined
+		}
+	}
+
+	/** Answers the owner's message, the thread's last: one request, one reply, one audit entry. */
+	async #answer(thread: Thread, message: string): Promise<void> {
+		this.preparing = thread.id
+		// read now, while the thread is the open one: the owner may open another before the pack is built
+		const prior = threads.messages.slice(0, -1)
 		const requestId = newId()
-		const ctx = this.#context(requestId)
+		const ctx = this.#context(requestId, thread)
 		const surface = gardenerUi.domain ? `${gardenerUi.domain}-chat` : 'global-chat'
 		const resolution = resolveGrade(gardenerSetup.grade, ['tools'], gardenerSetup.map, gardenerSetup.models)
-		threads.append('owner', [{ kind: 'text', text: message }])
 		if (resolution.kind !== 'model') {
-			this.#unavailable(resolution, requestId)
+			this.#unavailable(resolution, requestId, thread)
 			return
 		}
 		const model = gardenerSetup.models({ provider: resolution.provider, model: resolution.model })
-		if (!model) return this.#unavailable(resolution, requestId)
+		if (!model) return this.#unavailable(resolution, requestId, thread)
 		const reach = toolsFor(everyTool, gardenerUi.domain)
 		const pack = await buildPack(
 			{
 				reads: reach.flatMap((tool) => tool.declaration.reads).filter((id, i, all) => all.indexOf(id) === i),
 				focus: gardenerUi.focus,
-				thread: threads.messages.slice(0, -1),
+				thread: prior,
 				message,
 				tools: reach,
 				model,
@@ -163,23 +238,22 @@ export class GardenerRuntime {
 			readers
 		)
 		const estimate = estimateBefore(pack.estimatedInputTokens, OUTPUT_RESERVE, model.pricing)
-		if (!(await this.#budgetAllows(estimate, requestId, resolution))) return
+		if (!(await this.#budgetAllows(estimate, requestId, resolution, thread))) return
 		if (resolution.confirm && !(await this.#confirmCost(resolution.model, get(t)('gardener.conversation'), estimate))) {
-			this.#declined(requestId, resolution)
+			this.#declined(requestId, resolution, thread)
 			return
 		}
-		const reply = threads.append(
-			'gardener',
+		const reply = this.#begin(
+			thread,
 			[{ kind: 'can-see', items: pack.canSee, locked: pack.locked, trimmed: pack.trimmed, rows: rowsOf(pack) }],
 			requestId
 		)
-		threads.raiseTier(threads.current!.id, pack.tier)
-		this.streaming = true
+		threads.raiseTier(thread.id, pack.tier)
 		const audit: AuditEntryInput = {
 			id: requestId,
 			at: Date.now(),
 			surface,
-			threadId: threads.current!.id,
+			threadId: thread.id,
 			parentRequestId: null,
 			tool: null,
 			domain: gardenerUi.domain ?? null,
@@ -200,9 +274,16 @@ export class GardenerRuntime {
 			grants: [...pack.grants],
 			image: null,
 		}
+		// kept as open, at what the pack is estimated to cost going in, until the provider says what it took
+		const estimated: Usage = { tokensIn: pack.estimatedInputTokens, tokensOut: 0, cacheRead: 0 }
+		unsettled.open({ ...audit, ...estimated, costUsd: estimateCost(estimated, model.pricing) })
 		try {
 			let messages = [...pack.messages]
 			let usage: Usage = { tokensIn: 0, tokensOut: 0, cacheRead: 0 }
+			const counted = (round: Usage) => {
+				const so = sum(usage, round)
+				unsettled.count(requestId, { ...so, costUsd: estimateCost(so, model.pricing) })
+			}
 			for (let round = 0; round < MAX_ROUNDS; round += 1) {
 				const request: GardenerRequest = {
 					id: requestId,
@@ -212,7 +293,7 @@ export class GardenerRuntime {
 					messages,
 					tools: pack.tools,
 				}
-				const outcome = await this.#stream(request, reply.id)
+				const outcome = await this.#stream(request, reply.id, counted)
 				usage = sum(usage, outcome.usage)
 				if (outcome.error) {
 					this.#block(reply.id, {
@@ -258,11 +339,29 @@ export class GardenerRuntime {
 			audit.cacheRead = usage.cacheRead
 			audit.costUsd = estimateCost(usage, model.pricing)
 		} finally {
-			this.streaming = false
-			this.#cancel = undefined
-			threads.flush(reply.id)
+			this.#settle(reply.id)
 			await this.#record(audit)
 		}
+	}
+
+	/** The reply a request writes: marked as being written, and held so the request reaches it in any thread. */
+	#begin(thread: Thread, blocks: MessageBlock[], requestId: string): Message {
+		const reply = threads.append('gardener', [...blocks, { kind: 'writing' }], requestId, thread)
+		threads.hold(reply)
+		this.preparing = undefined
+		this.live = { threadId: thread.id, messageId: reply.id }
+		this.streaming = true
+		return reply
+	}
+
+	/** The request has ended, however it ended: the mark comes off and the reply is persisted as it stands. */
+	#settle(replyId: string): void {
+		this.streaming = false
+		this.live = undefined
+		this.#cancel = undefined
+		threads.patch(replyId, (blocks) => blocks.filter((block) => block.kind !== 'writing'))
+		threads.flush(replyId)
+		threads.release(replyId)
 	}
 
 	/** Runs a tool the panel was opened with (an idea's brainstorm), as if the owner had asked for it. */
@@ -272,15 +371,11 @@ export class GardenerRuntime {
 		gardenerUi.pending = undefined
 		const tool = everyTool.find((entry) => `${entry.domain}.${entry.declaration.id}` === pending.tool)
 		if (!tool) return
-		await Promise.all([gardenerSetup.load(), threads.load(), grants.load()])
-		if (!gardenerSetup.hasKey && isTauri()) {
-			this.error = 'noKey'
-			return
-		}
+		if (!(await this.#ready())) return
 		const title = get(t)('gardener.ranTool', { values: { tool: tool.declaration.id } })
-		if (!threads.current) threads.newThread(gardenerUi.domain, title)
+		const thread = threads.current ?? threads.newThread(gardenerUi.domain, title)
 		const requestId = newId()
-		const reply = threads.append('gardener', [], requestId)
+		const reply = this.#begin(thread, [], requestId)
 		const call: ToolCall = {
 			id: `owner-${requestId}`,
 			name: tool.wireName,
@@ -289,17 +384,15 @@ export class GardenerRuntime {
 			access: tool.declaration.access,
 			input: pending.input,
 		}
-		this.streaming = true
 		try {
-			const { result } = await this.#runCall(call, reply.id, this.#context(requestId))
+			const { result } = await this.#runCall(call, reply.id, this.#context(requestId, thread))
 			const reply2 =
 				typeof result.output === 'object' && result.output && 'reply' in result.output
 					? String(result.output.reply)
 					: ''
 			if (reply2) this.#block(reply.id, { kind: 'text', text: reply2 })
 		} finally {
-			this.streaming = false
-			threads.flush(reply.id)
+			this.#settle(reply.id)
 		}
 	}
 
@@ -333,7 +426,7 @@ export class GardenerRuntime {
 	}
 
 	/** Streams one request into the reply, or into nothing shown when there is none; answers what came back. */
-	#stream(request: GardenerRequest, replyId?: string): Promise<StreamOutcome> {
+	#stream(request: GardenerRequest, replyId?: string, counted?: (usage: Usage) => void): Promise<StreamOutcome> {
 		return new Promise((resolve) => {
 			const outcome: StreamOutcome = {
 				text: '',
@@ -373,6 +466,7 @@ export class GardenerRuntime {
 					})
 				} else if (event.type === 'usage') {
 					outcome.usage = { tokensIn: event.input, tokensOut: event.output, cacheRead: event.cacheRead }
+					counted?.(outcome.usage)
 				} else if (event.type === 'stop') {
 					outcome.stop = event.reason
 					outcome.refusal = event.refusal
@@ -576,8 +670,12 @@ export class GardenerRuntime {
 			messages,
 			tools: [],
 		}
+		const estimated: Usage = { tokensIn: pack.estimatedInputTokens, tokensOut: 0, cacheRead: 0 }
+		unsettled.open({ ...audit, ...estimated, costUsd: estimateCost(estimated, model.pricing) })
 		// the delegated reply is read by the handler and never shown: the tool's own card is its place in the thread
-		const outcome = await this.#stream(request)
+		const outcome = await this.#stream(request, undefined, (usage) =>
+			unsettled.count(requestId, { ...usage, costUsd: estimateCost(usage, model.pricing) })
+		)
 		audit.tokensIn = outcome.usage.tokensIn
 		audit.tokensOut = outcome.usage.tokensOut
 		audit.cacheRead = outcome.usage.cacheRead
@@ -601,6 +699,7 @@ export class GardenerRuntime {
 		} catch {
 			// the entry is the log's; a failure to write it is logged by the queue, never shown twice
 		}
+		if (entry.id) unsettled.close(entry.id)
 		void gardenerSetup.refreshSpend()
 		void profile.refreshUsage()
 	}
@@ -610,7 +709,7 @@ export class GardenerRuntime {
 		estimate: number,
 		requestId: string,
 		resolution: Extract<Resolution, { kind: 'model' }>,
-		audit?: AuditEntryInput
+		on: AuditEntryInput | Thread
 	): Promise<boolean> {
 		const today = todayIso()
 		let warnedOn: string | null
@@ -635,20 +734,21 @@ export class GardenerRuntime {
 			toast({ message: get(t)('gardener.budgetWarning', { values: { percent: state.percent } }) })
 		}
 		if (state.allowed) return true
-		if (audit) {
-			audit.outcome = 'budget'
-			await this.#record(audit)
+		if ('outcome' in on) {
+			on.outcome = 'budget'
+			await this.#record(on)
 		} else {
 			threads.append(
 				'gardener',
 				[{ kind: 'error', code: 'budget', message: get(t)('gardener.budgetReached') }],
-				requestId
+				requestId,
+				on
 			)
 			await this.#record({
 				id: requestId,
 				at: Date.now(),
 				surface: gardenerUi.domain ? `${gardenerUi.domain}-chat` : 'global-chat',
-				threadId: threads.current?.id ?? null,
+				threadId: on.id,
 				parentRequestId: null,
 				tool: null,
 				domain: gardenerUi.domain ?? null,
@@ -690,22 +790,23 @@ export class GardenerRuntime {
 		})
 	}
 
-	#unavailable(resolution: Resolution, requestId: string): void {
+	#unavailable(resolution: Resolution, requestId: string, thread: Thread): void {
 		const missing = resolution.kind === 'unavailable' ? resolution.missing.join(', ') : ''
 		const reason = resolution.kind === 'unavailable' ? resolution.reason : 'plain'
 		threads.append(
 			'gardener',
 			[{ kind: 'error', code: reason, message: get(t)(`gardener.unavailable.${reason}`, { values: { missing } }) }],
-			requestId
+			requestId,
+			thread
 		)
 	}
 
-	#declined(requestId: string, resolution: Extract<Resolution, { kind: 'model' }>): void {
+	#declined(requestId: string, resolution: Extract<Resolution, { kind: 'model' }>, thread: Thread): void {
 		void this.#record({
 			id: requestId,
 			at: Date.now(),
 			surface: gardenerUi.domain ? `${gardenerUi.domain}-chat` : 'global-chat',
-			threadId: threads.current?.id ?? null,
+			threadId: thread.id,
 			parentRequestId: null,
 			tool: null,
 			domain: gardenerUi.domain ?? null,
@@ -752,6 +853,15 @@ function errorOf(output: unknown): string | undefined {
 /** The owner stood the tool down part-way (no photo chosen, the cost declined): a cancel, not a failure. */
 function stoodDown(output: unknown): boolean {
 	return typeof output === 'object' && output !== null && (output as { cancelled?: unknown }).cancelled === true
+}
+
+/** The words of a message: its text blocks, as the owner wrote them. */
+function textOf(message: Message | undefined): string {
+	return ((message?.blocks ?? []) as MessageBlock[])
+		.filter((block): block is Extract<MessageBlock, { kind: 'text' }> => block.kind === 'text')
+		.map((block) => block.text)
+		.join('\n\n')
+		.trim()
 }
 
 function rowsOf(pack: Pack): Record<string, string[]> {

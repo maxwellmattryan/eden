@@ -1,9 +1,14 @@
 // Whether the Gardener's panel is open and where it was opened from: one $state object so the sidebar's entry, ⌘G,
-// the status bar's chip, a domain page's action and a deep link all reach the same panel.
+// the status bar's chip, a domain page's action and a deep link all reach the same panel. Whether it is open and its
+// domain are kept on the device (`gardenerPanelState`), so the next launch finds the panel as it was left.
+import { gardenerPanelState, rememberGardenerPanel } from '@eden/shared/gardener'
+
+const kept = gardenerPanelState()
+
 class GardenerUi {
-	open = $state(false)
+	open = $state(kept.open)
 	/** The domain the panel was opened from: its tools come first and its reads fill the chip (ai.md, "Surfaces"). */
-	domain = $state<string | undefined>()
+	domain = $state<string | undefined>(kept.domain)
 	/** The URIs the next conversation is about, when the panel was opened on something (an idea to brainstorm). */
 	focus = $state<string[]>([])
 	/** A tool the panel should run as soon as it opens, with its input; the Ideas view's brainstorm button sets it. */
@@ -15,6 +20,7 @@ class GardenerUi {
 		this.focus = focus
 		this.pending = pending
 		this.open = true
+		rememberGardenerPanel({ open: true, domain })
 	}
 
 	toggle() {
@@ -24,6 +30,7 @@ class GardenerUi {
 
 	hide() {
 		this.open = false
+		rememberGardenerPanel({ open: false })
 	}
 }
 

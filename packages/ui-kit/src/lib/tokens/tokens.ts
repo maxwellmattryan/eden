@@ -356,6 +356,7 @@ export const motion = {
 	"duration-settle": "320ms",
 	"duration-breeze": "700ms",
 	"duration-spin": "1050ms",
+	"duration-grow": "2400ms",
 	"ease-out": "cubic-bezier(0.22, 1, 0.36, 1)"
 } as const
 export const zIndex = {

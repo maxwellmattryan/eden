@@ -200,6 +200,7 @@
 	--ed-duration-settle: 320ms;
 	--ed-duration-breeze: 700ms;
 	--ed-duration-spin: 1050ms;
+	--ed-duration-grow: 2400ms;
 	--ed-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 	--ed-z-sticky: 10;
 	--ed-z-sidebar: 20;

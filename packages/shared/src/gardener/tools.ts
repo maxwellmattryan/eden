@@ -230,7 +230,7 @@ export const SCHEMAS: Readonly<Record<string, { description: string; schema: Jso
 	},
 	'weather.forecast': {
 		description:
-			'Answers the forecast for the owner’s home area on a day, from what Sky holds. Use it for any question about the weather; today when no day is given.',
+			'Answers the forecast for the owner’s home area on a day, from what Sky holds, with the weather alerts in force there now (`alerts`; `dismissed` marks one the owner has already put away in Sky, which is still in force). Use it for any question about the weather or about alerts, warnings and watches; today when no day is given. `alertsCovered: false` means no alert service covers the place, which is not the same as no alerts.',
 		schema: object({ day: text(DAY) }),
 	},
 	'weather.rain-during-plan': {

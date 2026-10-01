@@ -1087,6 +1087,7 @@
 			"toolFailed": "失敗",
 			"toolCancelled": "中止",
 			"toolWaiting": "確認待ち",
+			"writing": "返信を書いています",
 			"sentAt": "{0} に送信",
 			"receivedAt": "{0} に受信",
 			"copyMessage": "メッセージをコピー",
@@ -1142,11 +1143,36 @@
 		"ask": "庭師に聞く",
 		"askPlaceholder": "庭師に聞く",
 		"askInDomain": "{domain}について聞く",
+		"greeting": {
+			"any": {
+				"1": { "named": "{name}さん、どうしましたか？", "plain": "どうしましたか？" },
+				"2": { "named": "{name}さん、何を考えていますか？", "plain": "何を考えていますか？" },
+				"3": { "named": "{name}さん、どこから始めましょう？", "plain": "どこから始めましょう？" },
+				"4": { "named": "{name}さん、何の手入れをしましょう？", "plain": "何の手入れをしましょう？" }
+			},
+			"morning": {
+				"1": { "named": "おはようございます、{name}さん。", "plain": "おはようございます。" },
+				"2": { "named": "{name}さん、早起きですね。", "plain": "早起きですね。" }
+			},
+			"afternoon": {
+				"1": { "named": "こんにちは、{name}さん。", "plain": "こんにちは。" },
+				"2": { "named": "{name}さん、今日は順調ですか？", "plain": "今日は順調ですか？" }
+			},
+			"evening": {
+				"1": { "named": "こんばんは、{name}さん。", "plain": "こんばんは。" },
+				"2": { "named": "{name}さん、今日はどうでしたか？", "plain": "今日はどうでしたか？" }
+			},
+			"night": {
+				"1": { "named": "{name}さん、まだ起きていますか？", "plain": "まだ起きていますか？" },
+				"2": { "named": "静かな時間ですね、{name}さん。", "plain": "静かな時間ですね。" }
+			}
+		},
 		"send": "送信",
 		"stop": "停止",
 		"threads": "会話一覧",
 		"newThread": "新しい会話",
 		"deleteThread": "会話を削除",
+		"deleteSelected": "選択した会話を削除",
 		"noThreads": "まだ会話はありません。",
 		"runsInApp": "庭師はインストール版のアプリで動きます。これは台本どおりの返事です。",
 		"noKey": {
@@ -1162,6 +1188,11 @@
 		"noRows": "この種類の項目はこのリクエストにありません。",
 		"trimmed": "収めるために省いたもの: {ids}",
 		"cutShort": "トークン上限で途中までです。",
+		"interrupted": {
+			"title": "この返信は中断されました。",
+			"text": "完了する前に Eden が閉じました。届いた分は残っています。"
+		},
+		"retry": "再試行",
 		"ranTool": "{tool} を単独のリクエストとして実行しました。",
 		"confirmTool": "{tool} を実行",
 		"toolRun": {
@@ -1180,7 +1211,8 @@
 		},
 		"toast": {
 			"logged": "{value} を記録しました。",
-			"deleted": "{title} を削除しました。"
+			"deleted": "{title} を削除しました。",
+			"deletedMany": "{count} 件の会話を削除しました。"
 		},
 		"draft": {
 			"task": "追加するタスク",

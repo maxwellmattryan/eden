@@ -24,7 +24,7 @@
 	"quickActions": [],
 	"captureSources": [],
 	"tools": [
-		{ "id": "forecast", "access": "read", "reads": ["forecast", "home-area", "venue"] },
+		{ "id": "forecast", "access": "read", "reads": ["forecast", "alert", "home-area", "venue"] },
 		{
 			"id": "rain-during-plan",
 			"access": "read",

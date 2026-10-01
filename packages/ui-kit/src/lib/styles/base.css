@@ -249,6 +249,7 @@ body::before, .ed-canvas::before {
 		--ed-duration-settle: 0ms;
 		--ed-duration-breeze: 0ms;
 		--ed-duration-spin: 0ms;
+		--ed-duration-grow: 0ms;
 		--ed-press-scale: 1;
 	}
 	body::before, .ed-canvas::before, .ed-sheet-panel::after, [popover]::after {

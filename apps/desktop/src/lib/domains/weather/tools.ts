@@ -1,5 +1,5 @@
 // Sky's tool handlers (product/domains/weather.md, "Gardener tools"; docs/engineering/gardener.md, "Tools"): all
-// three are plain, answering from the forecast Sky holds and never running a model. What leaves is city level and
+// three are plain, answering from the forecast and the alerts Sky holds and never running a model. What leaves is city level and
 // the owner's units (D-60): the home's area, never its coordinates.
 import { queryEvents, queryTasks } from '@eden/shared/data'
 import { addDays, dateIn, instantAt, timeIn } from '@eden/shared/dates'
@@ -10,6 +10,7 @@ import {
 	nextPhase,
 	temperature,
 	weather,
+	type AlertSeverity,
 	type DayReading,
 	type MoonMoment,
 } from '@eden/shared/weather'
@@ -17,6 +18,7 @@ import { int, str, type ToolHandler } from '$lib/shell/gardener/types'
 
 const HOUR_MS = 60 * 60 * 1000
 const DAY_MS = 24 * HOUR_MS
+const SEVERITIES: readonly AlertSeverity[] = ['extreme', 'severe', 'moderate', 'minor', 'unknown']
 const MOMENTS: readonly MoonMoment[] = ['new', 'first-quarter', 'full', 'last-quarter']
 
 function place(): string {
@@ -39,6 +41,26 @@ function dayOf(reading: DayReading) {
 		uvMax: reading.uvMax,
 		observed: reading.observed,
 	}
+}
+
+/**
+ * The alerts in force for the home place, the most severe first. One the owner dismissed in Sky is still in force,
+ * so it is still told, marked as seen.
+ */
+function alerts() {
+	const dismissed = weather.data?.dismissed ?? []
+	return (weather.data?.alerts ?? [])
+		.map(({ id, event, headline, severity, onset, ends, issued, sender }) => ({
+			event,
+			headline,
+			severity,
+			onset,
+			ends,
+			issued,
+			sender,
+			dismissed: dismissed.includes(id),
+		}))
+		.sort((a, b) => SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity))
 }
 
 /** The day a request names: today, tomorrow, or a date. */
@@ -69,6 +91,9 @@ export const weatherTools: Record<string, ToolHandler> = {
 					unit: degrees(0).unit,
 					current: now ? { temp: degrees(now.temp).value, condition: now.condition, night: now.night } : undefined,
 					days,
+					alerts: alerts(),
+					alertsAt: weather.data?.alertsAt,
+					alertsCovered: weather.data?.alertsCovered !== false,
 					attribution: forecast.attribution,
 				},
 			}

@@ -232,6 +232,8 @@
 		let timer: ReturnType<typeof setInterval> | undefined
 		;(async () => {
 			settings.load()
+			// the panel comes back on the domain it was left on, while that domain is still one of the app's
+			if (gardenerUi.domain && !manifestFor(gardenerUi.domain)) gardenerUi.domain = undefined
 			await initializeI18n(settings.language)
 			void dismissSplash()
 			checkForUpdate().catch(() => null)

@@ -1046,6 +1046,16 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 			})
 		},
 
+		/** Takes the cards of one signal out of the inbox; the signal stays, so its key is still spent. */
+		withdrawSignal(name: string, dedupeKey: string): string[] {
+			return write((state) => {
+				const signals = state.signals.filter((signal) => signal.name === name && signal.dedupeKey === dedupeKey)
+				const went = state.inbox.filter((card) => signals.some((signal) => signal.id === card.signalId))
+				state.inbox = state.inbox.filter((card) => !went.includes(card))
+				return went.map((card) => card.id)
+			})
+		},
+
 		// The audit log (`audit.rs`; docs/product/substrate/ai.md, "Audit log"): this browser's, never exported.
 
 		/** Keeps one entry, whole. */
@@ -1215,6 +1225,20 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 				if (!row || row.deletedAt) throw notFound(`message ${id}`)
 				row.blocks = structuredClone(blocks)
 				row.updatedAt = stamp(state)
+				return structuredClone(row)
+			})
+		},
+
+		/** Tombstones one message. Deleting a deleted message changes nothing. */
+		deleteMessage(id: string): Message {
+			return write((state) => {
+				const row = state.messages.find((entry) => entry.id === id)
+				if (!row) throw notFound(`message ${id}`)
+				if (!row.deletedAt) {
+					const at = stamp(state)
+					row.updatedAt = at
+					row.deletedAt = at
+				}
 				return structuredClone(row)
 			})
 		},

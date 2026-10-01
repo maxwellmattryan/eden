@@ -443,9 +443,7 @@ pub fn update_message(ctx: &mut WriteCtx, id: &str, blocks: Value) -> Result<Mes
     Ok(message)
 }
 
-/// Deletes one message of a thread. Deleting a deleted message changes nothing. No command calls it yet: the
-/// contract deletes threads whole.
-#[cfg_attr(not(test), allow(dead_code))]
+/// Deletes one message of a thread: a reply the owner asked for again. Deleting a deleted message changes nothing.
 pub fn delete_message(ctx: &mut WriteCtx, id: &str) -> Result<Message> {
     let conn = ctx.conn;
     let message = require_message(conn, id)?;

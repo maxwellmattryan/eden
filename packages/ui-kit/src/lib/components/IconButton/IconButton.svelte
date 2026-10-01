@@ -23,6 +23,8 @@
 		fill?: 'brand' | 'ai'
 		/** The floating + on mobile: a brand fill, --fab wide. */
 		fab?: boolean
+		/** A destructive action: the glyph in the danger ink, at rest and under hover and press. */
+		danger?: boolean
 		/** md is the platform control (32 desktop, 44 mobile); sm is the 28 px variant for rows and the status bar; xs is a hint beside a label, no taller than its line. */
 		size?: 'xs' | 'sm' | 'md'
 		/** The pressed look while the popover it opened is showing; pass `aria-expanded` alongside it. */
@@ -43,6 +45,7 @@
 		count = 0,
 		fill,
 		fab = false,
+		danger = false,
 		size = 'md',
 		active = false,
 		pressed,
@@ -62,7 +65,7 @@
 		'ed-icon-btn',
 		`ed-icon-btn-${size}`,
 		filled && `ed-icon-btn-fill ed-icon-btn-fill-${filled}`,
-		{ 'ed-icon-btn-fab': fab, 'ed-icon-btn-active': active },
+		{ 'ed-icon-btn-fab': fab, 'ed-icon-btn-active': active, 'ed-icon-btn-danger': danger },
 		className,
 	]}
 	{type}
@@ -138,6 +141,12 @@
 	.ed-icon-btn:disabled {
 		opacity: 0.5;
 		cursor: default;
+	}
+	/* A destructive action keeps the danger ink on the hover and press grounds */
+	.ed-icon-btn-danger,
+	.ed-icon-btn-danger:not(:disabled):hover,
+	.ed-icon-btn-danger:not(:disabled):active {
+		color: var(--danger);
 	}
 
 	/* A fill: the accent or the Gardener's green under the glyph, hovered and pressed by the ink wash (never a step onto

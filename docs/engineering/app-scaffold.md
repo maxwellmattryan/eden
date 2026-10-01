@@ -79,7 +79,7 @@ A desktop domain module is laid out as:
 
 The Garden and the activity feed are the shell's, in `src/lib/shell/garden/` and `src/lib/shell/feed.svelte.ts`: every folder under `domains/` is a domain, and a domain never imports another.
 
-The route under `src/routes/<id>/` renders the view and loads the store on mount. Both shells keep two records of where the owner is, through `@eden/shared/navigation`: each tab's scroll position for the session (on desktop the `<main>` scrolls, not the window, so the router's own restoration never reaches it; a tab never visited starts at the top, and a move within a tab keeps its position) and the last route under `eden:last-place`, which the root `+page.ts` redirects to on launch while it is still a known place, the Garden otherwise. Neither is a setting, so neither is in the export bundle.
+The route under `src/routes/<id>/` renders the view and loads the store on mount. Both shells keep two records of where the owner is, through `@eden/shared/navigation`: each tab's scroll position for the session (on desktop the `<main>` scrolls, not the window, so the router's own restoration never reaches it; a tab never visited starts at the top, and a move within a tab keeps its position) and the last route under `eden:last-place`, which the root `+page.ts` redirects to on launch while it is still a known place, the Garden otherwise. Neither is a setting, so neither is in the export bundle. The desktop shell keeps how the Gardener's panel was left the same way, under `eden:gardener-panel` (`engineering/gardener.md`).
 
 ## Persistence
 

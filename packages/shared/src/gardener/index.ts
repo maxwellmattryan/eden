@@ -11,7 +11,9 @@ export {
 } from './budget.js'
 export * from './client.js'
 export { clampToLight, isDevEnvironment } from './dev.js'
+export { greetingKey, GREETINGS, partOfDay, type GreetingPool } from './greeting.js'
 export { estimateBefore, estimateCost, formatCost, formatUsd, type Usage } from './estimate.js'
+export { openRequests, OPEN_REQUESTS_KEY, type OpenRequests } from './open-requests.js'
 export {
 	buildPack,
 	WINDOW,
@@ -22,6 +24,12 @@ export {
 	type PackRow,
 	type SystemBlock,
 } from './pack.js'
+export {
+	GARDENER_PANEL_KEY,
+	gardenerPanelState,
+	rememberGardenerPanel,
+	type GardenerPanelState,
+} from './panel-state.js'
 export { persona, type Persona, type PersonaInput } from './persona.js'
 export { DEFAULT_POLICY, effectiveSetup, readPolicy, type EffectiveSetup } from './policy.js'
 export {
@@ -37,7 +45,7 @@ export {
 export { resolveGrade, resolveTool, type ToolRequest } from './resolve.js'
 export * from './rules.js'
 export * from './runtime-types.js'
-export { segmentsOf, type Segment, type ToolBlock } from './segments.js'
+export { awaitsWords, segmentsOf, type Segment, type ToolBlock } from './segments.js'
 export { scrub, scrubValue, type ScrubHits, type Scrubbed } from './scrub.js'
 export {
 	parseWireName,

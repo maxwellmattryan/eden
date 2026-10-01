@@ -219,6 +219,8 @@ export type MessageBlock =
 			rows: Record<string, string[]>
 	  }
 	| { kind: 'error'; code: string; message: string }
+	/** On a reply while its request runs, and taken off when it settles: one left behind was interrupted. */
+	| { kind: 'writing' }
 
 /** The owner's Gardener settings, the value of the `gardener` policy row: synced as workspace policy (D-37). */
 export interface GardenerPolicy {

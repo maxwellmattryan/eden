@@ -24,6 +24,11 @@ export function markInboxRead(ids: string[]): Promise<number> {
 	return call('mark_inbox_read', { ids }, (engine) => engine.markInboxRead(ids))
 }
 
+/** Takes the cards of one signal out of the inbox; the signal stays. Answers the cards that went. */
+export function withdrawSignal(name: string, dedupeKey: string): Promise<string[]> {
+	return call('withdraw_signal', { name, dedupeKey }, (engine) => engine.withdrawSignal(name, dedupeKey))
+}
+
 /**
  * Shows an OS notification with the words written for a card. Answers whether it was handed to the system: not while
  * the capability is off on this device, and never in a plain browser.

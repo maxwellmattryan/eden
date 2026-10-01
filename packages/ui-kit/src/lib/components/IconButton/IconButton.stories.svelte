@@ -56,6 +56,9 @@
 <!-- The pressed look while its popover is open; aria-expanded passes through -->
 <Story name="Active" args={{ icon: 'sparkles', label: 'Gardener', active: true, 'aria-expanded': true }} />
 
+<!-- A destructive action: the glyph in the danger ink -->
+<Story name="Danger" args={{ icon: 'trash', label: 'Delete', danger: true }} />
+
 <!-- A real toggle -->
 <Story
 	name="Pressed"

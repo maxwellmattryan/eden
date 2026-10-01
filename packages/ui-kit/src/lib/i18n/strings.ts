@@ -115,6 +115,8 @@ export interface UiStrings {
 		toolFailed: string
 		toolCancelled: string
 		toolWaiting: string
+		/** The spoken name of the sprout that grows while a reply is awaited. */
+		writing: string
 		/** The line under the owner's message: when it was sent. */
 		sentAt: (time: string) => string
 		/** The line under a reply: when it was received. */
@@ -325,6 +327,7 @@ export const defaultStrings: UiStrings = {
 		toolFailed: 'Failed',
 		toolCancelled: 'Cancelled',
 		toolWaiting: 'Waiting on you',
+		writing: 'Writing a reply',
 		sentAt: (time) => `Sent at ${time}`,
 		receivedAt: (time) => `Received at ${time}`,
 		copyMessage: 'Copy message',

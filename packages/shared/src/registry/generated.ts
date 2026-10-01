@@ -1670,6 +1670,7 @@ export const DECLARATIONS = {
 				"confirm": false,
 				"reads": [
 					"forecast",
+					"alert",
 					"home-area",
 					"venue"
 				],

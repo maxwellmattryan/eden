@@ -12,7 +12,7 @@ import { nowIso } from '../dates/index.js'
 import { load, save } from '../persistence/index.js'
 import { coordinator } from '../refresh/index.js'
 import { settings } from '../settings/settings.svelte.js'
-import { emit } from '../signals/runtime.js'
+import { emit, withdraw } from '../signals/runtime.js'
 import type { HomePlace } from '../types/index.js'
 import { goldenHourOf, moonAt, type Moon } from './ephemeris.js'
 import {
@@ -69,6 +69,8 @@ const ALERTS_STALE_MS = 5 * 60 * 1000
 export const FORECAST_RESOURCE = 'weather.forecast'
 /** The schedule Sky declares for the alerts (`manifest.json`), and the resource bound to it. */
 export const ALERTS_SCHEDULE = 'weather.alerts'
+/** What each active alert is emitted as, keyed by its id. */
+const ALERT_SIGNAL = 'weather.alert'
 const AIR_STALE_MS = 60 * 60 * 1000
 const ALLERGENS_STALE_MS = 3 * 60 * 60 * 1000
 const HOURS_SHOWN = 12
@@ -234,11 +236,15 @@ export class WeatherStore {
 		}
 	}
 
-	/** Takes an alert off the page for as long as it is issued; the mirror remembers it across a relaunch. */
+	/**
+	 * Takes an alert off the page for as long as it is issued, and its card out of the inbox; the mirror remembers
+	 * it across a relaunch.
+	 */
 	async dismissAlert(id: string): Promise<void> {
 		if (!this.data || this.data.dismissed?.includes(id)) return
 		this.data.dismissed = [...(this.data.dismissed ?? []), id]
 		await this.#save()
+		await withdraw(ALERT_SIGNAL, id).catch(() => null)
 	}
 
 	#save(): Promise<unknown> {
@@ -273,11 +279,13 @@ export class WeatherStore {
 		for (const alert of answer.alerts) {
 			const { id, severity, event, headline, ends } = alert
 			await emit(
-				'weather.alert',
+				ALERT_SIGNAL,
 				{ alertId: id, severity, event, headline, ...(ends ? { ends } : {}) },
 				{ dedupeKey: id }
 			).catch(() => null)
 		}
+		// a dismissed alert has no card: one left by a withdrawal that failed, or from before there was one, goes now
+		for (const id of data.dismissed) await withdraw(ALERT_SIGNAL, id).catch(() => null)
 	}
 
 	/**

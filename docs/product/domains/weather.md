@@ -43,9 +43,11 @@ Written: none. Read: `home-area` (substrate, T1) for the Gardener; the `home` Pl
 
 | tool | reads | access | confirm | grade |
 |---|---|---|---|---|
-| `forecast` | `forecast`, `home-area`, `venue` | read | none | plain |
+| `forecast` | `forecast`, `alert`, `home-area`, `venue` | read | none | plain |
 | `rain-during-plan` | `forecast`, `home-area`, `workout-session`, `local-event`, `outing` | read | none | plain |
 | `sun-and-moon` | `ephemeris` | read | none | plain |
+
+`forecast` carries the alerts in force for the home place beside the days, the most severe first, so a question about a warning is the same call as one about the weather. An alert the owner dismissed in Sky is still in force and is still told, marked `dismissed`; a place no alert service covers says so (`alertsCovered`), which is not the same as no alerts.
 
 `sun-and-moon` answers a day, a run of days (`days`, thirty-one at most) or the next time the moon is new, full or at a quarter (`next`), so a question about a date weeks away is one call. The next phase comes from the mean cycle (`nextPhase`, right to about half a day, covered by `ephemeris.test.ts`), so its answer is marked approximate and the Gardener says "around". Sunrise and sunset come from the forecast and are empty outside its window.
 
@@ -53,7 +55,7 @@ Never-do list: never sends coordinates finer than city level (D-60) to a model o
 
 ## 6. Surfaces
 
-**Desktop views (Phase 1)**: the Sky view with now, hours, the week, details, air quality, allergens, sun and moon, active alerts behind a button in the header that shows only while one is active (a popover lists them, and each can be dismissed for as long as it is issued), the sources' attribution, the header's motif (D-62: the wind now as a flow field, north up, with a small compass at its foot whose needle points the way the wind blows and whose tooltip says it is one reading for the place, not a map), the sun on its wave in the now block, and a location switcher over home and saved venues, with "Change home", a search by name, until Places exist (D-38).
+**Desktop views (Phase 1)**: the Sky view with now, hours, the week, details, air quality, allergens, sun and moon, active alerts behind a button in the header that shows only while one is active (a popover lists them, and each can be dismissed for as long as it is issued, which also takes its card out of the inbox), the sources' attribution, the header's motif (D-62: the wind now as a flow field, north up, with a small compass at its foot whose needle points the way the wind blows and whose tooltip says it is one reading for the place, not a map), the sun on its wave in the now block, and a location switcher over home and saved venues, with "Change home", a search by name, until Places exist (D-38).
 
 **Mobile (Phase 2)**: the same view as a tab candidate; Sky is pinned by default.
 

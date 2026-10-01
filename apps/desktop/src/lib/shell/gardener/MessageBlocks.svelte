@@ -11,13 +11,21 @@
 		Markdown,
 		Notice,
 		ProposalCard,
+		Sprouting,
 		ToolCard,
 		ToolRun,
 	} from '@eden/ui-kit'
 	import { openExternal } from '@eden/shared/api'
 	import { stampToDate } from '@eden/shared/data'
 	import { formatMoment } from '@eden/shared/dates'
-	import { segmentsOf, type Message, type MessageBlock, type ToolBlock, type ToolState } from '@eden/shared/gardener'
+	import {
+		awaitsWords,
+		segmentsOf,
+		type Message,
+		type MessageBlock,
+		type ToolBlock,
+		type ToolState,
+	} from '@eden/shared/gardener'
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { copyText } from '$lib/clipboard'
@@ -28,7 +36,6 @@
 	import ToolAbout from './ToolAbout.svelte'
 	import { toolByWireName } from './handlers'
 	import { runtime } from './runtime.svelte'
-	import { threads } from './threads.svelte'
 
 	type Props = { message: Message }
 	let { message }: Props = $props()
@@ -42,11 +49,26 @@
 	const drafts = $derived(
 		blocks.map((block, index) => ({ block, index })).filter(({ block }) => block.kind === 'draft')
 	)
-	// the message a request is still writing: the last one, while the runtime streams
-	const live = $derived(runtime.streaming && threads.messages.at(-1)?.id === message.id)
-	// a card left running or waiting by a request that is gone (the app closed mid-way) reads as cancelled
+	// the message a request is still writing
+	const live = $derived(runtime.live?.messageId === message.id)
+	// a reply still marked as being written by a request that is gone (the app closed mid-way) was interrupted
+	const interrupted = $derived(!live && blocks.some((block) => block.kind === 'writing'))
+	// a card left running or waiting by such a request reads as cancelled
 	const stateOf = (state: ToolState): ToolState =>
-		(state === 'running' || state === 'pending') && !runtime.streaming ? 'cancelled' : state
+		(state === 'running' || state === 'pending') && !live ? 'cancelled' : state
+	// Asking again is offered on the thread's last reply, when it was interrupted or failed in a way a second try may
+	// clear. The reply fades and is then deleted for good; the wait is the kit's settle, nothing under reduced motion.
+	let leaving = $state(false)
+	const again = $derived(
+		runtime.canRetry(message.id) && !leaving ? { label: $t('gardener.retry'), onclick: retry } : undefined
+	)
+	function retry() {
+		if (leaving) return
+		leaving = true
+		const settle = getComputedStyle(document.documentElement).getPropertyValue('--ed-duration-settle').trim()
+		const ms = settle.endsWith('ms') ? parseFloat(settle) : parseFloat(settle) * 1000
+		setTimeout(() => void runtime.retry(message.id), Number.isFinite(ms) ? ms : 0)
+	}
 	const segments = $derived(segmentsOf(blocks, stateOf))
 	// a run's line: the tool and how many times when it is one tool, how many tools when it is several
 	function runHeading(items: { block: ToolBlock }[]): string {
@@ -137,8 +159,8 @@
 	{#if text.length}
 		<GardenerMessage {text} owner {time} oncopy={copy} />
 	{/if}
-{:else if segments.length}
-	<GardenerMessage {time} oncopy={copy}>
+{:else if segments.length || interrupted}
+	<GardenerMessage {time} oncopy={copy} class={leaving ? 'reply-leaving' : undefined}>
 		{#each segments as segment (`${segment.kind}-${segment.index}`)}
 			{#if segment.kind === 'text'}
 				<Markdown source={segment.text} voice onlink={(href) => void openExternal(href)} />
@@ -161,9 +183,23 @@
 					ondismiss={() => dismiss(segment.index, proposal)}
 				/>
 			{:else if segment.block.kind === 'error'}
-				<Notice tone={segment.block.code === 'budget' ? 'warning' : 'danger'} title={segment.block.message} />
+				<Notice
+					tone={segment.block.code === 'budget' ? 'warning' : 'danger'}
+					title={segment.block.message}
+					action={runtime.retryable(segment.block.code) ? again : undefined}
+				/>
 			{/if}
 		{/each}
+		<!-- between rounds: the tools are through and the answer has not begun (D-80) -->
+		{#if live && segments.length && awaitsWords(segments, stateOf)}<Sprouting size="md" />{/if}
+		{#if interrupted}
+			<Notice
+				tone="warning"
+				title={$t('gardener.interrupted.title')}
+				detail={$t('gardener.interrupted.text')}
+				action={again}
+			/>
+		{/if}
 	</GardenerMessage>
 {/if}
 
@@ -209,6 +245,10 @@
 {/if}
 
 <style>
+	:global(.reply-leaving) {
+		opacity: 0;
+		transition: opacity var(--ed-duration-settle) var(--ed-ease-out);
+	}
 	.tool-call {
 		display: grid;
 		grid-template-columns: max-content minmax(0, 1fr);

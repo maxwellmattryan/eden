@@ -13,7 +13,7 @@ import type { DECLARATIONS } from '../registry/generated.js'
 import { declareSchedules, takeDueSchedules } from '../scheduler/client.js'
 import type { FiredSchedule } from '../scheduler/types.js'
 import { createBus, type SignalHandler } from './bus.js'
-import { emitSignal } from './client.js'
+import { emitSignal, withdrawSignal } from './client.js'
 import { createPump } from './pump.js'
 import { deliveriesFor, rulesOf, signalTier, type Rule } from './rules.js'
 import type { Emitted, InboxEntry, SignalPayload, SubstrateSignal } from './types.js'
@@ -34,6 +34,7 @@ const report = (what: string) => (error: unknown) => void logError('signals', wh
 
 const bus = createBus((name, error) => report(`A subscriber of ${name} failed`)(error))
 const delivered = new Set<(cards: InboxEntry[]) => void>()
+const withdrawn = new Set<(cards: string[]) => void>()
 /** The rules of the enabled domains, from the start until the stop. */
 let rules: Rule[] = []
 
@@ -83,6 +84,28 @@ export async function emit(
 	}
 	await bus.dispatch(name, emitted.signal.payload)
 	return emitted
+}
+
+/** Hears the ids of the cards a withdrawal takes away, which is how the inbox drops them. */
+export function onWithdrawn(listener: (cards: string[]) => void): () => void {
+	withdrawn.add(listener)
+	return () => void withdrawn.delete(listener)
+}
+
+/**
+ * Withdraws a signal emitted under a key: its cards leave the inbox, since the owner answered it where it came from.
+ * The signal is kept, so it is not emitted again.
+ */
+export async function withdraw(name: DeclaredSignal, dedupeKey: string): Promise<void> {
+	const cards = await withdrawSignal(name, dedupeKey)
+	if (!cards.length) return
+	for (const listener of withdrawn) {
+		try {
+			listener(cards)
+		} catch (error) {
+			report(`A listener for the withdrawn cards of ${name} failed`)(error)
+		}
+	}
 }
 
 export interface SignalsStart {

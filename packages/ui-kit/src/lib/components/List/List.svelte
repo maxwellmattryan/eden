@@ -8,7 +8,8 @@
 <script lang="ts">
 	// Rows on a card, with a header naming the section and counting it, and a select mode (D-41). "Select" in the
 	// header (and at the top of every row's menu) turns the mode on: the marks slide in, a click or Space toggles a
-	// row, the header reads "n selected" and offers Done, which leaves the mode and clears the selection. Outside the
+	// row, the header reads "n selected" and offers Done, which leaves the mode and clears the selection; `bulk` puts the
+	// caller's actions on the selection beside that count. Outside the
 	// mode the rows show no mark at all. The rows are a grid with one tab stop: arrows, Home and End move between rows
 	// and a letter jumps to the next row starting with it; the header's button is outside the grid, as ARIA asks.
 	// The selection is a SvelteSet of row ids; a $derived keeps only the ids still in `rows`, so nothing syncs in an effect.
@@ -46,6 +47,8 @@
 		onselect?: (ids: string[]) => void
 		/** Content after the rows: an EmptyState when there are none, a footer link. */
 		children?: Snippet
+		/** Actions on the selection, in the header beside the count while selecting; takes the selected ids. */
+		bulk?: Snippet<[string[]]>
 	}
 	const uid = $props.id()
 	let {
@@ -59,6 +62,7 @@
 		onaction,
 		onselect,
 		children,
+		bulk,
 		class: className = '',
 		...rest
 	}: Props = $props()
@@ -127,6 +131,7 @@
 			<span class="ed-list-title" id={headerId}>{header}</span>
 			<span class="ed-list-header-right">
 				<span class="ed-list-count" aria-live="polite">{selecting ? s.selected(selection.size) : (count ?? '')}</span>
+				{#if selecting && bulk}{@render bulk([...selection])}{/if}
 				{#if selectable}
 					<Button variant="quiet" label={selecting ? s.done : s.select} onclick={selecting ? leave : enter} />
 				{/if}

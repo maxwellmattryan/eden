@@ -266,6 +266,23 @@ pub fn mark_read(conn: &Connection, card_ids: &[String]) -> Result<usize> {
     Ok(marked)
 }
 
+/// Takes the cards of one signal out of the inbox: what its emitter calls once the owner has answered it where it
+/// came from (an alert dismissed in Sky). The signal stays, so its key is still spent and it is not emitted again.
+/// Answers the cards that went.
+pub fn withdraw(conn: &Connection, name: &str, dedupe_key: &str) -> Result<Vec<String>> {
+    let cards = conn
+        .prepare(
+            "SELECT inbox.id FROM inbox JOIN signals ON signals.id = inbox.signal_id
+             WHERE signals.name = ?1 AND signals.dedupe_key = ?2",
+        )?
+        .query_map([name, dedupe_key], |row| row.get(0))?
+        .collect::<rusqlite::Result<Vec<String>>>()?;
+    for id in &cards {
+        conn.execute("DELETE FROM inbox WHERE id = ?1", [id])?;
+    }
+    Ok(cards)
+}
+
 /// Removes the signals past their retention, counted from `now_ms`, and the cards made of them. A stamp begins with
 /// its wall clock, so comparing text against a stamp made of the cutoff alone does it. Answers how many signals went.
 pub(crate) fn sweep(conn: &Connection, now_ms: u64) -> Result<usize> {
@@ -410,6 +427,38 @@ mod tests {
             assert!(ws.write(|ctx| emit(ctx.conn, keyless)).unwrap().is_some());
         }
         assert_eq!(count(&ws, "signals"), 4);
+    }
+
+    #[test]
+    fn a_withdrawn_signal_leaves_the_inbox_and_keeps_its_key() {
+        let ws = Workspace::in_memory();
+        let alert = |key: &str| {
+            input(
+                "weather.alert",
+                Some(key),
+                &[("weather.severe-alert", Channel::Os)],
+            )
+        };
+        let first = ws.write(|ctx| emit(ctx.conn, alert("urn:1"))).unwrap();
+        let second = ws.write(|ctx| emit(ctx.conn, alert("urn:2"))).unwrap();
+        let went = ws
+            .write(|ctx| withdraw(ctx.conn, "weather.alert", "urn:1"))
+            .unwrap();
+        assert_eq!(went, vec![first.unwrap().deliveries[0].id.clone()]);
+        // The other alert's card stays; the withdrawn one's signal does too, so it is not emitted again.
+        assert_eq!(inbox(&ws), second.unwrap().deliveries);
+        assert_eq!(count(&ws, "signals"), 2);
+        assert_eq!(
+            ws.write(|ctx| emit(ctx.conn, alert("urn:1"))).unwrap(),
+            None
+        );
+        // Nothing left to withdraw, and a key under another name is not this one.
+        let none: Vec<String> = Vec::new();
+        for name in ["weather.alert", "weather.frost"] {
+            let went = ws.write(|ctx| withdraw(ctx.conn, name, "urn:1")).unwrap();
+            assert_eq!(went, none);
+        }
+        assert_eq!(count(&ws, "inbox"), 1);
     }
 
     #[test]

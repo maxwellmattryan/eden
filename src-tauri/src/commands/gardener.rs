@@ -175,6 +175,11 @@ pub async fn update_message(
 }
 
 #[tauri::command]
+pub async fn delete_message(workspace: State<'_, Workspace>, id: String) -> Result<Message> {
+    workspace.write(|ctx| threads::delete_message(ctx, &id))
+}
+
+#[tauri::command]
 pub async fn query_messages(
     workspace: State<'_, Workspace>,
     thread_id: String,

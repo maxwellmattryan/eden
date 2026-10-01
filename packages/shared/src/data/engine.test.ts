@@ -298,6 +298,20 @@ describe('engine', () => {
 		expect(ids(again.queryInbox({ unreadOnly: true }))).toEqual(ids(second.deliveries))
 		expect(again.queryInbox({ limit: 1 })).toHaveLength(1)
 
+		// A withdrawn signal's card leaves the inbox; its key stays spent, so it is not emitted again.
+		const alert = () =>
+			engine.emitSignal({
+				name: 'weather.alert',
+				tier: 'T0',
+				dedupeKey: 'urn:1',
+				deliveries: [{ rule: 'weather.severe-alert', channel: 'os' }],
+			})
+		const issued = alert()!
+		expect(engine.withdrawSignal('weather.alert', 'urn:1')).toEqual(ids(issued.deliveries))
+		expect(engine.withdrawSignal('weather.alert', 'urn:1')).toEqual([])
+		expect(engine.queryInbox()).toHaveLength(2)
+		expect(alert()).toBeNull()
+
 		expect(codeOf(() => engine.emitSignal({ name: 'expiring', tier: 'T0' }))).toBe('signal:invalid')
 		expect(
 			codeOf(() =>
@@ -691,6 +705,13 @@ describe('engine', () => {
 		expect(codeOf(() => engine.createThread({ title: 'x', tier: 'T3' as 'T2' }))).toBe('thread:invalid')
 		expect(codeOf(() => engine.updateThread(newId(), { title: 'x' }))).toBe('not-found')
 		expect(codeOf(() => engine.updateMessage(newId(), []))).toBe('not-found')
+
+		clock.now += 1000
+		const gone = engine.deleteMessage(answered.id)
+		expect(gone.deletedAt).toBe(gone.updatedAt)
+		expect(engine.queryMessages(thread.id).map((row) => row.id)).toEqual([asked.id])
+		expect(engine.deleteMessage(answered.id)).toEqual(gone)
+		expect(codeOf(() => engine.deleteMessage(newId()))).toBe('not-found')
 		expect(codeOf(() => engine.appendMessage({ threadId: thread.id, role: 'bot' as 'owner', blocks: [] }))).toBe(
 			'thread:invalid'
 		)

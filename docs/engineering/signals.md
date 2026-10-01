@@ -80,6 +80,7 @@ The frontend works out the tier and the cards, and the crate checks shapes and s
 | `emit_signal` | `input`: `{ name, payload?, tier, dedupeKey?, deliveries?: [{ rule, channel }] }` | `{ signal, deliveries }`, or `null` for a key already emitted |
 | `query_inbox` | `filter`: `{ unreadOnly?, limit? }` | the cards with their signal's name, payload, tier and time, the latest first; fifty unless told, two hundred at most |
 | `mark_inbox_read` | `ids` | how many were unread |
+| `withdraw_signal` | `name`, `dedupeKey` | the ids of the cards that left the inbox; the signal stays, so its key is still spent |
 | `show_notification` | `title`, `body` | whether it was handed to the system: never while the capability is off |
 
 A refusal starts with `schedule:invalid` or `signal:invalid` (`engineering/data-layer.md`, "The IPC boundary").
@@ -116,6 +117,8 @@ A manifest also declares its repeating schedules: `"schedules": [{ "id": "alerts
 | `subscribe(name, handler)` | hears a declared signal |
 | `onSchedule(name, handler)` | hears one schedule each time it is taken |
 | `onDelivered(listener)` | hears the cards each emit makes |
+| `withdraw(name, dedupeKey)` | takes a keyed signal's cards out of the inbox once the owner has answered it where it came from, and tells the inbox; the signal is kept and is not emitted again |
+| `onWithdrawn(listener)` | hears the ids of the cards a withdrawal takes away |
 
 A domain binds what it hears in its manifest binding, `subscribe: () => () => void` (`engineering/domain-module.md`, "Bindings"). The name of an emitted signal is typed from the manifests and from the substrate's own list (`SUBSTRATE_SIGNALS` in `signals/types.ts`, a const and not a manifest field: the two task signals, D-75), so a signal nobody declares does not compile.
 
@@ -162,7 +165,7 @@ The phone has no inbox and sends no OS notification yet. It runs the runtime, so
 | `weather.forecast` | once it is fifteen minutes old while read (each layout holds a watch for the live glyph), and whenever the owner asks | the forecast and the supplementary slots that are due; the alerts too when they are older than five minutes |
 | `weather.alerts` | when the schedule `weather.alerts` fires, every five minutes | the alerts alone |
 
-Each active alert is emitted as `weather.alert` with its id as the key, so it is a signal once however often it is answered; the rule `severe-alert` answers the severe and the extreme. The alert service answers 400 for a point outside the United States: Sky remembers that in the mirror (`alertsCovered`) and does not ask again until the home place changes or the owner presses Refresh. A service that does not answer leaves the alerts as they were.
+Each active alert is emitted as `weather.alert` with its id as the key, so it is a signal once however often it is answered; the rule `severe-alert` answers the severe and the extreme. Dismissing an alert in Sky withdraws its signal, so its card leaves the inbox with it; each answer of the alerts withdraws the dismissed ones again, which clears a card a failed withdrawal left behind. An alert that stops being issued keeps its card until it is read away or swept. The alert service answers 400 for a point outside the United States: Sky remembers that in the mirror (`alertsCovered`) and does not ask again until the home place changes or the owner presses Refresh. A service that does not answer leaves the alerts as they were.
 
 **Hearth** (`packages/shared/src/domains/kitchen/signals.ts`, with the pure parts in `digest.ts`). The handlers read the rows and not the app's store, which is not loaded until a Hearth page opens.
 

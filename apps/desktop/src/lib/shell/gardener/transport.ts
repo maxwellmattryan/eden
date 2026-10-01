@@ -26,6 +26,8 @@ export function fakeTransport(script: (request: GardenerRequest) => string = () 
 			onEvent({ type: 'start', messageId: `fake-${request.id}`, model: request.model })
 			onEvent({ type: 'usage', input: 120, output: 0, cacheRead: 0, cacheWrite: 0 })
 			const looks = moonRound(request)
+			// the wait a model makes before its first word, so the sprout can be worked on too
+			await new Promise((resolve) => setTimeout(resolve, 1200))
 			for (const word of (looks === 'ask' ? FAKE_LOOK : looks === 'answer' ? FAKE_MOON : script(request)).split(
 				/(?<=\s)/
 			)) {
