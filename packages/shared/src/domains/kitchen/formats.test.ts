@@ -39,9 +39,20 @@ const data: KitchenData = {
 			],
 			steps: ['Simmer the lentils.', 'Season.'],
 			sourceUrl: 'https://example.com/dal',
+			sourceName: 'Example Kitchen',
+			author: 'Asha Rao',
 			tip: 'Better the next day.',
 		},
-		{ id: '4', name: 'Plain rice', serves: 4, minutes: 20, tags: [], ingredients: [], steps: [] },
+		{
+			id: '4',
+			name: 'Plain rice',
+			serves: 4,
+			minutes: 20,
+			tags: [],
+			ingredients: [],
+			steps: [],
+			sourceName: 'The Rice Book',
+		},
 	],
 	grocery: {
 		stores: [
@@ -97,7 +108,8 @@ describe('kitchenExtras', () => {
 				'- Serves 2',
 				'- 35 minutes',
 				'- Tags: quick, one pot',
-				'- Source: https://example.com/dal',
+				'- By: Asha Rao',
+				'- Source: Example Kitchen, https://example.com/dal',
 				'',
 				'### Ingredients',
 				'',
@@ -115,6 +127,7 @@ describe('kitchenExtras', () => {
 				'',
 				'- Serves 4',
 				'- 20 minutes',
+				'- Source: The Rice Book',
 				'',
 			].join('\n')
 		)

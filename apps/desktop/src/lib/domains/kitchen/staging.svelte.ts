@@ -20,6 +20,9 @@ import {
 	guessedIcons,
 	htmlToText,
 	iconAddresses,
+	pageImage,
+	storeDetails,
+	type StoreDetails,
 	pictureAddress,
 	siteAddress,
 	wwwAddress,
@@ -214,22 +217,25 @@ const LOGO_LEAST = 32
 const LOGO_TRIES = 3
 
 /**
- * A store's picture from its website (D-103): the icon its page names for a home screen, or the one at a usual
- * address when the page will not be read or names none, fetched by the app and fitted whole. The site is asked as
- * the owner typed it and, when that will not be read, under `www.`, since many sites live only there. Nothing when
- * the site gives none worth showing; the store keeps its glyph and the owner is not told.
+ * What a store's own website gives of it: its picture (D-103), the icon its page names for a home screen or the
+ * one at a usual address when the page will not be read or names none, fetched by the app and fitted whole; and
+ * what the page says of where the store is and how to call it, read on the device. The site is asked as the owner
+ * typed it and, when that will not be read, under `www.`, since many sites live only there. A site that gives no
+ * picture worth showing answers none; the store keeps its glyph and the owner is not told.
  */
-export async function storeLogo(url: string): Promise<string | undefined> {
+export async function storeSite(url: string): Promise<{ image?: string; details: StoreDetails }> {
 	const site = siteAddress(url)
-	if (!site) return undefined
+	if (!site) return { details: {} }
 	const sites = [site, wwwAddress(site)].filter((entry): entry is string => !!entry)
 	let named: string[] = []
+	let details: StoreDetails = {}
 	// where the site answered from, after its redirects: the usual addresses are asked there
 	let home: string[] = sites
 	for (const entry of sites) {
 		try {
 			const page = await fetchPage(entry)
 			named = iconAddresses(page.html, page.url)
+			details = storeDetails(page.html)
 			home = [page.url]
 			break
 		} catch (error) {
@@ -244,13 +250,18 @@ export async function storeLogo(url: string): Promise<string | undefined> {
 		try {
 			const picture = new Blob([(await fetchImage(address)) as Uint8Array<ArrayBuffer>])
 			const image = await fitPicture(picture, LOGO_GOOD)
-			if (image) return image
+			if (image) return { image, details }
 			small ??= await fitPicture(picture, LOGO_LEAST)
 		} catch (error) {
 			void logError('web', "A store's picture could not be fetched", webErrorCode(error)).catch(() => null)
 		}
 	}
-	return small
+	return { ...(small ? { image: small } : {}), details }
+}
+
+/** A store's picture from its website (D-103); nothing when the site gives none worth showing. */
+export async function storeLogo(url: string): Promise<string | undefined> {
+	return (await storeSite(url)).image
 }
 
 /** The pictures an owner may choose for an item or a store: what the webview decodes, HEIC included. */
@@ -314,6 +325,32 @@ export async function recipePicture(photo: Blob): Promise<RecipePicture | undefi
 		return undefined
 	} finally {
 		bitmap?.close()
+	}
+}
+
+/**
+ * The picture a link the owner pasted means for a recipe (D-110), fetched by the app: the picture at the address,
+ * or, when the address is a page instead, the picture that page names as its own. Nothing when neither gives one.
+ */
+export async function linkedRecipePicture(link: string): Promise<RecipePicture | undefined> {
+	const address = pictureAddress(link)
+	if (!address) return undefined
+	const fetched = async (url: string) => recipePicture(new Blob([(await fetchImage(url)) as Uint8Array<ArrayBuffer>]))
+	try {
+		return await fetched(address)
+	} catch (error) {
+		if (webErrorCode(error) !== 'web:not-image') {
+			void logError('web', 'A picture could not be fetched', webErrorCode(error)).catch(() => null)
+			return undefined
+		}
+	}
+	try {
+		const page = await fetchPage(address)
+		const named = pageImage(page.html, page.url)
+		return named ? await fetched(named) : undefined
+	} catch (error) {
+		void logError('web', "A page's picture could not be fetched", webErrorCode(error)).catch(() => null)
+		return undefined
 	}
 }
 

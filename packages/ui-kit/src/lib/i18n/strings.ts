@@ -300,6 +300,8 @@ export interface UiStrings {
 		missing: string
 		/** The file could not be read or stored. */
 		failed: string
+		/** The first row of a file button's menu of sources: the platform's picker. */
+		fromFile: string
 	}
 }
 
@@ -540,6 +542,7 @@ export const defaultStrings: UiStrings = {
 		open: (name) => `Open ${name}`,
 		missing: 'No longer on this device',
 		failed: 'Could not be added',
+		fromFile: 'From a file',
 	},
 }
 

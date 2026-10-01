@@ -92,7 +92,7 @@ export interface Recipe {
 	tip?: string
 	/** The recipe's picture (D-93): the id of a `recipe-photo` Attachment, whose row holds the small image. */
 	photo?: string
-	/** `false` for a recipe whose amounts do not follow its servings (D-94): a loaf, a cake in one tin. */
+	/** `false` for a recipe whose amounts do not follow its servings (D-107): a loaf, a cake in one tin. */
 	scales?: boolean
 }
 

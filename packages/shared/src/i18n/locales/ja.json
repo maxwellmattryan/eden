@@ -128,6 +128,24 @@
 		"kitchen": {
 			"name": "台所",
 			"subtitle": "食材、レシピ、買い物",
+			"gardener": {
+				"preview": {
+					"add": "追加: {what}",
+					"change": "変更: {what}",
+					"remove": "削除: {what}",
+					"complete": "買い物を完了: {what}",
+					"cooked": "作った料理: {what}",
+					"unfiled": "その他",
+					"unknown": "台所にないもの"
+				},
+				"toast": {
+					"stock": "在庫を{count}件変更しました。",
+					"grocery": "買い物リストを{count}件変更しました。",
+					"stores": "店を{count}件変更しました。",
+					"recipeChanged": "{name}を変更しました。",
+					"recipeRemoved": "{name}を削除しました。"
+				}
+			},
 			"tabs": {
 				"stock": "在庫",
 				"recipes": "レシピ",
@@ -146,6 +164,11 @@
 				"lowStock": {
 					"line": "{count, plural, =1 {{first}が残りわずかです} =2 {{first}と{second}が残りわずかです} other {{first}ほか{more}件が残りわずかです}}"
 				}
+			},
+			"picture": {
+				"fromLink": "リンクから",
+				"link": "リンクから写真を設定",
+				"fetch": "写真を取得"
 			},
 			"categories": {
 				"produce": "野菜・果物",
@@ -175,6 +198,7 @@
 				"no-files": "まず写真、レシート、またはリストを追加してください。",
 				"no-recipe": "レシピを読み取れませんでした。レシピの本文か、別の写真でお試しください。",
 				"page-blocked": "このページは読み取れません。公開されたウェブページではないか、大きすぎます。",
+				"page-empty": "このサイトはアプリからページを読み取れません。レシピの本文を貼り付けるか、ページのスクリーンショットまたは PDF を追加してください。",
 				"page-failed": "ページを取得できませんでした。レシピの本文を貼り付けてください。",
 				"page-unavailable": "リンクの取得はインストール版のアプリで行います。レシピの本文を貼り付けてください。",
 				"not-https": "https で始まるリンクだけを取得します。"
@@ -200,7 +224,11 @@
 			},
 			"stock": {
 				"add": "追加",
-				"addPlaceholder": "在庫に追加、または商品のリンクを貼り付け",
+				"addItem": "在庫に追加",
+				"selection": {
+					"count": "{count}件を選択中",
+					"done": "完了"
+				},
 				"expiring": "期限間近",
 				"lowStock": "残りわずか",
 				"ranOut": "切らしたもの",
@@ -228,6 +256,10 @@
 					"text": "冷蔵庫、冷凍庫、食品棚の写真を数枚撮って在庫を確認すると、写っているものが場所ごとに並びます。買い物のあとは、写真、レシート、注文から取り込めます。"
 				},
 				"noneMatch": "この絞り込みに合う在庫はありません。",
+				"emptyLocation": {
+					"title": "ここには何もありません",
+					"text": "品目をドロップするとここに置かれます。"
+				},
 				"detail": {
 					"editing": "品目を編集",
 					"name": "名前",
@@ -248,9 +280,8 @@
 					"tipFor": "{name}のヒント",
 					"choosePicture": "写真を選ぶ",
 					"removePicture": "写真を削除",
-					"pictureLink": "リンクから写真を設定",
 					"pictureLinkHelp": "H-E-Bの商品ページ、または画像そのもののアドレス。",
-					"usePictureLink": "写真を取得"
+					"pictureLinkAddHelp": "H-E-Bの商品ページ（空欄の名前・ブランド・サイズも入力されます）、または画像そのもののアドレス。"
 				},
 				"source": {
 					"manual": "手入力",
@@ -405,8 +436,43 @@
 				"notEnough": "量が不足",
 				"ingredients": "材料",
 				"steps": "作り方",
-				"tipFor": "{name}のヒント",
 				"editing": "レシピを編集",
+				"search": "レシピを検索",
+				"searchPlaceholder": "検索、または材料を並べる: ほうれん草, 豆腐",
+				"clearSearch": "検索をクリア",
+				"countOf": "{total}件中{shown}件",
+				"filters": {
+					"inStock": "在庫あり",
+					"quick": "{minutes}分以内",
+					"expiring": "期限の近いものを使う",
+					"tags": "タグ",
+					"tagsChosen": "タグ: {tags}",
+					"tagsLabel": "タグで絞り込む",
+					"clear": "クリア"
+				},
+				"sortBy": "並び順: {sort}",
+				"sortLabel": "レシピを並べ替える",
+				"sort": {
+					"tonight": "今夜",
+					"name": "名前",
+					"quickest": "早い順",
+					"missing": "不足が少ない順"
+				},
+				"noMatch": {
+					"title": "一致するレシピはありません",
+					"text": "言葉を減らすか、フィルターを外してください。",
+					"clear": "フィルターをクリア"
+				},
+				"credit": {
+					"by": "{author} 作"
+				},
+				"servings": {
+					"label": "人数",
+					"fewer": "1人分減らす",
+					"more": "1人分増やす",
+					"reset": "元の{count}人分に戻す",
+					"fixed": "分量はレシピに書かれたとおりです。"
+				},
 				"missingEstimate": "不足分を買うのに約${total}。",
 				"missingUnpriced": "{count}件はまだ価格がありません。",
 				"actions": {
@@ -438,7 +504,9 @@
 					"alreadyListed": "不足分はすでにリストにあります。",
 					"missingAdded": "材料{count}件をリストに追加しました。",
 					"nothingTaken": "{name}に使う在庫はありません。",
-					"cooked": "{name}を作りました。在庫を更新しました。"
+					"cooked": "{name}を作りました。在庫を更新しました。",
+					"pictureFailed": "この写真は読み取れませんでした。",
+					"pictureLinkFailed": "このリンクから写真を取得できませんでした。"
 				},
 				"form": {
 					"name": "名前",
@@ -452,12 +520,21 @@
 					"tags": "タグ",
 					"tagsHelp": "カンマ区切り: 平日, 鍋ひとつ。",
 					"tip": "ヒント",
-					"source": "出典"
+					"source": "出典",
+					"sourceName": "出典名",
+					"sourceNameHelp": "サイト、雑誌、料理本など。",
+					"author": "著者",
+					"scales": "分量を人数に合わせる",
+					"scalesHelp": "パン1斤や型ひとつのケーキではオフにします。",
+					"choosePicture": "写真を選ぶ",
+					"removePicture": "写真を削除",
+					"fetchingPicture": "ページの写真を取得中…",
+					"pictureLinkHelp": "画像そのもののアドレス、または画像のあるページ。"
 				},
 				"import": {
 					"title": "レシピを追加",
 					"label": "レシピ、またはそのリンク",
-					"placeholder": "レシピの本文かリンクを貼り付けるか、ページの写真をドロップ",
+					"placeholder": "レシピかリンクを貼り付け",
 					"help": "ページやカードの写真でも構いません。ここにドロップ、貼り付け、または選択してください。",
 					"linkHelp": "まずページを取得します。ページ自体がレシピを記述していれば、モデルを使わずに読み取ります。",
 					"choose": "写真やファイルを選ぶ",
@@ -1447,7 +1524,8 @@
 		"file": {
 			"open": "{0}を開く",
 			"missing": "このデバイスにはもうありません",
-			"failed": "追加できませんでした"
+			"failed": "追加できませんでした",
+			"fromFile": "ファイルから"
 		}
 	},
 	"gardener": {

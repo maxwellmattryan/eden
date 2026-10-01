@@ -2,6 +2,7 @@
 // no manifest holds them, joined with every domain's declared tools to the schema and the words the model is given.
 // A tool's declaration is its contract with the grant store and the pack; its schema is what the API sees. The shell
 // rejects a tool that names a resource outside the registry or any T3 resource (`validateTools`).
+import { CATEGORIES, LOCATIONS, STORE_SELLS as STORE_SELLS_OPTIONS } from '../domains/kitchen/types.js'
 import type { DomainDeclaration, ToolDeclaration } from '../manifest/types.js'
 import { FACT_SHAPES, LIVE_FACT_TYPES, shapeOf, type ValueShape } from '../profile/shapes.js'
 import { resource, RESOURCES } from '../registry/index.js'
@@ -81,6 +82,27 @@ export const answer = {
 }
 
 const DAY = 'A day as YYYY-MM-DD.'
+
+const STOCK_LOCATION = (description: string): JsonSchema => ({ type: 'string', enum: LOCATIONS, description })
+const STOCK_CATEGORY: JsonSchema = {
+	type: 'string',
+	enum: CATEGORIES,
+	description: 'What kind of thing it is, when you can tell.',
+}
+const STORE_SELLS: JsonSchema = {
+	type: 'array',
+	items: { type: 'string', enum: STORE_SELLS_OPTIONS },
+	description: 'What the owner buys there; `grocery` when unsaid.',
+}
+const RECIPE_LINE = object(
+	{
+		name: text('The ingredient alone, without its amount.'),
+		qty: text('The amount alone: 2, 1/2, 200. An empty string when there is none.'),
+		unit: text('The unit of the amount: g, ml, tbsp, cup, clove. Left out for a plain count.'),
+		note: text('How it is prepared: minced, to taste. Left out when there is nothing to say.'),
+	},
+	['name', 'qty']
+)
 const SEPARATE = 'Runs a separate model request'
 const COSTED = 'the owner is shown its cost and confirms before it runs'
 
@@ -90,7 +112,7 @@ const COSTED = 'the owner is shown its cost and confirms before it runs'
  */
 export const QUICK_ACTION_WORDS: Readonly<Record<string, string>> = {
 	'kitchen.add-to-grocery':
-		'adds one item to the grocery list; `value` is the item, with its amount when one was given ("oat milk", "2 lemons")',
+		'puts one item on a grocery list, the list of the store it was last bought at or else the unfiled one; `value` is the item, with its amount when one was given ("oat milk", "2 lemons")',
 	'toolbench.capture-idea': 'saves a new idea in Toolbench; `value` is the idea in a sentence, which becomes its title',
 }
 
@@ -203,7 +225,7 @@ export const SCHEMAS: Readonly<Record<string, { description: string; schema: Jso
 		}),
 	},
 	'kitchen.storage-tip': {
-		description: `${SEPARATE} for how to store one food and how long it keeps. Pass \`stockItemId\` for an item in the stock, or \`name\` for anything else; one of the two is needed. Returns \`tip\`, two sentences at most, and \`shelfLifeDays\`. It is general guidance: an item’s own expiry date is on its row in the context.`,
+		description: `${SEPARATE} for how to store one food and how long it keeps. Pass \`stockItemId\` for an item in the stock, or \`name\` for anything else; one of the two is needed. Returns \`tip\`, two sentences at most, and \`shelfLifeDays\`. It is general guidance: an item’s own expiry date is on its row in the context. Nothing is stored: to keep a tip on the item, pass it to \`kitchen_update-stock\`.`,
 		schema: object({
 			stockItemId: text('The `id` of the item’s row under `stock-item` in the context.'),
 			name: text('The food’s name, when it is not in the stock.'),
@@ -221,7 +243,7 @@ export const SCHEMAS: Readonly<Record<string, { description: string; schema: Jso
 		}),
 	},
 	'kitchen.draft-grocery-list': {
-		description: `${SEPARATE} that drafts a grocery list as a card the owner edits and keeps: what the chosen recipes and the coming days need, less what is in stock and what is already on the list. Returns the drafted \`items\`. Use it when the owner asks what to buy or for a shopping list; to put one named item on the list, use \`log-quick\`.`,
+		description: `${SEPARATE} that drafts a grocery list as a card the owner edits and keeps: what the chosen recipes and the coming days need, less what is in stock and what is already on a list. When kept, the items go on the list of \`storeId\`, or with none each goes to the store it was last bought at. Returns the drafted \`items\`. Use it when the owner asks what to buy or for a shopping list; to put items they named on a list, use \`kitchen_edit-grocery\`.`,
 		schema: object({
 			forRecipeIds: {
 				type: 'array',
@@ -230,12 +252,15 @@ export const SCHEMAS: Readonly<Record<string, { description: string; schema: Jso
 					'The `id` of each recipe they want to cook, from rows under `recipe`. Left out, the list follows the stock.',
 			},
 			days: integer('How many days the list should cover, 1 to 14; 7 when unsaid.'),
-			notes: text('Anything to mind: a guest, a budget, a shop.'),
+			notes: text('Anything to mind: a guest, a budget.'),
+			storeId: text(
+				'The `id` of the store whose list the items go on, from rows under `grocery-store`, when the owner named one.'
+			),
 		}),
 	},
 	'kitchen.add-stock': {
 		description:
-			'Adds items to the kitchen stock, after the owner confirms on the card; they can undo it. Put every item in one call. Returns the id and name of each row added. Use it when the owner tells you what they bought or have at home. It cannot change or remove stock that is already there.',
+			'Adds items to the kitchen stock, after the owner confirms on the card; they can undo it. Put every item in one call. An item that ran out comes back as the same row. When the owner names a product you know, fill in its `brand`, its `size` and its `category` yourself so they do not have to; leave out whatever you are not sure of. Returns the id and name of each row. Use it when the owner tells you what they bought or have at home; to change or remove what is already there, use `kitchen_update-stock`.',
 		schema: object(
 			{
 				items: {
@@ -243,17 +268,18 @@ export const SCHEMAS: Readonly<Record<string, { description: string; schema: Jso
 					description: 'Every item to add, one entry each.',
 					items: object(
 						{
-							name: text('The item itself, as the owner named it, without its maker: "butter".'),
-							brand: text('Who makes it, when the owner said: "Kerrygold". Left out otherwise.'),
-							size: text('How much one package holds, when the owner said: "16 oz". Left out otherwise.'),
+							name: text('The item itself, without its maker: "butter".'),
+							brand: text('Who makes it, when the owner said or the product is one you know: "Kerrygold".'),
+							size: text('How much one package holds, when the owner said or you know it: "16 oz".'),
 							qty: text('The amount alone, as a number or a word: 2, 500, half. 1 when unsaid.'),
 							unit: text('The unit of the amount: g, ml, bunch, tin. Left out for a plain count.'),
-							location: {
-								type: 'string',
-								enum: ['fridge', 'freezer', 'pantry', 'counter'],
-								description: 'Where it is kept. When the owner did not say, choose by the kind of food.',
-							},
+							location: STOCK_LOCATION('Where it is kept. When the owner did not say, choose by the kind of food.'),
+							category: STOCK_CATEGORY,
 							expiry: text(`The day it expires, when the owner gave one. ${DAY}`),
+							tip: text('One short sentence on storing it, only when the owner asked for one to be kept.'),
+							link: text(
+								'The link to the product’s page at a grocer, when the owner pasted one: its name, size and picture are read from it.'
+							),
 						},
 						['name', 'qty', 'location']
 					),
@@ -261,6 +287,130 @@ export const SCHEMAS: Readonly<Record<string, { description: string; schema: Jso
 			},
 			['items']
 		),
+	},
+	'kitchen.update-stock': {
+		description:
+			'Changes or removes items that are in the kitchen stock, after the owner confirms on the card; they can undo it. Put every change in one call. `changes` edits rows: pass only the fields that change. A `qty` of 0 marks the item as run out: it stays, to be bought again, and that is what "we are out of eggs" means. `location` moves it. `remove` deletes rows for good, for something added by mistake. After the owner cooked a saved recipe, pass `cookedRecipeId` and, in `changes`, each used item with the `qty` that is left. Returns the id and name of each row changed and removed, or an error naming an id that is not in the stock. To add something new, use `kitchen_add-stock`.',
+		schema: object({
+			changes: {
+				type: 'array',
+				description: 'The items to change, one entry each.',
+				items: object(
+					{
+						id: text('The `id` of the item’s row under `stock-item` in the context.'),
+						name: text('Its new name, without its maker.'),
+						brand: text('Who makes it. An empty string clears it.'),
+						size: text('How much one package holds: "16 oz". An empty string clears it.'),
+						qty: text('The amount it holds now, alone: 2, 500, half. 0 when it ran out.'),
+						unit: text('The unit of the amount: g, ml, bunch, tin. An empty string for a plain count.'),
+						location: STOCK_LOCATION('Where it is kept now.'),
+						category: STOCK_CATEGORY,
+						expiry: text(`The day it expires. ${DAY} An empty string clears it.`),
+						threshold: {
+							type: 'number',
+							description: 'The amount at or under which it counts as low, in its own unit. -1 clears it.',
+						},
+						tip: text('One short sentence on storing it. An empty string clears it.'),
+					},
+					['id']
+				),
+			},
+			remove: { type: 'array', items: text(), description: 'The `id` of each item to delete for good.' },
+			cookedRecipeId: text(
+				'The `id` of the saved recipe the owner cooked, from rows under `recipe`, when the changes are what cooking it used.'
+			),
+		}),
+	},
+	'kitchen.edit-grocery': {
+		description:
+			'Changes the grocery lists, after the owner confirms on the card; they can undo it. Every store has its own list, and one list holds what is not filed under a store. Put everything in one call. `add` puts items on a list: on the list of `storeId` when the owner named a store, else where each was last bought. `update` edits an item, moves it to another store’s list with `storeId`, or checks it off with `done`. `remove` deletes items. `complete` finishes a shopping trip for a store: its checked items leave the list and the store remembers them. When the owner names a product you know, fill in its `brand` and `size` yourself; leave out what you are not sure of. Use it for items the owner names, for buying again something that ran out, and for a recipe’s missing ingredients; for a whole list worked out from the stock use `kitchen_draft-grocery-list`. Returns what was added, changed, removed and completed, or an error naming an id it does not know.',
+		schema: object({
+			add: {
+				type: 'array',
+				description: 'The items to add, one entry each.',
+				items: object(
+					{
+						name: text('The thing to buy, without its maker: "butter".'),
+						brand: text('The brand to buy, when the owner said or the product is one you know.'),
+						size: text('The package size to buy: "16 oz".'),
+						qty: text('How much, with its unit: 2, 500 g, 1 bunch.'),
+						price: { type: 'number', description: 'What one costs, only when the owner said: 3.49.' },
+						note: text('Anything to mind when buying it, in a few words.'),
+						storeId: text(
+							'The `id` of the store whose list it goes on, from rows under `grocery-store`; `none` for the unfiled list. Left out, it goes where it was last bought.'
+						),
+						link: text(
+							'The link to the product’s page at a grocer, when the owner pasted one: its name and size are read from it.'
+						),
+					},
+					['name']
+				),
+			},
+			update: {
+				type: 'array',
+				description: 'The items to change, one entry each, with only the fields that change.',
+				items: object(
+					{
+						id: text('The `id` of the item’s row under `grocery-item` in the context.'),
+						name: text('Its new name, without its maker.'),
+						brand: text('The brand to buy. An empty string clears it.'),
+						size: text('The package size to buy. An empty string clears it.'),
+						qty: text('How much, with its unit.'),
+						price: { type: 'number', description: 'What one costs, when the owner said. 0 clears it.' },
+						note: text('Anything to mind when buying it. An empty string clears it.'),
+						storeId: text(
+							'The `id` of the store whose list it moves to; `none` moves it to the unfiled list. Left out, it stays.'
+						),
+						done: { type: 'boolean', description: 'Whether it is checked off: true once it is in the basket.' },
+					},
+					['id']
+				),
+			},
+			remove: { type: 'array', items: text(), description: 'The `id` of each grocery item to delete.' },
+			complete: {
+				type: 'array',
+				items: text(),
+				description: 'The `id` of each store whose trip is done; `none` for the unfiled list.',
+			},
+		}),
+	},
+	'kitchen.edit-stores': {
+		description:
+			'Adds, changes or deletes the stores the owner shops at, after the owner confirms on the card; they can undo it. Each store has its own grocery list. For a store you know, fill in `url` with its own website so the owner does not have to: once they confirm, the app reads that site on the device for the store’s picture, its phone number and its address. Leave `url` out when you are not sure of it, and never guess a phone number. You are not given a store’s address and cannot set one. `shopDay` is the day of the next trip, which the owner is reminded of that morning. Deleting a store keeps its items: they move to the unfiled list. Returns the id and name of each store added, changed and removed; a store whose name is already there is answered as it stands.',
+		schema: object({
+			add: {
+				type: 'array',
+				description: 'The stores to add, one entry each.',
+				items: object(
+					{
+						name: text('The store’s name as the owner would say it: "H-E-B", "Central Market".'),
+						sells: STORE_SELLS,
+						url: text('The store’s own website, starting with https://, when the owner gave it or you know it.'),
+						phone: text('Its phone number, only when the owner gave it.'),
+						note: text('Anything the owner said to remember about it.'),
+						shopDay: text('The next trip, as YYYY-MM-DD or YYYY-MM-DDTHH:MM when the owner named one.'),
+					},
+					['name']
+				),
+			},
+			update: {
+				type: 'array',
+				description: 'The stores to change, one entry each, with only the fields that change.',
+				items: object(
+					{
+						id: text('The `id` of the store’s row under `grocery-store` in the context.'),
+						name: text('Its new name.'),
+						sells: STORE_SELLS,
+						url: text('The store’s own website, starting with https://. An empty string clears it.'),
+						phone: text('Its phone number. An empty string clears it.'),
+						note: text('Anything to remember about it. An empty string clears it.'),
+						shopDay: text('The next trip, as YYYY-MM-DD or YYYY-MM-DDTHH:MM. An empty string clears it.'),
+					},
+					['id']
+				),
+			},
+			remove: { type: 'array', items: text(), description: 'The `id` of each store to delete.' },
+		}),
 	},
 	'kitchen.import-recipe': {
 		description: `${SEPARATE} that writes out a recipe the owner brought, as a card that opens it in their recipes to check and save. The recipe is in \`text\` when they pasted it, at \`url\` when they gave a link (the app fetches the page), or in the files on their message when they attached a photo of a page or a card; pass whichever you have, and nothing when it is the files alone. Returns the drafted recipe’s name. It writes down what the source says and invents nothing; to save a dish you suggested yourself, use \`kitchen_save-recipe\`.`,
@@ -281,24 +431,49 @@ export const SCHEMAS: Readonly<Record<string, { description: string; schema: Jso
 				ingredients: {
 					type: 'array',
 					description: 'Every ingredient, one entry each.',
-					items: object(
-						{
-							name: text('The ingredient alone, without its amount.'),
-							qty: text('The amount alone: 2, 1/2, 200. An empty string when there is none.'),
-							unit: text('The unit of the amount: g, ml, tbsp, cup, clove. Left out for a plain count.'),
-							note: text('How it is prepared: minced, to taste. Left out when there is nothing to say.'),
-						},
-						['name', 'qty']
-					),
+					items: RECIPE_LINE,
 				},
 				steps: { type: 'array', items: text('One step, as a full sentence.'), description: 'The steps, in order.' },
 				tip: text('One sentence that makes the dish go right, when there is one worth giving.'),
+				author: text('Who the recipe is by, when it is someone’s and not your own.'),
+				sourceName: text('What it comes from, by name: a cookbook, a magazine, a site. Left out for your own.'),
+				sourceUrl: text('The page it comes from, starting with https://, when there is one.'),
+				scales: {
+					type: 'boolean',
+					description: 'False when the amounts cannot simply be multiplied for more servings, as with baking.',
+				},
 			},
 			['name', 'ingredients', 'steps']
 		),
 	},
+	'kitchen.change-recipe': {
+		description:
+			'Changes or deletes one of the owner’s saved recipes, after the owner confirms on the card; they can undo it. Pass only the fields that change; `ingredients`, `steps` and `tags` replace the whole list, so give each in full when you change it. `remove: true` deletes the recipe and takes nothing else. A change that names one of the owner’s allergens, restrictions or disliked ingredients is refused. Returns the recipe’s id and name, or an error when no recipe has that id. Use it when the owner asks to correct, adjust or delete a recipe they have; a new recipe goes through `kitchen_save-recipe` or `kitchen_import-recipe`.',
+		schema: object(
+			{
+				id: text('The `id` of the recipe’s row under `recipe` in the context.'),
+				remove: { type: 'boolean', description: 'True to delete the recipe.' },
+				name: text('The dish.'),
+				serves: integer('How many it serves.'),
+				minutes: integer('How long it takes start to finish, in minutes.'),
+				tags: { type: 'array', items: text(), description: 'Up to three plain tags, replacing the ones it has.' },
+				ingredients: {
+					type: 'array',
+					description: 'Every ingredient, one entry each, replacing the ones it has.',
+					items: RECIPE_LINE,
+				},
+				steps: {
+					type: 'array',
+					items: text('One step, as a full sentence.'),
+					description: 'The steps, in order, replacing the ones it has.',
+				},
+				tip: text('One sentence that makes the dish go right. An empty string clears it.'),
+			},
+			['id']
+		),
+	},
 	'kitchen.plan-week': {
-		description: `${SEPARATE} at the deep grade that plans meals for a run of days around the stock, the saved recipes and the events and tasks in the calendar, with one shop day, its list and the tasks the plan needs, as one plan card the owner keeps or discards; ${COSTED}. Returns the drafted plan. Use it when the owner asks to plan a week of meals; for one meal use \`kitchen_suggest-recipes\`.`,
+		description: `${SEPARATE} at the deep grade that plans meals for a run of days around the stock, the saved recipes and the events and tasks in the calendar, with one shop day, what to buy for it and the tasks the plan needs, as one plan card the owner keeps or discards. When kept, the shop day goes in the calendar and each thing to buy goes on the list of the store it was last bought at; ${COSTED}. Returns the drafted plan. Use it when the owner asks to plan a week of meals; for one meal use \`kitchen_suggest-recipes\`.`,
 		schema: object({
 			from: text(`The first day; today when unsaid. ${DAY}`),
 			days: integer('How many days, 1 to 14; 7 when unsaid.'),
@@ -401,7 +576,7 @@ export const SCHEMAS: Readonly<Record<string, { description: string; schema: Jso
  */
 export const DOMAIN_BLURBS: Readonly<Record<string, string>> = {
 	kitchen:
-		'food at home: the stock in the fridge, freezer and pantry with its expiry dates, recipes with their ingredients and steps, and the grocery list',
+		'food at home: the stock in the fridge, freezer and pantry with its expiry dates (an item at a quantity of 0 ran out and is kept to be bought again), recipes with their ingredients and steps, and the stores the owner shops at, each with its own grocery list (a `grocery-item` is on the list its `listId` names, and a `grocery-list` with no `storeId` is the unfiled one)',
 	toolbench:
 		'making things: ideas and their brainstorms, projects with their next steps and parts lists, code sketches, notes and homelab devices',
 	weather: 'the weather for the owner’s home area: the forecast, the alerts in force, sunrise, sunset and the moon',

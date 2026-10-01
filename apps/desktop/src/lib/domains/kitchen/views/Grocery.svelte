@@ -37,6 +37,7 @@
 	import { undoToast } from '$lib/shell/undo'
 	import { daysFromToday, daysSince, formatEventTime, todayIso } from '@eden/shared/dates'
 	import { PICTURE_ACCEPT, fitPicture, storeLogo } from '../staging.svelte'
+	import { fetchStoreSite } from '../store-site'
 	import { categoryGlyph } from '../words'
 	import {
 		kitchen,
@@ -364,24 +365,6 @@
 		note: place.note.trim(),
 		shopDay: place.date ? `${place.date}T${place.time || '10:00'}:00` : undefined,
 	})
-	/**
-	 * A store's picture from its website (D-103), fetched once the website is saved and set when it arrives, unless
-	 * the store has gone, has a picture by then or has another website. The undo it answers takes the picture back,
-	 * or stops one still on its way.
-	 */
-	function fetchLogo(id: string, url: string): Undo {
-		let stopped = false
-		let unpicture: Undo | undefined
-		void storeLogo(url).then((image) => {
-			const store = kitchen.storeById(id)
-			if (stopped || !image || !store || store.photo || store.place?.url !== url) return
-			unpicture = kitchen.setStorePhoto(id, image).undo
-		})
-		return () => {
-			stopped = true
-			unpicture?.()
-		}
-	}
 	// A store's own picture, in its form: one the owner picks, fitted whole, the website's fetched again, or none.
 	// Each is its own write with its own undo (D-95).
 	async function choosePicture(store: GroceryStore, files: File[]) {
@@ -421,7 +404,7 @@
 		}
 		const undos = [undo]
 		if (shopDay) undos.push(kitchen.setShopDay(store.id, shopDay))
-		if (where.url) undos.push(fetchLogo(store.id, where.url))
+		if (where.url) undos.push(fetchStoreSite(store.id, where.url))
 		undoToast($t('domains.kitchen.grocery.toast.storeAdded', { values: { store: store.name } }), () =>
 			undos.reverse().forEach((entry) => entry())
 		)
@@ -459,8 +442,8 @@
 		if (!same) undos.push(kitchen.updateStore(store.id, { name, sells, note, place: where }).undo)
 		const moved = shopDay !== shopDayOf(store.id)
 		if (moved) undos.push(kitchen.setShopDay(store.id, shopDay))
-		// a website that is new to a store with no picture brings its icon (D-103)
-		if (where.url && where.url !== (store.place?.url ?? '') && !store.photo) undos.push(fetchLogo(store.id, where.url))
+		// a website that is new to a store brings its icon and what its page says of the store (D-103, D-108)
+		if (where.url && where.url !== (store.place?.url ?? '')) undos.push(fetchStoreSite(store.id, where.url))
 		storeOpen = false
 		if (!undos.length) return
 		// a morning already past has no reminder to promise

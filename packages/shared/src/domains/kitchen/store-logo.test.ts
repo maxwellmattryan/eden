@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { guessedIcons, iconAddresses, siteAddress, wwwAddress } from './store-logo.js'
+import { guessedIcons, iconAddresses, siteAddress, storeDetails, wwwAddress } from './store-logo.js'
 
 const PAGE = 'https://www.example.com/shop/'
 
@@ -78,5 +78,49 @@ describe("a store's icons", () => {
 		expect(siteAddress('https://example.com')).toBe('https://example.com/')
 		expect(siteAddress('ftp://example.com')).toBeUndefined()
 		expect(siteAddress('')).toBeUndefined()
+	})
+})
+
+describe("a store's details", () => {
+	const page = (...nodes: unknown[]) =>
+		nodes.map((node) => `<script type="application/ld+json">${JSON.stringify(node)}</script>`).join('')
+
+	it('reads the phone and the address a shop gives of itself', () => {
+		const html = page({
+			'@context': 'https://schema.org',
+			'@graph': [
+				{ '@type': 'WebSite', name: 'Wheatsville' },
+				{
+					'@type': 'GroceryStore',
+					telephone: '(512) 478-2667',
+					address: {
+						'@type': 'PostalAddress',
+						streetAddress: '3101 Guadalupe St',
+						addressLocality: 'Austin',
+						addressRegion: 'TX',
+						postalCode: '78705',
+					},
+				},
+			],
+		})
+		expect(storeDetails(html)).toEqual({ phone: '(512) 478-2667', address: '3101 Guadalupe St, Austin, TX 78705' })
+	})
+
+	it('takes an address written as one line, and a type given as a list', () => {
+		const html = page({ '@type': ['LocalBusiness', 'Bakery'], address: '12 Mill Lane, Hyde Park' })
+		expect(storeDetails(html)).toEqual({ address: '12 Mill Lane, Hyde Park' })
+	})
+
+	it('answers nothing for what several shops on one page do not agree on', () => {
+		const html = page(
+			{ '@type': 'Store', telephone: '555-0100', address: '1 First St' },
+			{ '@type': 'Store', telephone: '555-0100', address: '2 Second St' }
+		)
+		expect(storeDetails(html)).toEqual({ phone: '555-0100' })
+	})
+
+	it('answers nothing for a page that describes no shop, or whose JSON-LD does not parse', () => {
+		expect(storeDetails(page({ '@type': 'Recipe', telephone: '555-0100' }))).toEqual({})
+		expect(storeDetails('<script type="application/ld+json">{ not json</script>')).toEqual({})
 	})
 })

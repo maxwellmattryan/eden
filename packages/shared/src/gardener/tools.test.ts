@@ -29,8 +29,8 @@ const index = toolIndex(declarations)
 describe('the tool index', () => {
 	it('validates, and holds the twenty-four tools', () => {
 		expect(validateTools(index)).toEqual([])
-		expect(index).toHaveLength(24)
-		expect(Object.keys(SCHEMAS)).toHaveLength(24)
+		expect(index).toHaveLength(28)
+		expect(Object.keys(SCHEMAS)).toHaveLength(28)
 	})
 
 	it('has a line for every declared domain, and none for another', () => {
@@ -43,7 +43,7 @@ describe('the tool index', () => {
 		expect(quickActionsFor(declarations)).toEqual(['kitchen.add-to-grocery', 'toolbench.capture-idea'])
 		expect(tool.schema.properties?.action?.enum).toEqual(['kitchen.add-to-grocery', 'toolbench.capture-idea'])
 		expect(tool.schema.required).toEqual(['action', 'value'])
-		expect(tool.description).toContain('- kitchen.add-to-grocery: adds one item to the grocery list')
+		expect(tool.description).toContain('- kitchen.add-to-grocery: puts one item on a grocery list')
 		// every line is a declared quick action, so none can name one that is gone
 		const declared = declarations.flatMap((domain) => domain.quickActions.map((action) => `${domain.id}.${action.id}`))
 		for (const action of Object.keys(QUICK_ACTION_WORDS)) expect(declared).toContain(action)

@@ -78,6 +78,22 @@ const tagsOf = (value: unknown): string[] =>
 		.filter((tag) => tag && tag.length <= 24)
 		.slice(0, 5)
 
+/** Every object a page describes in JSON-LD, across its scripts; a script that does not parse is passed over. */
+export function jsonLdNodes(html: string): Record<string, unknown>[] {
+	const scripts = html.matchAll(
+		/<script\b[^>]*type\s*=\s*["']?application\/ld\+json["']?[^>]*>([\s\S]*?)<\/script\s*>/gi
+	)
+	const found: Record<string, unknown>[] = []
+	for (const [, body] of scripts) {
+		try {
+			nodes(JSON.parse(body!.trim()), found)
+		} catch {
+			continue
+		}
+	}
+	return found
+}
+
 /** An `https` address a page names, absolute; nothing for any other kind of address. */
 export function httpsAddress(value: string, base?: string): string | undefined {
 	try {
@@ -182,6 +198,15 @@ export function recipeFromJsonLd(html: string, url?: string): RecipeDraft | unde
 export function pageText(html: string, cap = 40_000): string {
 	return htmlToText(html, cap)
 }
+
+/** The fewest characters of text a page with a recipe on it has: a name, a few ingredients and a step are more. */
+const PAGE_TEXT_MIN = 200
+
+/**
+ * A page's text is too little to hold a recipe: what a site that turns apps away answers (a challenge page, a
+ * "request unsuccessful" notice), or a page that draws itself with scripts. No model is asked to read one.
+ */
+export const pageSaysNothing = (text: string): boolean => text.trim().length < PAGE_TEXT_MIN
 
 const whole = (value: unknown, fallback: number, max: number): number =>
 	typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.min(max, Math.round(value)) : fallback

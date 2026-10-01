@@ -39,7 +39,7 @@
 	import DraftCard from './DraftCard.svelte'
 	import { sizeLabel } from './files'
 	import ToolAbout from './ToolAbout.svelte'
-	import { toolByWireName } from './handlers'
+	import { handlerOf, toolByWireName } from './handlers'
 	import { runtime } from './runtime.svelte'
 
 	type Props = { message: Message }
@@ -140,8 +140,13 @@
 		infoOpen = true
 	}
 	const json = (value: unknown) => JSON.stringify(value, null, 1)
-	const payload = (input: unknown) => {
-		const json = JSON.stringify(input, null, 1)
+	// what a card shows of its call: the handler's own words for it where it has them, else the input as it was sent
+	const payload = (block: ToolBlock) => {
+		const tool = toolByWireName(block.call.name)
+		const handler = tool && handlerOf(tool)
+		const words = handler && 'run' in handler ? handler.preview?.(block.call.input) : undefined
+		if (words) return words
+		const json = JSON.stringify(block.call.input, null, 1)
 		return json && json !== '{}' ? json : undefined
 	}
 </script>
@@ -150,7 +155,7 @@
 	<ToolCard
 		name={block.call.tool}
 		access={block.call.access}
-		payload={payload(block.call.input)}
+		payload={payload(block)}
 		text={block.call.error}
 		confirm={block.call.access === 'write' || block.call.access === 'act-external'
 			? $t('gardener.confirmTool', { values: { tool: block.call.tool } })

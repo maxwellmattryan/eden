@@ -1273,6 +1273,46 @@ export const DECLARATIONS = {
 				"minContext": null
 			},
 			{
+				"id": "update-stock",
+				"access": "write",
+				"confirm": true,
+				"reads": [
+					"stock-item",
+					"recipe"
+				],
+				"grade": null,
+				"needs": [],
+				"minContext": null
+			},
+			{
+				"id": "edit-grocery",
+				"access": "write",
+				"confirm": true,
+				"reads": [
+					"grocery-store",
+					"grocery-list",
+					"grocery-item",
+					"stock-item",
+					"recipe"
+				],
+				"grade": null,
+				"needs": [],
+				"minContext": null
+			},
+			{
+				"id": "edit-stores",
+				"access": "write",
+				"confirm": true,
+				"reads": [
+					"grocery-store",
+					"grocery-list",
+					"home-area"
+				],
+				"grade": null,
+				"needs": [],
+				"minContext": null
+			},
+			{
 				"id": "import-recipe",
 				"access": "write-draft",
 				"confirm": false,
@@ -1287,6 +1327,17 @@ export const DECLARATIONS = {
 				"id": "save-recipe",
 				"access": "write-draft",
 				"confirm": false,
+				"reads": [
+					"recipe"
+				],
+				"grade": null,
+				"needs": [],
+				"minContext": null
+			},
+			{
+				"id": "change-recipe",
+				"access": "write",
+				"confirm": true,
 				"reads": [
 					"recipe"
 				],

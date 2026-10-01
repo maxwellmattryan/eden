@@ -447,6 +447,7 @@
 									title={alert.title}
 									detail={alert.detail}
 									action={{ label: 'Open Today', onclick: onopentoday }}
+									breeze={false}
 									ondismiss={dismiss}
 								/>
 							</div>

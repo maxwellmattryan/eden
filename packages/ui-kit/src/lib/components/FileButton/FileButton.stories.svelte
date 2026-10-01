@@ -1,6 +1,6 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
-	import { expect, fn } from 'storybook/test'
+	import { expect, fn, userEvent, waitFor } from 'storybook/test'
 	import { canvasOf } from '../../../storybook/play.js'
 	import FileButton from './FileButton.svelte'
 
@@ -55,6 +55,30 @@
 		const input = canvasElement.querySelector<HTMLInputElement>('input[type="file"]')!
 		await expect(input).toHaveAttribute('accept', 'image/*,.pdf')
 		await expect(input.multiple).toBe(false)
+	}}
+/>
+
+<!-- A file is one of several sources: the press opens a menu, the picker first, and a second press closes it -->
+<Story
+	name="With sources"
+	args={{
+		label: 'Choose a picture',
+		icon: 'image-plus',
+		accept: ['image/*'],
+		multiple: false,
+		sources: [{ id: 'link', label: 'From a link', icon: 'link', onselect: fn() }],
+	}}
+	parameters={{ platformFrame: 'inline' }}
+	play={async ({ canvasElement, args }) => {
+		const canvas = canvasOf(canvasElement)
+		const button = canvas.getByRole('button', { name: 'Choose a picture' })
+		await userEvent.click(button)
+		await expect(button).toHaveAttribute('aria-expanded', 'true')
+		// a popover menu on desktop, a bottom sheet on mobile: the same two rows either way
+		await waitFor(() => expect(canvas.getByText('From a file')).toBeVisible())
+		await userEvent.click(await canvas.findByText('From a link'))
+		await waitFor(() => expect(args.sources?.[0]?.onselect).toHaveBeenCalled())
+		await waitFor(() => expect(button).toHaveAttribute('aria-expanded', 'false'))
 	}}
 />
 

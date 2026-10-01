@@ -128,6 +128,24 @@
 		"kitchen": {
 			"name": "Hearth",
 			"subtitle": "Food, recipes, pantry, groceries",
+			"gardener": {
+				"preview": {
+					"add": "Add: {what}",
+					"change": "Change: {what}",
+					"remove": "Delete: {what}",
+					"complete": "Finish the trip: {what}",
+					"cooked": "Cooked: {what}",
+					"unfiled": "Miscellaneous",
+					"unknown": "something Hearth does not have"
+				},
+				"toast": {
+					"stock": "{count, plural, one {# stock item} other {# stock items}} changed.",
+					"grocery": "{count, plural, one {# grocery change} other {# grocery changes}} made.",
+					"stores": "{count, plural, one {# store} other {# stores}} changed.",
+					"recipeChanged": "{name} changed.",
+					"recipeRemoved": "{name} deleted."
+				}
+			},
 			"tabs": {
 				"stock": "Stock",
 				"recipes": "Recipes",
@@ -146,6 +164,11 @@
 				"lowStock": {
 					"line": "{count, plural, =1 {{first} is running low} =2 {{first} and {second} are running low} other {{first} and {more} more are running low}}"
 				}
+			},
+			"picture": {
+				"fromLink": "From a link",
+				"link": "Picture from a link",
+				"fetch": "Fetch the picture"
 			},
 			"categories": {
 				"produce": "Produce",
@@ -175,6 +198,7 @@
 				"no-files": "Add a photo, a receipt or a list first.",
 				"no-recipe": "No recipe could be read from that. Try the recipe's text, or another photo.",
 				"page-blocked": "That page cannot be read: it is not a public web page, or it is too large.",
+				"page-empty": "That site did not let the app read the page. Paste the recipe's text, or add a screenshot or a PDF of the page.",
 				"page-failed": "The page could not be fetched. Paste the recipe's text instead.",
 				"page-unavailable": "Links are fetched in the installed app. Paste the recipe's text instead.",
 				"not-https": "Only links that start with https are fetched."
@@ -200,7 +224,11 @@
 			},
 			"stock": {
 				"add": "Add",
-				"addPlaceholder": "Add to stock, or paste a product link",
+				"addItem": "Add to stock",
+				"selection": {
+					"count": "{count} selected",
+					"done": "Done"
+				},
 				"expiring": "Expiring",
 				"lowStock": "Low stock",
 				"ranOut": "Ran out",
@@ -228,6 +256,10 @@
 					"text": "Take stock from a few photos of your fridge, freezer and pantry, and what is in them lands here by location. After a shop, capture the haul from a photo, a receipt or an order."
 				},
 				"noneMatch": "Nothing in stock matches these filters.",
+				"emptyLocation": {
+					"title": "Nothing here",
+					"text": "Drop an item to keep it here."
+				},
 				"detail": {
 					"editing": "Edit item",
 					"name": "Name",
@@ -248,9 +280,8 @@
 					"tipFor": "A tip for {name}",
 					"choosePicture": "Choose a picture",
 					"removePicture": "Remove the picture",
-					"pictureLink": "Picture from a link",
 					"pictureLinkHelp": "An H-E-B product page, or a picture's own address.",
-					"usePictureLink": "Fetch the picture"
+					"pictureLinkAddHelp": "An H-E-B product page, which also fills the name, brand and size left empty, or a picture's own address."
 				},
 				"source": {
 					"manual": "manual",
@@ -405,8 +436,43 @@
 				"notEnough": "not enough",
 				"ingredients": "Ingredients",
 				"steps": "Steps",
-				"tipFor": "A tip for {name}",
 				"editing": "Edit recipe",
+				"search": "Search the recipes",
+				"searchPlaceholder": "Search, or list ingredients: spinach, tofu",
+				"clearSearch": "Clear the search",
+				"countOf": "{shown} of {total}",
+				"filters": {
+					"inStock": "In stock",
+					"quick": "Under {minutes} min",
+					"expiring": "Uses expiring",
+					"tags": "Tags",
+					"tagsChosen": "Tags: {tags}",
+					"tagsLabel": "Filter by tag",
+					"clear": "Clear"
+				},
+				"sortBy": "Sort: {sort}",
+				"sortLabel": "Sort the recipes",
+				"sort": {
+					"tonight": "tonight",
+					"name": "name",
+					"quickest": "quickest",
+					"missing": "least missing"
+				},
+				"noMatch": {
+					"title": "No recipe matches",
+					"text": "Try fewer words, or switch a filter off.",
+					"clear": "Clear filters"
+				},
+				"credit": {
+					"by": "by {author}"
+				},
+				"servings": {
+					"label": "Serves",
+					"fewer": "One serving fewer",
+					"more": "One serving more",
+					"reset": "Back to {count}, as written",
+					"fixed": "The amounts are for the recipe as written."
+				},
 				"missingEstimate": "About ${total} to buy what is missing.",
 				"missingUnpriced": "{count, plural, one {# has no price yet.} other {# have no price yet.}}",
 				"actions": {
@@ -438,7 +504,9 @@
 					"alreadyListed": "What is missing is already on the list.",
 					"missingAdded": "{count, plural, one {# ingredient} other {# ingredients}} added to the list.",
 					"nothingTaken": "Nothing in stock to take for {name}.",
-					"cooked": "Cooked {name}: the stock is updated."
+					"cooked": "Cooked {name}: the stock is updated.",
+					"pictureFailed": "That picture could not be read.",
+					"pictureLinkFailed": "No picture could be fetched from that link."
 				},
 				"form": {
 					"name": "Name",
@@ -452,12 +520,21 @@
 					"tags": "Tags",
 					"tagsHelp": "Separated by commas: weeknight, one pot.",
 					"tip": "Tip",
-					"source": "Source"
+					"source": "Source",
+					"sourceName": "Source name",
+					"sourceNameHelp": "The site, the magazine or the cookbook.",
+					"author": "Author",
+					"scales": "Amounts follow the servings",
+					"scalesHelp": "Turn off for a loaf or a cake in one tin.",
+					"choosePicture": "Choose a picture",
+					"removePicture": "Remove the picture",
+					"fetchingPicture": "Fetching the page's picture…",
+					"pictureLinkHelp": "A picture's own address, or the page it is on."
 				},
 				"import": {
 					"title": "Add a recipe",
 					"label": "The recipe, or a link to it",
-					"placeholder": "Paste the recipe's text or a link, or drop a photo of the page",
+					"placeholder": "Paste the recipe or a link",
 					"help": "A photo of a page or a card works too: drop it here, paste it, or choose it.",
 					"linkHelp": "The page is fetched first. When it describes its own recipe, that is read with no model asked.",
 					"choose": "Choose a photo or a file",

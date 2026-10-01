@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { durationMinutes, recipeDraft, recipeFromJsonLd } from './recipe-import.js'
+import { durationMinutes, pageSaysNothing, pageText, recipeDraft, recipeFromJsonLd } from './recipe-import.js'
 
 const page = (json: unknown) =>
 	`<html><head><script type="application/ld+json">${JSON.stringify(json)}</script></head><body>…</body></html>`
@@ -74,6 +74,14 @@ describe('a recipe from a page', () => {
 			recipeFromJsonLd(page({ '@type': 'Recipe', name: 'Empty', recipeIngredient: [], recipeInstructions: [] }))
 		).toBeUndefined()
 		expect(recipeFromJsonLd(page({ '@type': 'Article', name: 'News' }))).toBeUndefined()
+	})
+
+	it('knows a page that says nothing from one with a recipe on it', () => {
+		const wall =
+			'<html><head><script src="/challenge"></script></head><body><iframe src="/_Incapsula_Resource">Request unsuccessful. Incapsula incident ID: 970000080802436037-731467865836356148</iframe></body></html>'
+		expect(pageSaysNothing(pageText(wall))).toBe(true)
+		const written = `<html><body><h1>Chickpea salad</h1><ul>${'<li>1 can chickpeas, drained and rinsed</li>'.repeat(6)}</ul><p>Toss everything together and chill for an hour.</p></body></html>`
+		expect(pageSaysNothing(pageText(written))).toBe(false)
 	})
 
 	it('reads a draft a model answered, leniently', () => {

@@ -251,7 +251,7 @@ SQLite is where the owner's data is; a store is what a page sees of it, in memor
 | domain | type | payload |
 |---|---|---|
 | Hearth | `stock-item` | the item, with its category (one of twelve ids), its low-stock threshold and its tip, a line of text (D-87). Low stock is not stored: `isLow` derives it from the threshold |
-| | `recipe` | name, serves, minutes, tags, `ingredients` (name, qty, unit, note), `steps`, `sourceUrl`, `tip`; a row written before recipes held their lines reads with both lists empty |
+| | `recipe` | name, serves, minutes, tags, `ingredients` (name, qty, unit, note), `steps`, `sourceUrl`, `sourceName`, `author`, `tip`, `photo` (the id of its `recipe-photo`, D-93), `scales` (only ever `false`, D-107); a row written before recipes held their lines reads with both lists empty |
 | | `grocery-store` | name, `sells`, and `bought`: what was last bought there, a normalised name to a timestamp (D-97) |
 | | `grocery-list` | `storeId` (none for the list of what is not filed) and an optional shop day; made with the first item put on it, or its first shop day (D-96). A row from before, with a `name` or a `store`, is rewritten when Hearth is read (`groceryUpgrade`) |
 | | `grocery-item` | the item, and `listId` |
@@ -275,11 +275,15 @@ Hearth's rules are pure modules beside its shapes, in `packages/shared/src/domai
 | `capture.ts` | `HaulRow`, `haulRows` (the model's answer as rows), `remerge`, `mergeInto` (quantities added in the item's own unit, the earlier expiry kept) |
 | `sources.ts` | `emlToText` and `htmlToText`, which reduce an email and a saved page to their text before they are sent |
 | `cook.ts` | `ingredientStatus`, `cookPlan`, `cookTonight` |
-| `recipe-import.ts` | `recipeFromJsonLd` (a page's schema.org Recipe, read with no model), `recipeDraft` (the model's answer as a draft) |
+| `recipe-import.ts` | `recipeFromJsonLd` (a page's schema.org Recipe, read with no model, with its picture's address, author and publisher), `pageImage` and `pageSiteName` (what a page says of itself), `recipeDraft` (the model's answer as a draft) |
+| `scale.ts` | `scaledIngredients` (a recipe's lines for the servings asked for, D-107), `scalable`, `MAX_SERVES`; nothing it answers is stored |
+| `browse.ts` | `browseRecipes` (the recipes a search and the filters leave, in the order asked for), `searchTerms`, `recipeTags`, `RecipeFilters`, `RECIPE_SORTS` |
 
 A haul is committed as one write (`kitchen.commitHaul` in `apps/desktop/src/lib/domains/kitchen/store.svelte.ts`, D-86): a batch that creates the new items, updates the merged ones and links the stock to any files already stored with a conversation, then `attachBytes` for each photo as a `haul-photo` linked `from` the stock rows. One undo takes back the rows, the merges and the photos. A photo that cannot be stored is logged and does not fail the haul. Taking stock (D-89) is the same write with `mode` `stock`: a matched item's quantity is set, not added to.
 
 An item's picture (D-90) is an Attachment of kind `item-photo`, linked `from` its item, whose row's `thumbnail` is the small image shown; the item's payload names it in `photo`. The store reads them all once (`queryAttachments({ kinds: ['item-photo'] })`) into a map by id. A haul's commit writes each row's picture after the rows; `setStockPhoto` gives an item the owner's own or takes it away, deleting the one it had; deleting an item, alone, in a selection or by cooking it to nothing, deletes its picture in the same write, and the undo restores both. A picture can also come from a link (D-91): `productLink` reads a grocer's product address into a name, a size and the address of its picture with nothing fetched, the crate's `fetch_image` brings the picture's bytes under the checks of `fetch_page`, and `fitPicture` fits it whole on the small square.
+
+A recipe's picture (D-93) is an Attachment of kind `recipe-photo`, linked `from` its recipe. Unlike an item's it is kept twice: the file is the whole picture, a JPEG of at most 1600 pixels on its long edge, and the row's `thumbnail` is the small square a list row shows (`recipePicture` in `staging.svelte.ts` makes both). The store reads the thumbnails with the other pictures; `recipeImage` reads a recipe's file with `readAttachment` the first time its page is shown, into an object URL, and answers the thumbnail until then. `addRecipe(draft, picture?)` writes the recipe and its picture under one undo; `setRecipePhoto` gives a saved recipe a picture or takes it away, deleting the one it had, and is its own change, which the view chains to `updateRecipe` when a form is saved; `removeRecipe` deletes both. A draft's `imageUrl`, where its page shows the dish, is the draft's alone and is never stored.
 
 ### Sky's mirrors
 

@@ -63,6 +63,20 @@
 	}}
 />
 
+<!-- Without the Breeze it leaves plainly: it says it has gone at the press -->
+<Story
+	name="Dismissible, no Breeze"
+	args={{ breeze: false, ondismiss: fn(), ondismissed: fn() }}
+	play={async ({ canvasElement, args }) => {
+		if (!hasCanvas(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		canvas.getByRole('button', { name: `Dismiss ${watch.title}` }).click()
+		await expect(args.ondismiss).toHaveBeenCalledTimes(1)
+		await expect(args.ondismissed).toHaveBeenCalledTimes(1)
+		await expect(canvasElement.querySelector('.ed-breeze')).toBeNull()
+	}}
+/>
+
 <!-- Where it sits: the top right of a page, in the header's aside -->
 <Story name="In a page header">
 	{#snippet template(args)}

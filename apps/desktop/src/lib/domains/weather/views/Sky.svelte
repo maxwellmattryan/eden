@@ -401,8 +401,8 @@
 			}
 		})
 	)
-	// Dismissing: an alert leaves with its Breeze and is taken from the page once that has played. With the last one
-	// the panel closes instead, and it is the button that leaves with the Breeze, taking the alerts with it.
+	// Dismissing: an alert is taken from the page at the press, with no effect of its own. With the last one the panel
+	// closes instead, and it is the button that leaves with the Breeze, taking the alerts with it.
 	let going = $state<string[]>([])
 	let buttonLeaving = $state(false)
 
@@ -574,6 +574,7 @@
 								title={notice.title}
 								detail={notice.detail}
 								meta={notice.meta}
+								breeze={false}
 								ondismiss={() => ondismiss(notice.id)}
 								ondismissed={() => ondismissed(notice.id)}
 							/>

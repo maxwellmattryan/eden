@@ -20,6 +20,7 @@ import {
 	toUri,
 	updateEntity,
 	WriteQueue,
+	type AttachmentKind,
 	type BatchOp,
 	type Write,
 } from '@eden/shared/data'
@@ -44,7 +45,6 @@ import {
 	mergeInto,
 	mergeTarget,
 	parseGrocery,
-	parseStock,
 	ranOut,
 	RECIPE_PHOTO,
 	recentlyOut,
@@ -73,6 +73,7 @@ import {
 } from '@eden/shared/domains/kitchen'
 import { feed } from '../../shell/feed.svelte.js'
 import { seedData } from './seed.js'
+import type { RecipePicture } from './staging.svelte.js'
 
 export { LOCATIONS }
 export type {
@@ -111,12 +112,6 @@ export interface HaulImage {
 	thumbnail?: string
 	width?: number
 	height?: number
-}
-
-/** A recipe's picture as it is kept (D-93): the whole of it, sized for the page, and the small square a row shows. */
-export interface RecipeImage {
-	image: Blob
-	thumbnail: string
 }
 
 /** How the stock is ordered within a location. */
@@ -359,14 +354,10 @@ export class KitchenStore {
 
 	// Stock
 
-	addStock(text: string): { item: StockItem; undo: Undo } {
-		const parsed = parseStock(text)
-		return this.addStockItem(parsed)
-	}
-
 	/**
-	 * Adds one item from its fields: what a quick-add line parses to, and what a product's link names (D-91). A name
-	 * that ran out (D-92) brings that item back, with its picture, where it was kept unless the line says where.
+	 * Adds one item from its fields: what the Add to stock form holds (D-109). A name that ran out (D-92) brings
+	 * that item back, with its picture, where it was kept unless the fields say where, and what the form filled of
+	 * its date, category, threshold and tip is laid over what the item kept.
 	 */
 	addStockItem(fields: {
 		name: string
@@ -375,6 +366,10 @@ export class KitchenStore {
 		qty?: string
 		unit?: string
 		location?: StockLocation
+		expiry?: string
+		category?: string
+		threshold?: number
+		tip?: string
 	}): {
 		item: StockItem
 		undo: Undo
@@ -390,9 +385,16 @@ export class KitchenStore {
 		}
 		const empty = this.stock.filter((entry) => isOut(entry))
 		const held = mergeTarget(row, empty)
-		const back = held
+		const extra = {
+			...(fields.expiry ? { expiry: fields.expiry } : {}),
+			...(fields.category ? { category: fields.category } : {}),
+			...(fields.threshold === undefined ? {} : { threshold: fields.threshold }),
+			...(fields.tip ? { tip: fields.tip } : {}),
+		}
+		const merged = held
 			? mergeInto($state.snapshot(held), { ...row, location: fields.location ?? held.location })
 			: undefined
+		const back = merged ? { ...merged, ...extra } : undefined
 		if (held && back) {
 			const undo = this.#commit(
 				this.#changed<StockItem>('stock', held.id, () => back),
@@ -409,6 +411,7 @@ export class KitchenStore {
 			qty: fields.qty || '1',
 			unit: fields.unit,
 			location: fields.location ?? 'pantry',
+			...extra,
 			source: 'manual' as const,
 			sourcedAt: nowIso(),
 		})
@@ -416,7 +419,11 @@ export class KitchenStore {
 		return { item, undo }
 	}
 
-	/** Adds several stock items in one batch, one feed entry and one undo: what the Gardener's `add-stock` writes. */
+	/**
+	 * Adds several stock items in one batch, one feed entry and one undo: what the Gardener's `add-stock` writes. A
+	 * row whose name ran out (D-92) brings that item back, as the Add to stock form does, and the rest are new. The items
+	 * answer in the order of their rows.
+	 */
 	addStockRows(
 		rows: {
 			name: string
@@ -427,29 +434,59 @@ export class KitchenStore {
 			location: StockLocation
 			expiry?: string
 			estimated?: boolean
+			category?: string
+			tip?: string
 		}[]
 	): { items: StockItem[]; undo: Undo } {
-		const items: StockItem[] = rows.map((row) => ({
-			id: newId(),
-			name: row.name,
-			brand: row.brand || undefined,
-			size: row.size || undefined,
-			qty: row.qty,
-			unit: row.unit || undefined,
-			location: row.location,
-			expiry: row.expiry || undefined,
-			estimated: row.estimated || undefined,
-			source: 'manual',
-			sourcedAt: nowIso(),
-		}))
+		const empty = this.stock.filter((entry) => isOut(entry))
+		const taken: string[] = []
+		const back: StockItem[] = []
+		const fresh: StockItem[] = []
+		const items = rows.map((row) => {
+			const held = mergeTarget(row, empty)
+			const revived = held && !taken.includes(held.id) ? mergeInto($state.snapshot(held), { ...row, id: '' }) : null
+			if (held && revived) {
+				taken.push(held.id)
+				back.push(revived)
+				return revived
+			}
+			const item: StockItem = without({
+				id: newId(),
+				name: row.name,
+				brand: row.brand || undefined,
+				size: row.size || undefined,
+				qty: row.qty,
+				unit: row.unit || undefined,
+				location: row.location,
+				expiry: row.expiry || undefined,
+				estimated: row.estimated || undefined,
+				category: row.category || undefined,
+				tip: row.tip || undefined,
+				source: 'manual' as const,
+				sourcedAt: nowIso(),
+			})
+			fresh.push(item)
+			return item
+		})
 		if (!items.length) return { items, undo: () => {} }
-		const ids = items.map((item) => item.id)
+		const ids = fresh.map((item) => item.id)
+		const before = $state.snapshot(this.stock.filter((entry) => taken.includes(entry.id)))
+		const show = (records: StockItem[]) =>
+			this.stock.map((entry) => records.find((record) => record.id === entry.id) ?? entry)
 		const undo = this.#commit(
 			{
-				apply: () => (this.stock = [...this.stock, ...items]),
-				revert: () => (this.stock = this.stock.filter((entry) => !ids.includes(entry.id))),
-				write: () => applyBatch(items.map((item) => this.#create('stock', item))),
-				unwrite: () => deleteRows(ids.map((id) => toUri(KITCHEN.stock, id))),
+				apply: () => (this.stock = [...show(back), ...fresh]),
+				revert: () => (this.stock = show(before).filter((entry) => !ids.includes(entry.id))),
+				write: () =>
+					applyBatch([
+						...fresh.map((item) => this.#create('stock', item)),
+						...back.map((item) => this.#update('stock', item)),
+					]),
+				unwrite: () =>
+					applyBatch([
+						...ids.map((id): BatchOp => ({ op: 'delete', uri: toUri(KITCHEN.stock, id) })),
+						...before.map((item) => this.#update('stock', item)),
+					]),
 			},
 			'garden.feed.stockAddedMany',
 			{ count: items.length }
@@ -631,7 +668,7 @@ export class KitchenStore {
 		ownerId: string,
 		name: string,
 		image: string,
-		of: { kind: string; type: string } = { kind: ITEM_PHOTO, type: KITCHEN.stock }
+		of: { kind: AttachmentKind; type: string } = { kind: ITEM_PHOTO, type: KITCHEN.stock }
 	): Promise<void> {
 		try {
 			await attachBytes(
@@ -1225,7 +1262,7 @@ export class KitchenStore {
 	}
 
 	/** Shows a recipe's picture at once, from the bytes in hand: its row's small one, and the whole of it. */
-	#showPicture(id: string, picture: RecipeImage) {
+	#showPicture(id: string, picture: RecipePicture) {
 		this.photos.set(id, picture.thumbnail)
 		this.#images.set(id, URL.createObjectURL(picture.image))
 	}
@@ -1238,7 +1275,7 @@ export class KitchenStore {
 	}
 
 	/** Writes a recipe's picture as its Attachment; a picture that cannot be kept leaves the recipe standing. */
-	async #keepRecipePicture(id: string, recipeId: string, name: string, picture: RecipeImage): Promise<void> {
+	async #keepRecipePicture(id: string, recipeId: string, name: string, picture: RecipePicture): Promise<void> {
 		try {
 			await attachBytes(
 				{
@@ -1260,7 +1297,7 @@ export class KitchenStore {
 	 * Saves a recipe the owner checked: a draft from a page, a photo, pasted text or the Gardener, with the picture
 	 * it came with when the owner kept it (D-93). One undo takes back both.
 	 */
-	addRecipe(draft: RecipeDraft, picture?: RecipeImage): { recipe: Recipe; undo: Undo } {
+	addRecipe(draft: RecipeDraft, picture?: RecipePicture): { recipe: Recipe; undo: Undo } {
 		const id = newId()
 		const photo = picture ? newId() : undefined
 		const recipe: Recipe = without({ ...this.#fields(draft), photo, id })
@@ -1303,7 +1340,7 @@ export class KitchenStore {
 	 * Gives a recipe a picture, or takes its picture away (D-93). The one it had is deleted with the change and comes
 	 * back with the undo.
 	 */
-	setRecipePhoto(id: string, picture: RecipeImage | undefined): { recipe: Recipe | undefined; undo: Undo } {
+	setRecipePhoto(id: string, picture: RecipePicture | undefined): { recipe: Recipe | undefined; undo: Undo } {
 		const recipe = this.recipeById(id)
 		if (!recipe) return { recipe, undo: () => {} }
 		const before = $state.snapshot(recipe) as Recipe

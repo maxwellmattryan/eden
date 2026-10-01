@@ -28,8 +28,8 @@
 	import Recipes from './Recipes.svelte'
 	import Stock from './Stock.svelte'
 
-	const uid = $props.id()
-	const quickAddId = `${uid}-quick-add`
+	/** The Stock view, whose Add to stock sheet the header's Add opens (D-109). */
+	let stock = $state<Stock>()
 	/** The Grocery view, whose sheets the header's Add menu opens. */
 	let grocery = $state<Grocery>()
 
@@ -56,10 +56,6 @@
 	let sortAnchor = $state<HTMLElement>()
 	let sortOpen = $state(false)
 
-	function focusQuickAdd() {
-		document.getElementById(quickAddId)?.focus()
-	}
-
 	const actions = $derived.by<PageHeaderAction[]>(() => {
 		if (tab === 'stock') {
 			return [
@@ -69,7 +65,7 @@
 					icon: 'refrigerator',
 					onclick: () => capture.start([], 'stock'),
 				},
-				{ label: $t('domains.kitchen.stock.add'), icon: 'plus', onclick: focusQuickAdd },
+				{ label: $t('domains.kitchen.stock.add'), icon: 'plus', onclick: () => stock?.addItem() },
 			]
 		}
 		if (tab === 'recipes') {
@@ -152,7 +148,7 @@
 	{/if}
 
 	{#if tab === 'stock'}
-		<Stock {quickAddId} {expiring} {lowStock} {sort} ontakestock={() => capture.start([], 'stock')} />
+		<Stock bind:this={stock} {expiring} {lowStock} {sort} ontakestock={() => capture.start([], 'stock')} />
 	{:else if tab === 'recipes'}
 		<Recipes />
 	{:else}

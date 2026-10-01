@@ -6,7 +6,14 @@
 // brings it along (D-93): the picture is fetched when the draft opens, shown on the form, and kept with the recipe
 // unless the owner takes it away or chooses their own.
 import { fetchImage, fetchPage, logError, webErrorCode } from '@eden/shared/api'
-import { pageImage, pageSiteName, pageText, recipeFromJsonLd, type RecipeDraft } from '@eden/shared/domains/kitchen'
+import {
+	pageImage,
+	pageSaysNothing,
+	pageSiteName,
+	pageText,
+	recipeFromJsonLd,
+	type RecipeDraft,
+} from '@eden/shared/domains/kitchen'
 import type { DirectPreview } from '$lib/shell/gardener/runtime.svelte'
 import type { ToolFailure } from '$lib/shell/gardener/types'
 import { recipePicture, StagedSources, type RecipePicture } from './staging.svelte.js'
@@ -78,7 +85,8 @@ const TOOL = 'kitchen.import-recipe'
 const LINK = /^https:\/\/\S+$/i
 
 /** Why an import did not make a draft: the tool's reasons, and the page's. */
-export type ImportFailure = ToolFailure | 'page-blocked' | 'page-failed' | 'page-unavailable' | 'not-https'
+export type ImportFailure =
+	ToolFailure | 'page-blocked' | 'page-empty' | 'page-failed' | 'page-unavailable' | 'not-https'
 
 export class RecipeImport {
 	open = $state(false)
@@ -142,6 +150,8 @@ export class RecipeImport {
 				const described = recipeFromJsonLd(page.html, page.url)
 				if (described) return this.#done(described)
 				text = pageText(page.html)
+				// a site that turns apps away answers a page with nothing on it, which no model can read a recipe from
+				if (pageSaysNothing(text) && !this.staging.sources.length) return this.#failed('page-empty')
 				// a page that does not describe its recipe still says where it shows it, and what it calls itself
 				shown = { imageUrl: pageImage(page.html, page.url), sourceName: pageSiteName(page.html) }
 			} catch (error) {

@@ -201,7 +201,8 @@ export type PlaceRow = Row & { type: 'place' } & Stored<PlaceFields, 'kind' | 'n
 export type PlaceInput = Input<PlaceFields, 'kind' | 'name'>
 export type PlacePatch = Patch<PlaceFields, 'kind' | 'name'>
 
-export type AttachmentKind = 'document' | 'photo' | 'haul-photo' | 'item-photo' | 'render'
+export type AttachmentKind =
+	'document' | 'photo' | 'haul-photo' | 'item-photo' | 'recipe-photo' | 'store-photo' | 'render'
 export interface AttachmentRow extends Row {
 	type: 'attachment'
 	kind: AttachmentKind

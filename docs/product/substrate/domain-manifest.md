@@ -89,7 +89,7 @@ Built-in domains are manifests compiled into the app. An external plugin is the 
 | `widgets` | expiring-soon (S, M; reads `stock-item`), cook-tonight (M; reads `stock-item`, `recipe`, `allergy`, `medical-dietary-restriction`, `dietary-preference`), grocery-quick-add (S; reads `grocery-store`, `grocery-list`, `grocery-item`) |
 | `quickActions` | capture-haul, add-to-grocery |
 | `captureSources` | photo, receipt (barcode in Phase 2) |
-| `tools` | suggest-recipes (read, standard), storage-tip (read, light), capture-haul (write-draft, light, needs vision), draft-grocery-list (write-draft, standard), add-stock (write, confirm, plain), import-recipe (write-draft, light, needs vision), save-recipe (write-draft, plain), plan-week (write-draft, deep, needs tools) |
+| `tools` | suggest-recipes (read, standard), storage-tip (read, light), capture-haul (write-draft, light, needs vision), draft-grocery-list (write-draft, standard), add-stock, update-stock, edit-grocery and edit-stores (each write, confirm, plain), import-recipe (write-draft, light, needs vision), save-recipe (write-draft, plain), change-recipe (write, confirm, plain), plan-week (write-draft, deep, needs tools) |
 | `signals` | `stock.expiring`, `stock.low`, `grocery.shop-day` |
 | `notificationKinds` | expiring-digest (daily, in-app; answers `stock.expiring`), low-stock (weekly, in-app; answers `stock.low`), shop-day-reminder (OS, morning of; answers `grocery.shop-day`) |
 | `schedules` | morning (daily at 08:00) |

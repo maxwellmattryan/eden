@@ -91,7 +91,16 @@ export interface Delegate {
 	maxTokens?: number
 }
 
-export type ToolHandler = { run: (input: unknown, ctx: ToolContext) => Promise<ToolResult> } | { delegate: Delegate }
+export type ToolHandler =
+	| {
+			run: (input: unknown, ctx: ToolContext) => Promise<ToolResult>
+			/**
+			 * What the call would do, in the owner's words, for the card that waits on their confirm: one line per
+			 * change, naming each row by its name where the input names it by id. Left out, the card shows the input.
+			 */
+			preview?: (input: unknown) => string | undefined
+	  }
+	| { delegate: Delegate }
 
 /** The model's answer to a delegated request, read as JSON where the prompt asked for it. */
 export function parseJson<T>(text: string): T | undefined {

@@ -1,32 +1,33 @@
 <script lang="ts">
-	// Hearth's Stock view (Domains/Hearth/Stock): a quick-add line, one List per location sorted as the header's chip
-	// says, with quantities in mono, `estimated` where capture guessed, a warning where stock is low and a tip button
+	// Hearth's Stock view (Domains/Hearth/Stock): one List per location under its own heading, sorted as the header's
+	// chip says, with quantities in mono, `estimated` where capture guessed, a warning where stock is low and a tip button
 	// where an item has one worth knowing (D-87); and the selected item in a detail pane. Edit opens the item's form in
-	// a sheet over the page (D-95, StockEditSheet). Selection is the List's own
+	// a sheet over the page (D-95, StockEditSheet), and the page's Add opens the same sheet blank (D-109). Selection is the List's own
 	// mode (D-41), and what it selects is moved, listed or deleted as one write with one undo. Files dropped or pasted
 	// on the page start a capture with them (D-86). Every item has a picture (D-90): the one cut from its photo or
-	// chosen by the owner, else its category's glyph; and a grocer's product link, in the quick-add line or the edit
-	// sheet, brings the grocer's own picture of the product (D-91). The four lists hold what is there; what ran out
+	// chosen by the owner, else its category's glyph; and a grocer's product link, in the item's sheet,
+	// brings the grocer's own picture of the product (D-91). The four lists hold what is there; what ran out
 	// lately has a list of its own at the side, each item kept with its picture to be bought again (D-92), and the
 	// item a click picks opens above it, fading in as it makes its room (D-94); a double-click does nothing more. The side stays in view while the lists scroll.
+	// A row can be dragged to another location, which is its menu's Move to, or onto Ran out, which is its menu's Ran
+	// out; one that ran out, dropped on a location, opens its form there with the quantity to type (D-111). Every
+	// location shows for the length of a drag, even one that holds nothing.
 	import {
 		Badge,
 		Button,
 		Chip,
+		DropTarget,
 		Dropzone,
 		EmptyState,
 		Icon,
 		IconButton,
 		List,
 		Menu,
-		QuickAdd,
-		defaultParse,
 		type IconName,
 		type ListRowData,
 		type MenuItem,
-		type ParsedChip,
 	} from '@eden/ui-kit'
-	import { CATEGORIES, productLink, type ProductLink } from '@eden/shared/domains/kitchen'
+	import { CATEGORIES } from '@eden/shared/domains/kitchen'
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { quintOut } from 'svelte/easing'
@@ -34,14 +35,12 @@
 	import { undoToast } from '$lib/shell/undo'
 	import { formatDay, formatDayTime } from '@eden/shared/dates'
 	import { capture } from '../capture.svelte'
-	import { CAPTURE_ACCEPT, linkedPicture } from '../staging.svelte'
+	import { CAPTURE_ACCEPT } from '../staging.svelte'
 	import { categoryGlyph } from '../words'
 	import StockEditSheet from './StockEditSheet.svelte'
 	import { LOCATIONS, kitchen, type StockItem, type StockLocation, type StockSort } from '../store.svelte'
 
 	type Props = {
-		/** The id the page's Add action focuses. */
-		quickAddId: string
 		/** The Expiring filter: only what is dated within the next two days. */
 		expiring?: boolean
 		/** The Low stock filter. */
@@ -51,7 +50,7 @@
 		/** Take stock from photos of the shelves, the empty state's primary action: the quickest way to a first stock. */
 		ontakestock: () => void
 	}
-	let { quickAddId, expiring = false, lowStock = false, sort = 'expiry', ontakestock }: Props = $props()
+	let { expiring = false, lowStock = false, sort = 'expiry', ontakestock }: Props = $props()
 
 	const uid = $props.id()
 	const lang = $derived($locale ?? 'en')
@@ -130,9 +129,15 @@
 		actions: actionsFor(item),
 	})
 
-	const sections = $derived(
-		kitchen.sections((item) => (!expiring || kitchen.soon(item)) && (!lowStock || kitchen.low(item)), sort)
-	)
+	/** The group the rows are dragged in, between the locations and Ran out (D-111). */
+	const DRAG_GROUP = 'stock-item'
+	let dragging = $state(false)
+	/** The lists on the page; while a row is held every location is among them, even an empty one, to be dropped on. */
+	const sections = $derived.by(() => {
+		const held = kitchen.sections((item) => (!expiring || kitchen.soon(item)) && (!lowStock || kitchen.low(item)), sort)
+		if (!dragging) return held
+		return LOCATIONS.map((location) => held.find((section) => section.location === location) ?? { location, items: [] })
+	})
 	/** What ran out lately; the Expiring filter hides it, the Low stock filter keeps what has a threshold. */
 	const ranOut = $derived(expiring ? [] : kitchen.recentlyOut.filter((item) => !lowStock || kitchen.low(item)))
 	let selected = $state<string>()
@@ -167,6 +172,10 @@
 		selected = item.id
 		editSheet?.edit(item)
 	}
+	/** The page's Add: the same form, blank (D-109). */
+	export function addItem() {
+		editSheet?.add()
+	}
 
 	function addToGrocery(item: StockItem) {
 		return kitchen.addToGrocery(
@@ -198,41 +207,21 @@
 	function onaction(menuItem: MenuItem, row: ListRowData) {
 		act(menuItem.id ?? '', row.id)
 	}
-	/** The chips the quick-add line shows: a product link reads as its brand and name, its size and its store; any other line as typed. */
-	const parseLine = (text: string): ParsedChip[] => {
-		const product = productLink(text)
-		if (!product) return defaultParse(text)
-		return [
-			{ label: product.brand ? `${product.brand} ${product.name}` : product.name },
-			...(product.size ? [{ label: product.size, mono: true }] : []),
-			{ label: product.store, icon: 'image' as const },
-		]
-	}
-	function add(text: string) {
-		const product = productLink(text)
-		if (product) return void addProduct(product)
-		const held = kitchen.stock.length
-		const { item, undo } = kitchen.addStock(text)
-		// no more items than before: one that ran out came back (D-92)
-		const key = kitchen.stock.length === held ? 'back' : 'added'
-		undoToast($t(`domains.kitchen.stock.toast.${key}`, { values: { name: item.name } }), undo)
-	}
 	/**
-	 * A product's link in the quick-add line (D-91): the item is added at once under the name its address gives, with
-	 * its size and, where the address says it, its brand as their own (D-104), and its picture follows when it has
-	 * been fetched. One undo takes back both.
+	 * A row dropped on a list (D-111): on a location it is the menu's Move to, on Ran out the menu's Ran out. One
+	 * that ran out comes back through its form, opened on that location with its quantity to type.
 	 */
-	async function addProduct(product: ProductLink) {
-		const { item, undo } = kitchen.addStockItem({ name: product.name, brand: product.brand, size: product.size })
-		let unpicture: (() => void) | undefined
-		undoToast($t('domains.kitchen.stock.toast.added', { values: { name: item.name } }), () => {
-			unpicture?.()
-			undo()
-		})
-		selected = item.id
-		const image = await linkedPicture(product.imageUrl)
-		// the item may have been taken back while its picture was on its way
-		if (image && kitchen.stockById(item.id)) unpicture = kitchen.setStockPhoto(item.id, image).undo
+	function drop(id: string, target: StockLocation | 'out') {
+		const item = kitchen.stock.find((entry) => entry.id === id)
+		if (!item) return
+		if (target === 'out') {
+			if (!kitchen.out(item)) act('ranOut', id)
+		} else if (kitchen.out(item)) {
+			selected = item.id
+			editSheet?.edit(item, { location: target, qty: '' })
+		} else if (item.location !== target) {
+			act(`move:${target}`, id)
+		}
 	}
 	function seed() {
 		undoToast($t('common.sampleAdded'), kitchen.seed($t('domains.kitchen.name')))
@@ -245,6 +234,8 @@
 		pantry: false,
 		counter: false,
 	})
+	/** What each location's list has selected, as the list reports it: the heading's actions act on these. */
+	let chosen = $state<Record<StockLocation, string[]>>({ fridge: [], freezer: [], pantry: [], counter: [] })
 	let bulkMove = $state<{ ids: string[]; from: StockLocation; anchor: HTMLElement }>()
 	let bulkMoveOpen = $state(false)
 	function moveMany(ids: string[], from: StockLocation, location: StockLocation) {
@@ -308,63 +299,90 @@
 	{:else}
 		<div class="body">
 			<div class="lists">
-				<QuickAdd
-					id={quickAddId}
-					placeholder={$t('domains.kitchen.stock.addPlaceholder')}
-					parse={parseLine}
-					onadd={add}
-				/>
 				{#each sections as section (section.location)}
-					<List
-						header={locationLabel(section.location)}
-						count={section.items.length}
-						rows={section.items.map(toRow)}
-						selectable
-						bind:selecting={selecting[section.location]}
-						current={detail?.id}
-						onpick={(row) => pick(row.id)}
-						{onaction}
-					>
-						{#snippet bulk(ids: string[])}
-							<IconButton
-								icon="arrow-right"
-								size="xs"
-								label={$t('domains.kitchen.stock.actions.move')}
-								tooltip
-								disabled={!ids.length}
-								aria-haspopup="menu"
-								onclick={(event: MouseEvent) => {
-									bulkMove = { ids, from: section.location, anchor: event.currentTarget as HTMLElement }
-									bulkMoveOpen = true
-								}}
-							/>
-							<IconButton
-								icon="plus"
-								size="xs"
-								label={$t('domains.kitchen.stock.actions.addToGrocery')}
-								tooltip
-								disabled={!ids.length}
-								onclick={() => groceryMany(ids, section.location)}
-							/>
-							<IconButton
-								icon="circle-dashed"
-								size="xs"
-								label={$t('domains.kitchen.stock.actions.ranOut')}
-								tooltip
-								disabled={!ids.length}
-								onclick={() => ranOutMany(ids, section.location)}
-							/>
-							<IconButton
-								icon="trash"
-								size="xs"
-								label={$t('domains.kitchen.stock.actions.delete')}
-								danger
-								tooltip
-								disabled={!ids.length}
-								onclick={() => removeMany(ids, section.location)}
-							/>
-						{/snippet}
-					</List>
+					<DropTarget accepts={[DRAG_GROUP]} ondrop={(ids) => ids.forEach((id) => drop(id, section.location))}>
+						<section class="location" aria-labelledby="{uid}-{section.location}">
+							<header class="location-head">
+								<Icon name={LOCATION_ICONS[section.location]} />
+								<h2 class="location-title" id="{uid}-{section.location}">{locationLabel(section.location)}</h2>
+								<span class="location-tools">
+									{#if selecting[section.location]}
+										{@const ids = chosen[section.location]}
+										<IconButton
+											icon="arrow-right"
+											size="xs"
+											label={$t('domains.kitchen.stock.actions.move')}
+											tooltip
+											disabled={!ids.length}
+											aria-haspopup="menu"
+											onclick={(event: MouseEvent) => {
+												bulkMove = { ids, from: section.location, anchor: event.currentTarget as HTMLElement }
+												bulkMoveOpen = true
+											}}
+										/>
+										<IconButton
+											icon="plus"
+											size="xs"
+											label={$t('domains.kitchen.stock.actions.addToGrocery')}
+											tooltip
+											disabled={!ids.length}
+											onclick={() => groceryMany(ids, section.location)}
+										/>
+										<IconButton
+											icon="circle-dashed"
+											size="xs"
+											label={$t('domains.kitchen.stock.actions.ranOut')}
+											tooltip
+											disabled={!ids.length}
+											onclick={() => ranOutMany(ids, section.location)}
+										/>
+										<IconButton
+											icon="trash"
+											size="xs"
+											label={$t('domains.kitchen.stock.actions.delete')}
+											danger
+											tooltip
+											disabled={!ids.length}
+											onclick={() => removeMany(ids, section.location)}
+										/>
+										<Button
+											variant="quiet"
+											label={$t('domains.kitchen.stock.selection.done')}
+											onclick={() => (selecting[section.location] = false)}
+										/>
+									{/if}
+									<span class="location-count" aria-live="polite">
+										{selecting[section.location]
+											? $t('domains.kitchen.stock.selection.count', {
+													values: { count: chosen[section.location].length },
+												})
+											: section.items.length}
+									</span>
+								</span>
+							</header>
+							{#if section.items.length}
+								<List
+									labelledby="{uid}-{section.location}"
+									headless
+									rows={section.items.map(toRow)}
+									selectable
+									bind:selecting={selecting[section.location]}
+									onselect={(ids) => (chosen[section.location] = ids)}
+									current={detail?.id}
+									onpick={(row) => pick(row.id)}
+									{onaction}
+									dragGroup={DRAG_GROUP}
+									ondragstate={(on) => (dragging = on)}
+								/>
+							{:else}
+								<EmptyState
+									inline
+									title={$t('domains.kitchen.stock.emptyLocation.title')}
+									text={$t('domains.kitchen.stock.emptyLocation.text')}
+								/>
+							{/if}
+						</section>
+					</DropTarget>
 				{/each}
 				{#if !sections.length && !ranOut.length}
 					<p class="voice">{$t('domains.kitchen.stock.noneMatch')}</p>
@@ -476,18 +494,22 @@
 						</aside>
 					</div>
 				{/if}
-				<List
-					header={$t('domains.kitchen.stock.ranOut')}
-					count={ranOut.length}
-					rows={ranOut.map(toOutRow)}
-					current={detail?.id}
-					onpick={(row) => pick(row.id)}
-					{onaction}
-				>
-					{#if !ranOut.length}
-						<p class="voice none">{$t('domains.kitchen.stock.ranOutEmpty')}</p>
-					{/if}
-				</List>
+				<DropTarget accepts={[DRAG_GROUP]} ondrop={(ids) => ids.forEach((id) => drop(id, 'out'))}>
+					<List
+						header={$t('domains.kitchen.stock.ranOut')}
+						count={ranOut.length}
+						rows={ranOut.map(toOutRow)}
+						current={detail?.id}
+						onpick={(row) => pick(row.id)}
+						{onaction}
+						dragGroup={DRAG_GROUP}
+						ondragstate={(on) => (dragging = on)}
+					>
+						{#if !ranOut.length}
+							<p class="voice none">{$t('domains.kitchen.stock.ranOutEmpty')}</p>
+						{/if}
+					</List>
+				</DropTarget>
 			</div>
 		</div>
 		<Menu
@@ -500,9 +522,9 @@
 				if (bulkMove) moveMany(bulkMove.ids, bulkMove.from, (item.id ?? '').slice('move:'.length) as StockLocation)
 			}}
 		/>
-		<StockEditSheet bind:this={editSheet} />
 	{/if}
 </Dropzone>
+<StockEditSheet bind:this={editSheet} onadded={(item) => (selected = item.id)} />
 
 <style>
 	/* The lists on the left and the detail pane on the right */
@@ -537,6 +559,45 @@
 		flex-direction: column;
 		gap: var(--space-4);
 		min-width: 0;
+	}
+	/* One list per location: its glyph, plain, and its name in the display face as Grocery's stores are, with the
+	   count at the end of the same line */
+	.location {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-3);
+	}
+	.location-head {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		/* as tall as Done, so the list under it does not move when select mode begins */
+		min-height: var(--ed-control);
+	}
+	/* the count stands over the rows' menu buttons: the card's edge and the row's padding from the end, in a box
+	   as wide as the row's button; while selecting, the actions on the selection and Done come before it */
+	.location-tools {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		margin-left: auto;
+		padding-right: calc(1px + var(--space-2));
+	}
+	.location-count {
+		box-sizing: border-box;
+		min-width: calc(var(--control-height) - var(--space-1));
+		text-align: center;
+		white-space: nowrap;
+		font: var(--ed-t-data-sm);
+		letter-spacing: var(--ed-t-data-sm-tracking);
+		font-variant-numeric: tabular-nums;
+		color: var(--text-secondary);
+	}
+	.location-title {
+		margin: 0;
+		font: var(--ed-t-display-md);
+		letter-spacing: var(--ed-t-display-md-tracking);
+		font-variation-settings: var(--ed-t-display-md-opsz);
 	}
 	.anchor {
 		display: inline-flex;

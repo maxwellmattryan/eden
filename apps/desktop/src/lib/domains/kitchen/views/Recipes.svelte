@@ -1,23 +1,14 @@
 <script lang="ts">
-	// Hearth's Recipes view (Domains/Hearth/Recipes): the recipes on the left, the ones tonight's stock suggests first,
-	// and the selected one in the pane on the right with each ingredient marked in stock or missing. From the pane a
-	// recipe is cooked (the stock is decremented, product/domains/kitchen.md "Cooking decrements stock"), its missing
-	// ingredients go to the grocery list, and it is edited. A recipe on its way in (pasted, linked, photographed, or
-	// drafted by the Gardener) opens in the pane as a form and is stored only when it is saved there. Everything the
-	// pane says of the stock is worked out here, locally; a recipe that names something the owner avoids says so (D-25).
+	// Hearth's Recipes view (Domains/Hearth/Recipes): a narrow column on the left to find a recipe in (search, filters,
+	// order; `RecipeBrowser`) and the picked one on the right as a page (`RecipePage`), with each ingredient marked in
+	// stock or missing for the servings shown (D-107). From the page a recipe is cooked (the stock is decremented,
+	// product/domains/kitchen.md "Cooking decrements stock"), its missing ingredients go to the grocery lists, and it
+	// is edited. A recipe on its way in (pasted, linked, photographed, or drafted by the Gardener) opens in the pane as
+	// a form and is stored only when it is saved there, with its picture (D-93). Everything the pane says of the stock
+	// is worked out here, locally; a recipe that names something the owner avoids says so (D-25).
+	import { Button, Chip, Dropzone, EmptyState, toast, type ListRowData, type MenuItem } from '@eden/ui-kit'
 	import {
-		Badge,
-		Button,
-		Chip,
-		Dropzone,
-		EmptyState,
-		IconButton,
-		List,
-		type ListRowData,
-		type MenuItem,
-	} from '@eden/ui-kit'
-	import { openExternal } from '@eden/shared/api'
-	import {
+		browseRecipes,
 		cookPlan,
 		cookTonight,
 		formatIngredient,
@@ -25,17 +16,19 @@
 		isSafe,
 		missingEstimate,
 		normaliseName,
+		scaledIngredients,
 		type CookLine,
 	} from '@eden/shared/domains/kitchen'
-	import { formatUsd } from '@eden/shared/gardener'
 	import { t } from '@eden/shared/i18n'
 	import { undoToast } from '$lib/shell/undo'
-	import { toast } from '@eden/ui-kit'
+	import { recipeBrowse } from '../recipe-browse.svelte'
 	import { recipeDrafts, recipeImport } from '../recipe-draft.svelte'
 	import { forbidden } from '../safety.svelte'
-	import { CAPTURE_ACCEPT } from '../staging.svelte'
+	import { CAPTURE_ACCEPT, type RecipePicture } from '../staging.svelte'
 	import { kitchen, type Recipe, type RecipeDraft } from '../store.svelte'
+	import RecipeBrowser from './RecipeBrowser.svelte'
 	import RecipeForm from './RecipeForm.svelte'
+	import RecipePage from './RecipePage.svelte'
 
 	const uid = $props.id()
 
@@ -49,49 +42,19 @@
 	/** Names something the owner avoids: said only once the profile has been read and has something to say. */
 	const avoided = (recipe: Recipe) => !!forbidden.words?.length && !isSafe(textsOf(recipe), forbidden.words)
 
-	// Tonight's order first: what uses up the expiring stock, then what misses least; the rest follow by name.
+	// Tonight's order is the default: what uses up the expiring stock, then what misses least; the rest follow by name.
 	const tonight = $derived(cookTonight(kitchen.recipes, kitchen.stock, forbidden.words))
-	const ordered = $derived.by(() => {
-		const picked = tonight.map((pick) => pick.recipe)
-		const rest = kitchen.recipes
-			.filter((recipe) => !picked.some((entry) => entry.id === recipe.id))
-			.sort((a, b) => a.name.localeCompare(b.name))
-		return [...picked, ...rest]
-	})
+	const browsed = $derived(
+		browseRecipes(kitchen.recipes, kitchen.stock, tonight, recipeBrowse.filters, recipeBrowse.sort)
+	)
 
-	const actionsFor = (): MenuItem[] => [
-		{ id: 'edit', label: $t('domains.kitchen.recipes.actions.edit'), icon: 'pencil' },
-		{ id: 'delete', label: $t('domains.kitchen.recipes.actions.delete'), icon: 'trash', destructive: true },
-	]
-	const toRow = (recipe: Recipe): ListRowData => {
-		const pick = tonight.find((entry) => entry.recipe.id === recipe.id)
-		const missing = ingredientStatus(recipe, kitchen.stock).filter((line) => line.state === 'missing').length
-		return {
-			id: recipe.id,
-			primary: recipe.name,
-			hint: recipe.tip,
-			secondary: pick?.uses.length
-				? $t('domains.kitchen.recipes.usesUp', { values: { names: pick.uses.join(', ') } })
-				: undefined,
-			chips: [
-				...(recipe.minutes
-					? [{ label: $t('domains.kitchen.recipes.minutes', { values: { minutes: recipe.minutes } }), mono: true }]
-					: []),
-				...recipe.tags.map((tag) => ({ label: tag })),
-			],
-			badges: avoided(recipe) ? [{ kind: 'danger' as const, label: $t('domains.kitchen.recipes.avoided') }] : [],
-			meta: recipe.ingredients.length
-				? missing
-					? $t('domains.kitchen.recipes.missingCount', { values: { count: missing } })
-					: $t('domains.kitchen.recipes.allInStock')
-				: undefined,
-			actions: actionsFor(),
-		}
-	}
-
-	let selected = $state<string>()
-	const detail = $derived(kitchen.recipes.find((recipe) => recipe.id === selected) ?? ordered[0])
-	const status = $derived(detail ? ingredientStatus(detail, kitchen.stock) : [])
+	// The recipe the owner picked stays open even when a filter takes its row away; until one is picked the page shows
+	// the first of the list.
+	const detail = $derived(kitchen.recipes.find((recipe) => recipe.id === recipeBrowse.selected) ?? browsed[0])
+	// What the page says and what is cooked and shopped for are the amounts for the servings shown (D-107).
+	const serves = $derived(detail ? recipeBrowse.servesOf(detail) : 0)
+	const scaled = $derived(detail ? { ...detail, ingredients: scaledIngredients(detail, serves) } : undefined)
+	const status = $derived(scaled ? ingredientStatus(scaled, kitchen.stock) : [])
 	const missing = $derived(status.filter((line) => line.state === 'missing'))
 	/** About what the missing ingredients cost to buy, a package of each, from what the stores remember (D-105). */
 	const toBuy = $derived(
@@ -104,15 +67,23 @@
 	// The pane's modes over a saved recipe: read, edit, or the questions cooking it asks.
 	let mode = $state<'view' | 'edit' | 'cook'>('view')
 	function open(id: string) {
-		selected = id
+		recipeBrowse.selected = id
 		mode = 'view'
+	}
+	/**
+	 * The picture chosen while a saved recipe is edited: one the owner chose, `null` for taken away, nothing for left
+	 * as it is. It is kept with the recipe only when the form is saved, so Cancel leaves the picture alone.
+	 */
+	let edited = $state.raw<RecipePicture | null | undefined>()
+	function edit(id: string) {
+		open(id)
+		edited = undefined
+		mode = 'edit'
 	}
 
 	function onaction(menuItem: MenuItem, row: ListRowData) {
-		if (menuItem.id === 'edit') {
-			open(row.id)
-			mode = 'edit'
-		} else if (menuItem.id === 'delete') remove(row.id)
+		if (menuItem.id === 'edit') edit(row.id)
+		else if (menuItem.id === 'delete') remove(row.id)
 	}
 	function remove(id: string) {
 		const { recipe, undo } = kitchen.removeRecipe(id)
@@ -120,19 +91,27 @@
 		if (recipe) undoToast($t('domains.kitchen.recipes.toast.removed', { values: { name: recipe.name } }), undo)
 	}
 	function saveDraft(draft: RecipeDraft) {
-		const { recipe, undo } = kitchen.addRecipe(draft)
+		const { recipe, undo } = kitchen.addRecipe(draft, recipeDrafts.picture)
 		recipeDrafts.saved()
 		open(recipe.id)
 		undoToast($t('domains.kitchen.recipes.toast.saved', { values: { name: recipe.name } }), undo)
 	}
 	function saveEdit(recipe: Recipe, draft: RecipeDraft) {
-		const { undo } = kitchen.updateRecipe(recipe.id, draft)
+		const fields = kitchen.updateRecipe(recipe.id, draft)
+		// the picture is its own change in the store; one undo takes back both, the later one first
+		const picture =
+			edited || (edited === null && recipe.photo) ? kitchen.setRecipePhoto(recipe.id, edited ?? undefined) : undefined
 		mode = 'view'
-		undoToast($t('domains.kitchen.recipes.toast.edited', { values: { name: draft.name } }), undo)
+		edited = undefined
+		undoToast($t('domains.kitchen.recipes.toast.edited', { values: { name: draft.name } }), () => {
+			picture?.undo()
+			fields.undo()
+		})
 	}
 
 	function addMissing(recipe: Recipe) {
-		// what is already on the list, and not yet bought, is not added again
+		// what is already on a list, and not yet bought, is not added again; each line is filed where it was last
+		// bought (D-97), at the amount for the servings shown
 		const listed = new Set(kitchen.grocery.items.filter((item) => !item.done).map((item) => normaliseName(item.name)))
 		const wanted = missing.filter((line) => !listed.has(normaliseName(line.ingredient.name)))
 		if (!wanted.length) {
@@ -155,7 +134,7 @@
 	/** The owner's answer to each question, by the ingredient's place in the plan: the item was used up, or left. */
 	let usedUp = $state<Record<number, boolean>>({})
 	function cook(recipe: Recipe) {
-		plan = cookPlan(recipe, kitchen.stock)
+		plan = cookPlan(scaled ?? recipe, kitchen.stock)
 		usedUp = {}
 		if (plan.some((line) => line.state === 'ask')) mode = 'cook'
 		else cooked(recipe)
@@ -183,13 +162,6 @@
 	function seed() {
 		undoToast($t('common.sampleAdded'), kitchen.seed($t('domains.kitchen.name')))
 	}
-	const host = (url: string) => {
-		try {
-			return new URL(url).hostname.replace(/^www\./, '')
-		} catch {
-			return url
-		}
-	}
 </script>
 
 <Dropzone accept={[...CAPTURE_ACCEPT]} disabled={recipeImport.open} ondrop={(accepted) => recipeImport.start(accepted)}>
@@ -202,13 +174,14 @@
 		/>
 	{:else}
 		<div class="body">
-			<div class="lists">
-				{#if ordered.length}
-					<List
-						header={$t('domains.kitchen.tabs.recipes')}
-						count={ordered.length}
-						rows={ordered.map(toRow)}
-						onopen={(row) => open(row.id)}
+			<div class="side">
+				{#if kitchen.recipes.length}
+					<RecipeBrowser
+						recipes={browsed}
+						{tonight}
+						current={recipeDrafts.current ? undefined : detail?.id}
+						{avoided}
+						onpick={open}
 						{onaction}
 					/>
 				{/if}
@@ -223,6 +196,9 @@
 							title={$t('domains.kitchen.recipes.draft.title')}
 							note={$t('domains.kitchen.recipes.draft.note')}
 							cancelLabel={$t('domains.kitchen.recipes.draft.discard')}
+							picture={recipeDrafts.picture?.thumbnail}
+							fetching={recipeDrafts.fetching}
+							onpicture={(picture) => recipeDrafts.setPicture(picture)}
 							onsave={saveDraft}
 							oncancel={() => recipeDrafts.discard()}
 						/>
@@ -236,6 +212,8 @@
 							recipe={detail}
 							title={$t('domains.kitchen.recipes.editing')}
 							cancelLabel={$t('common.cancel')}
+							picture={edited === undefined ? kitchen.recipeThumb(detail) : edited?.thumbnail}
+							onpicture={(picture) => (edited = picture ?? null)}
 							onsave={(draft) => saveEdit(detail, draft)}
 							oncancel={() => (mode = 'view')}
 						/>
@@ -297,99 +275,20 @@
 					</div>
 				</aside>
 			{:else if detail}
-				<aside class="detail" aria-labelledby="{uid}-detail">
-					<div class="detail-head">
-						<h2 class="detail-title" id="{uid}-detail">{detail.name}</h2>
-						{#if detail.tip}
-							<IconButton
-								icon="info"
-								size="xs"
-								label={$t('domains.kitchen.recipes.tipFor', { values: { name: detail.name } })}
-								tooltip={detail.tip}
-							/>
-						{/if}
-					</div>
-					<div class="chips">
-						<Chip label={$t('domains.kitchen.recipes.serves', { values: { count: detail.serves } })} />
-						{#if detail.minutes}
-							<Chip
-								label={$t('domains.kitchen.recipes.minutes', { values: { minutes: detail.minutes } })}
-								icon="clock"
-							/>
-						{/if}
-						{#each detail.tags as tag (tag)}
-							<Chip label={tag} tone="outline" />
-						{/each}
-						{#if detail.sourceUrl}
-							<Chip
-								label={host(detail.sourceUrl)}
-								tone="outline"
-								icon="external-link"
-								onclick={() => void openExternal(detail.sourceUrl!)}
-							/>
-						{/if}
-					</div>
-					{#if avoided(detail)}
-						<p class="warn"><Badge kind="danger" label={$t('domains.kitchen.recipes.avoided')} /></p>
-					{/if}
-					{#if detail.ingredients.length}
-						<section class="part" aria-labelledby="{uid}-ingredients">
-							<h3 class="part-title" id="{uid}-ingredients">{$t('domains.kitchen.recipes.ingredients')}</h3>
-							<ul class="lines">
-								{#each status as line, index (index)}
-									<li class="line">
-										<span class="line-text">{formatIngredient(line.ingredient)}</span>
-										{#if line.state === 'missing'}
-											<Badge kind="warning" label={$t('domains.kitchen.recipes.missing')} />
-										{:else if line.enough === false}
-											<Badge kind="warning" label={$t('domains.kitchen.recipes.notEnough')} />
-										{:else}
-											<Badge kind="neutral" label={$t('domains.kitchen.recipes.inStock')} />
-										{/if}
-									</li>
-								{/each}
-							</ul>
-						</section>
-					{/if}
-					{#if detail.steps.length}
-						<section class="part" aria-labelledby="{uid}-steps">
-							<h3 class="part-title" id="{uid}-steps">{$t('domains.kitchen.recipes.steps')}</h3>
-							<ol class="steps">
-								{#each detail.steps as step, index (index)}
-									<li>{step}</li>
-								{/each}
-							</ol>
-						</section>
-					{/if}
-					{#if toBuy.priced}
-						<p class="quiet">
-							{$t('domains.kitchen.recipes.missingEstimate', { values: { total: formatUsd(toBuy.total) } })}
-							{#if toBuy.unpriced}
-								{$t('domains.kitchen.recipes.missingUnpriced', { values: { count: toBuy.unpriced } })}
-							{/if}
-						</p>
-					{/if}
-					<div class="detail-actions">
-						<Button
-							label={$t('domains.kitchen.recipes.actions.cook')}
-							icon="cooking-pot"
-							disabled={!detail.ingredients.length}
-							onclick={() => cook(detail)}
-						/>
-						<Button
-							label={$t('domains.kitchen.recipes.actions.addMissing', { values: { count: missing.length } })}
-							icon="plus"
-							disabled={!missing.length}
-							onclick={() => addMissing(detail)}
-						/>
-						<Button label={$t('domains.kitchen.recipes.actions.edit')} icon="pencil" onclick={() => (mode = 'edit')} />
-						<Button
-							label={$t('domains.kitchen.recipes.actions.delete')}
-							variant="danger"
-							icon="trash"
-							onclick={() => remove(detail.id)}
-						/>
-					</div>
+				<aside class="detail reading" aria-labelledby="{uid}-detail">
+					<RecipePage
+						id="{uid}-detail"
+						recipe={detail}
+						{serves}
+						{status}
+						{toBuy}
+						avoided={avoided(detail)}
+						onserves={(count) => recipeBrowse.setServes(detail, count)}
+						oncook={() => cook(detail)}
+						onaddmissing={() => addMissing(detail)}
+						onedit={() => edit(detail.id)}
+						ondelete={() => remove(detail.id)}
+					/>
 				</aside>
 			{/if}
 		</div>
@@ -397,19 +296,24 @@
 </Dropzone>
 
 <style>
-	/* The recipes on the left and the one that is open on the right */
+	/* A narrow column to find a recipe in, and the open one on the rest of the page */
 	.body {
 		display: grid;
-		grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+		grid-template-columns: var(--sheet-sm) minmax(0, 1fr);
 		align-items: start;
 		gap: var(--space-6);
 		padding: 0 var(--ed-gutter);
 	}
-	.lists {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-4);
+	/* The column stays in view and scrolls on its own, so a long list never carries the recipe away */
+	.side {
+		position: sticky;
+		top: var(--space-4);
 		min-width: 0;
+		max-height: calc(100vh - var(--space-8) * 3);
+		/* a scroller clips what it holds: the room around it keeps a focus ring whole, and is taken back outside */
+		margin: calc(var(--space-1) * -1);
+		padding: var(--space-1);
+		overflow-y: auto;
 	}
 
 	.detail {
@@ -424,10 +328,10 @@
 		background: var(--surface-1);
 		box-shadow: var(--shadow-card);
 	}
-	.detail-head {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
+	/* the recipe as it is read: its picture runs to the card's edges, so the page pads itself */
+	.reading {
+		gap: 0;
+		padding: 0;
 	}
 	.detail-title {
 		margin: 0;
@@ -436,34 +340,19 @@
 		font-variation-settings: var(--ed-t-display-sm-opsz);
 		text-wrap: balance;
 	}
-	.chips,
 	.detail-actions,
 	.choices {
 		display: flex;
 		flex-wrap: wrap;
 		gap: var(--space-2);
 	}
-	.warn,
 	.quiet {
 		margin: 0;
-	}
-	.quiet {
 		font: var(--ed-t-body-sm);
 		letter-spacing: var(--ed-t-body-sm-tracking);
 		color: var(--text-secondary);
 	}
-	.part {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-2);
-	}
-	.part-title {
-		margin: 0;
-		font: var(--ed-t-label);
-		letter-spacing: var(--ed-t-label-tracking);
-		color: var(--text-secondary);
-	}
-	/* One ingredient to a line: what it is, then where it stands */
+	/* Cooking: one ingredient to a line, what it is, then what it takes from the stock */
 	.lines {
 		display: flex;
 		flex-direction: column;
@@ -489,16 +378,5 @@
 		letter-spacing: var(--ed-t-data-sm-tracking);
 		font-variant-numeric: tabular-nums;
 		color: var(--text-secondary);
-	}
-	.steps {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-2);
-		margin: 0;
-		padding-left: var(--space-6);
-		list-style: decimal outside;
-		font: var(--ed-t-body);
-		letter-spacing: var(--ed-t-body-tracking);
-		text-wrap: pretty;
 	}
 </style>

@@ -82,7 +82,7 @@
 	},
 	{
 		"name": "log-quick",
-		"description": "Runs one of Eden’s quick actions with a value. The owner confirms on the card the first time, and can undo it. The actions:\n- kitchen.add-to-grocery: adds one item to the grocery list; `value` is the item, with its amount when one was given (\"oat milk\", \"2 lemons\")\n- toolbench.capture-idea: saves a new idea in Toolbench; `value` is the idea in a sentence, which becomes its title\nReturns `logged: true`. It does only these; anything else needs its own tool.",
+		"description": "Runs one of Eden’s quick actions with a value. The owner confirms on the card the first time, and can undo it. The actions:\n- kitchen.add-to-grocery: puts one item on a grocery list, the list of the store it was last bought at or else the unfiled one; `value` is the item, with its amount when one was given (\"oat milk\", \"2 lemons\")\n- toolbench.capture-idea: saves a new idea in Toolbench; `value` is the idea in a sentence, which becomes its title\nReturns `logged: true`. It does only these; anything else needs its own tool.",
 		"input_schema": {
 			"type": "object",
 			"properties": {
@@ -173,7 +173,7 @@
 	},
 	{
 		"name": "kitchen_storage-tip",
-		"description": "Runs a separate model request for how to store one food and how long it keeps. Pass `stockItemId` for an item in the stock, or `name` for anything else; one of the two is needed. Returns `tip`, two sentences at most, and `shelfLifeDays`. It is general guidance: an item’s own expiry date is on its row in the context.",
+		"description": "Runs a separate model request for how to store one food and how long it keeps. Pass `stockItemId` for an item in the stock, or `name` for anything else; one of the two is needed. Returns `tip`, two sentences at most, and `shelfLifeDays`. It is general guidance: an item’s own expiry date is on its row in the context. Nothing is stored: to keep a tip on the item, pass it to `kitchen_update-stock`.",
 		"input_schema": {
 			"type": "object",
 			"properties": {
@@ -212,7 +212,7 @@
 	},
 	{
 		"name": "kitchen_draft-grocery-list",
-		"description": "Runs a separate model request that drafts a grocery list as a card the owner edits and keeps: what the chosen recipes and the coming days need, less what is in stock and what is already on the list. Returns the drafted `items`. Use it when the owner asks what to buy or for a shopping list; to put one named item on the list, use `log-quick`.",
+		"description": "Runs a separate model request that drafts a grocery list as a card the owner edits and keeps: what the chosen recipes and the coming days need, less what is in stock and what is already on a list. When kept, the items go on the list of `storeId`, or with none each goes to the store it was last bought at. Returns the drafted `items`. Use it when the owner asks what to buy or for a shopping list; to put items they named on a list, use `kitchen_edit-grocery`.",
 		"input_schema": {
 			"type": "object",
 			"properties": {
@@ -229,7 +229,11 @@
 				},
 				"notes": {
 					"type": "string",
-					"description": "Anything to mind: a guest, a budget, a shop."
+					"description": "Anything to mind: a guest, a budget."
+				},
+				"storeId": {
+					"type": "string",
+					"description": "The `id` of the store whose list the items go on, from rows under `grocery-store`, when the owner named one."
 				}
 			},
 			"required": [],
@@ -239,7 +243,7 @@
 	},
 	{
 		"name": "kitchen_add-stock",
-		"description": "Adds items to the kitchen stock, after the owner confirms on the card; they can undo it. Put every item in one call. Returns the id and name of each row added. Use it when the owner tells you what they bought or have at home. It cannot change or remove stock that is already there.",
+		"description": "Adds items to the kitchen stock, after the owner confirms on the card; they can undo it. Put every item in one call. An item that ran out comes back as the same row. When the owner names a product you know, fill in its `brand`, its `size` and its `category` yourself so they do not have to; leave out whatever you are not sure of. Returns the id and name of each row. Use it when the owner tells you what they bought or have at home; to change or remove what is already there, use `kitchen_update-stock`.",
 		"input_schema": {
 			"type": "object",
 			"properties": {
@@ -251,15 +255,15 @@
 						"properties": {
 							"name": {
 								"type": "string",
-								"description": "The item itself, as the owner named it, without its maker: \"butter\"."
+								"description": "The item itself, without its maker: \"butter\"."
 							},
 							"brand": {
 								"type": "string",
-								"description": "Who makes it, when the owner said: \"Kerrygold\". Left out otherwise."
+								"description": "Who makes it, when the owner said or the product is one you know: \"Kerrygold\"."
 							},
 							"size": {
 								"type": "string",
-								"description": "How much one package holds, when the owner said: \"16 oz\". Left out otherwise."
+								"description": "How much one package holds, when the owner said or you know it: \"16 oz\"."
 							},
 							"qty": {
 								"type": "string",
@@ -279,9 +283,35 @@
 								],
 								"description": "Where it is kept. When the owner did not say, choose by the kind of food."
 							},
+							"category": {
+								"type": "string",
+								"enum": [
+									"produce",
+									"meat-and-fish",
+									"dairy-and-eggs",
+									"bakery",
+									"grains-and-pasta",
+									"canned-and-jarred",
+									"frozen",
+									"snacks",
+									"drinks",
+									"condiments-and-spices",
+									"supplements-and-mixes",
+									"other"
+								],
+								"description": "What kind of thing it is, when you can tell."
+							},
 							"expiry": {
 								"type": "string",
 								"description": "The day it expires, when the owner gave one. A day as YYYY-MM-DD."
+							},
+							"tip": {
+								"type": "string",
+								"description": "One short sentence on storing it, only when the owner asked for one to be kept."
+							},
+							"link": {
+								"type": "string",
+								"description": "The link to the product’s page at a grocer, when the owner pasted one: its name, size and picture are read from it."
 							}
 						},
 						"required": [
@@ -296,6 +326,337 @@
 			"required": [
 				"items"
 			],
+			"additionalProperties": false
+		},
+		"strict": true
+	},
+	{
+		"name": "kitchen_update-stock",
+		"description": "Changes or removes items that are in the kitchen stock, after the owner confirms on the card; they can undo it. Put every change in one call. `changes` edits rows: pass only the fields that change. A `qty` of 0 marks the item as run out: it stays, to be bought again, and that is what \"we are out of eggs\" means. `location` moves it. `remove` deletes rows for good, for something added by mistake. After the owner cooked a saved recipe, pass `cookedRecipeId` and, in `changes`, each used item with the `qty` that is left. Returns the id and name of each row changed and removed, or an error naming an id that is not in the stock. To add something new, use `kitchen_add-stock`.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"changes": {
+					"type": "array",
+					"description": "The items to change, one entry each.",
+					"items": {
+						"type": "object",
+						"properties": {
+							"id": {
+								"type": "string",
+								"description": "The `id` of the item’s row under `stock-item` in the context."
+							},
+							"name": {
+								"type": "string",
+								"description": "Its new name, without its maker."
+							},
+							"brand": {
+								"type": "string",
+								"description": "Who makes it. An empty string clears it."
+							},
+							"size": {
+								"type": "string",
+								"description": "How much one package holds: \"16 oz\". An empty string clears it."
+							},
+							"qty": {
+								"type": "string",
+								"description": "The amount it holds now, alone: 2, 500, half. 0 when it ran out."
+							},
+							"unit": {
+								"type": "string",
+								"description": "The unit of the amount: g, ml, bunch, tin. An empty string for a plain count."
+							},
+							"location": {
+								"type": "string",
+								"enum": [
+									"fridge",
+									"freezer",
+									"pantry",
+									"counter"
+								],
+								"description": "Where it is kept now."
+							},
+							"category": {
+								"type": "string",
+								"enum": [
+									"produce",
+									"meat-and-fish",
+									"dairy-and-eggs",
+									"bakery",
+									"grains-and-pasta",
+									"canned-and-jarred",
+									"frozen",
+									"snacks",
+									"drinks",
+									"condiments-and-spices",
+									"supplements-and-mixes",
+									"other"
+								],
+								"description": "What kind of thing it is, when you can tell."
+							},
+							"expiry": {
+								"type": "string",
+								"description": "The day it expires. A day as YYYY-MM-DD. An empty string clears it."
+							},
+							"threshold": {
+								"type": "number",
+								"description": "The amount at or under which it counts as low, in its own unit. -1 clears it."
+							},
+							"tip": {
+								"type": "string",
+								"description": "One short sentence on storing it. An empty string clears it."
+							}
+						},
+						"required": [
+							"id"
+						],
+						"additionalProperties": false
+					}
+				},
+				"remove": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"description": "The `id` of each item to delete for good."
+				},
+				"cookedRecipeId": {
+					"type": "string",
+					"description": "The `id` of the saved recipe the owner cooked, from rows under `recipe`, when the changes are what cooking it used."
+				}
+			},
+			"required": [],
+			"additionalProperties": false
+		},
+		"strict": true
+	},
+	{
+		"name": "kitchen_edit-grocery",
+		"description": "Changes the grocery lists, after the owner confirms on the card; they can undo it. Every store has its own list, and one list holds what is not filed under a store. Put everything in one call. `add` puts items on a list: on the list of `storeId` when the owner named a store, else where each was last bought. `update` edits an item, moves it to another store’s list with `storeId`, or checks it off with `done`. `remove` deletes items. `complete` finishes a shopping trip for a store: its checked items leave the list and the store remembers them. When the owner names a product you know, fill in its `brand` and `size` yourself; leave out what you are not sure of. Use it for items the owner names, for buying again something that ran out, and for a recipe’s missing ingredients; for a whole list worked out from the stock use `kitchen_draft-grocery-list`. Returns what was added, changed, removed and completed, or an error naming an id it does not know.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"add": {
+					"type": "array",
+					"description": "The items to add, one entry each.",
+					"items": {
+						"type": "object",
+						"properties": {
+							"name": {
+								"type": "string",
+								"description": "The thing to buy, without its maker: \"butter\"."
+							},
+							"brand": {
+								"type": "string",
+								"description": "The brand to buy, when the owner said or the product is one you know."
+							},
+							"size": {
+								"type": "string",
+								"description": "The package size to buy: \"16 oz\"."
+							},
+							"qty": {
+								"type": "string",
+								"description": "How much, with its unit: 2, 500 g, 1 bunch."
+							},
+							"price": {
+								"type": "number",
+								"description": "What one costs, only when the owner said: 3.49."
+							},
+							"note": {
+								"type": "string",
+								"description": "Anything to mind when buying it, in a few words."
+							},
+							"storeId": {
+								"type": "string",
+								"description": "The `id` of the store whose list it goes on, from rows under `grocery-store`; `none` for the unfiled list. Left out, it goes where it was last bought."
+							},
+							"link": {
+								"type": "string",
+								"description": "The link to the product’s page at a grocer, when the owner pasted one: its name and size are read from it."
+							}
+						},
+						"required": [
+							"name"
+						],
+						"additionalProperties": false
+					}
+				},
+				"update": {
+					"type": "array",
+					"description": "The items to change, one entry each, with only the fields that change.",
+					"items": {
+						"type": "object",
+						"properties": {
+							"id": {
+								"type": "string",
+								"description": "The `id` of the item’s row under `grocery-item` in the context."
+							},
+							"name": {
+								"type": "string",
+								"description": "Its new name, without its maker."
+							},
+							"brand": {
+								"type": "string",
+								"description": "The brand to buy. An empty string clears it."
+							},
+							"size": {
+								"type": "string",
+								"description": "The package size to buy. An empty string clears it."
+							},
+							"qty": {
+								"type": "string",
+								"description": "How much, with its unit."
+							},
+							"price": {
+								"type": "number",
+								"description": "What one costs, when the owner said. 0 clears it."
+							},
+							"note": {
+								"type": "string",
+								"description": "Anything to mind when buying it. An empty string clears it."
+							},
+							"storeId": {
+								"type": "string",
+								"description": "The `id` of the store whose list it moves to; `none` moves it to the unfiled list. Left out, it stays."
+							},
+							"done": {
+								"type": "boolean",
+								"description": "Whether it is checked off: true once it is in the basket."
+							}
+						},
+						"required": [
+							"id"
+						],
+						"additionalProperties": false
+					}
+				},
+				"remove": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"description": "The `id` of each grocery item to delete."
+				},
+				"complete": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"description": "The `id` of each store whose trip is done; `none` for the unfiled list."
+				}
+			},
+			"required": [],
+			"additionalProperties": false
+		},
+		"strict": true
+	},
+	{
+		"name": "kitchen_edit-stores",
+		"description": "Adds, changes or deletes the stores the owner shops at, after the owner confirms on the card; they can undo it. Each store has its own grocery list. For a store you know, fill in `url` with its own website so the owner does not have to: once they confirm, the app reads that site on the device for the store’s picture, its phone number and its address. Leave `url` out when you are not sure of it, and never guess a phone number. You are not given a store’s address and cannot set one. `shopDay` is the day of the next trip, which the owner is reminded of that morning. Deleting a store keeps its items: they move to the unfiled list. Returns the id and name of each store added, changed and removed; a store whose name is already there is answered as it stands.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"add": {
+					"type": "array",
+					"description": "The stores to add, one entry each.",
+					"items": {
+						"type": "object",
+						"properties": {
+							"name": {
+								"type": "string",
+								"description": "The store’s name as the owner would say it: \"H-E-B\", \"Central Market\"."
+							},
+							"sells": {
+								"type": "array",
+								"items": {
+									"type": "string",
+									"enum": [
+										"grocery",
+										"home-goods"
+									]
+								},
+								"description": "What the owner buys there; `grocery` when unsaid."
+							},
+							"url": {
+								"type": "string",
+								"description": "The store’s own website, starting with https://, when the owner gave it or you know it."
+							},
+							"phone": {
+								"type": "string",
+								"description": "Its phone number, only when the owner gave it."
+							},
+							"note": {
+								"type": "string",
+								"description": "Anything the owner said to remember about it."
+							},
+							"shopDay": {
+								"type": "string",
+								"description": "The next trip, as YYYY-MM-DD or YYYY-MM-DDTHH:MM when the owner named one."
+							}
+						},
+						"required": [
+							"name"
+						],
+						"additionalProperties": false
+					}
+				},
+				"update": {
+					"type": "array",
+					"description": "The stores to change, one entry each, with only the fields that change.",
+					"items": {
+						"type": "object",
+						"properties": {
+							"id": {
+								"type": "string",
+								"description": "The `id` of the store’s row under `grocery-store` in the context."
+							},
+							"name": {
+								"type": "string",
+								"description": "Its new name."
+							},
+							"sells": {
+								"type": "array",
+								"items": {
+									"type": "string",
+									"enum": [
+										"grocery",
+										"home-goods"
+									]
+								},
+								"description": "What the owner buys there; `grocery` when unsaid."
+							},
+							"url": {
+								"type": "string",
+								"description": "The store’s own website, starting with https://. An empty string clears it."
+							},
+							"phone": {
+								"type": "string",
+								"description": "Its phone number. An empty string clears it."
+							},
+							"note": {
+								"type": "string",
+								"description": "Anything to remember about it. An empty string clears it."
+							},
+							"shopDay": {
+								"type": "string",
+								"description": "The next trip, as YYYY-MM-DD or YYYY-MM-DDTHH:MM. An empty string clears it."
+							}
+						},
+						"required": [
+							"id"
+						],
+						"additionalProperties": false
+					}
+				},
+				"remove": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"description": "The `id` of each store to delete."
+				}
+			},
+			"required": [],
 			"additionalProperties": false
 		},
 		"strict": true
@@ -386,6 +747,22 @@
 				"tip": {
 					"type": "string",
 					"description": "One sentence that makes the dish go right, when there is one worth giving."
+				},
+				"author": {
+					"type": "string",
+					"description": "Who the recipe is by, when it is someone’s and not your own."
+				},
+				"sourceName": {
+					"type": "string",
+					"description": "What it comes from, by name: a cookbook, a magazine, a site. Left out for your own."
+				},
+				"sourceUrl": {
+					"type": "string",
+					"description": "The page it comes from, starting with https://, when there is one."
+				},
+				"scales": {
+					"type": "boolean",
+					"description": "False when the amounts cannot simply be multiplied for more servings, as with baking."
 				}
 			},
 			"required": [
@@ -398,8 +775,91 @@
 		"strict": true
 	},
 	{
+		"name": "kitchen_change-recipe",
+		"description": "Changes or deletes one of the owner’s saved recipes, after the owner confirms on the card; they can undo it. Pass only the fields that change; `ingredients`, `steps` and `tags` replace the whole list, so give each in full when you change it. `remove: true` deletes the recipe and takes nothing else. A change that names one of the owner’s allergens, restrictions or disliked ingredients is refused. Returns the recipe’s id and name, or an error when no recipe has that id. Use it when the owner asks to correct, adjust or delete a recipe they have; a new recipe goes through `kitchen_save-recipe` or `kitchen_import-recipe`.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"id": {
+					"type": "string",
+					"description": "The `id` of the recipe’s row under `recipe` in the context."
+				},
+				"remove": {
+					"type": "boolean",
+					"description": "True to delete the recipe."
+				},
+				"name": {
+					"type": "string",
+					"description": "The dish."
+				},
+				"serves": {
+					"type": "integer",
+					"description": "How many it serves."
+				},
+				"minutes": {
+					"type": "integer",
+					"description": "How long it takes start to finish, in minutes."
+				},
+				"tags": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"description": "Up to three plain tags, replacing the ones it has."
+				},
+				"ingredients": {
+					"type": "array",
+					"description": "Every ingredient, one entry each, replacing the ones it has.",
+					"items": {
+						"type": "object",
+						"properties": {
+							"name": {
+								"type": "string",
+								"description": "The ingredient alone, without its amount."
+							},
+							"qty": {
+								"type": "string",
+								"description": "The amount alone: 2, 1/2, 200. An empty string when there is none."
+							},
+							"unit": {
+								"type": "string",
+								"description": "The unit of the amount: g, ml, tbsp, cup, clove. Left out for a plain count."
+							},
+							"note": {
+								"type": "string",
+								"description": "How it is prepared: minced, to taste. Left out when there is nothing to say."
+							}
+						},
+						"required": [
+							"name",
+							"qty"
+						],
+						"additionalProperties": false
+					}
+				},
+				"steps": {
+					"type": "array",
+					"items": {
+						"type": "string",
+						"description": "One step, as a full sentence."
+					},
+					"description": "The steps, in order, replacing the ones it has."
+				},
+				"tip": {
+					"type": "string",
+					"description": "One sentence that makes the dish go right. An empty string clears it."
+				}
+			},
+			"required": [
+				"id"
+			],
+			"additionalProperties": false
+		},
+		"strict": true
+	},
+	{
 		"name": "kitchen_plan-week",
-		"description": "Runs a separate model request at the deep grade that plans meals for a run of days around the stock, the saved recipes and the events and tasks in the calendar, with one shop day, its list and the tasks the plan needs, as one plan card the owner keeps or discards; the owner is shown its cost and confirms before it runs. Returns the drafted plan. Use it when the owner asks to plan a week of meals; for one meal use `kitchen_suggest-recipes`.",
+		"description": "Runs a separate model request at the deep grade that plans meals for a run of days around the stock, the saved recipes and the events and tasks in the calendar, with one shop day, what to buy for it and the tasks the plan needs, as one plan card the owner keeps or discards. When kept, the shop day goes in the calendar and each thing to buy goes on the list of the store it was last bought at; the owner is shown its cost and confirms before it runs. Returns the drafted plan. Use it when the owner asks to plan a week of meals; for one meal use `kitchen_suggest-recipes`.",
 		"input_schema": {
 			"type": "object",
 			"properties": {

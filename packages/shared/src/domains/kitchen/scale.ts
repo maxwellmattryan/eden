@@ -1,4 +1,4 @@
-// A recipe for more or fewer than it was written for (D-94): each amount is multiplied by the servings asked for
+// A recipe for more or fewer than it was written for (D-107): each amount is multiplied by the servings asked for
 // over the servings written, and said the way a cook measures it, in fractions for spoons, cups and counts and in
 // round numbers for grams and millilitres. An amount with no number in it ("a pinch", "to taste") is left as it
 // is, and so is every line of a recipe that says it does not scale. Nothing is stored: the recipe keeps the amounts

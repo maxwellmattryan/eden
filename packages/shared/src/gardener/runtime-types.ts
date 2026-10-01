@@ -184,11 +184,16 @@ export type DraftCard =
 			events: { kind: string; title: string; day: string }[]
 			meals?: { day: string; meals: { name: string; recipeId?: string }[] }[]
 			/** What the plan's shop day needs, for the grocery list. */
-			grocery?: { name: string; brand?: string; qty: string }[]
+			grocery?: { name: string; brand?: string; size?: string; qty: string }[]
 			/** The project the tasks belong to, when they do. */
 			projectId?: string
 	  }
-	| { kind: 'grocery'; items: { name: string; brand?: string; size?: string; qty: string; note?: string }[] }
+	| {
+			kind: 'grocery'
+			items: { name: string; brand?: string; size?: string; qty: string; note?: string }[]
+			/** The store whose list the items go on when kept; with none, each is filed where it was last bought (D-97). */
+			storeId?: string
+	  }
 	| { kind: 'code'; language: string; code: string; title?: string }
 	| {
 			kind: 'capture'
@@ -232,7 +237,13 @@ export type DraftCard =
 				ingredients: { name: string; qty: string; unit?: string; note?: string }[]
 				steps: string[]
 				sourceUrl?: string
+				sourceName?: string
+				author?: string
 				tip?: string
+				/** False for a recipe whose amounts do not follow its servings. */
+				scales?: boolean
+				/** Where the source shows a picture of the dish, for the draft to fetch. */
+				imageUrl?: string
 			}
 	  }
 

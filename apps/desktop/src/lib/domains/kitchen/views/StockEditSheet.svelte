@@ -1,28 +1,26 @@
 <script lang="ts">
 	// A stock item's form, in a sheet over the page (D-95): its picture with the buttons that change it, then its name,
-	// brand and package size (D-104), amount, location, date, category, low-stock threshold and tip, and last the link a picture can be fetched from
-	// (D-91). Save writes the fields as one change with one undo; Cancel, Escape and the scrim leave them as they were.
+	// brand and package size (D-104), amount, location, date, category, low-stock threshold and tip. The picture's button
+	// offers a file or a link to fetch it from (D-91, D-110), and one dropped or pasted is taken too. Save writes the fields as one change with one undo; Cancel, Escape and the scrim leave them as they were.
 	// The picture is not one of the fields: choosing, linking or removing it is its own write with its own undo (D-90).
-	// The page opens it through `edit(item)`.
-	import {
-		Button,
-		Chip,
-		Field,
-		FileButton,
-		Icon,
-		IconButton,
-		Menu,
-		Segmented,
-		Sheet,
-		toast,
-		type MenuItem,
-	} from '@eden/ui-kit'
-	import { CATEGORIES } from '@eden/shared/domains/kitchen'
+	// The page opens it through `edit(item)`, and blank through `add()` (D-109): there Add writes the item and the
+	// picture chosen for it as one change with one undo, and a grocer's product link also fills the name, the brand
+	// and the size left empty (D-91, D-104).
+	import { Button, Chip, Field, Menu, Segmented, Sheet, toast, type MenuItem } from '@eden/ui-kit'
+	import { CATEGORIES, productLink } from '@eden/shared/domains/kitchen'
 	import { t } from '@eden/shared/i18n'
 	import { undoToast } from '$lib/shell/undo'
-	import { PICTURE_ACCEPT, linkedPicture, squarePicture } from '../staging.svelte'
+	import { linkedPicture, squarePicture } from '../staging.svelte'
 	import { categoryGlyph } from '../words'
+	import PictureDrop from './PictureDrop.svelte'
+	import PictureInput from './PictureInput.svelte'
 	import { LOCATIONS, kitchen, type StockItem, type StockLocation, type StockPatch } from '../store.svelte'
+
+	type Props = {
+		/** An item was added from the blank form; the page shows it. */
+		onadded?: (item: StockItem) => void
+	}
+	let { onadded }: Props = $props()
 
 	const uid = $props.id()
 	const locationLabel = (location: StockLocation) => $t(`domains.kitchen.stock.locations.${location}`)
@@ -34,11 +32,11 @@
 	let editing = $state<string>()
 	/** The item as the store holds it now, so a picture set from here shows at once. */
 	const item = $derived(kitchen.stock.find((entry) => entry.id === editing))
-	let form = $state({
+	const blank = () => ({
 		name: '',
 		brand: '',
 		size: '',
-		qty: '',
+		qty: '1',
 		unit: '',
 		location: 'pantry' as StockLocation,
 		expiry: '',
@@ -46,9 +44,23 @@
 		threshold: '',
 		tip: '',
 	})
+	let form = $state(blank())
+	/** The picture chosen for an item that is not added yet, kept here until Add writes it with the item. */
+	let pending = $state<string>()
 
-	/** Open the form on an item, its fields as text. */
-	export function edit(target: StockItem) {
+	/** Open the form blank, to add an item. */
+	export function add() {
+		form = blank()
+		pending = undefined
+		editing = undefined
+		open = true
+	}
+
+	/**
+	 * Open the form on an item, its fields as text. A `preset` stands over the item's own: a row that ran out,
+	 * dropped on a location, opens there with its quantity to type (D-111).
+	 */
+	export function edit(target: StockItem, preset: { location?: StockLocation; qty?: string } = {}) {
 		form = {
 			name: target.name,
 			brand: target.brand ?? '',
@@ -60,14 +72,15 @@
 			category: target.category ?? '',
 			threshold: target.threshold === undefined ? '' : String(target.threshold),
 			tip: target.tip ?? '',
+			...preset,
 		}
-		pictureLink = ''
 		editing = target.id
 		open = true
 	}
-	function save(target: StockItem) {
+	/** The form's fields as the store takes them. */
+	function fields() {
 		const threshold = Number(form.threshold.replace(',', '.'))
-		const patch: StockPatch = {
+		return {
 			name: form.name.trim(),
 			brand: form.brand.trim() || undefined,
 			size: form.size.trim() || undefined,
@@ -79,8 +92,25 @@
 			threshold: form.threshold.trim() && Number.isFinite(threshold) && threshold >= 0 ? threshold : undefined,
 			tip: form.tip.trim() || undefined,
 		}
+	}
+	function save(target: StockItem) {
+		const patch: StockPatch = fields()
 		const { undo } = kitchen.updateStock(target.id, patch)
 		undoToast($t('domains.kitchen.stock.toast.edited', { values: { name: patch.name || target.name } }), undo)
+		open = false
+	}
+	/** Add: the item and the picture chosen for it, taken back by one undo. */
+	function create() {
+		const held = kitchen.stock.length
+		const { item, undo } = kitchen.addStockItem(fields())
+		const unpicture = pending ? kitchen.setStockPhoto(item.id, pending).undo : undefined
+		// no more items than before: one that ran out came back (D-92)
+		const key = kitchen.stock.length === held ? 'back' : 'added'
+		undoToast($t(`domains.kitchen.stock.toast.${key}`, { values: { name: item.name } }), () => {
+			unpicture?.()
+			undo()
+		})
+		onadded?.(item)
 		open = false
 	}
 
@@ -96,31 +126,47 @@
 	let categoryOpen = $state(false)
 
 	// An item's own picture: the middle of a photo the owner picks, or none, which leaves the category's glyph.
-	async function setPicture(target: StockItem, files: File[]) {
-		const image = files[0] ? await squarePicture(files[0]) : undefined
+	// For an item not added yet the picture waits in `pending`, and nothing is written.
+	async function setPicture(target: StockItem | undefined, file: File) {
+		const image = await squarePicture(file)
 		if (!image) {
 			toast({ message: $t('domains.kitchen.stock.toast.pictureFailed') })
 			return
 		}
-		const { undo } = kitchen.setStockPhoto(target.id, image)
-		undoToast($t('domains.kitchen.stock.toast.pictureSet', { values: { name: target.name } }), undo)
-	}
-	let pictureLink = $state('')
-	let fetching = $state(false)
-	async function linkPicture(target: StockItem) {
-		if (fetching || !pictureLink.trim()) return
-		fetching = true
-		const image = await linkedPicture(pictureLink)
-		fetching = false
-		if (!image) {
-			toast({ message: $t('domains.kitchen.stock.toast.pictureLinkFailed') })
+		if (!target) {
+			pending = image
 			return
 		}
-		pictureLink = ''
 		const { undo } = kitchen.setStockPhoto(target.id, image)
 		undoToast($t('domains.kitchen.stock.toast.pictureSet', { values: { name: target.name } }), undo)
 	}
-	function removePicture(target: StockItem) {
+	/** The picture a link means; true when one came of it. */
+	async function linkPicture(target: StockItem | undefined, pictureLink: string) {
+		// a product's link on the blank form names the product too (D-91, D-104): it fills what is still empty
+		const product = target ? null : productLink(pictureLink)
+		if (product) {
+			form.name ||= product.name
+			form.brand ||= product.brand ?? ''
+			form.size ||= product.size ?? ''
+		}
+		const image = await linkedPicture(pictureLink)
+		if (!image) {
+			toast({ message: $t('domains.kitchen.stock.toast.pictureLinkFailed') })
+			return false
+		}
+		if (!target) {
+			pending = image
+			return true
+		}
+		const { undo } = kitchen.setStockPhoto(target.id, image)
+		undoToast($t('domains.kitchen.stock.toast.pictureSet', { values: { name: target.name } }), undo)
+		return true
+	}
+	function removePicture(target: StockItem | undefined) {
+		if (!target) {
+			pending = undefined
+			return
+		}
 		const { undo } = kitchen.setStockPhoto(target.id, undefined)
 		undoToast($t('domains.kitchen.stock.toast.pictureRemoved', { values: { name: target.name } }), undo)
 	}
@@ -128,137 +174,103 @@
 
 <Sheet bind:open size="md" labelledby="{uid}-title">
 	{#snippet header()}
-		<h2 class="title" id="{uid}-title">{$t('domains.kitchen.stock.detail.editing')}</h2>
+		<h2 class="title" id="{uid}-title">
+			{$t(editing ? 'domains.kitchen.stock.detail.editing' : 'domains.kitchen.stock.addItem')}
+		</h2>
 	{/snippet}
-	{#if item}
-		{@const image = kitchen.photoOf(item)}
-		<form
-			class="form"
-			id="{uid}-form"
-			onsubmit={(event) => {
-				event.preventDefault()
-				save(item)
-			}}
-		>
-			<div class="picture-row">
-				{#if image}
-					<img class="picture" src={image} alt="" />
-				{:else}
-					<span class="picture picture-glyph" aria-hidden="true"><Icon name={categoryGlyph(item.category)} /></span>
-				{/if}
-				<FileButton
-					label={$t('domains.kitchen.stock.detail.choosePicture')}
-					icon="image-plus"
-					accept={PICTURE_ACCEPT}
-					multiple={false}
-					tooltip
-					onfiles={(files) => void setPicture(item, files)}
-				/>
-				{#if item.photo}
-					<IconButton
-						icon="trash"
-						size="sm"
-						label={$t('domains.kitchen.stock.detail.removePicture')}
-						danger
-						tooltip
-						onclick={() => removePicture(item)}
-					/>
-				{/if}
-			</div>
-			<Field label={$t('domains.kitchen.stock.detail.name')} bind:value={form.name} />
-			<div class="pair">
-				<Field label={$t('domains.kitchen.stock.detail.brand')} bind:value={form.brand} />
-				<Field
-					label={$t('domains.kitchen.stock.detail.size')}
-					placeholder={$t('domains.kitchen.stock.detail.sizeHint')}
-					bind:value={form.size}
-				/>
-			</div>
-			<div class="pair">
-				<Field label={$t('domains.kitchen.stock.detail.quantity')} bind:value={form.qty} mono inputmode="decimal" />
-				<Field label={$t('domains.kitchen.stock.detail.unit')} bind:value={form.unit} />
-			</div>
-			<div class="group">
-				<span class="group-label">{$t('domains.kitchen.stock.detail.location')}</span>
-				<Segmented
-					items={LOCATIONS.map(locationLabel)}
-					selected={LOCATIONS.indexOf(form.location)}
-					label={$t('domains.kitchen.stock.detail.location')}
-					onchange={(index) => (form.location = LOCATIONS[index]!)}
-				/>
-			</div>
-			<div class="pair">
-				<Field label={$t('domains.kitchen.stock.detail.expires')} type="date" bind:value={form.expiry} />
-				<div class="group">
-					<span class="group-label">{$t('domains.kitchen.stock.detail.category')}</span>
-					<span class="anchor" bind:this={categoryAnchor}>
-						<Chip
-							label={form.category ? categoryLabel(form.category) : $t('domains.kitchen.stock.detail.noCategory')}
-							tone="outline"
-							icon="chevron-down"
-							aria-haspopup="menu"
-							aria-expanded={categoryOpen}
-							onclick={() => (categoryOpen = !categoryOpen)}
-						/>
-					</span>
-					<Menu
-						bind:open={categoryOpen}
-						anchor={categoryAnchor}
-						align="start"
-						label={$t('domains.kitchen.stock.detail.category')}
-						items={categoryItems}
-						onselect={(entry) => (form.category = entry.id ?? '')}
-					/>
-				</div>
-			</div>
-			<Field
-				label={$t('domains.kitchen.stock.detail.threshold')}
-				helper={$t('domains.kitchen.stock.detail.thresholdHelp')}
-				bind:value={form.threshold}
-				mono
-				inputmode="decimal"
-			/>
-			<Field
-				label={$t('domains.kitchen.stock.detail.tip')}
-				helper={$t('domains.kitchen.stock.detail.tipHelp')}
-				bind:value={form.tip}
-				multiline
-				rows={2}
-			/>
-			<Field
-				label={$t('domains.kitchen.stock.detail.pictureLink')}
-				helper={$t('domains.kitchen.stock.detail.pictureLinkHelp')}
-				placeholder="https://"
-				type="url"
-				bind:value={pictureLink}
-				disabled={fetching}
-				onkeydown={(event: KeyboardEvent) => {
-					if (event.key !== 'Enter') return
+	{#if item || !editing}
+		{@const image = item ? kitchen.photoOf(item) : pending}
+		<PictureDrop onfile={(file) => void setPicture(item, file)}>
+			<form
+				class="form"
+				id="{uid}-form"
+				onsubmit={(event) => {
 					event.preventDefault()
-					void linkPicture(item)
+					if (item) save(item)
+					else create()
 				}}
 			>
-				{#snippet trailing()}
-					<IconButton
-						icon="arrow-right"
-						size="sm"
-						label={$t('domains.kitchen.stock.detail.usePictureLink')}
-						tooltip
-						disabled={fetching || !pictureLink.trim()}
-						onclick={() => void linkPicture(item)}
+				<PictureInput
+					picture={image}
+					glyph={categoryGlyph(item ? item.category : form.category || undefined)}
+					chooseLabel={$t('domains.kitchen.stock.detail.choosePicture')}
+					removeLabel={$t('domains.kitchen.stock.detail.removePicture')}
+					linkHelp={$t(`domains.kitchen.stock.detail.${item ? 'pictureLinkHelp' : 'pictureLinkAddHelp'}`)}
+					onfile={(file) => void setPicture(item, file)}
+					onlink={(link) => linkPicture(item, link)}
+					onremove={() => removePicture(item)}
+				/>
+				<Field label={$t('domains.kitchen.stock.detail.name')} bind:value={form.name} />
+				<div class="pair">
+					<Field label={$t('domains.kitchen.stock.detail.brand')} bind:value={form.brand} />
+					<Field
+						label={$t('domains.kitchen.stock.detail.size')}
+						placeholder={$t('domains.kitchen.stock.detail.sizeHint')}
+						bind:value={form.size}
 					/>
-				{/snippet}
-			</Field>
-		</form>
+				</div>
+				<div class="pair">
+					<Field label={$t('domains.kitchen.stock.detail.quantity')} bind:value={form.qty} mono inputmode="decimal" />
+					<Field label={$t('domains.kitchen.stock.detail.unit')} bind:value={form.unit} />
+				</div>
+				<div class="group">
+					<span class="group-label">{$t('domains.kitchen.stock.detail.location')}</span>
+					<Segmented
+						items={LOCATIONS.map(locationLabel)}
+						selected={LOCATIONS.indexOf(form.location)}
+						label={$t('domains.kitchen.stock.detail.location')}
+						onchange={(index) => (form.location = LOCATIONS[index]!)}
+					/>
+				</div>
+				<div class="pair">
+					<Field label={$t('domains.kitchen.stock.detail.expires')} type="date" bind:value={form.expiry} />
+					<div class="group">
+						<span class="group-label">{$t('domains.kitchen.stock.detail.category')}</span>
+						<span class="anchor" bind:this={categoryAnchor}>
+							<Chip
+								label={form.category ? categoryLabel(form.category) : $t('domains.kitchen.stock.detail.noCategory')}
+								tone="outline"
+								icon="chevron-down"
+								aria-haspopup="menu"
+								aria-expanded={categoryOpen}
+								onclick={() => (categoryOpen = !categoryOpen)}
+							/>
+						</span>
+						<Menu
+							bind:open={categoryOpen}
+							anchor={categoryAnchor}
+							align="start"
+							label={$t('domains.kitchen.stock.detail.category')}
+							items={categoryItems}
+							onselect={(entry) => (form.category = entry.id ?? '')}
+						/>
+					</div>
+				</div>
+				<Field
+					label={$t('domains.kitchen.stock.detail.threshold')}
+					helper={$t('domains.kitchen.stock.detail.thresholdHelp')}
+					bind:value={form.threshold}
+					mono
+					inputmode="decimal"
+				/>
+				<Field
+					label={$t('domains.kitchen.stock.detail.tip')}
+					helper={$t('domains.kitchen.stock.detail.tipHelp')}
+					bind:value={form.tip}
+					multiline
+					rows={2}
+				/>
+			</form>
+		</PictureDrop>
 	{/if}
 	{#snippet footer()}
 		<Button label={$t('common.cancel')} variant="quiet" onclick={() => (open = false)} />
 		<Button
-			label={$t('common.save')}
+			label={$t(editing ? 'common.save' : 'domains.kitchen.stock.add')}
 			variant="primary"
 			type="submit"
 			form="{uid}-form"
-			disabled={!item || !form.name.trim()}
+			disabled={(!!editing && !item) || !form.name.trim()}
 		/>
 	{/snippet}
 </Sheet>
@@ -294,26 +306,5 @@
 	}
 	.anchor {
 		display: inline-flex;
-	}
-	/* the item's picture, or its category's glyph on a tile of the same size, with the buttons that change it */
-	.picture-row {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
-	}
-	.picture {
-		flex: none;
-		box-sizing: border-box;
-		width: calc(var(--space-8) * 2);
-		height: calc(var(--space-8) * 2);
-		border: 1px solid var(--ed-card-border);
-		border-radius: var(--ed-radius-control);
-		object-fit: cover;
-		background: var(--surface-2);
-	}
-	.picture-glyph {
-		display: inline-grid;
-		place-items: center;
-		color: var(--text-secondary);
 	}
 </style>

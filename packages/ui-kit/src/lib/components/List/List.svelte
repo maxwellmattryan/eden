@@ -34,6 +34,13 @@
 	type Props = Omit<HTMLAttributes<HTMLDivElement>, 'children' | 'onselect'> & {
 		/** The section name, in the small title style; it names the grid. */
 		header?: string
+		/** The id of a heading outside the list that names the grid, for a list with no `header` of its own. */
+		labelledby?: string
+		/**
+		 * No header row at all: the caller shows the name and the count itself, and while `selecting` its own Done and
+		 * actions on what `onselect` reports. Select stays in every row's menu.
+		 */
+		headless?: boolean
 		/** The count beside the name, in mono. */
 		count?: number | string
 		/** The rows, keyed and selected by `id`. */
@@ -71,6 +78,8 @@
 	const uid = $props.id()
 	let {
 		header,
+		labelledby,
+		headless = false,
 		count,
 		rows,
 		compact = false,
@@ -110,6 +119,7 @@
 	function enter() {
 		picked.clear()
 		selecting = true
+		onselect?.([])
 	}
 	function leave() {
 		selecting = false
@@ -169,7 +179,7 @@
 </script>
 
 <div class={['ed-list', { 'ed-list-selecting': selecting }, className]} {...rest}>
-	{#if header || count !== undefined || selectable}
+	{#if !headless && (header || count !== undefined || selectable)}
 		<div class="ed-list-header">
 			<span class="ed-list-title" id={headerId}>{header}</span>
 			<span class="ed-list-header-right">
@@ -187,7 +197,7 @@
 	<div
 		class="ed-list-grid"
 		role={rows.length ? 'grid' : undefined}
-		aria-labelledby={rows.length && header ? headerId : undefined}
+		aria-labelledby={rows.length ? (header ? headerId : labelledby) : undefined}
 		aria-multiselectable={rows.length && selecting ? 'true' : undefined}
 		{onfocusin}
 		{@attach roving(() => ({

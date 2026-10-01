@@ -66,8 +66,22 @@
 			"reads": ["stock-item", "recipe", "grocery-store", "grocery-list", "grocery-item"]
 		},
 		{ "id": "add-stock", "access": "write", "confirm": true, "reads": ["stock-item"] },
+		{ "id": "update-stock", "access": "write", "confirm": true, "reads": ["stock-item", "recipe"] },
+		{
+			"id": "edit-grocery",
+			"access": "write",
+			"confirm": true,
+			"reads": ["grocery-store", "grocery-list", "grocery-item", "stock-item", "recipe"]
+		},
+		{
+			"id": "edit-stores",
+			"access": "write",
+			"confirm": true,
+			"reads": ["grocery-store", "grocery-list", "home-area"]
+		},
 		{ "id": "import-recipe", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] },
 		{ "id": "save-recipe", "access": "write-draft", "reads": ["recipe"] },
+		{ "id": "change-recipe", "access": "write", "confirm": true, "reads": ["recipe"] },
 		{
 			"id": "plan-week",
 			"access": "write-draft",

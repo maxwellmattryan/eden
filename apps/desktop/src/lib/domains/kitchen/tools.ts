@@ -4,6 +4,8 @@
 // before it is shown, whatever the model saw (D-25). The rows a delegated request reads come from the pack, built
 // from the tool's declared reads; a prompt names what it wants of them and nothing more. The tools that read files
 // (`capture-haul`, `import-recipe`) are given the ones on the owner's message, or the ones a page staged for them.
+// The batch tools (`update-stock`, `edit-grocery`, `edit-stores`, `change-recipe`) check every id before they write
+// anything, write through the store's own methods and hand back one undo for the whole call.
 import { get } from 'svelte/store'
 import { fetchPage } from '@eden/shared/api'
 import { newId } from '@eden/shared/data'
@@ -18,10 +20,14 @@ import {
 	pageImage,
 	pageSiteName,
 	pageText,
+	productLink,
 	recipeDraft,
 	recipeFromJsonLd,
+	siteAddress,
+	STORE_SELLS,
 	type CaptureMode,
 	type StockLocation,
+	type StoreSells,
 } from '@eden/shared/domains/kitchen'
 import { t } from '@eden/shared/i18n'
 import { settings } from '@eden/shared/settings'
@@ -37,7 +43,16 @@ import {
 import { capture } from './capture.svelte.js'
 import { recipeDrafts } from './recipe-draft.svelte.js'
 import { forbidden } from './safety.svelte.js'
-import { kitchen } from './store.svelte.js'
+import { linkedPicture } from './staging.svelte.js'
+import { fetchStoreSite } from './store-site.js'
+import {
+	kitchen,
+	type GroceryPatch,
+	type GroceryRow,
+	type StockPatch,
+	type StorePatch,
+	type Undo,
+} from './store.svelte.js'
 
 interface Suggestion {
 	recipeId?: string
@@ -59,6 +74,94 @@ function location(value: unknown): StockLocation {
 	return typeof value === 'string' && (LOCATIONS as readonly string[]).includes(value)
 		? (value as StockLocation)
 		: 'pantry'
+}
+
+type Fields = Record<string, unknown>
+
+/** The entries of a list the model sent, each an object; nothing for anything else. */
+function entries(input: unknown, key: string): Fields[] {
+	const value = (input as Fields | null)?.[key]
+	return Array.isArray(value) ? value.filter((entry): entry is Fields => !!entry && typeof entry === 'object') : []
+}
+
+/** The ids of a list the model sent. */
+function ids(input: unknown, key: string): string[] {
+	const value = (input as Fields | null)?.[key]
+	return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string' && !!entry) : []
+}
+
+/** A text field the model sent, kept when it is empty: an empty string is how a field is cleared. */
+function given(row: Fields, key: string): string | undefined {
+	return typeof row[key] === 'string' ? (row[key] as string).trim() : undefined
+}
+
+/** One undo for several writes, taken back in the reverse of their order. */
+const together =
+	(undos: Undo[]): Undo =>
+	() =>
+		[...undos].reverse().forEach((undo) => undo())
+
+/** The error for ids the model passed that name nothing, saying where the real ones are. */
+const unknown = (what: string, under: string, missing: string[]) => ({
+	output: {
+		error: `No ${what} has the id ${missing.map((id) => JSON.stringify(id)).join(', ')}. Pass the \`id\` of a row under \`${under}\` in the context. Nothing was changed.`,
+	},
+})
+
+/** What a `storeId` says for the list of what is not filed under a store. */
+const NONE = 'none'
+
+/** The store a `storeId` means: the store, `null` for the unfiled list, `undefined` for an id no store has. */
+function storeNamed(id: string) {
+	return id === NONE ? null : kitchen.storeById(id)
+}
+
+/** What a card says of a call before it runs, kept so it still reads after the rows it names are gone. */
+const said = new Map<string, string>()
+function preview(tool: string, lines: (input: unknown) => (string | undefined)[]) {
+	return (input: unknown): string | undefined => {
+		const key = `${tool}:${JSON.stringify(input)}`
+		const kept = said.get(key)
+		if (kept) return kept
+		const written = lines(input)
+		// a row that cannot be named leaves the card to show the input as it was sent
+		if (!written.length || written.some((line) => line === undefined)) return undefined
+		const words = written.join('\n')
+		said.set(key, words)
+		return words
+	}
+}
+const say = (key: 'add' | 'change' | 'remove' | 'complete' | 'cooked', what: string) =>
+	get(t)(`domains.kitchen.gardener.preview.${key}`, { values: { what } })
+const labelled = (name: string | undefined, brand?: string) => (name ? (brand ? `${brand} ${name}` : name) : undefined)
+const stockName = (id: unknown) => {
+	const item = typeof id === 'string' ? kitchen.stockById(id) : undefined
+	return labelled(item?.name, item?.brand)
+}
+const groceryById = (id: unknown) => kitchen.grocery.items.find((entry) => entry.id === id)
+const storeName = (id: unknown) =>
+	id === NONE
+		? get(t)('domains.kitchen.gardener.preview.unfiled')
+		: kitchen.storeById(typeof id === 'string' ? id : undefined)?.name
+/** A row with the fields it sets beside its name, as the card lists them: "Bread (qty 0, location freezer)". */
+function withFields(
+	name: string | undefined,
+	row: Fields,
+	skip: string[] = ['id'],
+	names: Record<string, (value: unknown) => string | undefined> = {}
+): string | undefined {
+	if (!name) return undefined
+	const fields = Object.entries(row)
+		.filter(([key]) => !skip.includes(key))
+		.map(([key, value]) => `${key} ${names[key]?.(value) ?? (value === '' ? '-' : String(value))}`)
+		.join(', ')
+	return fields ? `${name} (${fields})` : name
+}
+
+/** A shop day as a list keeps it, from a day or a day and a time; `null` for what is neither. */
+function shopDayOf(value: string): string | null {
+	const match = /^(\d{4}-\d{2}-\d{2})(?:T(\d{2}:\d{2}))?/.exec(value)
+	return match ? `${match[1]}T${match[2] ?? '10:00'}:00` : null
 }
 
 /** What a capture was asked to read: a haul unless the input says the shelves. */
@@ -315,13 +418,13 @@ export const kitchenTools: Record<string, ToolHandler> = {
 				return [
 					`Draft a grocery list that covers the next ${days} days.`,
 					recipes?.length ? `The owner wants to cook: ${recipes.join(', ')}.` : '',
-					'List what those days need that is not already covered: leave out what the stock in the context holds enough of, and what is already on the grocery list.',
+					'List what those days need that is not already covered: leave out what the stock in the context holds enough of (an item at a quantity of 0 ran out and is not there), and what is already on a grocery list.',
 					notes ? `The owner added: ${notes}` : '',
 				]
 					.filter(Boolean)
 					.join('\n')
 			},
-			parse: (text) => {
+			parse: (text, input) => {
 				const parsed = parseJson<{
 					items?: { name?: string; brand?: string; size?: string; qty?: string; note?: string }[]
 				}>(text)
@@ -340,36 +443,361 @@ export const kitchenTools: Record<string, ToolHandler> = {
 				)
 				if (!items.length)
 					return { output: { error: 'The list came back empty. Tell the owner it could not be drafted.' } }
-				return { output: { status: 'drafted', items, note: DRAFTED }, card: { kind: 'grocery', items } }
+				const store = kitchen.storeById(str(input, 'storeId'))
+				return {
+					output: { status: 'drafted', items, ...(store ? { store: store.name } : {}), note: DRAFTED },
+					card: { kind: 'grocery', items, ...(store ? { storeId: store.id } : {}) },
+				}
 			},
 		},
 	},
 	'add-stock': {
+		preview: preview('add-stock', (input) =>
+			entries(input, 'items').map((row) => {
+				const named = labelled(str(row, 'name'), str(row, 'brand'))
+				return named && say('add', named)
+			})
+		),
 		run: async (input, ctx) => {
-			const rows = (((input as { items?: unknown })?.items as Record<string, unknown>[] | undefined) ?? []).flatMap(
-				(row) => {
-					const name = str(row, 'name')
-					if (!name) return []
-					return [
-						{
-							name,
-							brand: str(row, 'brand'),
-							size: str(row, 'size'),
-							qty: str(row, 'qty') ?? '1',
-							unit: str(row, 'unit'),
-							location: location(row.location),
-							expiry: str(row, 'expiry'),
-						},
-					]
-				}
-			)
+			const rows = entries(input, 'items').flatMap((row) => {
+				// a grocer's product link names the thing, its size and its picture (D-91); the owner's words win
+				const link = str(row, 'link')
+				const product = link ? productLink(link) : undefined
+				const name = str(row, 'name') ?? product?.name
+				if (!name) return []
+				const category = str(row, 'category')
+				return [
+					{
+						name,
+						brand: str(row, 'brand') ?? product?.brand,
+						size: str(row, 'size') ?? product?.size,
+						qty: str(row, 'qty') ?? '1',
+						unit: str(row, 'unit'),
+						location: location(row.location),
+						expiry: str(row, 'expiry'),
+						category: (CATEGORIES as readonly string[]).includes(category ?? '') ? category : undefined,
+						tip: str(row, 'tip'),
+						link,
+					},
+				]
+			})
 			if (!rows.length) return { output: { error: 'Nothing to add: pass `items`, each with a `name`.' } }
-			const { items, undo } = kitchen.addStockRows(rows)
+			const { items, undo } = kitchen.addStockRows(rows.map(({ link: _link, ...row }) => row))
+			// a linked product's picture arrives after, for an item that has none by then
+			let stopped = false
+			const pictures: Undo[] = []
+			rows.forEach((row, at) => {
+				const id = items[at]?.id
+				if (!row.link || !id) return
+				void linkedPicture(row.link).then((image) => {
+					if (stopped || !image || !kitchen.stockById(id) || kitchen.stockById(id)?.photo) return
+					pictures.push(kitchen.setStockPhoto(id, image).undo)
+				})
+			})
 			if (items.length)
-				ctx.undo(get(t)('domains.kitchen.stock.toast.addedMany', { values: { count: items.length } }), undo)
+				ctx.undo(get(t)('domains.kitchen.stock.toast.addedMany', { values: { count: items.length } }), () => {
+					stopped = true
+					together([undo, ...pictures])()
+				})
 			return {
 				output: { added: items.map((item) => ({ id: item.id, name: item.name })) },
 				touched: items.map((item) => `eden://stock-item/${item.id}`),
+			}
+		},
+	},
+	'update-stock': {
+		preview: preview('update-stock', (input) => {
+			const recipe = kitchen.recipeById(str(input, 'cookedRecipeId') ?? '')
+			return [
+				...(recipe ? [say('cooked', recipe.name)] : []),
+				...entries(input, 'changes').map((row) => {
+					const named = withFields(stockName(row.id), row)
+					return named && say('change', named)
+				}),
+				...ids(input, 'remove').map((id) => {
+					const named = stockName(id)
+					return named && say('remove', named)
+				}),
+			]
+		}),
+		run: async (input, ctx) => {
+			const changes = entries(input, 'changes')
+			const remove = ids(input, 'remove')
+			if (!changes.length && !remove.length)
+				return { output: { error: 'Nothing to change: pass `changes`, `remove` or both.' } }
+			const missing = [...changes.map((row) => String(row.id ?? '')), ...remove].filter((id) => !kitchen.stockById(id))
+			if (missing.length) return unknown('stock item', 'stock-item', missing)
+			const placed = changes.find(
+				(row) => 'location' in row && !(LOCATIONS as readonly unknown[]).includes(row.location)
+			)
+			if (placed)
+				return {
+					output: {
+						error: `\`location\` is one of ${LOCATIONS.join(', ')}, not ${JSON.stringify(placed.location)}. Nothing was changed.`,
+					},
+				}
+			const names = (list: string[]) => list.map((id) => ({ id, name: kitchen.stockById(id)?.name ?? '' }))
+			const changed = names(changes.map((row) => row.id as string))
+			const removed = names(remove)
+			const undos: Undo[] = []
+			const cooked = kitchen.recipeById(str(input, 'cookedRecipeId') ?? '')
+			// what cooking used is one write under the recipe's name, when the changes are quantities alone
+			const amounts = changes.every((row) => Object.keys(row).every((key) => key === 'id' || key === 'qty'))
+			if (cooked && changes.length && amounts) {
+				undos.push(
+					kitchen.cookRecipe(
+						cooked.id,
+						changes.map((row) => ({ stockId: row.id as string, qty: given(row, 'qty') || '0' }))
+					).undo
+				)
+			} else {
+				for (const row of changes) {
+					const patch: StockPatch = {}
+					for (const key of ['name', 'brand', 'size', 'qty', 'unit', 'expiry', 'tip'] as const) {
+						const value = given(row, key)
+						if (value !== undefined) patch[key] = value || undefined
+					}
+					// a threshold under nothing is how the model clears one
+					if (typeof row.threshold === 'number') patch.threshold = row.threshold >= 0 ? row.threshold : undefined
+					if ('location' in row) patch.location = row.location as StockLocation
+					const category = given(row, 'category')
+					if (category && (CATEGORIES as readonly string[]).includes(category)) patch.category = category
+					undos.push(kitchen.updateStock(row.id as string, patch).undo)
+				}
+			}
+			if (remove.length) undos.push(kitchen.removeStockMany(remove).undo)
+			ctx.undo(
+				get(t)('domains.kitchen.gardener.toast.stock', { values: { count: changed.length + removed.length } }),
+				together(undos)
+			)
+			return {
+				output: { changed, removed },
+				touched: [...changes.map((row) => row.id as string), ...remove].map((id) => `eden://stock-item/${id}`),
+			}
+		},
+	},
+	'edit-grocery': {
+		preview: preview('edit-grocery', (input) => [
+			...entries(input, 'add').map((row) => {
+				const name = labelled(str(row, 'name') ?? productLink(str(row, 'link') ?? '')?.name, str(row, 'brand'))
+				const store = 'storeId' in row ? storeName(row.storeId) : ''
+				return name && store !== undefined ? say('add', store ? `${name} (${store})` : name) : undefined
+			}),
+			...entries(input, 'update').map((row) => {
+				const item = groceryById(row.id)
+				const named = withFields(labelled(item?.name, item?.brand), row, ['id'], { storeId: storeName })
+				return named && say('change', named)
+			}),
+			...ids(input, 'remove').map((id) => {
+				const item = groceryById(id)
+				return item && say('remove', labelled(item.name, item.brand) ?? '')
+			}),
+			...ids(input, 'complete').map((id) => {
+				const store = storeName(id)
+				return store && say('complete', store)
+			}),
+		]),
+		run: async (input, ctx) => {
+			const add = entries(input, 'add')
+			const update = entries(input, 'update')
+			const remove = ids(input, 'remove')
+			const complete = ids(input, 'complete')
+			if (!add.length && !update.length && !remove.length && !complete.length)
+				return { output: { error: 'Nothing to change: pass `add`, `update`, `remove` or `complete`.' } }
+			const missing = [...update.map((row) => String(row.id ?? '')), ...remove].filter((id) => !groceryById(id))
+			if (missing.length) return unknown('grocery item', 'grocery-item', missing)
+			const stores = [...add, ...update].flatMap((row) => (typeof row.storeId === 'string' ? [row.storeId] : []))
+			const noStore = [...stores, ...complete].filter((id) => storeNamed(id) === undefined)
+			if (noStore.length) return unknown('store', 'grocery-store', noStore)
+
+			const undos: Undo[] = []
+			// the rows of one target go on together: a named store's, the unfiled list's, and the ones filed by memory
+			const targets = new Map<string | null | undefined, GroceryRow[]>()
+			for (const row of add) {
+				const product = productLink(str(row, 'link') ?? '')
+				const name = str(row, 'name') ?? product?.name
+				if (!name) continue
+				const price = typeof row.price === 'number' && row.price > 0 ? row.price : undefined
+				const target = typeof row.storeId === 'string' ? (storeNamed(row.storeId)?.id ?? null) : undefined
+				targets.set(target, [
+					...(targets.get(target) ?? []),
+					{
+						name,
+						brand: str(row, 'brand') ?? product?.brand,
+						size: str(row, 'size') ?? product?.size,
+						qty: str(row, 'qty') ?? '',
+						...(price === undefined ? {} : { price }),
+						note: str(row, 'note'),
+					},
+				])
+			}
+			type Line = { id: string; name: string; store: string | null }
+			const added: Line[] = []
+			for (const [target, rows] of targets) {
+				const { items, undo } = kitchen.addGroceryItems(rows, 'manual', target)
+				undos.push(undo)
+				for (const item of items)
+					added.push({ id: item.id, name: item.name, store: kitchen.storeOf(item)?.name ?? null })
+			}
+			const updated: Line[] = []
+			for (const row of update) {
+				const id = row.id as string
+				const patch: GroceryPatch = {}
+				for (const key of ['name', 'brand', 'size', 'qty', 'note'] as const) {
+					const value = given(row, key)
+					if (value !== undefined) patch[key] = key === 'qty' ? value : value || undefined
+				}
+				if (typeof row.price === 'number') patch.price = row.price > 0 ? row.price : undefined
+				if (typeof row.storeId === 'string') patch.storeId = storeNamed(row.storeId)?.id ?? null
+				if (Object.keys(patch).length) undos.push(kitchen.updateGrocery(id, patch).undo)
+				if (typeof row.done === 'boolean' && groceryById(id)?.done !== row.done)
+					undos.push(kitchen.toggleGrocery(id).undo)
+				const item = groceryById(id)
+				updated.push({ id, name: item?.name ?? '', store: kitchen.storeOf(item)?.name ?? null })
+			}
+			const removed = remove.map((id) => {
+				const { item, undo } = kitchen.removeGrocery(id)
+				undos.push(undo)
+				return { id, name: item?.name ?? '' }
+			})
+			const completed = complete.map((id) => {
+				const store = storeNamed(id)
+				const list = kitchen.grocery.lists.find((entry) => entry.storeId === (store?.id ?? undefined))
+				const { count, undo } = list ? kitchen.completeList(list.id) : { count: 0, undo: () => {} }
+				undos.push(undo)
+				return {
+					store: store?.name ?? null,
+					cleared: count,
+					...(count ? {} : { note: 'Nothing on that list was checked off, so nothing left it.' }),
+				}
+			})
+			const count = added.length + updated.length + removed.length + completed.length
+			ctx.undo(get(t)('domains.kitchen.gardener.toast.grocery', { values: { count } }), together(undos))
+			return {
+				output: { added, updated, removed, completed },
+				touched: [...added, ...updated, ...removed].map(({ id }) => `eden://grocery-item/${id}`),
+			}
+		},
+	},
+	'edit-stores': {
+		preview: preview('edit-stores', (input) => [
+			...entries(input, 'add').map((row) => {
+				const named = withFields(str(row, 'name'), row, ['name'])
+				return named && say('add', named)
+			}),
+			...entries(input, 'update').map((row) => {
+				const named = withFields(storeName(row.id), row)
+				return named && say('change', named)
+			}),
+			...ids(input, 'remove').map((id) => {
+				const store = kitchen.storeById(id)
+				return store && say('remove', store.name)
+			}),
+		]),
+		run: async (input, ctx) => {
+			const add = entries(input, 'add')
+			const update = entries(input, 'update')
+			const remove = ids(input, 'remove')
+			if (!add.length && !update.length && !remove.length)
+				return { output: { error: 'Nothing to change: pass `add`, `update` or `remove`.' } }
+			const missing = [...update.map((row) => String(row.id ?? '')), ...remove].filter((id) => !kitchen.storeById(id))
+			if (missing.length) return unknown('store', 'grocery-store', missing)
+			// every website and every shop day is read before anything is written
+			const sites = new Map<Fields, string | undefined>()
+			const days = new Map<Fields, string | undefined>()
+			for (const row of [...add, ...update]) {
+				const url = given(row, 'url')
+				if (url) {
+					const site = siteAddress(url)
+					if (!site)
+						return {
+							output: {
+								error: `${JSON.stringify(url)} is not a website: pass an address starting with https://. Nothing was changed.`,
+							},
+						}
+					sites.set(row, site)
+				} else if (url === '') sites.set(row, undefined)
+				const day = given(row, 'shopDay')
+				if (day) {
+					const shopDay = shopDayOf(day)
+					if (!shopDay)
+						return {
+							output: {
+								error: `${JSON.stringify(day)} is not a day: pass \`shopDay\` as YYYY-MM-DD or YYYY-MM-DDTHH:MM. Nothing was changed.`,
+							},
+						}
+					days.set(row, shopDay)
+				} else if (day === '') days.set(row, undefined)
+			}
+			const sells = (row: Fields): StoreSells[] | undefined => {
+				const named = Array.isArray(row.sells)
+					? row.sells.filter((entry): entry is StoreSells => (STORE_SELLS as readonly unknown[]).includes(entry))
+					: []
+				return named.length ? named : undefined
+			}
+			const undos: Undo[] = []
+			const added = add.flatMap((row) => {
+				const name = str(row, 'name')
+				if (!name) return []
+				const url = sites.get(row)
+				const { store, created, undo } = kitchen.addStore(name, sells(row) ?? ['grocery'], {
+					note: str(row, 'note'),
+					place: { url, phone: str(row, 'phone') },
+				})
+				if (!created)
+					return [
+						{
+							id: store.id,
+							name: store.name,
+							note: 'A store of that name was already there; it was left as it stands.',
+						},
+					]
+				undos.push(undo)
+				const shopDay = days.get(row)
+				if (shopDay) undos.push(kitchen.setShopDay(store.id, shopDay))
+				// the website the owner confirmed on the card is read on the device (D-108)
+				if (url) undos.push(fetchStoreSite(store.id, url))
+				return [{ id: store.id, name: store.name }]
+			})
+			const updated = update.map((row) => {
+				const id = row.id as string
+				const before = kitchen.storeById(id)!
+				const patch: StorePatch = {}
+				const name = str(row, 'name')
+				if (name) patch.name = name
+				const sold = sells(row)
+				if (sold) patch.sells = sold
+				const note = given(row, 'note')
+				if (note !== undefined) patch.note = note
+				const phone = given(row, 'phone')
+				if (sites.has(row) || phone !== undefined)
+					patch.place = {
+						...before.place,
+						...(sites.has(row) ? { url: sites.get(row) } : {}),
+						...(phone === undefined ? {} : { phone: phone || undefined }),
+					}
+				if (Object.keys(patch).length) undos.push(kitchen.updateStore(id, patch).undo)
+				if (days.has(row)) undos.push(kitchen.setShopDay(id, days.get(row)))
+				const url = sites.get(row)
+				if (url && url !== before.place?.url) undos.push(fetchStoreSite(id, url))
+				return { id, name: kitchen.storeById(id)?.name ?? before.name }
+			})
+			const removed = remove.map((id) => {
+				const { store, undo } = kitchen.removeStore(id)
+				undos.push(undo)
+				return { id, name: store?.name ?? '' }
+			})
+			if (undos.length)
+				ctx.undo(
+					get(t)('domains.kitchen.gardener.toast.stores', {
+						// a store that was already there is not a change
+						values: { count: added.filter((store) => !('note' in store)).length + updated.length + removed.length },
+					}),
+					together(undos)
+				)
+			return {
+				output: { added, updated, removed },
+				touched: [...added, ...updated, ...removed].map((store) => `eden://grocery-store/${store.id}`),
 			}
 		},
 	},
@@ -429,6 +857,51 @@ export const kitchenTools: Record<string, ToolHandler> = {
 			return { output: { status: 'drafted', name: recipe.name, note: DRAFTED }, card: { kind: 'recipe', recipe } }
 		},
 	},
+	'change-recipe': {
+		preview: preview('change-recipe', (input) => {
+			const recipe = kitchen.recipeById(str(input, 'id') ?? '')
+			if (!recipe) return [undefined]
+			const fields = Object.keys((input ?? {}) as Fields).filter((key) => key !== 'id' && key !== 'remove')
+			return [
+				(input as Fields).remove === true
+					? say('remove', recipe.name)
+					: say('change', `${recipe.name} (${fields.join(', ')})`),
+			]
+		}),
+		run: async (input, ctx) => {
+			const id = str(input, 'id') ?? ''
+			const recipe = kitchen.recipeById(id)
+			if (!recipe) return unknown('recipe', 'recipe', [id])
+			const { id: _id, remove, ...fields } = input as Fields
+			if (remove === true) {
+				const { undo } = kitchen.removeRecipe(id)
+				ctx.undo(get(t)('domains.kitchen.gardener.toast.recipeRemoved', { values: { name: recipe.name } }), undo)
+				return { output: { removed: { id, name: recipe.name } }, touched: [`eden://recipe/${id}`] }
+			}
+			if (!Object.keys(fields).length)
+				return { output: { error: 'Nothing to change: pass the fields that change, or `remove: true`.' } }
+			const { id: _was, photo: _photo, ...kept } = kitchen.data().recipes.find((entry) => entry.id === id)!
+			const draft = recipeDraft({ ...kept, ...fields })
+			if (!draft || !draft.steps.length)
+				return {
+					output: {
+						error: 'A recipe keeps a `name`, at least one of `ingredients` and one of `steps`. Nothing was changed.',
+					},
+				}
+			// what the Gardener wrote into a recipe passes the filter as a suggestion does (D-25)
+			const texts = [draft.name, ...draft.tags, ...draft.ingredients.map((line) => line.name)]
+			if (!isSafe(texts, await forbidden.read()))
+				return {
+					output: {
+						error:
+							'This change was not made: it names something the owner has said they must not be offered. Do not say which.',
+					},
+				}
+			const { undo } = kitchen.updateRecipe(id, draft)
+			ctx.undo(get(t)('domains.kitchen.gardener.toast.recipeChanged', { values: { name: draft.name } }), undo)
+			return { output: { changed: { id, name: draft.name } }, touched: [`eden://recipe/${id}`] }
+		},
+	},
 	'plan-week': {
 		delegate: {
 			schema: answer.object({
@@ -451,6 +924,9 @@ export const kitchenTools: Record<string, ToolHandler> = {
 						answer.object({
 							name: answer.text('The thing to buy, without its maker: "butter".'),
 							brand: answer.text('The brand to buy, when the stock names one for it; an empty string otherwise.'),
+							size: answer.text(
+								'The package size to buy, when the stock names one for it: "16 oz"; an empty string otherwise.'
+							),
 							qty: answer.text('How much, with its unit.'),
 						})
 					),
@@ -477,7 +953,7 @@ export const kitchenTools: Record<string, ToolHandler> = {
 			parse: (text) => {
 				const parsed = parseJson<{
 					days?: { day: string; meals: { name: string; recipeId?: string }[] }[]
-					shopDay?: { day: string; items: { name: string; brand?: string; qty?: string }[] }
+					shopDay?: { day: string; items: { name: string; brand?: string; size?: string; qty?: string }[] }
 					tasks?: { title: string; due?: string }[]
 				}>(text)
 				// a field with nothing to say arrives as an empty string: it is left off the card
@@ -508,6 +984,7 @@ export const kitchenTools: Record<string, ToolHandler> = {
 							.map((item) => ({
 								name: item.name,
 								...(item.brand ? { brand: item.brand } : {}),
+								...(item.size ? { size: item.size } : {}),
 								qty: item.qty ?? '',
 							})),
 					},
@@ -520,7 +997,7 @@ export const kitchenTools: Record<string, ToolHandler> = {
 
 /** Hearth's part of a draft's commit: a drafted grocery list, and the shop list of a plan. */
 export async function kitchenCommitDraft(card: DraftCard): Promise<{ undo: () => void } | undefined> {
-	if (card.kind === 'grocery') return kitchen.addGroceryItems(card.items)
+	if (card.kind === 'grocery') return kitchen.addGroceryItems(card.items, 'manual', kitchen.storeById(card.storeId)?.id)
 	if (card.kind === 'plan') return card.grocery?.length ? kitchen.addGroceryItems(card.grocery, 'recipe') : undefined
 	return undefined
 }

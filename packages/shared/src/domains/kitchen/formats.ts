@@ -39,7 +39,10 @@ export function kitchenExtras(data: KitchenData): BundleExtra[] {
 				`- Serves ${recipe.serves}`,
 				`- ${recipe.minutes} minutes`,
 				recipe.tags.length ? `- Tags: ${recipe.tags.map(inline).join(', ')}` : undefined,
-				recipe.sourceUrl ? `- Source: ${recipe.sourceUrl}` : undefined,
+				recipe.author ? `- By: ${inline(recipe.author)}` : undefined,
+				recipe.sourceName || recipe.sourceUrl
+					? `- Source: ${[recipe.sourceName && inline(recipe.sourceName), recipe.sourceUrl].filter(Boolean).join(', ')}`
+					: undefined,
 				...(recipe.ingredients.length
 					? ['', '### Ingredients', '', ...recipe.ingredients.map((line) => `- ${inline(formatIngredient(line))}`)]
 					: []),
