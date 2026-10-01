@@ -209,6 +209,8 @@
 		const items = canvas.getAllByRole('menuitem')
 		await waitFor(() => expect(menu).toContainElement(document.activeElement as HTMLElement))
 		await userEvent.keyboard('{ArrowDown}')
+		await expect(items[0]).toHaveFocus()
+		await userEvent.keyboard('{ArrowDown}')
 		await expect(items[1]).toHaveFocus()
 		await userEvent.keyboard('{Enter}')
 		await waitFor(() => expect(menu).not.toBeVisible())

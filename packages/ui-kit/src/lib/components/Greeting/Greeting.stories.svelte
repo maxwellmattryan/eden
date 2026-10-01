@@ -1,12 +1,12 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
-	import { expect } from 'storybook/test'
+	import { expect, fn } from 'storybook/test'
 	import { canvasOf } from '../../../storybook/play.js'
 	import Greeting from './Greeting.svelte'
 	import Composer from '../Composer/Composer.svelte'
 	import { owner } from '../../../stories/sample-data.js'
 
-	const [first] = owner.name.split(' ')
+	const first = owner.name.split(' ')[0]!
 
 	const { Story } = defineMeta({
 		title: 'Components/Gardener/Greeting',
@@ -46,7 +46,7 @@
 			style="display: flex; flex-direction: column; height: 420px; padding: var(--space-3); background: var(--surface-0)"
 		>
 			<Greeting {...args} />
-			<Composer label="Ask the Gardener" placeholder="Ask the Gardener" />
+			<Composer label="Ask the Gardener" placeholder="Ask the Gardener" onsend={fn()} />
 		</div>
 	{/snippet}
 </Story>
