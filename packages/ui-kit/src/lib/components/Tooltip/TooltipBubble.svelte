@@ -59,6 +59,11 @@
 			transform: translateY(var(--ed-tooltip-shift));
 		}
 	}
+	/* the way out is the way in: tooltip.ts holds the bubble shown under data-closing until this has played */
+	.ed-tooltip:global([data-closing]) {
+		opacity: 0;
+		transform: translateY(var(--ed-tooltip-shift));
+	}
 	/* The micro duration is not zeroed under reduced motion, so the shift is: only the opacity animates then. */
 	@media (prefers-reduced-motion: reduce) {
 		.ed-tooltip {

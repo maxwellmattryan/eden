@@ -3,7 +3,8 @@
 	// risk patterns"). The title asks the question; a definition list names the subject, the resource and, for an
 	// external action, the destination; the exact payload sits verbatim in mono when there is one; the confirm button
 	// repeats the verb, in danger for a destructive write. Reversible writes take an undo toast instead, never this
-	// sheet. Composes Sheet, so Escape and the scrim take the cancel path and focus returns to the opener.
+	// sheet. Composes Sheet, so Escape and the scrim take the cancel path and focus returns to the opener. The answer is
+	// reported once the sheet has closed, after its fade, so a consumer that unmounts it on the answer cuts nothing short.
 	import type { HTMLDialogAttributes } from 'svelte/elements'
 	import { useStrings } from '../../i18n/context.js'
 	import Button from '../Button/Button.svelte'
@@ -28,9 +29,9 @@
 		verb: string
 		/** A destructive write: the confirm button is the danger variant. */
 		danger?: boolean
-		/** Called when the verb button is pressed; the sheet then closes. */
+		/** Called once the sheet has closed after the verb button was pressed. */
 		onconfirm?: () => void
-		/** Called when the sheet is cancelled: the Cancel button, Escape or the scrim. */
+		/** Called once the sheet has closed after a cancel: the Cancel button, Escape or the scrim. */
 		oncancel?: () => void
 	}
 	const uid = $props.id()
@@ -53,18 +54,24 @@
 	const s = useStrings()
 	const titleId = `${uid}-title`
 
+	// what the owner pressed, held until the sheet has closed
+	let answer: 'confirm' | 'cancel' | undefined
+
 	function confirm() {
-		onconfirm?.()
+		answer = 'confirm'
 		open = false
 	}
 	function cancel() {
-		oncancel?.()
+		answer = 'cancel'
 		open = false
 	}
-	// Escape and the scrim close the dialog themselves and report here; a close through `open` (the two buttons, or the
-	// consumer) has already been accounted for.
+	// Every close ends here. The two buttons left their answer; Escape and the scrim are a cancel; a close through
+	// `open` by the consumer is neither.
 	function onclose(reason: SheetCloseReason) {
-		if (reason !== 'api') oncancel?.()
+		const given = answer ?? (reason === 'api' ? undefined : 'cancel')
+		answer = undefined
+		if (given === 'confirm') onconfirm?.()
+		else if (given === 'cancel') oncancel?.()
 	}
 </script>
 

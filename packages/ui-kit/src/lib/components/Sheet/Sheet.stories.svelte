@@ -75,7 +75,8 @@
 		await userEvent.tab()
 		await expect(dialog.contains(document.activeElement)).toBe(true)
 		await userEvent.keyboard('{Escape}')
-		await expect(dialog).not.toBeVisible()
+		// the sheet fades before it closes
+		await waitFor(() => expect(dialog).not.toBeVisible())
 		// the close event and the native focus return arrive a task after close()
 		await waitFor(() => expect(args.onclose).toHaveBeenCalledWith('escape'))
 		await waitFor(() => expect(document.activeElement).toBe(trigger))

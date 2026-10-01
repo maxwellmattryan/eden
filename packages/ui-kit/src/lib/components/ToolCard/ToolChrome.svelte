@@ -44,6 +44,8 @@
 		done?: boolean
 		/** The status glyph at the end of the title line; with it the result line is words alone. */
 		status?: ToolStatus
+		/** What ends the title line, after the status: the chevron of a card that folds. */
+		end?: Snippet
 	}
 	let {
 		tone,
@@ -56,6 +58,7 @@
 		result,
 		done = false,
 		status,
+		end,
 		class: className = '',
 		...rest
 	}: Props = $props()
@@ -117,6 +120,7 @@
 					{/if}
 				</span>
 			{/if}
+			{@render end?.()}
 		</span>
 	</div>
 	{@render children?.()}

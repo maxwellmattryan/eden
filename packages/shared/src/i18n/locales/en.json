@@ -1031,6 +1031,10 @@
 		"cutShort": "Cut short by the token cap.",
 		"ranTool": "Ran {tool} as its own request.",
 		"confirmTool": "Run {tool}",
+		"toolRun": {
+			"same": "{tool} × {count}",
+			"mixed": "{count, plural, one {# tool} other {# tools}}"
+		},
 		"confirm": {
 			"title": "Send this request?",
 			"text": "This will cost about {estimate}.",

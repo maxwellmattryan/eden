@@ -212,7 +212,8 @@
 		await expect(items[1]).toHaveFocus()
 		await userEvent.keyboard('{Enter}')
 		await waitFor(() => expect(menu).not.toBeVisible())
-		await expect(withIcons[1]!.onselect).toHaveBeenLastCalledWith(withIcons[1])
+		// a sheet reports the pick once it has closed
+		await waitFor(() => expect(withIcons[1]!.onselect).toHaveBeenLastCalledWith(withIcons[1]))
 		await expect(args.onselect).toHaveBeenLastCalledWith(withIcons[1])
 		await waitFor(() => expect(trigger).toHaveFocus())
 	}}

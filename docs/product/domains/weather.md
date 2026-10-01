@@ -47,6 +47,8 @@ Written: none. Read: `home-area` (substrate, T1) for the Gardener; the `home` Pl
 | `rain-during-plan` | `forecast`, `home-area`, `workout-session`, `local-event`, `outing` | read | none | plain |
 | `sun-and-moon` | `ephemeris` | read | none | plain |
 
+`sun-and-moon` answers a day, a run of days (`days`, thirty-one at most) or the next time the moon is new, full or at a quarter (`next`), so a question about a date weeks away is one call. The next phase comes from the mean cycle (`nextPhase`, right to about half a day, covered by `ephemeris.test.ts`), so its answer is marked approximate and the Gardener says "around". Sunrise and sunset come from the forecast and are empty outside its window.
+
 Never-do list: never sends coordinates finer than city level (D-60) to a model or a provider unless a precise-location grant exists; keeps no location history; never claims certainty beyond the provider's own confidence.
 
 ## 6. Surfaces

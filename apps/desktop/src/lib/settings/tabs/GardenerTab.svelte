@@ -29,10 +29,14 @@
 	let keyFailed = $state(false)
 	let cap = $state('')
 	let tokenCap = $state('')
-	// the menu for a grade or an override, anchored to the button that opened it
+	// the menu for a grade or an override, anchored to the button that opened it; pressed again, the button closes it
 	let menuOpen = $state(false)
 	let menuFor = $state<{ id: string; anchor: HTMLElement } | undefined>()
 	function openMenu(id: string, e: MouseEvent) {
+		if (menuOpen && menuFor?.anchor === e.currentTarget) {
+			menuOpen = false
+			return
+		}
 		menuFor = { id, anchor: e.currentTarget as HTMLElement }
 		menuOpen = true
 	}

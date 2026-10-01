@@ -14,20 +14,39 @@ export interface Transport {
 /** The crate's stream. */
 export const crateTransport: Transport = (request, onEvent) => gardenerSend(request, onEvent)
 
-/** A scripted reply: the text streamed word by word, then a stop. What `yarn dev:web` answers with. */
+/**
+ * A scripted reply: the text streamed word by word, then a stop. What `yarn dev:web` answers with. A message that
+ * names the moon is answered as the model would: a line, three reads of `sun-and-moon`, then the answer once their
+ * results are back, so the order of a reply and the fold of its reads can be worked on in the browser.
+ */
 export function fakeTransport(script: (request: GardenerRequest) => string = () => FAKE_REPLY): Transport {
 	return (request, onEvent) => {
 		let cancelled = false
 		const done = (async () => {
 			onEvent({ type: 'start', messageId: `fake-${request.id}`, model: request.model })
 			onEvent({ type: 'usage', input: 120, output: 0, cacheRead: 0, cacheWrite: 0 })
-			for (const word of script(request).split(/(?<=\s)/)) {
+			const looks = moonRound(request)
+			for (const word of (looks === 'ask' ? FAKE_LOOK : looks === 'answer' ? FAKE_MOON : script(request)).split(
+				/(?<=\s)/
+			)) {
 				if (cancelled) break
 				await new Promise((resolve) => setTimeout(resolve, 30))
 				onEvent({ type: 'text_delta', text: word })
 			}
+			if (looks === 'ask' && !cancelled) {
+				for (const day of [0, 1, 2]) {
+					await new Promise((resolve) => setTimeout(resolve, 300))
+					onEvent({
+						type: 'tool_use',
+						id: `fake-${request.id}-${day}`,
+						name: 'weather_sun-and-moon',
+						input: day === 2 ? { next: 'full' } : { day: day ? 'tomorrow' : 'today' },
+					})
+				}
+			}
 			onEvent({ type: 'usage', input: 120, output: 40, cacheRead: 0, cacheWrite: 0 })
-			onEvent({ type: 'stop', reason: cancelled ? 'cancelled' : 'end_turn', refusal: null })
+			const reason = cancelled ? 'cancelled' : looks === 'ask' ? 'tool_use' : 'end_turn'
+			onEvent({ type: 'stop', reason, refusal: null })
 		})()
 		return {
 			done,
@@ -37,6 +56,20 @@ export function fakeTransport(script: (request: GardenerRequest) => string = () 
 			},
 		}
 	}
+}
+
+const FAKE_LOOK = 'Let me look at the moon over the next weeks.'
+const FAKE_MOON =
+	'That is what the ephemeris says: the next full moon is in the last result, **around** the day it names.'
+
+/** Where a moon question stands: to be asked of the tool, answered from its results, or not one at all. */
+function moonRound(request: GardenerRequest): 'ask' | 'answer' | undefined {
+	const turns = request.messages as { role: string; content: unknown }[]
+	const last = turns.at(-1)?.content
+	if (Array.isArray(last) && last.some((part) => (part as { type?: string }).type === 'tool_result')) return 'answer'
+	const words = typeof last === 'string' ? last : JSON.stringify(last ?? '')
+	const reach = (request.tools as { name: string }[]).some((tool) => tool.name === 'weather_sun-and-moon')
+	return reach && /\bmoon\b/i.test(words) ? 'ask' : undefined
 }
 
 const FAKE_REPLY = [

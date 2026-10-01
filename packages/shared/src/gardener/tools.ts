@@ -244,8 +244,17 @@ export const SCHEMAS: Readonly<Record<string, { description: string; schema: Jso
 		}),
 	},
 	'weather.sun-and-moon': {
-		description: 'Answers sunrise, sunset and the moon for a day, from the ephemeris. Today when no day is given.',
-		schema: object({ day: text(DAY) }),
+		description:
+			'Answers sunrise, sunset and the moon for a day or a run of days, from the ephemeris; today when no day is given. For when the moon is next new, full or at a quarter, pass `next` and say "around": the date is right to about half a day. For a span pass `days`. One call answers either; never call it once per day.',
+		schema: object({
+			day: text(`The first day: ${DAY}`),
+			days: integer('How many days from that day, thirty-one at most; one when unsaid.'),
+			next: {
+				type: 'string',
+				enum: ['new', 'first-quarter', 'full', 'last-quarter'],
+				description: 'Find the next time the moon reaches this phase, from that day on.',
+			},
+		}),
 	},
 }
 

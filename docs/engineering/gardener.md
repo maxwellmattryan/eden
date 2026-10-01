@@ -102,7 +102,7 @@ The policy row holds the monthly cap (10 USD by default) and the per-request tok
 
 ## Threads and policy
 
-`threads` and `messages` are rows of the workspace: stamped, tombstoned, exported in the full bundle and merged by stamp. A message's `blocks` is JSON the frontend shapes, as a fact's value is: text, tool cards with their state (`pending`, `running`, `done`, `failed`, `cancelled`), proposal and draft cards, the can-see snapshot, an error. A card stored `running` or `pending` by a request that is no longer live reads as cancelled. A reply's text is Markdown: the chat's persona asks for it (`markdown` on the pack request; a delegated request leaves it off, since a handler parses its answer) and the panel draws it with the kit's `Markdown`, which never injects HTML. A message's foot shows its `createdAt`, so a reply's "Received at" is when it began. A thread's tier is the highest tier it read; a T2 thread shows the lock and stays out of future packs unless the owner includes it, which records a per-request grant on the T2 id that made it so.
+`threads` and `messages` are rows of the workspace: stamped, tombstoned, exported in the full bundle and merged by stamp. A message's `blocks` is JSON the frontend shapes, as a fact's value is: text, tool cards with their state (`pending`, `running`, `done`, `failed`, `cancelled`), proposal and draft cards, the can-see snapshot, an error. A card stored `running` or `pending` by a request that is no longer live reads as cancelled. The blocks are stored in the order they happened and drawn in it: `segmentsOf` (`packages/shared/src/gardener/segments.ts`) turns them into text, single cards and runs (two or more consecutive `read` calls that are running, done or cancelled), and the panel draws a run as the kit's `ToolRun`; the mobile chat (#19) draws from the same function and the same component. A reply's text is Markdown: the chat's persona asks for it (`markdown` on the pack request; a delegated request leaves it off, since a handler parses its answer) and the panel draws it with the kit's `Markdown`, which never injects HTML. A message's foot shows its `createdAt`, so a reply's "Received at" is when it began. A thread's tier is the highest tier it read; a T2 thread shows the lock and stays out of future packs unless the owner includes it, which records a per-request grant on the T2 id that made it so.
 
 `policy` is a generic key-value table of workspace policy (D-37). The row `gardener` holds the owner's sparse edits over the seed, the overrides, and the two caps. The conversation's grade is a per-device setting.
 
@@ -112,13 +112,13 @@ In `development` (`yarn dev`) and in the browser (`web`) every grade and every o
 
 ## The browser fallback
 
-`yarn dev:web` has no crate: `hasSecret` is false, `gardenerSend` rejects `unavailable`, and the panel says the Gardener runs in the installed app. Threads, messages, the policy and the audit log work in the engine, so the panel is developed against `FakeTransport`, a scripted stream.
+`yarn dev:web` has no crate: `hasSecret` is false, `gardenerSend` rejects `unavailable`, and the panel says the Gardener runs in the installed app. Threads, messages, the policy and the audit log work in the engine, so the panel is developed against `FakeTransport`, a scripted stream; a message that names the moon is answered with a line, three `sun-and-moon` calls and an answer, which exercises the order of a reply and the fold.
 
 ## Testing
 
 | command | runs |
 |---|---|
 | `yarn test:rust` | the secret store's file provider; the audit store and its sweep; threads, messages and the policy in the bundle round-trips; `the_audit_never_leaves` and `a_secret_never_leaves`; the SSE parser over `gardener/fixtures/stream.sse`, fed byte by byte and whole |
-| `yarn workspace @eden/shared test` | `tools.test.ts` (every declared tool has a strict schema, reads inside the registry, unique wire names), `pack.test.ts` (the order, tiering, trimming, the untrusted wrapping, the row ids), `scrub.test.ts`, `persona.test.ts`, `estimate.test.ts`, `budget.test.ts`, `dev.test.ts` (the clamp never answers a non-light model), `policy.test.ts`, and the engine's threads, policy and audit cases |
+| `yarn workspace @eden/shared test` | `tools.test.ts` (every declared tool has a strict schema, reads inside the registry, unique wire names), `segments.test.ts` (the order of a reply, what folds into a run and what never does), `pack.test.ts` (the order, tiering, trimming, the untrusted wrapping, the row ids), `scrub.test.ts`, `persona.test.ts`, `estimate.test.ts`, `budget.test.ts`, `dev.test.ts` (the clamp never answers a non-light model), `policy.test.ts`, and the engine's threads, policy and audit cases |
 
 The one thing a test cannot pin is the schema shape the provider accepts under `strict`: a live request against the light model before a release settles it.

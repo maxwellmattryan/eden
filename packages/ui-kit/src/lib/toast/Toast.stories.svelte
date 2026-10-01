@@ -81,7 +81,7 @@
 		await userEvent.click(canvas.getByRole('button', { name: 'Log, then remove the log' }))
 		await expect(await canvas.findByRole('status')).toHaveTextContent(logged)
 		await waitFor(() => expect(canvas.getByRole('status')).toHaveTextContent(removed), { timeout: 3000 })
-		await expect(canvas.getAllByRole('status')).toHaveLength(1)
+		await waitFor(() => expect(canvas.getAllByRole('status')).toHaveLength(1))
 	}}
 >
 	{#snippet template()}

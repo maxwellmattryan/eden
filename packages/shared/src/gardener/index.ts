@@ -37,6 +37,7 @@ export {
 export { resolveGrade, resolveTool, type ToolRequest } from './resolve.js'
 export * from './rules.js'
 export * from './runtime-types.js'
+export { segmentsOf, type Segment, type ToolBlock } from './segments.js'
 export { scrub, scrubValue, type ScrubHits, type Scrubbed } from './scrub.js'
 export {
 	parseWireName,

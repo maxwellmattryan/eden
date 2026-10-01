@@ -154,11 +154,19 @@
 		await userEvent.keyboard('{Escape}')
 		await waitFor(() => expect(menu).not.toBeVisible())
 		await waitFor(() => expect(row).toHaveFocus())
-		// the ⋯ button opens the same menu; a pick reaches onaction
+		// the ⋯ button opens the same menu, and pressed again closes it (a popover; the phone's sheet is modal)
 		await userEvent.click(more)
-		await canvas.findByRole('menu')
+		const opened = await canvas.findByRole('menu')
+		if (opened.closest('[popover]')) {
+			await userEvent.click(more)
+			await waitFor(() => expect(opened).not.toBeVisible())
+			await expect(more).toHaveAttribute('aria-expanded', 'false')
+			await userEvent.click(more)
+			await canvas.findByRole('menu')
+		}
+		// a pick reaches onaction
 		await userEvent.click(canvas.getByRole('menuitem', { name: 'Edit' }))
-		await expect(args.onaction).toHaveBeenLastCalledWith(actions[0])
+		await waitFor(() => expect(args.onaction).toHaveBeenLastCalledWith(actions[0]))
 	}}
 />
 

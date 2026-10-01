@@ -84,7 +84,7 @@
 		await expect(canvas.getByText(forecastRows[0]!.label)).toBeVisible()
 		await userEvent.keyboard('{Escape}')
 		await waitFor(() => expect(panel).not.toBeVisible())
-		await expect(args.onclose).toHaveBeenLastCalledWith('escape')
+		await waitFor(() => expect(args.onclose).toHaveBeenLastCalledWith('escape'))
 		await waitFor(() => expect(button).toHaveFocus())
 	}}
 >

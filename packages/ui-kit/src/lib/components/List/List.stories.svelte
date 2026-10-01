@@ -126,7 +126,7 @@
 		const items = canvas.getAllByRole('menuitem')
 		await expect(items[0]).toHaveTextContent(strings.select)
 		await userEvent.click(canvas.getByRole('menuitem', { name: 'Delete' }))
-		await expect(args.onaction).toHaveBeenLastCalledWith(fridgeActions[2], fridge[0])
+		await waitFor(() => expect(args.onaction).toHaveBeenLastCalledWith(fridgeActions[2], fridge[0]))
 		await expect(args.onselect).not.toHaveBeenCalled()
 	}}
 />

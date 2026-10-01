@@ -102,13 +102,31 @@
 			if (!threads.current && latest) await threads.open(latest.id)
 		})
 	})
-	// The log follows the reply as it streams.
+	// The log follows the reply as it streams, while the owner is at its foot: scrolled up to read, they are left
+	// there. Sending a message or opening a thread goes to the foot again. Whether they are at the foot is read
+	// against the height the log had before it grew, at the moment it grows, so a scroll is never raced.
+	const NEAR_FOOT = 32
+	let toFoot = true
+	let lastHeight = 0
+	let shownThread: string | undefined
 	// effect: imperative DOM
 	$effect(() => {
 		void threads.messages.length
+		void threads.messages.at(-1)?.blocks
 		void runtime.streaming
+		const thread = threads.current?.id
+		if (thread !== shownThread) toFoot = true
+		shownThread = thread
 		if (!log) return
-		void tick().then(() => log?.scrollTo({ top: log.scrollHeight }))
+		const atFoot = log.scrollTop + log.clientHeight >= lastHeight - NEAR_FOOT
+		lastHeight = log.scrollHeight
+		if (!toFoot && !atFoot) return
+		toFoot = false
+		void tick().then(() => {
+			if (!log) return
+			log.scrollTo({ top: log.scrollHeight })
+			lastHeight = log.scrollHeight
+		})
 	})
 
 	onMount(() => {
@@ -116,6 +134,7 @@
 	})
 
 	function send(text: string) {
+		toFoot = true
 		void runtime.ask(text)
 	}
 	async function newThread() {

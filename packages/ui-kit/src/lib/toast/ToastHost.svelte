@@ -1,10 +1,13 @@
 <script lang="ts">
 	// Mount once near the root. Renders the store's current toast at the bottom centre, above the mobile tab bar and the
 	// safe-area inset, rising in by 8 px as it fades (under reduced motion --ed-duration-panel is 0, so it simply
-	// appears). The strip ignores the pointer; only the toast takes it. While the pointer or keyboard focus is on the
+	// appears) and sinking back the same way when it goes; a toast that replaces another rises through the one that is
+	// leaving, in the same place. The strip ignores the pointer; only the toast takes it. While the pointer or keyboard focus is on the
 	// toast the store's clock pauses, and it runs again once both have left. Each toast is a fresh element keyed on its
 	// id, so a replacement announces again, and a dismiss from an older toast cannot remove the one that replaced it.
 	import type { HTMLAttributes } from 'svelte/elements'
+	import type { TransitionConfig } from 'svelte/transition'
+	import { quintOut } from 'svelte/easing'
 	import Toast from './Toast.svelte'
 	import { toastStore, type ToastStore } from './toast.svelte.js'
 
@@ -29,6 +32,16 @@
 		if (within(el, e.relatedTarget) || (el instanceof Element && el.matches(':hover'))) return
 		store.resume()
 	}
+	/** The way out is the rise backwards: down by --space-2 while it fades, over the panel duration (zero under reduced motion). */
+	function sink(node: HTMLElement): TransitionConfig {
+		const style = getComputedStyle(node)
+		const drop = parseFloat(style.getPropertyValue('--space-2')) || 0
+		return {
+			duration: parseFloat(style.getPropertyValue('--ed-duration-panel')) || 0,
+			easing: quintOut,
+			css: (t, u) => `opacity: ${t}; transform: translateY(${(u * drop).toFixed(2)}px)`,
+		}
+	}
 	function dismiss(id: number) {
 		if (store.current?.id === id) store.dismiss()
 	}
@@ -38,7 +51,7 @@
 	{#key store.current?.id}
 		{#if store.current}
 			{@const item = store.current}
-			<div class="ed-toast-enter">
+			<div class="ed-toast-enter" out:sink|global>
 				<Toast
 					message={item.message}
 					action={item.action}
@@ -61,13 +74,16 @@
 		right: 0;
 		bottom: calc(var(--ed-tab-bar) + var(--ed-safe-bottom) + var(--space-4));
 		z-index: var(--ed-z-toast);
-		display: flex;
-		justify-content: center;
+		/* one cell, so the toast that is leaving and the one replacing it share the spot */
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		justify-items: center;
 		box-sizing: border-box;
 		padding: 0 calc(var(--ed-gutter) + var(--ed-safe-right)) 0 calc(var(--ed-gutter) + var(--ed-safe-left));
 		pointer-events: none;
 	}
 	.ed-toast-enter {
+		grid-area: 1 / 1;
 		display: flex;
 		justify-content: center;
 		min-width: 0;

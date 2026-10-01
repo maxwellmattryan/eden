@@ -2,12 +2,22 @@
 // three are plain, answering from the forecast Sky holds and never running a model. What leaves is city level and
 // the owner's units (D-60): the home's area, never its coordinates.
 import { queryEvents, queryTasks } from '@eden/shared/data'
-import { addDays, dateIn, timeIn } from '@eden/shared/dates'
+import { addDays, dateIn, instantAt, timeIn } from '@eden/shared/dates'
 import { settings } from '@eden/shared/settings'
-import { moonAt, temperature, weather, type DayReading } from '@eden/shared/weather'
-import { str, type ToolHandler } from '$lib/shell/gardener/types'
+import {
+	goldenHourOf,
+	moonAt,
+	nextPhase,
+	temperature,
+	weather,
+	type DayReading,
+	type MoonMoment,
+} from '@eden/shared/weather'
+import { int, str, type ToolHandler } from '$lib/shell/gardener/types'
 
 const HOUR_MS = 60 * 60 * 1000
+const DAY_MS = 24 * HOUR_MS
+const MOMENTS: readonly MoonMoment[] = ['new', 'first-quarter', 'full', 'last-quarter']
 
 function place(): string {
 	const area = settings.home.area
@@ -112,19 +122,38 @@ export const weatherTools: Record<string, ToolHandler> = {
 			await weather.load()
 			const forecast = weather.forecast
 			const zone = forecast?.timeZone
-			const day = resolveDay(input, zone)
-			const reading = forecast?.days.find((entry) => entry.date === day)
-			const noon = new Date(`${day}T12:00:00Z`).getTime()
-			const moon = moonAt(noon)
+			const first = resolveDay(input, zone)
 			const at = (instant: number | null) => (instant ? timeIn(instant, zone) : null)
-			return {
-				output: {
+			const days = Array.from({ length: int(input, 'days', 1, 1, 31) }, (_, i) => {
+				const day = addDays(first, i)
+				const reading = forecast?.days.find((entry) => entry.date === day)
+				const moon = moonAt(instantAt(day, '12:00', zone))
+				return {
 					day,
-					place: place(),
 					sunrise: at(reading?.sunrise ?? null),
 					sunset: at(reading?.sunset ?? null),
-					goldenHour: reading?.sunset ? timeIn(reading.sunset - HOUR_MS * 0.65, zone) : null,
+					goldenHour: reading?.sunset ? timeIn(goldenHourOf(reading.sunset), zone) : null,
 					moon: { phase: moon.phase, illumination: moon.illumination },
+				}
+			})
+			const asked = str(input, 'next')
+			const phase = MOMENTS.find((moment) => moment === asked)
+			if (!phase) return { output: { place: place(), days } }
+			// from the start of the first day, or from now when that day is today: a phase already past is not next
+			const today = dateIn(zone, Date.now())
+			const found = nextPhase(phase, first === today ? Date.now() : instantAt(first, '00:00', zone))
+			const day = dateIn(zone, found)
+			return {
+				output: {
+					place: place(),
+					days,
+					next: {
+						phase,
+						day,
+						time: timeIn(found, zone),
+						daysAway: Math.round((Date.parse(day) - Date.parse(today)) / DAY_MS),
+						approximate: true,
+					},
 				},
 			}
 		},

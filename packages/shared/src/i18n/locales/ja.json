@@ -1164,6 +1164,10 @@
 		"cutShort": "トークン上限で途中までです。",
 		"ranTool": "{tool} を単独のリクエストとして実行しました。",
 		"confirmTool": "{tool} を実行",
+		"toolRun": {
+			"same": "{tool} × {count}",
+			"mixed": "ツール {count} 件"
+		},
 		"confirm": {
 			"title": "このリクエストを送りますか？",
 			"text": "費用はおよそ {estimate} です。",

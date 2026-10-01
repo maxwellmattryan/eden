@@ -1,14 +1,23 @@
 <script lang="ts">
-	// One message of a thread as the panel shows it: the text as the bubble, and inside it the tool cards with their
-	// confirm, the proposal cards and any error (docs/design/ux-patterns.md, "Gardener surfaces"). A draft is its own
-	// message after the bubble, in honey. The can-see block is the chip row's, not the bubble's. A reply is drawn as Markdown; under each message is when it
+	// One message of a thread as the panel shows it: a bubble that holds, in the order they happened, what was said,
+	// the tool cards with their confirm, the proposal cards and any error (docs/design/ux-patterns.md, "Gardener
+	// surfaces"); reads in a row fold into one line. A draft is its own message after the bubble, in honey. The can-see block is the chip row's, not the bubble's. A reply is drawn as Markdown; under each message is when it
 	// was sent or received and a glyph that copies its words. A tool the Gardener ran as its own request is a note in
 	// the thread, not a bubble.
-	import { DetailPopover, DetailSection, GardenerMessage, Notice, ProposalCard, ToolCard } from '@eden/ui-kit'
+	import {
+		DetailPopover,
+		DetailSection,
+		GardenerMessage,
+		Markdown,
+		Notice,
+		ProposalCard,
+		ToolCard,
+		ToolRun,
+	} from '@eden/ui-kit'
 	import { openExternal } from '@eden/shared/api'
 	import { stampToDate } from '@eden/shared/data'
 	import { formatMoment } from '@eden/shared/dates'
-	import type { Message, MessageBlock, ToolState } from '@eden/shared/gardener'
+	import { segmentsOf, type Message, type MessageBlock, type ToolBlock, type ToolState } from '@eden/shared/gardener'
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { copyText } from '$lib/clipboard'
@@ -30,11 +39,6 @@
 			.filter((block) => block.kind === 'text' && block.text.trim())
 			.map((block) => (block as { text: string }).text)
 	)
-	const cards = $derived(
-		blocks
-			.map((block, index) => ({ block, index }))
-			.filter(({ block }) => block.kind !== 'text' && block.kind !== 'can-see' && block.kind !== 'draft')
-	)
 	const drafts = $derived(
 		blocks.map((block, index) => ({ block, index })).filter(({ block }) => block.kind === 'draft')
 	)
@@ -43,6 +47,20 @@
 	// a card left running or waiting by a request that is gone (the app closed mid-way) reads as cancelled
 	const stateOf = (state: ToolState): ToolState =>
 		(state === 'running' || state === 'pending') && !runtime.streaming ? 'cancelled' : state
+	const segments = $derived(segmentsOf(blocks, stateOf))
+	// a run's line: the tool and how many times when it is one tool, how many tools when it is several
+	function runHeading(items: { block: ToolBlock }[]): string {
+		const [first] = items
+		const same = items.every(({ block }) => block.call.tool === first?.block.call.tool)
+		return same && first
+			? $t('gardener.toolRun.same', { values: { tool: first.block.call.tool, count: items.length } })
+			: $t('gardener.toolRun.mixed', { values: { count: items.length } })
+	}
+	function runStatus(items: { block: ToolBlock }[]): 'running' | 'done' | 'cancelled' {
+		const states = items.map(({ block }) => stateOf(block.state))
+		if (states.includes('running')) return 'running'
+		return states.every((state) => state === 'done') ? 'done' : 'cancelled'
+	}
 	// What became of the draft or the proposal a tool call left, for that call's card: found by the call's id, or, in
 	// a message stored before the id was kept, as the first one after the card and before the next tool's.
 	function draftOf(index: number, callId: string): 'pending' | 'committed' | 'discarded' | undefined {
@@ -79,12 +97,15 @@
 		profile.dismiss(proposal.id)
 		runtime.settleProposal(message.id, index, 'dismissed')
 	}
-	// the popover about a tool: what it is declared to do, and what it did here
-	type ToolBlock = Extract<MessageBlock, { kind: 'tool' }>
+	// the popover about a tool: what it is declared to do, and what it did here; its glyph pressed again closes it
 	let info = $state<{ anchor: HTMLElement; block: ToolBlock } | undefined>()
 	let infoOpen = $state(false)
 	const infoTool = $derived(info ? toolByWireName(info.block.call.name) : undefined)
 	function showInfo(anchor: HTMLElement, block: ToolBlock) {
+		if (infoOpen && info?.anchor === anchor) {
+			infoOpen = false
+			return
+		}
 		info = { anchor, block }
 		infoOpen = true
 	}
@@ -95,42 +116,52 @@
 	}
 </script>
 
-{#if text.length || cards.length}
-	<GardenerMessage
-		text={text.length ? text : undefined}
-		owner={message.role === 'owner'}
-		markdown
-		onlink={(href) => void openExternal(href)}
-		{time}
-		oncopy={copy}
-	>
-		{#each cards as { block, index } (index)}
-			{#if block.kind === 'tool'}
-				<ToolCard
-					name={block.call.tool}
-					access={block.call.access}
-					payload={payload(block.call.input)}
-					text={block.call.error}
-					confirm={block.call.access === 'write' || block.call.access === 'act-external'
-						? $t('gardener.confirmTool', { values: { tool: block.call.tool } })
-						: undefined}
-					state={stateOf(block.state)}
-					draft={draftOf(index, block.call.id)}
-					onconfirm={() => runtime.answerTool(block.call.id, true)}
-					oncancel={() => runtime.answerTool(block.call.id, false)}
-					oninfo={(anchor) => showInfo(anchor, block)}
-				/>
-			{:else if block.kind === 'proposal'}
+{#snippet toolCard(block: ToolBlock, index: number)}
+	<ToolCard
+		name={block.call.tool}
+		access={block.call.access}
+		payload={payload(block.call.input)}
+		text={block.call.error}
+		confirm={block.call.access === 'write' || block.call.access === 'act-external'
+			? $t('gardener.confirmTool', { values: { tool: block.call.tool } })
+			: undefined}
+		state={stateOf(block.state)}
+		draft={draftOf(index, block.call.id)}
+		onconfirm={() => runtime.answerTool(block.call.id, true)}
+		oncancel={() => runtime.answerTool(block.call.id, false)}
+		oninfo={(anchor) => showInfo(anchor, block)}
+	/>
+{/snippet}
+
+{#if message.role === 'owner'}
+	{#if text.length}
+		<GardenerMessage {text} owner {time} oncopy={copy} />
+	{/if}
+{:else if segments.length}
+	<GardenerMessage {time} oncopy={copy}>
+		{#each segments as segment (`${segment.kind}-${segment.index}`)}
+			{#if segment.kind === 'text'}
+				<Markdown source={segment.text} voice onlink={(href) => void openExternal(href)} />
+			{:else if segment.kind === 'run'}
+				<ToolRun heading={runHeading(segment.items)} status={runStatus(segment.items)}>
+					{#each segment.items as { block, index } (index)}
+						{@render toolCard(block, index)}
+					{/each}
+				</ToolRun>
+			{:else if segment.block.kind === 'tool'}
+				{@render toolCard(segment.block, segment.index)}
+			{:else if segment.block.kind === 'proposal'}
+				{@const proposal = segment.block.proposal}
 				<ProposalCard
-					fact={block.proposal.type}
-					value={formatValue(block.proposal.type, block.proposal.value, $t)}
-					text={block.proposal.text}
-					state={block.state}
-					onaccept={() => accept(index, block.proposal)}
-					ondismiss={() => dismiss(index, block.proposal)}
+					fact={proposal.type}
+					value={formatValue(proposal.type, proposal.value, $t)}
+					text={proposal.text}
+					state={segment.block.state}
+					onaccept={() => accept(segment.index, proposal)}
+					ondismiss={() => dismiss(segment.index, proposal)}
 				/>
-			{:else if block.kind === 'error'}
-				<Notice tone={block.code === 'budget' ? 'warning' : 'danger'} title={block.message} />
+			{:else if segment.block.kind === 'error'}
+				<Notice tone={segment.block.code === 'budget' ? 'warning' : 'danger'} title={segment.block.message} />
 			{/if}
 		{/each}
 	</GardenerMessage>

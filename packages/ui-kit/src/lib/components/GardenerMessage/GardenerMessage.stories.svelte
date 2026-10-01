@@ -5,7 +5,9 @@
 	import { canvasOf } from '../../../storybook/play.js'
 	import { recipes } from '../../../stories/sample-data.js'
 	import Button from '../Button/Button.svelte'
+	import Markdown from '../Markdown/Markdown.svelte'
 	import ToolCard from '../ToolCard/ToolCard.svelte'
+	import ToolRun from '../ToolCard/ToolRun.svelte'
 	import GardenerMessage from './GardenerMessage.svelte'
 	import Thread from './Thread.svelte'
 	import { defaultStrings } from '$lib/i18n/strings.js'
@@ -18,6 +20,8 @@
 		opening,
 		`${salmon.name} · ${salmon.minutes} min. ${soba.name} · ${soba.minutes} min. Nothing here contains nuts or shellfish.`,
 	]
+	const lookingUp = 'Let me look at the moon over the next weeks.'
+	const moonAnswer = 'The next full moon is around Monday 26 October.'
 	const followUp = 'The salmon, then. Put it on the calendar for 18:30.'
 	const onconfirm = fn()
 	const oncancel = fn()
@@ -66,6 +70,33 @@
 					{onconfirm}
 					{oncancel}
 				/>
+			</GardenerMessage>
+		</div>
+	{/snippet}
+</Story>
+
+<!-- In the order it happened: what it said first, the reads folded into one line, then the answer, all as children -->
+<Story
+	name="Text, tools, then text"
+	args={{ text: undefined }}
+	play={async ({ canvasElement }) => {
+		const bubble = canvasElement.querySelector('.ed-msg-bubble')!
+		const before = canvasOf(canvasElement).getByText(lookingUp)
+		const after = canvasOf(canvasElement).getByText(moonAnswer)
+		const run = bubble.querySelector('.ed-tool')!
+		await expect(before.compareDocumentPosition(run) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+		await expect(run.compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+	}}
+>
+	{#snippet template(args)}
+		<div class="col">
+			<GardenerMessage {...args}>
+				<Markdown source={lookingUp} voice />
+				<ToolRun heading="sun-and-moon × 2" status="done">
+					<ToolCard name="sun-and-moon" access="read" payload="day: 2026-10-25" state="done" />
+					<ToolCard name="sun-and-moon" access="read" payload="day: 2026-10-26" state="done" />
+				</ToolRun>
+				<Markdown source={moonAnswer} voice />
 			</GardenerMessage>
 		</div>
 	{/snippet}

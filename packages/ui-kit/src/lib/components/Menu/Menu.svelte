@@ -37,7 +37,9 @@
 	// A Popover with role="menu" on desktop; on mobile a bottom Sheet listing the same items as full-width rows
 	// (`presentation="auto"` reads data-platform once). `roving` moves focus (arrows, Home, End, first-letter
 	// typeahead); Enter, Space or a click picks, which calls the item's onselect, then the menu's, then closes; Escape
-	// and Tab close without picking. Every close hands focus back to the anchor.
+	// and Tab close without picking. Every close hands focus back to the anchor. A sheet is modal until it has faded and
+	// closed, and only then can focus go back, so a pick on a sheet is reported once it has: a pick that removes the
+	// opener finds the focus where it expects it.
 	import type { AnchorLike } from '../../internal/anchor.js'
 	import Icon from '../../icons/Icon.svelte'
 	import { useStrings } from '../../i18n/context.js'
@@ -59,7 +61,7 @@
 		label?: string
 		/** auto is a popover menu on desktop and a bottom sheet on mobile, decided once from data-platform. */
 		presentation?: MenuPresentation
-		/** Called with the picked item, after the item's own onselect and before the menu closes. */
+		/** Called with the picked item, after the item's own onselect: as a popover menu starts to close, once a sheet has closed. */
 		onselect?: (item: MenuItem) => void
 		class?: string
 	}
@@ -86,10 +88,22 @@
 		presentation === 'auto' ? (platformOf(probe) === 'mobile' ? 'sheet' : 'menu') : presentation
 	)
 
-	function pick(item: MenuItem) {
+	// the pick made on a sheet, held until the sheet has closed
+	let picked: MenuItem | undefined
+
+	function report(item: MenuItem) {
 		item.onselect?.(item)
 		onselect?.(item)
+	}
+	function pick(item: MenuItem) {
+		if (mode === 'sheet') picked = item
+		else report(item)
 		open = false
+	}
+	function onsheetclose() {
+		const item = picked
+		picked = undefined
+		if (item) report(item)
 	}
 	// Tab leaves a popover menu: it closes, focus lands on the anchor, and the browser moves on from there.
 	function onkeydown(e: KeyboardEvent) {
@@ -131,7 +145,7 @@
 <span class="ed-menu-probe" bind:this={probe} hidden></span>
 
 {#if mode === 'sheet'}
-	<Sheet bind:open placement="bottom" label={name}>
+	<Sheet bind:open placement="bottom" label={name} onclose={onsheetclose}>
 		<div
 			class={['ed-menu', 'ed-menu-sheet', className]}
 			role="menu"
