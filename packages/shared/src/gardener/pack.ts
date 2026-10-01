@@ -11,6 +11,7 @@ import type { GrantCheck, GrantDecision } from '../grants/types.js'
 import type { ModelGrade } from '../manifest/types.js'
 import type { Fact } from '../profile/types.js'
 import { resource, type Resource } from '../registry/index.js'
+import { tasksForPack } from '../tasks/pack.js'
 import { REQUEST_MAX_BYTES } from './attachment-limits.js'
 import { attachmentKind, attachmentTokens, auditOf, sentBytes } from './attachments.js'
 import { persona } from './persona.js'
@@ -305,6 +306,18 @@ export async function buildPack(request: PackRequest, readers: PackReaders): Pro
 		return kept
 	}
 
+	/**
+	 * The rows of a primitive: events and places in the window, tasks without one, since a routine has no due. A
+	 * conversation carries the tasks trimmed (what is open, and what was done lately); a delegated request, whose
+	 * tool works from the tasks it declared, carries them all.
+	 */
+	async function primitives(primitive: PackPrimitive, kinds?: string[]): Promise<PackRow[]> {
+		if (primitive !== 'task')
+			return [...(await readers.primitives(primitive, { ...(kinds ? { kinds } : {}), from, to }))]
+		const rows = await readers.primitives(primitive, kinds ? { kinds } : {})
+		return request.mode === 'delegated' ? [...rows] : tasksForPack(rows, request.now, request.zone, focus)
+	}
+
 	const factIds = passed.filter((row) => row.category === 'fact').map((row) => row.id)
 	const facts = factIds.length ? await readers.facts(factIds) : []
 
@@ -317,12 +330,10 @@ export async function buildPack(request: PackRequest, readers: PackReaders): Pro
 		} else if (row.category === 'entity') {
 			rows = [...(await readers.entities(row.id))].sort(byNewest)
 		} else if (row.category === 'kind' && row.primitive && row.primitive !== 'attachment') {
-			const primitive = row.primitive
-			const window = primitive === 'task' ? {} : { from, to }
-			rows = [...(await readers.primitives(primitive, { kinds: [row.id], ...window }))].sort(byNewest)
+			rows = (await primitives(row.primitive, [row.id])).sort(byNewest)
 		} else if (row.category === 'primitive' && row.id !== 'attachment') {
 			const primitive = row.id as PackPrimitive
-			rows = await gated([...(await readers.primitives(primitive, primitive === 'task' ? {} : { from, to }))])
+			rows = await gated(await primitives(primitive))
 			rows.sort(byNewest)
 			tier = rows.reduce<ThreadTier>((highest, item) => {
 				const of = tierOfRow(item) ?? 'T1'

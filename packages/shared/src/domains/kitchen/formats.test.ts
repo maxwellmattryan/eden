@@ -21,21 +21,49 @@ const data: KitchenData = {
 			name: 'Rice',
 			qty: '2',
 			location: 'pantry',
-			lowStock: true,
+			threshold: 2,
 			source: 'manual',
 			sourcedAt: '2026-09-29T15:02:11.000Z',
 		},
 	],
 	recipes: [
-		{ id: '3', name: 'Dal', serves: 2, minutes: 35, tags: ['quick', 'one pot'] },
-		{ id: '4', name: 'Plain rice', serves: 4, minutes: 20, tags: [] },
+		{
+			id: '3',
+			name: 'Dal',
+			serves: 2,
+			minutes: 35,
+			tags: ['quick', 'one pot'],
+			ingredients: [
+				{ name: 'red lentils', qty: '200', unit: 'g', note: 'rinsed' },
+				{ name: 'salt', qty: '' },
+			],
+			steps: ['Simmer the lentils.', 'Season.'],
+			sourceUrl: 'https://example.com/dal',
+			sourceName: 'Example Kitchen',
+			author: 'Asha Rao',
+			tip: 'Better the next day.',
+		},
+		{
+			id: '4',
+			name: 'Plain rice',
+			serves: 4,
+			minutes: 20,
+			tags: [],
+			ingredients: [],
+			steps: [],
+			sourceName: 'The Rice Book',
+		},
 	],
 	grocery: {
-		name: 'This week',
-		store: 'H-E-B',
+		stores: [
+			{ id: 's1', name: 'H-E-B', sells: ['grocery'] },
+			{ id: 's2', name: 'Costco', sells: ['grocery', 'home-goods'] },
+		],
+		lists: [{ id: 'l1', storeId: 's1' }, { id: 'l2', storeId: 's2' }, { id: 'l0' }],
 		items: [
-			{ id: '5', name: 'Spinach', qty: '1 bag', origin: 'recipe', note: 'Dal', done: true },
-			{ id: '6', name: 'Oat milk', qty: '2', store: 'Costco', origin: 'manual', done: false },
+			{ id: '5', name: 'Spinach', qty: '1 bag', listId: 'l1', origin: 'recipe', note: 'Dal', done: true },
+			{ id: '6', name: 'Oat milk', qty: '2', listId: 'l2', origin: 'manual', done: false },
+			{ id: '7', name: 'Tape', qty: '', listId: 'l0', origin: 'manual', done: false },
 		],
 	},
 }
@@ -58,12 +86,13 @@ describe('kitchenExtras', () => {
 		)
 	})
 
-	it('writes the grocery list with the store each item is bought at', () => {
+	it('writes the grocery lists with the store each item is on, and none for what is not filed', () => {
 		expect(files['friendly/grocery.csv']).toBe(
 			[
-				'list,item,quantity,store,origin,note,done',
-				'This week,Spinach,1 bag,H-E-B,recipe,Dal,true',
-				'This week,Oat milk,2,Costco,manual,,false',
+				'store,item,quantity,origin,note,done',
+				'H-E-B,Spinach,1 bag,recipe,Dal,true',
+				'Costco,Oat milk,2,manual,,false',
+				',Tape,,manual,,false',
 				'',
 			].join('\r\n')
 		)
@@ -71,12 +100,41 @@ describe('kitchenExtras', () => {
 
 	it('writes the recipes as headings', () => {
 		expect(files['friendly/recipes.md']).toBe(
-			'# Recipes\n\n## Dal\n\n- Serves 2\n- 35 minutes\n- Tags: quick, one pot\n\n## Plain rice\n\n- Serves 4\n- 20 minutes\n'
+			[
+				'# Recipes',
+				'',
+				'## Dal',
+				'',
+				'- Serves 2',
+				'- 35 minutes',
+				'- Tags: quick, one pot',
+				'- By: Asha Rao',
+				'- Source: Example Kitchen, https://example.com/dal',
+				'',
+				'### Ingredients',
+				'',
+				'- 200 g red lentils, rinsed',
+				'- salt',
+				'',
+				'### Steps',
+				'',
+				'1. Simmer the lentils.',
+				'2. Season.',
+				'',
+				'Tip: Better the next day.',
+				'',
+				'## Plain rice',
+				'',
+				'- Serves 4',
+				'- 20 minutes',
+				'- Source: The Rice Book',
+				'',
+			].join('\n')
 		)
 	})
 
 	it('writes the headers alone for a domain with nothing in it', () => {
-		const empty = kitchenExtras({ stock: [], recipes: [], grocery: { name: '', store: '', items: [] } })
+		const empty = kitchenExtras({ stock: [], recipes: [], grocery: { stores: [], lists: [], items: [] } })
 		expect(empty.map((file) => file.content.split('\n').length)).toEqual([2, 2, 2])
 	})
 })

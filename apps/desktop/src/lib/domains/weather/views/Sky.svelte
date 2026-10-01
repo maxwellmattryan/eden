@@ -213,11 +213,22 @@
 	const clock = $derived(weather.clock)
 	/** The sun on its day: the two times as they are written, and the sentence that says where it stands. */
 	const sun = $derived.by(() => {
-		if (!weather.sun) return undefined
+		const latitude = weather.data?.place.latitude
+		if (!weather.sun || latitude === undefined) return undefined
 		const { sunrise, sunset } = weather.sun
 		const values = { sunrise: formatTime(sunrise, format), sunset: formatTime(sunset, format) }
 		const state = clock < sunrise ? 'before' : clock < sunset ? 'up' : 'after'
-		return { sunrise, sunset, now: clock, labels: values, label: $t(`domains.weather.sunArc.${state}`, { values }) }
+		return {
+			sunrise,
+			sunset,
+			now: clock,
+			// the wave is the place's own: its latitude says how high the sun climbs and how deep it sinks
+			latitude,
+			labels: values,
+			label: $t(`domains.weather.sunArc.${state}`, { values }),
+			// the wave read under the pointer says its time on the owner's clock
+			format: (instant: number) => formatTime(instant, format),
+		}
 	})
 	const lastGood = $derived(weather.lastGood ? formatTime(weather.lastGood, format) : undefined)
 	/** How old the reading is, on the minute; it closes the sources at the foot of the page. */
@@ -401,8 +412,8 @@
 			}
 		})
 	)
-	// Dismissing: an alert leaves with its Breeze and is taken from the page once that has played. With the last one
-	// the panel closes instead, and it is the button that leaves with the Breeze, taking the alerts with it.
+	// Dismissing: an alert is taken from the page at the press, with no effect of its own. With the last one the panel
+	// closes instead, and it is the button that leaves with the Breeze, taking the alerts with it.
 	let going = $state<string[]>([])
 	let buttonLeaving = $state(false)
 
@@ -574,6 +585,7 @@
 								title={notice.title}
 								detail={notice.detail}
 								meta={notice.meta}
+								breeze={false}
 								ondismiss={() => ondismiss(notice.id)}
 								ondismissed={() => ondismissed(notice.id)}
 							/>
@@ -647,6 +659,7 @@
 												height={144}
 												values={trend.map((hour) => hour.temp)}
 												labels={trend.map((hour) => hour.tick)}
+												titles={trend.map((hour) => hour.label)}
 												format={(value) => $t('domains.weather.value.degrees', { values: { value } })}
 												label={$t('domains.weather.trend.label', {
 													values: {
@@ -997,7 +1010,7 @@
 		padding: 0 var(--ed-gutter);
 	}
 	/* Two columns that fill on their own and end on one line: the forecast on the left, and the light, the air and
-	   the allergens on the right. On a phone they are one column, in reading order. */
+	   the allergens on the right. In a narrow page they are one column, in reading order. */
 	.cols {
 		display: flex;
 		flex-direction: column;
@@ -1007,6 +1020,12 @@
 	.cols-wide {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) calc(var(--sheet-sm) - var(--space-3));
+	}
+	/* narrow page */
+	@container page (max-width: 48rem) {
+		.cols-wide {
+			grid-template-columns: minmax(0, 1fr);
+		}
 	}
 	.col {
 		display: flex;

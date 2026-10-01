@@ -52,7 +52,7 @@ Every doc in one table per layer: path, status, one-liner, size (S under 120 lin
 |---|---|---|---|---|
 | product/domains/README.md | draft | Table of all domains with id, name, subtitle, status, phase | S | orienting on domains |
 | product/domains/_template.md | draft | The ten-section domain template, plus stub and candidate templates | S | writing a domain doc |
-| product/domains/kitchen.md | draft | Hearth: stock by location, recipes from what you have, grocery lists, capture a haul | S | kitchen work |
+| product/domains/kitchen.md | draft | Hearth: stock by location, food and household consumables, recipes from what you have and from a link, a photo or pasted text, grocery lists, capture a haul, take stock from photos of the shelves, a picture on every item, tips on the item; handoffs for mobile capture | M | kitchen work |
 | product/domains/toolbench.md | draft | Toolbench: ideas, projects, homelab, generative-art studio, technical notes | S | ideas or projects |
 | product/domains/weather.md | draft | Sky: forecasts by a chosen provider, details, air quality, allergens, alerts, sun and moon, the default Garden widget | S | weather or ephemeris |
 | product/domains/calendar.md | draft | Almanac: Eden's own calendar with layers over Events, Google as a source | S | calendar work |
@@ -72,7 +72,7 @@ Every doc in one table per layer: path, status, one-liner, size (S under 120 lin
 |---|---|---|---|---|
 | design/brand.md | draft | Name, metaphor policy, voice and tone, motifs, the app icon, the domain glyph family, splash | S | any visual or copy decision |
 | design/visual-language.md | draft | Tokens, light and dark themes, accents, type, icons, spacing, motion, a11y | S | styling anything |
-| design/ux-patterns.md | draft | Navigation, forms, Quick Log, Capture sheet, states, AI surfaces, confirmations | S | designing a screen |
+| design/ux-patterns.md | draft | Navigation, forms, buttons, Quick Log, Capture sheet, states, AI surfaces, confirmations | S | designing a screen |
 | design/screens.md | draft | Screen inventory with must-show, actions, states, and mockup order | S | mockups |
 | design/sample-data.md | draft | One consistent fictional dataset for every mockup | S | mockups |
 
@@ -87,7 +87,7 @@ Every doc in one table per layer: path, status, one-liner, size (S under 120 lin
 | engineering/data-layer.md | draft | The workspace database and everything over it: the SQLCipher file and its key per platform, the schema, migrations, stamps and ids, the grant store, the egress ledger, the profile, the tables of the scheduler and of signals, the IPC boundary command by command, the frontend module and its browser fallback, a store on rows, the export bundle, the import, testing | L | reading or writing the owner's data from Rust or from an app, adding a table, a command, an entity type or a fact type, moving a store onto rows, touching export or import |
 | engineering/domain-module.md | draft | The manifest and the registry as code: manifest.json, the builder and what it refuses, the generated registry, app bindings, the shell's composition functions, model grades and how a tool resolves to a model, where a domain's code lives, isolation | M | adding or changing a domain, a registry row, a widget, a quick action, an intent, a palette entry or a tool's grade, or sending a request to a model |
 | engineering/signals.md | draft | The scheduler, signals, rules and the inbox as code: the alarm in the crate and the take in the webview, the stores and their commands, rules from the manifests, the runtime, the refresh coordinator, the desktop inbox and its OS notifications, the first consumers, testing | M | adding a schedule, a signal, a rule or a mirror that refreshes itself, touching the inbox or an OS notification, changing when Sky fetches |
-| engineering/gardener.md | draft | The Gardener v0 as code: the key in the keychain, the crate's Anthropic adapter and its events, the pack, the scrub, tools and handlers, budgets, the audit log, threads, policy, the development clamp, testing | M | sending a request to a model, adding or changing a tool or its handler, touching the panel, the audit log, budgets, the key or a thread |
+| engineering/gardener.md | draft | The Gardener v0 as code: the key in the keychain, the crate's Anthropic adapter and its events, the pack, the scrub, tools and handlers, a tool run from a page, budgets and pricing, the audit log and its paged query, the usage rollup, the Gardener's page, threads, policy, the development clamp, testing | M | sending a request to a model, adding or changing a tool or its handler, running a tool from a page, touching the panel, the Gardener's page, the audit log, usage, budgets, the key or a thread |
 | engineering/release.md | draft | The owner's release checklist: bucket, updater key, Apple and iOS ad-hoc signing, the WeatherKit capability, Android keystore, Pages, the secrets, the tag flow | S | setting up release accounts or cutting a release |
 
 ## Status legend

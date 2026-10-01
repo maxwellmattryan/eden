@@ -17,6 +17,19 @@
 		{ id: 'edit', label: 'Edit', onselect: fn() },
 		{ id: 'duplicate', label: 'Duplicate', onselect: fn() },
 	]
+	const withSubmenu: MenuItem[] = [
+		{ id: 'edit', label: 'Edit', icon: 'pencil', onselect: fn() },
+		{
+			id: 'move',
+			label: 'Move to',
+			icon: 'arrow-right',
+			children: [
+				{ id: 'move:fridge', label: 'Fridge', icon: 'refrigerator', onselect: fn() },
+				{ id: 'move:freezer', label: 'Freezer', icon: 'snowflake', onselect: fn() },
+			],
+		},
+		{ id: 'delete', label: 'Delete', icon: 'trash', destructive: true, onselect: fn() },
+	]
 	const withIcons: MenuItem[] = [
 		{ id: 'open', label: 'Open', icon: 'chevron-right', shortcut: '↵', onselect: fn() },
 		{ id: 'edit', label: 'Edit', icon: 'pencil', shortcut: 'E', onselect: fn() },
@@ -133,6 +146,37 @@
 		await waitFor(() => expect(menu).not.toBeVisible())
 		await expect(calls(args.onselect)).toBe(before)
 		await waitFor(() => expect(trigger).toHaveFocus())
+	}}
+/>
+
+<Story
+	name="With submenu"
+	args={{ items: withSubmenu }}
+	{template}
+	parameters={{
+		docs: {
+			description: {
+				story: 'Hovering Move to (or ArrowRight) opens its submenu beside it; picking a leaf closes both.',
+			},
+		},
+	}}
+	play={async ({ canvasElement, args }) => {
+		// a flyout is the desktop menu's; the sheet drills in on a click
+		if (canvasElement.querySelector('[data-platform=mobile]')) return
+		const canvas = canvasOf(canvasElement)
+		await userEvent.click(canvas.getByRole('button', { name: triggerName }))
+		const parent = await canvas.findByRole('menuitem', { name: 'Move to' })
+		// a pointer reaches the item once the menu has unfurled; the flyout is placed against where it stands then
+		const panel = parent.closest('[popover]') as HTMLElement
+		await waitFor(() => expect(getComputedStyle(panel).transform).toBe('none'))
+		await userEvent.hover(parent)
+		const fridge = await canvas.findByRole('menuitem', { name: 'Fridge' })
+		await waitFor(() => expect(fridge).toBeVisible())
+		const sub = fridge.closest('[role=menu]') as HTMLElement
+		await waitFor(() => expect(sub.getBoundingClientRect().left).toBeGreaterThan(parent.getBoundingClientRect().right))
+		await userEvent.click(fridge)
+		await waitFor(() => expect(canvas.queryByRole('menuitem', { name: 'Edit' })).toBeNull())
+		await expect(args.onselect).toHaveBeenCalledWith(expect.objectContaining({ id: 'move:fridge' }))
 	}}
 />
 

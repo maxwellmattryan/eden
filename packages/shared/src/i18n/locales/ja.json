@@ -6,7 +6,8 @@
 		"undo": "元に戻す",
 		"sampleAdded": "サンプルデータを追加しました。",
 		"close": "閉じる",
-		"save": "保存"
+		"save": "保存",
+		"cancel": "キャンセル"
 	},
 	"shell": {
 		"garden": "庭",
@@ -14,6 +15,7 @@
 		"today": "今日",
 		"todaySubtitle": "タスクと習慣",
 		"gardener": "庭師",
+		"resizeSidebar": "サイドバーの幅を変える",
 		"gardenerSubtitle": "相談、記録、実行",
 		"settings": "設定",
 		"settingsSubtitle": "環境設定",
@@ -46,7 +48,8 @@
 			"activeProjects": "進行中のプロジェクト",
 			"sunAndMoon": "太陽と月",
 			"dailyLine": "今日の一行",
-			"quickLog": "体重"
+			"quickLog": "体重",
+			"groceryQuickAdd": "買い物リスト"
 		},
 		"empty": {
 			"weatherNow": "自宅の場所を設定すると空が見えます。",
@@ -58,18 +61,20 @@
 			"sunAndMoon": "自宅の場所を設定すると光が見えます。",
 			"dailyLine": "足るを知る",
 			"quickLog": "体重を記録すると線が始まります。",
-			"feed": "まだ何も起きていません。"
+			"feed": "まだ何も起きていません。",
+			"groceryQuickAdd": "次に必要なものを追加しましょう。"
 		},
 		"actions": {
 			"today": "今日を開く",
 			"cookTonight": "これを作る",
 			"resurfacedIdea": "アイデアを開く",
 			"activeProjects": "プロジェクトを開く",
-			"quickLog": "体重を記録"
+			"quickLog": "体重を記録",
+			"groceryQuickAdd": "リストを開く"
 		},
 		"untouched": "{days}日間手つかず",
 		"minutes": "{minutes}分",
-		"suggested": "{name}が明日期限",
+		"suggested": "{name}を使い切る",
 		"sunrise": "日の出",
 		"sunset": "日の入り",
 		"goldenHour": "ゴールデンアワー",
@@ -84,6 +89,7 @@
 			"sampleAdded": "{domain}にサンプルデータを追加",
 			"stockAdded": "{name}を在庫に追加",
 			"stockRemoved": "{name}を在庫から削除",
+			"stockRanOut": "{name}を切らした",
 			"stockMoved": "{name}を{location}へ移動",
 			"groceryAdded": "{name}を買い物リストに追加",
 			"groceryChecked": "{name}をチェック",
@@ -102,24 +108,50 @@
 			"taskSkipped": "{title}を今日はスキップ",
 			"taskTallied": "{title}を記録",
 			"taskDeleted": "{title}を削除",
+			"taskEdited": "{title}を変更",
 			"haulCaptured": "買い物を取り込み: {count}品",
 			"stockAddedMany": "{count}品を在庫に追加",
 			"groceryAddedMany": "{count}品をリストに追加",
 			"ideaBrainstormed": "{title} をブレインストーム",
 			"projectPlanned": "{name} に{count}件の手順を計画",
-			"tasksAdded": "{count}件のタスクを今日に追加"
+			"tasksAdded": "{count}件のタスクを今日に追加",
+			"stockEdited": "{name}を編集",
+			"stockRemovedMany": "{count}件を在庫から削除",
+			"stockRanOutMany": "{count}件を切らした",
+			"stockMovedMany": "{count}件を{location}に移動",
+			"recipeSaved": "{name}をレシピに保存",
+			"recipeRemoved": "{name}をレシピから削除",
+			"recipeCooked": "{name}を作りました",
+			"stockTaken": "在庫を確認: {count}件"
 		},
 		"profile": "Edenが知っていること"
 	},
 	"domains": {
 		"kitchen": {
 			"name": "台所",
-			"subtitle": "食材、レシピ、買い物",
+			"subtitle": "食材、レシピ、買い物、日用品",
+			"gardener": {
+				"preview": {
+					"add": "追加: {what}",
+					"change": "変更: {what}",
+					"remove": "削除: {what}",
+					"complete": "買い物を完了: {what}",
+					"cooked": "作った料理: {what}",
+					"unfiled": "その他",
+					"unknown": "台所にないもの"
+				},
+				"toast": {
+					"stock": "在庫を{count}件変更しました。",
+					"grocery": "買い物リストを{count}件変更しました。",
+					"stores": "店を{count}件変更しました。",
+					"recipeChanged": "{name}を変更しました。",
+					"recipeRemoved": "{name}を削除しました。"
+				}
+			},
 			"tabs": {
 				"stock": "在庫",
 				"recipes": "レシピ",
-				"grocery": "買い物",
-				"tips": "保存のコツ"
+				"grocery": "買い物"
 			},
 			"tabsLabel": "台所のセクション",
 			"saveFailed": "変更を保存できませんでした。",
@@ -129,41 +161,133 @@
 				},
 				"shopDayReminder": {
 					"title": "買い物の日",
-					"line": "{count, plural, =0 {今日は買い物の日です} other {今日は買い物の日です。リストに#件あります}}"
+					"line": "{count, plural, =0 {今日は{store}で買い物の日です} other {今日は{store}で買い物の日です。リストに#件あります}}"
+				},
+				"lowStock": {
+					"line": "{count, plural, =1 {{first}が残りわずかです} =2 {{first}と{second}が残りわずかです} other {{first}ほか{more}件が残りわずかです}}"
 				}
+			},
+			"picture": {
+				"fromLink": "リンクから",
+				"link": "リンクから写真を設定",
+				"fetch": "写真を取得"
+			},
+			"categories": {
+				"produce": "野菜・果物",
+				"meat-and-fish": "肉・魚",
+				"dairy-and-eggs": "乳製品・卵",
+				"bakery": "パン",
+				"grains-and-pasta": "穀物・麺",
+				"canned-and-jarred": "缶詰・瓶詰",
+				"frozen": "冷凍食品",
+				"snacks": "お菓子",
+				"drinks": "飲み物",
+				"condiments-and-spices": "調味料・香辛料",
+				"supplements-and-mixes": "サプリ・粉末飲料",
+				"cleaning-and-laundry": "掃除・洗濯",
+				"personal-care": "パーソナルケア",
+				"health": "ヘルスケア",
+				"other": "その他"
+			},
+			"failure": {
+				"busy": "ガーデナーは別のリクエストを処理中です。少し待ってからもう一度お試しください。",
+				"no-key": "設定の「ガーデナー」でAnthropicのキーを追加すると読み取れます。",
+				"unavailable": "設定済みのモデルではこれを読み取れません。設定の「ガーデナー」でモデルを変更してください。",
+				"budget": "今月の上限額を超えます。設定の「ガーデナー」で上限を上げてください。",
+				"network": "リクエストが届きませんでした。接続を確認して、もう一度お試しください。",
+				"refusal": "モデルが読み取りを断りました。",
+				"max-tokens": "回答が途中で切れました。ファイルを減らしてお試しください。",
+				"cancelled": "中止しました。",
+				"unreadable": "回答を読み取れませんでした。もう一度お試しください。",
+				"empty": "品目を読み取れませんでした。より鮮明な写真か、別のファイルでお試しください。",
+				"no-files": "まず写真、レシート、またはリストを追加してください。",
+				"no-recipe": "レシピを読み取れませんでした。レシピの本文か、別の写真でお試しください。",
+				"page-blocked": "このページは読み取れません。公開されたウェブページではないか、大きすぎます。",
+				"page-empty": "このサイトはアプリからページを読み取れません。レシピの本文を貼り付けるか、ページのスクリーンショットまたは PDF を追加してください。",
+				"page-failed": "ページを取得できませんでした。レシピの本文を貼り付けてください。",
+				"page-unavailable": "リンクの取得はインストール版のアプリで行います。レシピの本文を貼り付けてください。",
+				"not-https": "https で始まるリンクだけを取得します。"
+			},
+			"refused": {
+				"type": "{name}はここで読み取れない種類のファイルです{more, plural, =0 {} other {（ほか#件も除外）}}。",
+				"size": "{name}は大きすぎます{more, plural, =0 {} other {（ほか#件も除外）}}。",
+				"count": "ファイルは10件までです。{name}は除外しました{more, plural, =0 {} other {（ほか#件も）}}。",
+				"total": "{name}を加えるとリクエストが大きくなりすぎます{more, plural, =0 {} other {（ほか#件も除外）}}。",
+				"empty": "{name}は空です{more, plural, =0 {} other {（ほか#件も除外）}}。",
+				"unreadable": "{name}を読み取れませんでした{more, plural, =0 {} other {（ほか#件も除外）}}。"
 			},
 			"capture": {
 				"action": "買い物を撮る",
-				"notYet": "撮影は庭師とともに届きます。"
+				"about": "最大{cost}",
+				"stop": "中止",
+				"pastedText": "貼り付けたテキスト",
+				"toast": {
+					"committed": "{count}件を在庫に追加しました。",
+					"taken": "写真から{count}件を在庫にしました。"
+				},
+				"takeStock": "在庫を確認する"
 			},
 			"stock": {
 				"add": "追加",
-				"addPlaceholder": "在庫に追加",
+				"addItem": "在庫に追加",
+				"selection": {
+					"count": "{count}件を選択中",
+					"done": "完了"
+				},
 				"expiring": "期限間近",
 				"lowStock": "残りわずか",
-				"sortExpiry": "並び順: 期限",
+				"ranOut": "切らしたもの",
+				"ranOutEmpty": "最近切らしたものはありません。",
+				"sortBy": "並び順: {sort}",
+				"sortLabel": "在庫の並び順",
+				"sort": {
+					"expiry": "期限",
+					"name": "名前",
+					"added": "新しい順"
+				},
 				"locations": {
 					"fridge": "冷蔵庫",
 					"freezer": "冷凍庫",
 					"pantry": "食品庫",
-					"counter": "カウンター"
+					"counter": "カウンター",
+					"household": "日用品"
 				},
 				"badge": {
 					"lowStock": "残りわずか",
+					"ranOut": "切らした",
 					"thisWeek": "今週"
 				},
 				"empty": {
 					"title": "在庫はまだありません",
-					"text": "買い物を撮ると、場所ごとに推定期限つきでここに並びます。"
+					"text": "冷蔵庫、冷凍庫、食品棚の写真を数枚撮って在庫を確認すると、写っているものが場所ごとに並びます。買い物のあとは、写真、レシート、注文から取り込めます。"
+				},
+				"noneMatch": "この絞り込みに合う在庫はありません。",
+				"emptyLocation": {
+					"title": "ここには何もありません",
+					"text": "品目をドロップするとここに置かれます。"
 				},
 				"detail": {
+					"editing": "品目を編集",
+					"name": "名前",
+					"brand": "ブランド",
+					"size": "内容量",
+					"sizeHint": "16 oz",
 					"quantity": "数量",
+					"unit": "単位",
 					"location": "場所",
 					"expires": "期限",
 					"category": "分類",
+					"noCategory": "カテゴリなし",
 					"source": "出所",
 					"threshold": "残りわずかの基準",
-					"tip": "保存のコツ"
+					"thresholdHelp": "この量以下になると残りわずかと表示します。空欄ならなし。",
+					"tip": "ヒント",
+					"tipHelp": "保存や扱い方について知っておきたい一言。名前の横の情報ボタンに表示されます。",
+					"tipFor": "{name}のヒント",
+					"choosePicture": "写真を選ぶ",
+					"removePicture": "写真を削除",
+					"pictureLinkHelp": "H-E-Bの商品ページ、または画像そのもののアドレス。",
+					"pictureLinkAddHelp": "H-E-Bの商品ページ（空欄の名前・ブランド・サイズも入力されます）、または画像そのもののアドレス。"
 				},
 				"source": {
 					"manual": "手入力",
@@ -171,7 +295,9 @@
 					"sample": "サンプル"
 				},
 				"actions": {
-					"moveTo": "{location}へ移動",
+					"edit": "編集",
+					"moveTo": "移動先",
+					"ranOut": "切らした",
 					"move": "移動",
 					"addToGrocery": "買い物リストへ",
 					"delete": "削除"
@@ -179,30 +305,57 @@
 				"toast": {
 					"added": "{name}を在庫に追加しました。",
 					"removed": "{name}を在庫から削除しました。",
+					"ranOut": "{name}を切らしました。",
+					"ranOutMany": "{count}件を切らしました。",
+					"back": "{name}が在庫に戻りました。",
 					"moved": "{name}を{location}へ移動しました。",
+					"edited": "{name}を保存しました。",
 					"addedToGrocery": "{name}を買い物リストに追加しました。",
-					"addedMany": "{count}品を在庫に追加しました。"
+					"addedMany": "{count}品を在庫に追加しました。",
+					"movedMany": "{count}件を{location}に移動しました。",
+					"removedMany": "{count}件を在庫から削除しました。",
+					"addedManyToGrocery": "{count}件をリストに追加しました。",
+					"pictureSet": "{name}の写真を設定しました。",
+					"pictureRemoved": "{name}の写真を削除しました。",
+					"pictureFailed": "この写真は読み取れませんでした。",
+					"pictureLinkFailed": "このリンクから写真を取得できませんでした。"
 				}
 			},
 			"grocery": {
 				"add": "追加",
-				"addPlaceholder": "リストに追加",
-				"clearChecked": "チェック済みを整理",
-				"checked": "{total}件中{checked}件チェック済み",
-				"allChecked": "すべてチェック済みです。帰ったらリストを整理しましょう。",
+				"addPlaceholder": "品目を追加",
+				"buyAgain": "また買う",
+				"buyAgainNone": "また買うものはありません。",
+				"estimate": "約${total}",
+				"priced": "${price}",
+				"estimateSome": "約${total}、{count}件は価格なし",
+				"allChecked": "すべてチェック済みです。帰ったらリストを完了しましょう。",
+				"anyStore": "その他",
+				"toBuy": "{count, plural, =0 {買うものはありません} other {あと#件}}",
 				"empty": {
-					"title": "リストは空です",
-					"text": "一行で追加するか、レシピから足りない材料を送ってください。",
+					"title": "買うものはありません",
+					"text": "品目を追加するか、ストックで切らしたものに印を付けるか、レシピから足りない材料を送ってください。",
 					"action": "項目を追加"
+				},
+				"emptyList": {
+					"title": "このリストにはまだ何もありません",
+					"text": "ここに追加するか、ストックで切らしたものに印を付けてください。"
 				},
 				"origin": {
 					"manual": "手入力",
 					"recipe": "レシピ",
+					"ranOut": "切らした",
 					"lowStock": "残りわずか"
 				},
 				"actions": {
 					"check": "チェック",
 					"uncheck": "チェックを外す",
+					"edit": "編集",
+					"moveTo": "移動",
+					"addTo": "追加先",
+					"openWebsite": "ウェブサイトを開く",
+					"moveUp": "上へ移動",
+					"moveDown": "下へ移動",
 					"delete": "削除"
 				},
 				"toast": {
@@ -210,19 +363,189 @@
 					"removed": "{name}をリストから削除しました。",
 					"checked": "{name}をチェックしました。",
 					"unchecked": "{name}のチェックを外しました。",
-					"cleared": "チェック済み{count}件を整理しました。"
+					"edited": "{name}を保存しました。",
+					"shopDaySet": "買い物の日を設定しました。当日の朝にお知らせします。",
+					"shopDayCleared": "買い物の日を取り消しました。",
+					"addedTo": "{name}を{store}に追加しました。",
+					"moved": "{name}を{store}に移しました。",
+					"completed": "{store}のチェック済み{count}件を整理しました。",
+					"storeAdded": "{store}を追加しました。",
+					"storeExists": "{store}はすでにあります。",
+					"storeSaved": "{store}を保存しました。",
+					"storeRemoved": "{store}を削除しました。リストにあった品目は「その他」にあります。",
+					"shopDaySetLate": "買い物の日を設定しました。",
+					"storeMoved": "{store}を移動しました。",
+					"pictureSet": "{store}の画像を設定しました。",
+					"pictureRemoved": "{store}の画像を削除しました。",
+					"pictureFailed": "この画像は読み取れませんでした。",
+					"pictureNotFound": "ウェブサイトから使える画像が見つかりませんでした。"
+				},
+				"pane": {
+					"editing": "品目を編集",
+					"name": "名前",
+					"brand": "ブランド",
+					"size": "内容量",
+					"sizeHint": "16 oz",
+					"price": "価格",
+					"priceHelp": "1つあたりの値段です。リストを完了すると店が覚えます。",
+					"quantity": "数量",
+					"store": "店",
+					"storeHelp": "店を選ばなければ、前回買った店のリストに入ります。",
+					"note": "メモ",
+					"editingStore": "店を編集",
+					"sells": "扱うもの",
+					"address": "住所",
+					"website": "ウェブサイト",
+					"phone": "電話",
+					"storeNote": "メモ",
+					"shopDay": "買い物の日",
+					"shopTime": "時刻",
+					"shopDayHelp": "任意です。設定すると、当日の朝にお知らせが届きます。",
+					"today": "今日",
+					"tomorrow": "明日",
+					"noShopDay": "買い物の日なし",
+					"deleteStore": "店を削除",
+					"choosePicture": "画像を選ぶ",
+					"fetchPicture": "ウェブサイトから画像を取得",
+					"removePicture": "画像を削除"
+				},
+				"addItem": "品目を追加",
+				"addTo": "{store}に追加",
+				"addStore": "店を追加",
+				"stores": "店",
+				"storesNone": "店はまだありません。上の「追加」から追加してください。",
+				"left": "あと{count}件",
+				"shopped": "{when}に買い物",
+				"complete": "{store}を完了",
+				"completeHint": "完了：チェック済みを整理",
+				"editStore": "{store}を編集",
+				"editStoreHint": "店を編集",
+				"sells": {
+					"grocery": "食料品",
+					"home-goods": "日用品"
 				}
 			},
 			"recipes": {
+				"add": "レシピを追加",
 				"empty": {
 					"title": "レシピはまだありません",
-					"text": "庭師の提案とあなたのレシピがここに集まります。"
-				}
-			},
-			"tips": {
-				"empty": {
-					"title": "コツはまだありません",
-					"text": "保存のコツがここに集まります。"
+					"text": "レシピの本文やリンクを貼り付けるか、ページの写真を追加します。ガーデナーが提案した料理も保存できます。"
+				},
+				"usesUp": "{names}を使い切る",
+				"minutes": "{minutes}分",
+				"serves": "{count}人分",
+				"avoided": "避けているものを含みます",
+				"missingCount": "{count}件不足",
+				"allInStock": "在庫あり",
+				"inStock": "在庫あり",
+				"missing": "不足",
+				"notEnough": "量が不足",
+				"ingredients": "材料",
+				"steps": "作り方",
+				"editing": "レシピを編集",
+				"search": "レシピを検索",
+				"searchPlaceholder": "検索、または材料を並べる: ほうれん草, 豆腐",
+				"clearSearch": "検索をクリア",
+				"countOf": "{total}件中{shown}件",
+				"filters": {
+					"inStock": "在庫あり",
+					"quick": "{minutes}分以内",
+					"expiring": "期限の近いものを使う",
+					"tags": "タグ",
+					"tagsChosen": "タグ: {tags}",
+					"tagsLabel": "タグで絞り込む",
+					"clear": "クリア"
+				},
+				"sortBy": "並び順: {sort}",
+				"sortLabel": "レシピを並べ替える",
+				"sort": {
+					"tonight": "今夜",
+					"name": "名前",
+					"quickest": "早い順",
+					"missing": "不足が少ない順"
+				},
+				"noMatch": {
+					"title": "一致するレシピはありません",
+					"text": "言葉を減らすか、フィルターを外してください。",
+					"clear": "フィルターをクリア"
+				},
+				"credit": {
+					"by": "{author} 作"
+				},
+				"servings": {
+					"label": "人数",
+					"fewer": "1人分減らす",
+					"more": "1人分増やす",
+					"reset": "元の{count}人分に戻す",
+					"fixed": "分量はレシピに書かれたとおりです。"
+				},
+				"missingEstimate": "不足分を買うのに約${total}。",
+				"missingUnpriced": "{count}件はまだ価格がありません。",
+				"actions": {
+					"cook": "これを作る",
+					"addMissing": "{count, plural, =0 {不足分を買い物リストへ} other {不足の#件を買い物リストへ}}",
+					"edit": "編集",
+					"delete": "削除"
+				},
+				"draft": {
+					"title": "新しいレシピ",
+					"note": "まだ保存されていません。確認してから保存してください。",
+					"discard": "破棄"
+				},
+				"cook": {
+					"title": "{name}を作る",
+					"text": "作ると在庫からこれだけ減ります。レシピの単位で品目から引けないものは選んでください。",
+					"none": "残りなし",
+					"ask": "{name}: 在庫 {held}",
+					"leave": "そのまま",
+					"usedUp": "使い切った",
+					"noAmount": "引く量なし",
+					"notInStock": "在庫なし",
+					"confirm": "作りました"
+				},
+				"toast": {
+					"saved": "{name}をレシピに保存しました。",
+					"edited": "{name}を保存しました。",
+					"removed": "{name}をレシピから削除しました。",
+					"alreadyListed": "不足分はすでにリストにあります。",
+					"missingAdded": "材料{count}件をリストに追加しました。",
+					"nothingTaken": "{name}に使う在庫はありません。",
+					"cooked": "{name}を作りました。在庫を更新しました。",
+					"pictureFailed": "この写真は読み取れませんでした。",
+					"pictureLinkFailed": "このリンクから写真を取得できませんでした。"
+				},
+				"form": {
+					"name": "名前",
+					"serves": "何人分",
+					"minutes": "時間",
+					"minutesUnit": "分",
+					"ingredients": "材料",
+					"ingredientsHelp": "1行に1つ、量を先に: 200 g ほうれん草, 洗う。",
+					"steps": "作り方",
+					"stepsHelp": "1行に1手順、順番に。",
+					"tags": "タグ",
+					"tagsHelp": "カンマ区切り: 平日, 鍋ひとつ。",
+					"tip": "ヒント",
+					"source": "出典",
+					"sourceName": "出典名",
+					"sourceNameHelp": "サイト、雑誌、料理本など。",
+					"author": "著者",
+					"scales": "分量を人数に合わせる",
+					"scalesHelp": "パン1斤や型ひとつのケーキではオフにします。",
+					"choosePicture": "写真を選ぶ",
+					"removePicture": "写真を削除",
+					"fetchingPicture": "ページの写真を取得中…",
+					"pictureLinkHelp": "画像そのもののアドレス、または画像のあるページ。"
+				},
+				"import": {
+					"title": "レシピを追加",
+					"label": "レシピ、またはそのリンク",
+					"placeholder": "レシピかリンクを貼り付け",
+					"help": "ページやカードの写真でも構いません。ここにドロップ、貼り付け、または選択してください。",
+					"linkHelp": "まずページを取得します。ページ自体がレシピを記述していれば、モデルを使わずに読み取ります。",
+					"choose": "写真やファイルを選ぶ",
+					"reading": "読み取り中…",
+					"read": "読み取る"
 				}
 			},
 			"plan": {
@@ -538,6 +861,10 @@
 		}
 	},
 	"profile": {
+		"proposal": {
+			"replaces": "{value}を置き換え",
+			"until": "{day}まで"
+		},
 		"add": "事実を追加",
 		"edit": "編集",
 		"window": "期間を設定",
@@ -873,7 +1200,9 @@
 				"weatherkit": "Apple WeatherKit",
 				"updater": "更新",
 				"anthropic": "Anthropic",
-				"vault-ai": "金庫 → AI"
+				"vault-ai": "金庫 → AI",
+				"web-page": "取り込んだウェブページ",
+				"web-image": "リンクした写真"
 			},
 			"never": {
 				"label": "自動化しないこと",
@@ -1004,6 +1333,29 @@
 	},
 	"uiKit": {
 		"about": "{0}について",
+		"sunArc": {
+			"elevation": "高度",
+			"azimuth": "方位",
+			"phases": {
+				"day": "日中",
+				"golden": "ゴールデンアワー",
+				"civil": "市民薄明",
+				"nautical": "航海薄明",
+				"astronomical": "天文薄明",
+				"night": "夜"
+			},
+			"bearings": { "n": "北", "ne": "北東", "e": "東", "se": "南東", "s": "南", "sw": "南西", "w": "西", "nw": "北西" }
+		},
+		"chart": { "total": "合計" },
+		"pagination": {
+			"label": "ページ",
+			"range": "{2}件中 {0}–{1}",
+			"first": "最初のページ",
+			"previous": "前のページ",
+			"next": "次のページ",
+			"last": "最後のページ"
+		},
+		"checkOff": "{0}をチェック",
 		"compass": {
 			"north": "北"
 		},
@@ -1015,6 +1367,7 @@
 		"dismiss": "閉じる",
 		"dismissNamed": "{0}を閉じる",
 		"discard": "破棄",
+		"commit": "確定",
 		"close": "閉じる",
 		"back": "戻る",
 		"retry": "再試行",
@@ -1022,6 +1375,7 @@
 		"undo": "元に戻す",
 		"select": "選択",
 		"selected": "{0} 件を選択",
+		"remove": "{0}を削除",
 		"more": "その他",
 		"menu": "メニュー",
 		"loading": "読み込み中",
@@ -1032,6 +1386,7 @@
 		"on": "オン",
 		"off": "オフ",
 		"noData": "データはまだありません",
+		"datePart": { "year": "年", "month": "月", "day": "日" },
 		"gardener": {
 			"name": "庭師",
 			"open": "庭師を開く",
@@ -1099,7 +1454,7 @@
 			"notSharedChip": "{0}: 庭師と未共有です。許可が必要です。共有する。",
 			"locked": "{0}、未共有: 許可が必要です",
 			"canSeeTitle": "庭師に見えているもの",
-			"inThisRequest": "このリクエストで",
+			"inThisRequest": "次のメッセージで",
 			"notSharedExplain": "ツールが求めましたが、T2の項目はあなたが共有するまでどのリクエストにも含まれません。「許可」で庭師に常時の読み取りを与え、いつでも取り消せます。",
 			"allow": "許可"
 		},
@@ -1137,6 +1492,57 @@
 		},
 		"show": "表示",
 		"hide": "隠す",
+		"capture": {
+			"collectTitle": "買い物を取り込む",
+			"title": "買い物を確認",
+			"invite": "写真、レシート、注文のPDFを追加",
+			"inviteHint": "ここにドロップするか、ファイルを選ぶか、リストを貼り付けます。",
+			"inviteHintTouch": "ファイルを選ぶか、リストを貼り付けます。",
+			"chooseFiles": "ファイルを選ぶ",
+			"sources": "取り込み元",
+			"estimate": "最大{0}",
+			"readBy": "読み取り: {0}",
+			"read": "読み取る",
+			"reading": "読み取り中…",
+			"draftRows": "下書きの行",
+			"addRow": "行を追加",
+			"mergeWith": "{0}にまとめる",
+			"everyRowRemoved": "すべての行を削除しました。何も作成されません。",
+			"footer": "{0} 件を作成、{1} 件をまとめる",
+			"locations": {
+				"fridge": "冷蔵庫",
+				"freezer": "冷凍庫",
+				"pantry": "食品庫",
+				"counter": "カウンター",
+				"household": "日用品"
+			},
+			"rowName": "名前",
+			"rowQty": "数量",
+			"rowUnit": "単位",
+			"rowExpiry": "期限",
+			"rowBrand": "ブランド",
+			"rowSize": "内容量",
+			"rowPrice": "価格",
+			"store": "店",
+			"pickStore": "店を選ぶ",
+			"boughtAt": "{0}で購入",
+			"noStore": "店なし",
+			"storeRead": "{0}と読み取りましたが、登録された店ではありません。",
+			"pricesNeedStore": "店を選ぶと価格が記憶されます。",
+			"category": "カテゴリ",
+			"categoryNamed": "カテゴリ: {0}",
+			"location": "{0}の置き場所",
+			"unnamed": "この行",
+			"stock": {
+				"collectTitle": "在庫を確認する",
+				"title": "見つかったものを確認",
+				"invite": "冷蔵庫、冷凍庫、食品棚、カウンターの写真を追加",
+				"inviteHint": "ここにドロップするか、ファイルを選びます。写っているものが在庫になります。",
+				"inviteHintTouch": "ファイルを選びます。写っているものが在庫になります。",
+				"mergeWith": "{0}を更新",
+				"footer": "{0} 件を作成、{1} 件を更新"
+			}
+		},
 		"dropzone": {
 			"drop": "ファイルをドロップ",
 			"groups": {
@@ -1151,7 +1557,8 @@
 		"file": {
 			"open": "{0}を開く",
 			"missing": "このデバイスにはもうありません",
-			"failed": "追加できませんでした"
+			"failed": "追加できませんでした",
+			"fromFile": "ファイルから"
 		}
 	},
 	"gardener": {
@@ -1224,6 +1631,16 @@
 		"retry": "再試行",
 		"ranTool": "{tool} を単独のリクエストとして実行しました。",
 		"confirmTool": "{tool} を実行",
+		"confirmRead": "このページを読む",
+		"preview": {
+			"change": "変更: {what}",
+			"done": "完了: {what}",
+			"reopen": "未完了に戻す: {what}",
+			"skip": "今日はスキップ: {what}",
+			"remove": "削除: {what}",
+			"forget": "忘れる: {what}",
+			"read": "{what} を読む"
+		},
 		"toolRun": {
 			"same": "{tool} × {count}",
 			"mixed": "ツール {count} 件"
@@ -1240,19 +1657,20 @@
 		},
 		"toast": {
 			"logged": "{value} を記録しました。",
+			"tasks": "{count}件のタスクを変更しました。",
+			"forgotten": "{name}を忘れました。",
 			"deleted": "{title} を削除しました。",
 			"deletedMany": "{count} 件の会話を削除しました。"
 		},
 		"draft": {
 			"task": "追加するタスク",
+			"tasks": "追加するタスク {count}件",
 			"grocery": "リストに入れる{count}品",
 			"code": "コピーする雛形",
-			"capture": "写真から{count}品",
+			"capture": "ファイルから{count}件を読み取りました",
 			"captureText": "在庫にする前に行を確認してください。",
-			"captureCost": "送信済み",
 			"planCommitted": "{count}件のタスクを追加しました。",
 			"groceryCommitted": "{count}品をリストに追加しました。",
-			"captureCommitted": "{count}品を在庫に追加しました。",
 			"plusGrocery": "とリスト用の{count}品",
 			"copy": "コピー",
 			"copied": "コピーしました",
@@ -1263,7 +1681,10 @@
 			"verify": "確認する",
 			"discard": "破棄",
 			"committed": "追加しました",
-			"discarded": "破棄しました"
+			"discarded": "破棄しました",
+			"recipe": "レシピ: {name}",
+			"recipeText": "レシピで開いて確認し、保存してください。",
+			"openRecipe": "レシピで開く"
 		},
 		"resize": "庭師の幅を変える",
 		"allowed": "{id} を庭師と共有しました。",
@@ -1295,8 +1716,81 @@
 			"confirmNo": "いいえ",
 			"readsNothing": "なし"
 		},
-		"openTools": "ツールを見る",
-		"openAudit": "監査ログを開く"
+		"openPage": "庭師のページを開く"
+	},
+	"gardenerPage": {
+		"tabsLabel": "庭師のページ",
+		"tabs": { "usage": "利用状況", "conversations": "会話", "audit": "監査ログ", "tools": "ツール" },
+		"usage": {
+			"tiles": {
+				"month": "今月",
+				"last30": "過去30日",
+				"allTime": "全期間",
+				"requests": "今月のリクエスト"
+			},
+			"ofCap": "上限 ${cap} の {percent}%",
+			"estimate": "設定の価格から見積もった、この端末での集計です。請求額はプロバイダーの計測によります。",
+			"spend": "利用額",
+			"periodsLabel": "集計の単位",
+			"periods": { "day": "日", "week": "週", "month": "月", "year": "年" },
+			"chart": "{from} から {to} までの{period}ごとの利用額(米ドル、グレード別の積み上げ)",
+			"byModel": "モデル別",
+			"byGrade": "グレード別",
+			"byTool": "実行内容別",
+			"noGrade": "グレードなし",
+			"columns": { "what": "内容", "requests": "リクエスト", "tokensIn": "入力トークン", "tokensOut": "出力トークン" },
+			"hints": {
+				"requests": "モデルに送ったリクエストの数。拒否したものや予算で止まったものは送られていないため、数えません。",
+				"tokensIn": "モデルに送ったすべてのトークン。キャッシュにあった分も含みます。",
+				"tokensOut": "モデルが返したトークン数。",
+				"cost": "リクエストの費用(米ドル)。それぞれが終わった時点の設定の価格で計算します。",
+				"what": "庭師が独立したリクエストとして実行したツール、または会話。",
+				"from": "ツールが属するドメイン、または会話が行われた場所。"
+			},
+			"empty": {
+				"title": "まだ利用がありません",
+				"text": "庭師が応答すると、その費用がここに表示されます。"
+			},
+			"error": "利用状況を読み込めませんでした。",
+			"kept": "利用状況は日ごとにこの端末へ保存され、消えません。書き出しも同期もされません。"
+		},
+		"conversations": {
+			"summary": "リクエスト {requests} 件、{tokens} トークン",
+			"noRequests": "過去90日間のリクエストなし",
+			"showAudit": "監査ログで表示",
+			"totalsNote": "会話の費用は、監査ログの保存期間である過去90日分です。",
+			"empty": {
+				"title": "まだ会話がありません",
+				"text": "庭師に質問すると、会話がここに残ります。"
+			},
+			"error": "会話を読み込めませんでした。"
+		},
+		"audit": {
+			"filtersLabel": "フィルター",
+			"filters": { "range": "期間", "kind": "種類" },
+			"filterValue": "{filter}: {value}",
+			"filterCount": "{filter}: {count}",
+			"kinds": {
+				"conversation": "会話",
+				"tool": "会話の中でのツール実行",
+				"page": "ページからのツール実行"
+			},
+			"ranges": {
+				"all": "すべての期間",
+				"today": "今日",
+				"7d": "過去7日",
+				"30d": "過去30日",
+				"month": "今月"
+			},
+			"thread": "会話: {title}",
+			"threadGone": "1件の会話",
+			"fact": "1件の事実を読んだもの",
+			"remove": "フィルター「{filter}」を解除",
+			"clear": "フィルターをクリア",
+			"onlyThread": "この会話のみ",
+			"noMatch": { "title": "一致するリクエストがありません", "text": "フィルターを減らしてみてください。" },
+			"pages": "監査ログのページ"
+		}
 	},
 	"audit": {
 		"title": "監査ログ",
@@ -1307,7 +1801,8 @@
 			"tool": "ツール",
 			"grade": "グレード",
 			"model": "モデル",
-			"tokens": "入力 / 出力",
+			"tokensIn": "入力",
+			"tokensOut": "出力",
 			"cost": "費用",
 			"outcome": "結果"
 		},
@@ -1316,7 +1811,8 @@
 			"tool": "リクエストが実行したツール(実行した場合)。",
 			"grade": "リクエストが動いたモデルのグレード。「—」はモデルを使っていません。",
 			"model": "応答したモデル。",
-			"tokens": "モデルに送ったトークン数と、返ってきたトークン数。",
+			"tokensIn": "モデルに送ったトークン数。キャッシュにあった分は含みません。",
+			"tokensOut": "モデルが返したトークン数。",
 			"cost": "リクエストの費用(米ドル)。",
 			"outcome": "リクエストの終わり方。"
 		},
@@ -1358,7 +1854,8 @@
 			"grade": "グレード",
 			"usage": "使用量",
 			"request": "リクエスト",
-			"cached": "キャッシュ"
+			"cached": "キャッシュ",
+			"cacheWritten": "キャッシュ書き込み"
 		},
 		"openThread": "会話を開く",
 		"retention": "項目はこの端末に90日間残ります。書き出しや同期はされません。"

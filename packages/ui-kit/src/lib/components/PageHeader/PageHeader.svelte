@@ -2,6 +2,7 @@
 	import type { ComponentProps } from 'svelte'
 	import type { IconName } from '../../icons/icons.js'
 	import Button from '../Button/Button.svelte'
+	import type { MenuItem } from '../Menu/Menu.svelte'
 
 	/** A header action, rendered as a Button; the first in the list is the page's primary. */
 	export interface PageHeaderAction {
@@ -14,6 +15,8 @@
 		/** Shown but not yet available: the Garden's "Edit layout" before edit mode exists. */
 		disabled?: boolean
 		onclick?: () => void
+		/** The button opens a Menu of these instead of acting itself: one Add that offers what can be added. */
+		menu?: MenuItem[]
 	}
 </script>
 
@@ -24,9 +27,10 @@
 	// row beneath when the page is a list. The top right is also where a page's notices sit (`aside`): what the owner
 	// should know before reading the page, such as a weather alert. It stands beside the name and the filters together,
 	// so a notice of a few lines never makes the header taller than they are. On mobile the actions and the aside
-	// wrap under the name. Never a second row of buttons. A domain's motif (D-62) fills the room the header leaves
-	// empty: from where the name and the filters end to where the actions or the notices begin, or to the page's
-	// gutter when there are none. It never lies behind anything the header holds, and it fades in from the name's side
+	// wrap under the name. Never a second row of buttons. An action with a `menu` opens it under itself, lined up
+	// with the button's end, and the pick is reported by the item's own `onselect`. A domain's motif (D-62) fills the room the header leaves
+	// empty: from where the name and the filters end to where the notices begin, or to the page's edge when there are
+	// none, the actions standing over it. It never lies behind a filter or a notice, and it fades in from the name's side
 	// and out towards the page: decoration, so it takes no pointer and has no name.
 	import type { Snippet } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
@@ -34,6 +38,7 @@
 	import { measure } from '../../internal/measure.js'
 	import { platformOf } from '../../internal/platform.js'
 	import BackButton from '../BackButton/BackButton.svelte'
+	import Menu from '../Menu/Menu.svelte'
 
 	type Props = Omit<HTMLAttributes<HTMLElement>, 'children'> & {
 		/** The themed domain name, the page's h1. */
@@ -73,32 +78,65 @@
 		...rest
 	}: Props = $props()
 
-	// The root, for the platform: on mobile the actions take a row of their own under the name.
-	let root = $state<HTMLElement>()
-	const stacked = $derived(root ? platformOf(root) === 'mobile' : false)
+	// The one menu an action opens: which action's it is, and the button it hangs from.
+	const keyOf = (action: PageHeaderAction) => action.id ?? action.label
+	let menuKey = $state<string>()
+	let menuAnchor = $state<HTMLElement>()
+	let menuOpen = $state(false)
+	const menuAction = $derived(actions.find((action) => keyOf(action) === menuKey))
+	function toggleMenu(action: PageHeaderAction, button: HTMLElement) {
+		const same = menuOpen && menuKey === keyOf(action)
+		menuKey = keyOf(action)
+		menuAnchor = button
+		menuOpen = !same
+	}
 
-	// The motif's room, in the header's own pixels: where what stands on the left ends, and how far from the right
-	// edge what stands on the right begins. Read again whenever any of them changes size.
+	// The root, for the platform and its own width: on mobile, and wherever the header is too narrow to hold the name
+	// and the actions on one line (a panel open beside the page), the actions take a row of their own under the name.
+	let root = $state<HTMLElement>()
+	/** The least width, in px, at which the name and the actions share a line. */
+	const STACK_ROOM = 560
+	// layout width, not the rect: a scaled ancestor shrinks the rect
+	let width = $state(0)
+	const stacked = $derived(root ? platformOf(root) === 'mobile' || (width > 0 && width < STACK_ROOM) : false)
+
+	// The motif's room, in the header's own pixels: where the name ends, and how far from the right edge what stands
+	// on the right begins. Filters that run past the name cut a notch from the room's lower left, so the motif keeps
+	// the line of the name and never stands behind a filter. Read again whenever any of them changes size.
 	let title = $state<HTMLElement>()
 	let filtersRow = $state<HTMLElement>()
 	let actionsRow = $state<HTMLElement>()
 	let asideColumn = $state<HTMLElement>()
-	let room = $state<{ start: number; end: number | null; width: number }>({ start: 0, end: null, width: 0 })
+	let room = $state<{
+		start: number
+		end: number | null
+		/** The room at the foot, where the legend stands. */
+		width: number
+		/** How far past the name the filters run, and how far above the foot they begin. */
+		notch: { inline: number; block: number } | null
+	}>({ start: 0, end: null, width: 0, notch: null })
 	/** The least room, in px, in which a legend stands clear of what is on the left. */
 	const LEGEND_ROOM = 280
 	const place = measure(() => {
 		if (!root) return
-		const ends = [title, filtersRow].map((el) => (el ? el.offsetLeft + el.offsetWidth : 0))
-		const begins = [actionsRow, asideColumn].flatMap((el) => (el ? [el.offsetLeft] : []))
-		const start = Math.max(...ends)
+		const [start, filtersEnd] = [title, filtersRow].map((el) => (el ? el.offsetLeft + el.offsetWidth : 0)) as [
+			number,
+			number,
+		]
+		const begins = [asideColumn].flatMap((el) => (el ? [el.offsetLeft] : []))
 		const end = begins.length ? root.clientWidth - Math.min(...begins) : null
-		room = { start, end, width: root.clientWidth - start - (end ?? 0) }
+		const notch =
+			filtersRow && filtersEnd > start
+				? { inline: filtersEnd - start, block: root.clientHeight - filtersRow.offsetTop }
+				: null
+		room = { start, end, width: root.clientWidth - Math.max(start, filtersEnd) - (end ?? 0), notch }
 	})
 </script>
 
 <header
 	class={['ed-page-header', { 'ed-page-header-stacked': stacked, 'ed-page-header-with-aside': !!aside }, className]}
 	bind:this={root}
+	{@attach measure((_, el) => (width = el.clientWidth))}
 	{...rest}
 >
 	{#if motif}
@@ -107,6 +145,10 @@
 			aria-hidden="true"
 			style:--ed-page-header-motif-start="{room.start}px"
 			style:--ed-page-header-motif-end={room.end == null ? undefined : `${room.end}px`}
+			style:--ed-page-header-motif-notch={room.notch ? `${room.notch.inline}px` : undefined}
+			style:--ed-page-header-motif-notch-top={room.notch ? `${room.notch.block}px` : undefined}
+			class:ed-page-header-motif-notched={!!room.notch}
+			class:ed-page-header-motif-bleed={room.end == null}
 		>
 			{@render motif()}
 		</div>
@@ -129,16 +171,31 @@
 		</div>
 		{#if actions.length}
 			<div class="ed-page-header-actions" bind:this={actionsRow} {@attach motif && place}>
-				{#each actions as action, i (action.id ?? action.label)}
-					<Button
-						label={action.label}
-						icon={action.icon}
-						variant={action.variant ?? (i === 0 ? 'primary' : 'secondary')}
-						disabled={action.disabled}
-						onclick={action.onclick}
-					/>
+				{#each actions as action, i (keyOf(action))}
+					{#if action.menu?.length}
+						<Button
+							label={action.label}
+							icon={action.icon}
+							variant={action.variant ?? (i === 0 ? 'primary' : 'secondary')}
+							disabled={action.disabled}
+							aria-haspopup="menu"
+							aria-expanded={menuOpen && menuKey === keyOf(action)}
+							onclick={(event) => toggleMenu(action, event.currentTarget)}
+						/>
+					{:else}
+						<Button
+							label={action.label}
+							icon={action.icon}
+							variant={action.variant ?? (i === 0 ? 'primary' : 'secondary')}
+							disabled={action.disabled}
+							onclick={action.onclick}
+						/>
+					{/if}
 				{/each}
 			</div>
+			{#if menuAction?.menu?.length}
+				<Menu bind:open={menuOpen} anchor={menuAnchor} label={menuAction.label} items={menuAction.menu} />
+			{/if}
 		{/if}
 	</div>
 	{#if filters}
@@ -159,9 +216,9 @@
 		/* what the header holds is placed against it, and so is the motif's room */
 		position: relative;
 	}
-	/* The motif's room runs a little past what it shows: from the very end of what stands on the left, through the
-	   gutter to the header's edge, and above the header's top, so the feathering falls outside the streaks a reader
-	   sees. Only its faintest part comes near the name. Never below the foot, where the page's cards begin. */
+	/* The motif's room runs a little past what it shows: from the very end of the name, through the gutter to the
+	   header's edge, and above the header's top, so the feathering falls outside the streaks a reader sees. Only its
+	   faintest part comes near the name. Never below the foot, where the page's cards begin. */
 	.ed-page-header-motif {
 		position: absolute;
 		inset-block: calc(-1 * var(--space-6)) 0;
@@ -171,7 +228,12 @@
 		/* Feathered on every side, so no line says where the room begins: each edge eases in over its feather rather
 		   than ramping, and the foot fades into the page as it did */
 		--ed-page-header-motif-side: calc(var(--space-8) * 3);
+		--ed-page-header-motif-side-end: var(--ed-page-header-motif-side);
 		--ed-page-header-motif-top: calc(var(--space-8) + var(--space-6));
+		/* The notch the filters cut: nothing of it until there is one */
+		--ed-page-header-motif-notch: 0px;
+		--ed-page-header-motif-notch-top: 0px;
+		--ed-page-header-motif-notch-feather: 0px;
 		mask-image:
 			linear-gradient(
 				to right,
@@ -180,10 +242,10 @@
 				rgb(0 0 0 / 0.5) calc(var(--ed-page-header-motif-side) * 0.6),
 				rgb(0 0 0 / 0.88) calc(var(--ed-page-header-motif-side) * 0.85),
 				black var(--ed-page-header-motif-side),
-				black calc(100% - var(--ed-page-header-motif-side)),
-				rgb(0 0 0 / 0.88) calc(100% - var(--ed-page-header-motif-side) * 0.85),
-				rgb(0 0 0 / 0.5) calc(100% - var(--ed-page-header-motif-side) * 0.6),
-				rgb(0 0 0 / 0.1) calc(100% - var(--ed-page-header-motif-side) * 0.3),
+				black calc(100% - var(--ed-page-header-motif-side-end)),
+				rgb(0 0 0 / 0.88) calc(100% - var(--ed-page-header-motif-side-end) * 0.85),
+				rgb(0 0 0 / 0.5) calc(100% - var(--ed-page-header-motif-side-end) * 0.6),
+				rgb(0 0 0 / 0.1) calc(100% - var(--ed-page-header-motif-side-end) * 0.3),
 				transparent
 			),
 			linear-gradient(
@@ -195,8 +257,27 @@
 				black var(--ed-page-header-motif-top),
 				black 75%,
 				transparent
+			),
+			/* the notch: shown past the filters' end, or above their line; the two are added, then cut from the rest */
+			linear-gradient(
+					to right,
+					transparent var(--ed-page-header-motif-notch),
+					black calc(var(--ed-page-header-motif-notch) + var(--ed-page-header-motif-notch-feather))
+				),
+			linear-gradient(
+				to top,
+				transparent var(--ed-page-header-motif-notch-top),
+				black calc(var(--ed-page-header-motif-notch-top) + var(--ed-page-header-motif-notch-feather))
 			);
-		mask-composite: intersect;
+		mask-composite: intersect, intersect, add;
+	}
+	/* With no notices to stop at the motif runs to the header's edge, round the actions: it eases out over a short
+	   feather there, so it is still about the buttons rather than fading short of them */
+	.ed-page-header-motif-bleed {
+		--ed-page-header-motif-side-end: var(--space-6);
+	}
+	.ed-page-header-motif-notched {
+		--ed-page-header-motif-notch-feather: var(--space-6);
 	}
 	/* The legend stands at the foot of the motif's room, on the line of the filters, clear of the feathering */
 	.ed-page-header-legend {
@@ -278,7 +359,7 @@
 		align-items: center;
 		gap: var(--space-2);
 	}
-	/* mobile: the actions wrap under the name, never a second row of buttons in the header */
+	/* mobile or narrow: the actions wrap under the name, never a second row of buttons in the header */
 	.ed-page-header-stacked .ed-page-header-row {
 		flex-wrap: wrap;
 	}

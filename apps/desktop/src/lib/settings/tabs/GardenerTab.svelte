@@ -142,11 +142,11 @@
 
 	function openAudit() {
 		settingsUi.hide()
-		void goto(resolve('/gardener/audit'))
+		void goto(resolve('/gardener/[[tab]]', { tab: 'audit' }))
 	}
 	function openTools() {
 		settingsUi.hide()
-		void goto(resolve('/gardener/tools'))
+		void goto(resolve('/gardener/[[tab]]', { tab: 'tools' }))
 	}
 </script>
 
@@ -175,7 +175,7 @@
 			/>
 			{#if gardenerSetup.hasKey}
 				<Button
-					variant="quiet"
+					variant="danger"
 					icon="trash"
 					label={$t('settings.gardener.key.remove')}
 					disabled={keyBusy}

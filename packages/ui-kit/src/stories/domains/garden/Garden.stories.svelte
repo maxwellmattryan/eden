@@ -51,7 +51,7 @@
 		},
 		untouched: (days) => `${days}日間手つかず`,
 		minutes: (minutes) => `${minutes}分`,
-		suggested: 'ほうれん草が明日期限',
+		suggested: 'ほうれん草を使い切る',
 		sunrise: '日の出',
 		sunset: '日の入り',
 		goldenHour: 'ゴールデンアワー',

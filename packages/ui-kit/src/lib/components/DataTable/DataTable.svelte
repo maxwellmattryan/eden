@@ -10,7 +10,19 @@
 		muted?: boolean
 		/** A sentence explaining the column, as a tooltip on an info glyph beside its header. */
 		hint?: string
+		/** What `sort` and `onsort` call the column; its label when left out. */
+		id?: string
+		/** The header is a button that asks for the table to be sorted by this column. */
+		sortable?: boolean
 	}
+
+	/** The column the rows are sorted by, and which way. */
+	export interface DataTableSort {
+		column: string
+		direction: 'asc' | 'desc'
+	}
+
+	const columnId = (column: DataTableColumn) => column.id ?? column.label
 
 	/** A richer cell: text with an optional glyph before it, a tone that colours both, and mono on its own. */
 	export interface DataTableCell {
@@ -57,10 +69,14 @@
 	// units. With `onrow` each body row is a focusable target that opens on click, Enter or Space; its cells name it.
 	// With `detail` a row unfolds instead: a chevron at the row's end (the keyboard's target) or a click on the row
 	// opens the snippet beneath it, one row at a time (`expanded`, bindable), the table growing over the panel duration.
+	// A `sortable` column's header is a button: it asks through `onsort`, and the caller hands the rows back in that
+	// order with `sort` saying which column and which way. The table never reorders rows itself, since a page of a
+	// longer list can only be sorted where the whole list is.
 	import type { Snippet } from 'svelte'
 	import type { HTMLTableAttributes } from 'svelte/elements'
 	import Icon from '../../icons/Icon.svelte'
 	import { useStrings } from '../../i18n/context.js'
+	import { measure } from '../../internal/measure.js'
 	import { smoothSize } from '../../internal/smooth-size.js'
 	import IconButton from '../IconButton/IconButton.svelte'
 
@@ -79,6 +95,10 @@
 		detail?: Snippet<[number]>
 		/** detail only: the index of the row that is open (bindable); one at a time. */
 		expanded?: number
+		/** The column the rows arrive sorted by, and which way: the header shows it and says it (`aria-sort`). */
+		sort?: DataTableSort
+		/** A sortable header was picked: the same column the other way, or a new one (numbers highest first). */
+		onsort?: (next: DataTableSort) => void
 	}
 	let {
 		columns,
@@ -88,12 +108,31 @@
 		onrow,
 		detail,
 		expanded = $bindable(),
+		sort,
+		onsort,
 		class: className = '',
 		...rest
 	}: Props = $props()
 
 	const s = useStrings()
 	const uid = $props.id()
+
+	// a table wider than its room scrolls sideways, and a region that scrolls is one the keyboard can reach
+	let overflows = $state(false)
+
+	function resort(column: DataTableColumn) {
+		const id = columnId(column)
+		const flipped = sort?.direction === 'asc' ? 'desc' : 'asc'
+		onsort?.({ column: id, direction: sort?.column === id ? flipped : column.numeric ? 'desc' : 'asc' })
+	}
+	const ariaSort = (column: DataTableColumn) =>
+		!column.sortable
+			? undefined
+			: sort?.column !== columnId(column)
+				? 'none'
+				: sort.direction === 'asc'
+					? 'ascending'
+					: 'descending'
 
 	function toggle(index: number) {
 		expanded = expanded === index ? undefined : index
@@ -114,80 +153,114 @@
 	}
 </script>
 
-<table class={['ed-table', { 'ed-table-rows': !!onrow || !!detail }, className]} {...rest}>
-	<caption class={showCaption ? 'ed-table-caption' : 'ed-sr-only'}>{label}</caption>
-	<thead>
-		<tr>
-			{#each columns as column, c (`${column.label}-${c}`)}
-				<th scope="col">
-					<span class="ed-table-head">
-						{column.label}
-						{#if column.hint}<IconButton
-								icon="info"
-								size="xs"
-								label={s.about(column.label)}
-								tooltip={column.hint}
-							/>{/if}
-					</span>
-				</th>
-			{/each}
-			{#if detail}<td class="ed-table-fold-head"></td>{/if}
-		</tr>
-	</thead>
-	<tbody>
-		<!-- rows are plain arrays with no identity of their own, so the index is the only stable key -->
-		{#each rows as row, r (r)}
-			<!-- with onrow the row is the target: its cells name it, so it needs no role or label of its own -->
-			<tr
-				class={{ 'ed-table-open': !!detail && expanded === r }}
-				tabindex={onrow ? 0 : undefined}
-				onclick={onrow || detail ? (e) => click(e, r) : undefined}
-				onkeydown={onrow ? (e) => keydown(e, r) : undefined}
-			>
-				{#each row as raw, c (c)}
-					{@const cell = cellOf(raw)}
-					<td
-						class={[
-							{
-								'ed-table-num': columns[c]?.numeric,
-								'ed-table-mono': cell.mono,
-								'ed-table-code': cell.code,
-								'ed-table-muted': columns[c]?.muted,
-							},
-							cell.tone && `ed-table-${cell.tone}`,
-						]}
-					>
-						{#if cell.icon}<Icon name={cell.icon} size="sm" class="ed-table-glyph" />{/if}<span>{cell.text}</span>
-					</td>
+<!-- a table wider than its room scrolls inside itself, never the page -->
+<div
+	class="ed-table-scroll"
+	role={overflows ? 'group' : undefined}
+	aria-label={overflows ? label : undefined}
+	tabindex={overflows ? 0 : undefined}
+	{@attach measure((_, el) => (overflows = el.scrollWidth > el.clientWidth))}
+>
+	<table class={['ed-table', { 'ed-table-rows': !!onrow || !!detail }, className]} {...rest}>
+		<caption class={showCaption ? 'ed-table-caption' : 'ed-sr-only'}>{label}</caption>
+		<thead>
+			<tr>
+				{#each columns as column, c (`${column.label}-${c}`)}
+					{@const sorted = sort?.column === columnId(column)}
+					<th scope="col" aria-sort={ariaSort(column)}>
+						<span class="ed-table-head">
+							{#if column.sortable}
+								<button
+									type="button"
+									class={['ed-table-sort', { 'ed-table-sorted': sorted }]}
+									onclick={() => resort(column)}
+								>
+									{column.label}
+									<Icon
+										name={sorted && sort?.direction === 'asc' ? 'arrow-up' : 'arrow-down'}
+										size="sm"
+										class="ed-table-sort-glyph"
+									/>
+								</button>
+							{:else}
+								{column.label}
+							{/if}
+							{#if column.hint}<IconButton
+									icon="info"
+									size="xs"
+									label={s.about(column.label)}
+									tooltip={column.hint}
+								/>{/if}
+						</span>
+					</th>
 				{/each}
-				{#if detail}
-					<td class="ed-table-fold-cell">
-						<IconButton
-							icon={expanded === r ? 'chevron-up' : 'chevron-down'}
-							size="xs"
-							label={expanded === r ? s.hide : s.show}
-							aria-expanded={expanded === r}
-							aria-controls="{uid}-detail-{r}"
-							onclick={() => toggle(r)}
-						/>
-					</td>
-				{/if}
+				{#if detail}<td class="ed-table-fold-head"></td>{/if}
 			</tr>
-			{#if detail && expanded === r}
-				<tr class="ed-table-detail">
-					<td colspan={columns.length + 1}>
-						<!-- the frame opens and closes; the body inside eases it when a section folds or rows arrive -->
-						<div class="ed-table-detail-frame" id="{uid}-detail-{r}" transition:unfold>
-							<div class="ed-table-detail-body" {@attach smoothSize()}>{@render detail(r)}</div>
-						</div>
-					</td>
+		</thead>
+		<tbody>
+			<!-- rows are plain arrays with no identity of their own, so the index is the only stable key -->
+			{#each rows as row, r (r)}
+				<!-- with onrow the row is the target: its cells name it, so it needs no role or label of its own -->
+				<tr
+					class={{ 'ed-table-open': !!detail && expanded === r }}
+					tabindex={onrow ? 0 : undefined}
+					onclick={onrow || detail ? (e) => click(e, r) : undefined}
+					onkeydown={onrow ? (e) => keydown(e, r) : undefined}
+				>
+					{#each row as raw, c (c)}
+						{@const cell = cellOf(raw)}
+						<td
+							class={[
+								{
+									'ed-table-num': columns[c]?.numeric,
+									'ed-table-mono': cell.mono,
+									'ed-table-code': cell.code,
+									'ed-table-muted': columns[c]?.muted,
+								},
+								cell.tone && `ed-table-${cell.tone}`,
+							]}
+						>
+							{#if cell.icon}<Icon name={cell.icon} size="sm" class="ed-table-glyph" />{/if}<span>{cell.text}</span>
+						</td>
+					{/each}
+					{#if detail}
+						<td class="ed-table-fold-cell">
+							<IconButton
+								icon={expanded === r ? 'chevron-up' : 'chevron-down'}
+								size="xs"
+								label={expanded === r ? s.hide : s.show}
+								aria-expanded={expanded === r}
+								aria-controls="{uid}-detail-{r}"
+								onclick={() => toggle(r)}
+							/>
+						</td>
+					{/if}
 				</tr>
-			{/if}
-		{/each}
-	</tbody>
-</table>
+				{#if detail && expanded === r}
+					<tr class="ed-table-detail">
+						<td colspan={columns.length + 1}>
+							<!-- the frame opens and closes; the body inside eases it when a section folds or rows arrive -->
+							<div class="ed-table-detail-frame" id="{uid}-detail-{r}" transition:unfold>
+								<div class="ed-table-detail-body" {@attach smoothSize()}>{@render detail(r)}</div>
+							</div>
+						</td>
+					</tr>
+				{/if}
+			{/each}
+		</tbody>
+	</table>
+</div>
 
 <style>
+	.ed-table-scroll {
+		max-width: 100%;
+		overflow-x: auto;
+		border-radius: var(--ed-radius-card);
+	}
+	.ed-table-scroll:focus-visible {
+		outline: 2px solid transparent;
+		box-shadow: var(--focus-ring);
+	}
 	.ed-table {
 		width: 100%;
 		border-collapse: separate;
@@ -223,6 +296,41 @@
 		align-items: center;
 		gap: var(--space-1);
 	}
+	/* a sortable header: the label's own type, an arrow that shows which way once it is the sort, and faintly on
+	   hover before that */
+	.ed-table-sort {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-1);
+		margin: 0;
+		padding: 0;
+		border: 0;
+		border-radius: var(--ed-radius-control);
+		background: none;
+		color: inherit;
+		font: inherit;
+		letter-spacing: inherit;
+		cursor: pointer;
+	}
+	.ed-table-sort:focus-visible {
+		outline: 2px solid transparent;
+		box-shadow: var(--focus-ring);
+	}
+	.ed-table-sort :global(.ed-table-sort-glyph) {
+		opacity: 0;
+		transition: opacity var(--ed-duration-micro) var(--ed-ease-out);
+	}
+	.ed-table-sort:hover :global(.ed-table-sort-glyph),
+	.ed-table-sort:focus-visible :global(.ed-table-sort-glyph) {
+		opacity: 0.5;
+	}
+	.ed-table-sorted {
+		color: var(--text-primary);
+	}
+	.ed-table-sorted :global(.ed-table-sort-glyph),
+	.ed-table-sorted:hover :global(.ed-table-sort-glyph) {
+		opacity: 1;
+	}
 	.ed-table td {
 		height: var(--ed-row);
 		padding: 0 var(--space-3);
@@ -233,7 +341,8 @@
 	.ed-table tr:last-child td {
 		border-bottom: 0;
 	}
-	.ed-table tbody tr:not(.ed-table-detail):hover td {
+	/* only a row that does something answers the pointer: one that opens or unfolds. A table of figures stays still. */
+	.ed-table-rows tbody tr:not(.ed-table-detail):hover td {
 		background: var(--surface-2);
 	}
 	.ed-table td.ed-table-num,

@@ -24,7 +24,13 @@
 		<li class="item">
 			<SwipeRow leading={leading?.(row)} trailing={trailing?.(row)}>
 				<button class={['row', { 'row-done': row.done }]} type="button" onclick={() => onopen?.(row)}>
-					{#if row.icon}<Icon name={row.icon} size="sm" class="row-icon" />{/if}
+					{#if row.thumbnail}
+						<img class="row-thumb" src={row.thumbnail} alt="" />
+					{:else if row.icon && row.tile}
+						<span class="row-thumb row-tile" aria-hidden="true"><Icon name={row.icon} size="sm" /></span>
+					{:else if row.icon}
+						<Icon name={row.icon} size="sm" class="row-icon" />
+					{/if}
 					<span class="row-text">
 						<span class="row-primary">{row.primary}</span>
 						{#if row.secondary || row.chips?.length || row.badges?.length}
@@ -84,6 +90,22 @@
 	}
 	.row :global(.row-icon) {
 		flex: none;
+		color: var(--text-secondary);
+	}
+	/* the row's picture, or its glyph on a tile of the same size, as ListRow draws them */
+	.row-thumb {
+		flex: none;
+		box-sizing: border-box;
+		width: var(--space-8);
+		height: var(--space-8);
+		border: 1px solid var(--stroke-subtle);
+		border-radius: var(--ed-radius-control);
+		object-fit: cover;
+		background: var(--surface-2);
+	}
+	.row-tile {
+		display: inline-grid;
+		place-items: center;
 		color: var(--text-secondary);
 	}
 	.row-text {

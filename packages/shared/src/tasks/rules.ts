@@ -10,8 +10,25 @@ import type { ParsedTask } from './parse.js'
 import { addTally, markDone, markSkipped, periodStart, reopenDay, streakOn, tallyOn } from './progress.js'
 import type { Task, TaskProgress } from './types.js'
 
-/** The fields an action on Today sets; the same keys as a patch of the row. */
-export type TaskChange = Partial<Pick<Task, 'due' | 'done' | 'completedAt' | 'items' | 'progress' | 'streak'>>
+/** The fields an action on Today, or an edit, sets; the same keys as a patch of the row. */
+export type TaskChange = Partial<
+	Pick<
+		Task,
+		'title' | 'notes' | 'priority' | 'timeOfDay' | 'due' | 'done' | 'completedAt' | 'items' | 'progress' | 'streak'
+	>
+>
+
+/** What an edit may rewrite of a task; a field left out stays as it is. */
+export interface TaskEdit {
+	title?: string
+	/** The day it moves to, `YYYY-MM-DD`: a todo's or a checklist's. */
+	due?: string
+	/** `HH:MM` on the owner's clock, or an empty string for no time. */
+	timeOfDay?: string
+	priority?: Task['priority']
+	/** An empty string clears them. */
+	notes?: string
+}
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
 
@@ -66,9 +83,35 @@ export function skip(task: Task, day: string): TaskChange {
 	return { progress: markSkipped(task.progress, day) }
 }
 
-/** Open again: what an undo of a completion or a skip writes for a routine. */
+/**
+ * Open again: a routine's occurrence on the day, done or skipped, and a todo or a checklist that was done, with
+ * every item of the checklist open, since Done finished them all.
+ */
 export function reopened(task: Task, day: string): TaskChange {
-	return { progress: reopenDay(task.progress, day) }
+	if (task.kind === 'routine') return { progress: reopenDay(task.progress, day) }
+	const items: TaskItem[] = task.items.map((item) => ({ ...item, done: false }))
+	return { done: false, completedAt: null, ...(task.items.length ? { items } : {}) }
+}
+
+/**
+ * An edit as the fields it sets. A todo's and a checklist's time is part of its due, so a new day keeps the time
+ * it had and a new time keeps its day, today when it had none; a routine's time is its own field and it has no
+ * due, and a habit has neither. What does not apply to the task's kind is left out.
+ */
+export function edited(task: Task, edit: TaskEdit, today: string, zone: string | undefined): TaskChange {
+	const change: TaskChange = {}
+	if (edit.title?.trim()) change.title = edit.title.trim()
+	if (edit.notes !== undefined) change.notes = edit.notes.trim() || null
+	if (edit.priority !== undefined) change.priority = edit.priority
+	if (task.kind === 'routine') {
+		if (edit.timeOfDay !== undefined) change.timeOfDay = edit.timeOfDay || null
+		return change
+	}
+	if (task.kind === 'habit' || (edit.due === undefined && edit.timeOfDay === undefined)) return change
+	const day = edit.due ?? (task.due ? dueDay(task.due, zone) : today)
+	const time = edit.timeOfDay ?? (task.due ? dueTime(task.due, zone) : null)
+	change.due = time ? new Date(instantAt(day, time, zone)).toISOString() : day
+	return change
 }
 
 /** One more on the habit's tally today, with its streak recomputed and written beside it. */

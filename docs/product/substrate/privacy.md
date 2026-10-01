@@ -4,7 +4,7 @@ status: draft
 summary: The sensitivity tiers T0–T3 and what each allows for storage, sync, AI and export; what never leaves the device; what third parties receive; the owner's controls; a one-screen threat model.
 read-this-if: Anything you are designing touches personal data, an external service, or the Gardener.
 depends-on: [decisions]
-updated: 2026-09-29
+updated: 2026-10-01
 ---
 
 ## Principles (Phase 1)
@@ -35,7 +35,7 @@ Tiers attach to resources in `substrate/registry.md`:
 - T3 content, except through the three audited doors in `substrate/data.md`: share-sheet export after biometric auth, the passphrase-encrypted export bundle, and end-to-end encrypted vault sync from Phase 3.
 - Precise coordinates. AI and weather providers receive city-level coordinates (D-60) unless a precise-location grant exists for that subject.
 - The workspace database itself.
-- A Capture photo, until the owner sees which provider will receive it and confirms in the verification sheet (D-29).
+- A source brought to Capture or to a recipe's import (a photo, a receipt, an order's PDF, an email, pasted text), until the sheet has named the provider that will receive it and the owner has pressed Read (D-86).
 
 ## What the Gardener may never see
 
@@ -49,9 +49,14 @@ Tiers attach to resources in `substrate/registry.md`:
 
 | party | receives | never receives |
 |---|---|---|
-| AI provider (your key) | the context pack after tier exclusion and scrub; a Capture image on confirmation | T3, undeclared resources, precise location, the audit log |
+| AI provider (your key) | the context pack after tier exclusion and scrub; the files the owner attached to a message (D-82); Capture's sources after its Read (D-86) | T3, undeclared resources, precise location, the audit log |
 | sync backend | opaque encrypted blobs, a manifest of sizes and hashes, an account id | plaintext of any tier, mirrors |
 | an integration | the OAuth scopes granted and the request parameters the connector needs (rounded coordinates for weather, a calendar id for Google) | anything from another domain |
+| a web page the owner gave the address of, or confirmed on the Gardener's card that shows it whole (D-126) | one request for that page, made by the crate, with no cookie, credential or referrer (D-88); counted in the egress ledger under `web-page` | anything from the workspace, beyond what the address itself spells out, which is why an address the owner did not write is shown before it is fetched |
+| a picture the owner linked for a stock item | one request for that picture, made by the crate under the same checks (D-91); a grocer's product page is never requested, only the picture its address names; counted under `web-image` | anything from the workspace |
+| the picture of a recipe page the owner linked | one request for the picture that page shows of the dish, made by the crate under the same checks when the draft opens (D-93); counted under `web-image` | anything from the workspace |
+| a picture the owner linked for a recipe | one request for the address, and, when it is a page, one for the page and one for the picture it names, made by the crate under the same checks (D-110); a grocer's product page is never requested; counted under `web-image` and `web-page` | anything from the workspace |
+| a store's website, which the owner gave or confirmed on the Gardener's card (D-108) | up to two requests for its page (as typed, then under `www.`) and up to five for its icon (those the page names, then the site's usual addresses), made by the crate under the same checks (D-103); the page's phone number and address are read on the device and go to no model; counted under `web-page` and `web-image` | anything from the workspace; no third-party icon service is asked |
 | a plugin (later) | exactly what its manifest declares under the same grants | anything undeclared |
 | crash reporting | nothing; logs stay local and are exported by hand (OQ-10) | |
 
@@ -82,7 +87,7 @@ There is no telemetry. Diagnostics keep the last hundred entries and system info
 | AI provider retention or misuse | declared reads, tier exclusion, scrub, bring-your-own-key so the contract is the owner's, local models on desktop |
 | compromised sync server | end-to-end encrypted blobs; the manifest reveals sizes and hashes only |
 | over-broad OAuth | narrowest scopes, read-only default, ledger, per-calendar write grants (OQ-6) |
-| prompt injection through mirrored or fetched content | untrusted marking in the context pack, `act-external` always confirms, never-automated list |
+| prompt injection through mirrored or fetched content | untrusted marking in the context pack and on a fetched page's text, `act-external` always confirms, never-automated list; a page is fetched only from an address the owner wrote or confirmed, and a conversation that has read one confirms every write (D-126) |
 | malicious plugin (later) | manifest-declared reads, identical grants, sandbox defined in engineering |
 | accidental share of a T3 item | share sheet warns that the copy is unprotected; audit entry |
 | passphrase loss | recovery key shown once (OQ-12); the local workspace remains |

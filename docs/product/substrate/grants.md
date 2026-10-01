@@ -4,7 +4,7 @@ status: draft
 summary: One permission model for integrations, the Gardener's reads and actions, plugins and device capabilities; defaults, confirmation patterns by access level, the never-automated list, per-device exceptions and the ledger.
 read-this-if: You are designing anything that reads personal data on behalf of a model or a service, or anything that acts on the world.
 depends-on: [privacy, registry]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## Purpose
@@ -29,7 +29,7 @@ Grants are workspace policy and **sync** (D-37), with the exceptions listed belo
 
 - Integrations connect **read-only** with the narrowest scope the connector offers. Widening is a separate grant.
 - The Gardener may read **T0 and T1** resources that a tool or surface declares. **T2** needs a standing or per-request grant on that registry id. **T3** is `never` and cannot be granted.
-- The Gardener's tools default to `read`. `write-draft` needs no grant because nothing is stored until the owner commits. `write` needs a per-tool standing grant or a per-request confirm. `act-external` always confirms per request.
+- The Gardener's tools default to `read`. `write-draft` needs no grant because nothing is stored until the owner commits. `write` needs a per-tool standing grant or a per-request confirm; the first confirm of `log-quick` and of `update-tasks` records the standing one (D-124), and every other write is confirmed per request. `act-external` always confirms per request. A tool may also ask for one call whatever its grant: a delete among a batch of edits, a web address the owner did not write (D-124, D-126).
 - Device capabilities are off until asked for, in context, the first time a feature needs them.
 - **Onboarding asks for the T2 grants the Phase 1 flows need**: `allergy` and `medical-dietary-restriction` for Hearth's Gardener tools. The prompt explains what the grant enables and what happens without it (D-25).
 
@@ -41,9 +41,9 @@ Allergy and medical-restriction checks are deterministic and local. Recipe and g
 
 | access | what the owner sees |
 |---|---|
-| `read` | nothing at the moment; the "can see" chip on the Gardener panel and the audit log afterwards |
+| `read` | nothing at the moment; the "can see" chip on the Gardener panel and the audit log afterwards. A read that reaches outside Eden for an address the owner did not write shows a confirm with the whole address (D-126) |
 | `write-draft` | the draft itself, in a verification sheet or an editable card; commit is the owner's click |
-| `write` | a confirm sheet naming the entities that will change, with undo after; Quick Log writes skip the sheet and rely on undo (D-12) |
+| `write` | a confirm sheet naming the entities that will change, with undo after; Quick Log writes skip the sheet and rely on undo (D-12), as a task write does once its first confirm stands. In a conversation that has read a web page, every write is confirmed, standing grant or not (D-126) |
 | `act-external` | a confirm sheet naming the destination and showing the exact payload; never batched, never remembered as standing |
 | `never` | the action is not offered; the tool is not registered |
 
@@ -74,5 +74,5 @@ Every Gardener request writes an audit entry naming the registry ids read and th
 - **Hearth, suggest recipes.** Declared reads `stock-item`, `recipe`, `dietary-preference`, `disliked-ingredient`, `cuisine-preference`, `allergy`, `medical-dietary-restriction`. The first five are T0–T1 and need nothing. The last two are T2 and were granted in onboarding. Output is filtered locally against allergies regardless.
 - **Sky, rain during my run.** Declared reads `workout-session`, `forecast`, `home-area`. All T0–T1. Runs from any chat under the default grant.
 - **Google Calendar.** Phase 2 grant: `calendar:<id>:read` per selected calendar, standing. Write is a Phase 3 grant, per calendar (OQ-6).
-- **Capture a haul.** Device grant `camera` on this device; a per-request confirm naming the vision provider before the photo is sent (D-29).
+- **Capture a haul.** Tool `capture-haul`, access `write-draft`, so it needs no grant of its own. The sheet names the provider, the model and the estimate, and its Read is the per-request confirm (D-86). A PDF or a text source records a per-request grant on `document`, as a file on a message does (D-82). On the phone, the device grant `camera` on this device (D-29).
 - **A Quick Log of weight.** Tool `log-body-metric`, access `write`, standing grant created the first time the owner uses it; undo instead of a confirm sheet.

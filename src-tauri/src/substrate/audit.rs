@@ -15,12 +15,16 @@ use super::entities::json_column;
 use super::grants::Access;
 use super::ids;
 use super::text::{text_column, text_enum};
+use super::usage;
 use crate::error::{EdenError, Result};
 
 /// How long an entry is kept.
 pub const RETENTION_DAYS: u64 = 90;
 const DEFAULT_LIMIT: u32 = 200;
 const MAX_LIMIT: u32 = 1000;
+/// A page of the log's table (D-114).
+const DEFAULT_PAGE: u32 = 50;
+const MAX_PAGE: u32 = 200;
 
 text_enum! {
     /// How a request ended.
@@ -44,6 +48,56 @@ text_enum! {
 text_enum! {
     /// Where the grade came from when it was not the map's own.
     GradeSource { ToolOverride = "tool-override", DomainOverride = "domain-override", Map = "map" }
+}
+
+/// What a request was, told from its surface and its caller: a turn of a conversation, a tool a conversation
+/// ran, or a tool a page ran with no conversation (D-86).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum SurfaceKind {
+    Conversation,
+    Tool,
+    Page,
+}
+
+/// The column a page of the log is sorted by.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum AuditOrder {
+    At,
+    Tool,
+    Grade,
+    Model,
+    TokensIn,
+    TokensOut,
+    Cost,
+    Outcome,
+}
+
+/// A request's kind, in SQL, over `audit_entries`.
+pub(crate) const KIND_SQL: &str = "CASE WHEN surface <> 'delegated' THEN 'conversation' \
+                                   WHEN parent_request_id IS NOT NULL THEN 'tool' ELSE 'page' END";
+/// A request's tool as the filters name it: its owner, a dot, its id.
+const TOOL_SQL: &str = "(COALESCE(domain, 'substrate') || '.' || tool)";
+
+impl SurfaceKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Conversation => "conversation",
+            Self::Tool => "tool",
+            Self::Page => "page",
+        }
+    }
+
+    pub(crate) fn of(surface: &str, parent_request_id: Option<&str>) -> Self {
+        if surface != "delegated" {
+            Self::Conversation
+        } else if parent_request_id.is_some() {
+            Self::Tool
+        } else {
+            Self::Page
+        }
+    }
 }
 
 text_enum! {
@@ -121,6 +175,8 @@ pub struct AuditEntry {
     pub grants: Vec<String>,
     pub image: Option<AuditImage>,
     pub attachments: Vec<AuditAttachment>,
+    /// The tokens the provider wrote to its cache, priced at their own rate (D-116).
+    pub cache_write: u64,
 }
 
 /// An entry as the frontend records it: the same fields, the id optional.
@@ -171,6 +227,12 @@ pub struct AuditEntryInput {
     pub image: Option<AuditImage>,
     #[serde(default)]
     pub attachments: Vec<AuditAttachment>,
+    #[serde(default)]
+    pub cache_write: u64,
+    /// The owner's day the request was made on, `YYYY-MM-DD`, for the usage rollup (D-115); the device's own day
+    /// of `at` when it is left out.
+    #[serde(default)]
+    pub day: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -184,9 +246,63 @@ pub struct AuditQuery {
     pub limit: Option<u32>,
 }
 
+/// One page of the log's table: what to keep, how to sort it, and which rows of the result (D-114).
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct AuditPageQuery {
+    pub thread_id: Option<String>,
+    /// The earliest `at`, inclusive.
+    pub from_ms: Option<u64>,
+    /// The latest `at`, inclusive.
+    pub to_ms: Option<u64>,
+    pub kinds: Vec<SurfaceKind>,
+    /// Tools as `<domain or substrate>.<id>`.
+    pub tools: Vec<String>,
+    pub grades: Vec<Grade>,
+    pub models: Vec<String>,
+    pub outcomes: Vec<Outcome>,
+    /// A row id: only the entries that read it.
+    pub read_row: Option<String>,
+    /// `at` when it is left out.
+    pub order: Option<AuditOrder>,
+    /// The latest, the dearest, the last of the alphabet first; so when it is left out.
+    pub descending: Option<bool>,
+    pub limit: Option<u32>,
+    pub offset: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct AuditPage {
+    pub rows: Vec<AuditEntry>,
+    /// How many entries the filters keep, whatever the page.
+    pub total: u64,
+}
+
+/// What the log holds that a filter may name.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AuditFacets {
+    pub models: Vec<String>,
+    /// Tools as `<domain or substrate>.<id>`.
+    pub tools: Vec<String>,
+}
+
+/// What one conversation's requests came to, over the entries the log still holds.
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ThreadUsage {
+    pub thread_id: String,
+    pub requests: u64,
+    pub tokens_in: u64,
+    pub tokens_out: u64,
+    pub cost_usd: f64,
+    pub last_at: u64,
+}
+
 const COLUMNS: &str = "id, at, surface, thread_id, parent_request_id, tool, domain, declared_grade, grade, source, \
                        provider, model, reads, entities, tools, confirm_outcome, tokens_in, tokens_out, cache_read, \
-                       cost_usd, outcome, grants, image, attachments";
+                       cost_usd, outcome, grants, image, attachments, cache_write";
 
 fn refused(detail: impl std::fmt::Display) -> EdenError {
     EdenError::Refused(format!("audit:invalid: {detail}"))
@@ -243,6 +359,7 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<AuditEntry> {
             rusqlite::Error::FromSqlConversionFailure(22, rusqlite::types::Type::Text, Box::new(e))
         })?,
         attachments: json_list(row, 23)?,
+        cache_write: row.get::<_, i64>(24)? as u64,
     })
 }
 
@@ -279,12 +396,18 @@ fn validate(input: &AuditEntryInput) -> Result<()> {
     if !(input.cost_usd.is_finite() && input.cost_usd >= 0.0) {
         return Err(refused("a cost is a number of dollars"));
     }
+    if let Some(day) = &input.day {
+        if !usage::is_day(day) {
+            return Err(refused(format!("not a day: {day:?}")));
+        }
+    }
     Ok(())
 }
 
-/// Writes one entry. An entry is never edited: what happened happened.
+/// Writes one entry, and adds it to its day's usage (D-115). An entry is never edited: what happened happened.
 pub fn record(conn: &Connection, input: AuditEntryInput) -> Result<AuditEntry> {
     validate(&input)?;
+    let day = input.day.clone();
     let id = ids::id_or_new(input.id)?;
     if get(conn, &id)?.is_some() {
         return Err(refused(format!("the id is taken: {id}")));
@@ -293,7 +416,7 @@ pub fn record(conn: &Connection, input: AuditEntryInput) -> Result<AuditEntry> {
         &format!(
             "INSERT INTO audit_entries ({COLUMNS})
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20,
-                     ?21, ?22, ?23, ?24)"
+                     ?21, ?22, ?23, ?24, ?25)"
         ),
         rusqlite::params![
             id,
@@ -324,9 +447,12 @@ pub fn record(conn: &Connection, input: AuditEntryInput) -> Result<AuditEntry> {
                 .map(serde_json::to_string)
                 .transpose()?,
             serde_json::to_string(&input.attachments)?,
+            input.cache_write as i64,
         ],
     )?;
-    get(conn, &id)?.ok_or_else(|| EdenError::NotFound(format!("audit entry {id}")))
+    let entry = get(conn, &id)?.ok_or_else(|| EdenError::NotFound(format!("audit entry {id}")))?;
+    usage::add(conn, &entry, day.as_deref())?;
+    Ok(entry)
 }
 
 /// One entry by id.
@@ -365,6 +491,162 @@ pub fn query(conn: &Connection, filter: &AuditQuery) -> Result<Vec<AuditEntry>> 
     Ok(conn
         .prepare(&sql)?
         .query_map(rusqlite::params_from_iter(params), from_row)?
+        .collect::<rusqlite::Result<Vec<_>>>()?)
+}
+
+fn marks(params: &mut Vec<rusqlite::types::Value>, values: impl Iterator<Item = String>) -> String {
+    values
+        .map(|value| {
+            params.push(value.into());
+            format!("?{}", params.len())
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+/// The WHERE of a page, with its parameters.
+fn page_filter(filter: &AuditPageQuery) -> (String, Vec<rusqlite::types::Value>) {
+    let mut clauses = vec!["1".to_string()];
+    let mut params: Vec<rusqlite::types::Value> = Vec::new();
+    if let Some(thread_id) = &filter.thread_id {
+        params.push(thread_id.clone().into());
+        clauses.push(format!("thread_id = ?{}", params.len()));
+    }
+    for (column, bound) in [(">=", filter.from_ms), ("<=", filter.to_ms)] {
+        if let Some(ms) = bound {
+            params.push((ms as i64).into());
+            clauses.push(format!("at {column} ?{}", params.len()));
+        }
+    }
+    let words = |list: Vec<&'static str>| list.into_iter().map(str::to_string);
+    let lists: [(&str, Vec<String>); 5] = [
+        (
+            KIND_SQL,
+            words(filter.kinds.iter().map(|kind| kind.as_str()).collect()).collect(),
+        ),
+        (TOOL_SQL, filter.tools.clone()),
+        (
+            "grade",
+            words(filter.grades.iter().map(|grade| grade.as_str()).collect()).collect(),
+        ),
+        ("model", filter.models.clone()),
+        (
+            "outcome",
+            words(
+                filter
+                    .outcomes
+                    .iter()
+                    .map(|outcome| outcome.as_str())
+                    .collect(),
+            )
+            .collect(),
+        ),
+    ];
+    for (column, values) in lists {
+        if !values.is_empty() {
+            let marks = marks(&mut params, values.into_iter());
+            clauses.push(format!("{column} IN ({marks})"));
+        }
+    }
+    if let Some(row) = &filter.read_row {
+        params.push(row.clone().into());
+        clauses.push(format!(
+            "EXISTS (SELECT 1 FROM json_each(audit_entries.reads) AS reads,
+                                   json_each(reads.value ->> '$.rows') AS rows
+                     WHERE rows.value = ?{})",
+            params.len()
+        ));
+    }
+    (clauses.join(" AND "), params)
+}
+
+/// One page of the log: filtered, sorted by one column and then by the latest, with how many entries the filters
+/// keep in all. The column is one of the enum's, never a caller's word.
+pub fn query_page(conn: &Connection, filter: &AuditPageQuery) -> Result<AuditPage> {
+    let (clause, mut params) = page_filter(filter);
+    let total: i64 = conn.query_row(
+        &format!("SELECT COUNT(*) FROM audit_entries WHERE {clause}"),
+        rusqlite::params_from_iter(params.iter()),
+        |row| row.get(0),
+    )?;
+    let direction = if filter.descending.unwrap_or(true) {
+        "DESC"
+    } else {
+        "ASC"
+    };
+    let order = match filter.order.unwrap_or(AuditOrder::At) {
+        AuditOrder::At => format!("at {direction}, id {direction}"),
+        other => {
+            let column = match other {
+                AuditOrder::At => "at",
+                AuditOrder::Tool => "tool",
+                AuditOrder::Grade => {
+                    "CASE grade WHEN 'light' THEN 0 WHEN 'standard' THEN 1 WHEN 'deep' THEN 2 END"
+                }
+                AuditOrder::Model => "model",
+                AuditOrder::TokensIn => "tokens_in",
+                AuditOrder::TokensOut => "tokens_out",
+                AuditOrder::Cost => "cost_usd",
+                AuditOrder::Outcome => "outcome",
+            };
+            format!("{column} {direction}, at DESC, id DESC")
+        }
+    };
+    let limit = filter.limit.unwrap_or(DEFAULT_PAGE).clamp(1, MAX_PAGE);
+    params.push((limit as i64).into());
+    params.push((filter.offset.unwrap_or(0) as i64).into());
+    let sql = format!(
+        "SELECT {COLUMNS} FROM audit_entries WHERE {clause} ORDER BY {order} LIMIT ?{} OFFSET ?{}",
+        params.len() - 1,
+        params.len()
+    );
+    let rows = conn
+        .prepare(&sql)?
+        .query_map(rusqlite::params_from_iter(params), from_row)?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(AuditPage {
+        rows,
+        total: total as u64,
+    })
+}
+
+/// The models and the tools the log holds, for the filters to offer.
+pub fn facets(conn: &Connection) -> Result<AuditFacets> {
+    let list = |sql: &str| -> Result<Vec<String>> {
+        Ok(conn
+            .prepare(sql)?
+            .query_map([], |row| row.get(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?)
+    };
+    Ok(AuditFacets {
+        models: list("SELECT DISTINCT model FROM audit_entries ORDER BY model")?,
+        tools: list(&format!(
+            "SELECT DISTINCT {TOOL_SQL} FROM audit_entries WHERE tool IS NOT NULL ORDER BY 1"
+        ))?,
+    })
+}
+
+/// What each conversation's requests came to, the tools it ran among them. A request that never left the device
+/// (declined, or stopped by the budget) is not counted, as in the rollup.
+pub fn thread_totals(conn: &Connection) -> Result<Vec<ThreadUsage>> {
+    Ok(conn
+        .prepare(
+            "SELECT thread_id, COUNT(*), SUM(tokens_in), SUM(tokens_out), SUM(cost_usd), MAX(at)
+             FROM audit_entries
+             WHERE thread_id IS NOT NULL AND outcome NOT IN ('declined', 'budget')
+             GROUP BY thread_id
+             ORDER BY thread_id",
+        )?
+        .query_map([], |row| {
+            Ok(ThreadUsage {
+                thread_id: row.get(0)?,
+                requests: row.get::<_, i64>(1)? as u64,
+                tokens_in: row.get::<_, i64>(2)? as u64,
+                tokens_out: row.get::<_, i64>(3)? as u64,
+                cost_usd: row.get(4)?,
+                last_at: row.get::<_, i64>(5)? as u64,
+            })
+        })?
         .collect::<rusqlite::Result<Vec<_>>>()?)
 }
 
@@ -439,6 +721,8 @@ pub(crate) mod tests {
             grants: vec!["allergy".into()],
             image: None,
             attachments: Vec::new(),
+            cache_write: 0,
+            day: None,
         }
     }
 
@@ -488,6 +772,277 @@ pub(crate) mod tests {
         let bare: AuditEntryInput = serde_json::from_value(bare).unwrap();
         let recorded = ws.write(|ctx| record(ctx.conn, bare)).unwrap();
         assert!(recorded.attachments.is_empty());
+    }
+
+    #[test]
+    fn cache_writes_round_trip_and_an_entry_without_them_reads_none() {
+        let ws = Workspace::in_memory();
+        let with = AuditEntryInput {
+            cache_write: 640,
+            ..input(1_000, None, &[])
+        };
+        let recorded = ws.write(|ctx| record(ctx.conn, with)).unwrap();
+        assert_eq!(recorded.cache_write, 640);
+
+        let mut bare = serde_json::to_value(&recorded).unwrap();
+        let fields = bare.as_object_mut().unwrap();
+        fields.remove("cacheWrite");
+        fields.remove("id");
+        let bare: AuditEntryInput = serde_json::from_value(bare).unwrap();
+        assert_eq!(
+            ws.write(|ctx| record(ctx.conn, bare)).unwrap().cache_write,
+            0
+        );
+    }
+
+    /// Five entries that differ in every column a page sorts or filters by.
+    fn varied(ws: &Workspace) -> (String, Vec<AuditEntry>) {
+        let thread = ids::new_id();
+        let chat = ids::new_id();
+        let entries = ws
+            .write(|ctx| {
+                let a = record(
+                    ctx.conn,
+                    AuditEntryInput {
+                        id: Some(chat.clone()),
+                        surface: "global-chat".into(),
+                        domain: None,
+                        tokens_in: 500,
+                        tokens_out: 50,
+                        cost_usd: 0.05,
+                        ..input(1_000, Some(&thread), &["r1"])
+                    },
+                )?;
+                let b = record(
+                    ctx.conn,
+                    AuditEntryInput {
+                        surface: "delegated".into(),
+                        parent_request_id: Some(chat.clone()),
+                        tool: Some("plan".into()),
+                        grade: Some(Grade::Deep),
+                        model: "claude-opus-5-5".into(),
+                        tokens_in: 900,
+                        tokens_out: 10,
+                        cost_usd: 0.4,
+                        ..input(2_000, Some(&thread), &[])
+                    },
+                )?;
+                let c = record(
+                    ctx.conn,
+                    AuditEntryInput {
+                        surface: "delegated".into(),
+                        tool: Some("capture-haul".into()),
+                        grade: Some(Grade::Standard),
+                        model: "claude-sonnet-5-5".into(),
+                        tokens_in: 100,
+                        tokens_out: 400,
+                        cost_usd: 0.2,
+                        outcome: Outcome::Error,
+                        ..input(3_000, None, &["r2"])
+                    },
+                )?;
+                let d = record(
+                    ctx.conn,
+                    AuditEntryInput {
+                        surface: "kitchen-chat".into(),
+                        tokens_in: 0,
+                        tokens_out: 0,
+                        cost_usd: 0.0,
+                        outcome: Outcome::Budget,
+                        ..input(4_000, Some(&thread), &[])
+                    },
+                )?;
+                let e = record(
+                    ctx.conn,
+                    AuditEntryInput {
+                        surface: "delegated".into(),
+                        domain: None,
+                        tool: Some("find-similar".into()),
+                        tokens_in: 300,
+                        tokens_out: 30,
+                        cost_usd: 0.01,
+                        ..input(5_000, None, &[])
+                    },
+                )?;
+                Ok(vec![a, b, c, d, e])
+            })
+            .unwrap();
+        (thread, entries)
+    }
+
+    fn ids_of(page: &AuditPage) -> Vec<&str> {
+        page.rows.iter().map(|entry| entry.id.as_str()).collect()
+    }
+
+    #[test]
+    fn a_page_sorts_by_each_column_both_ways() {
+        let ws = Workspace::in_memory();
+        let (_, entries) = varied(&ws);
+        let id = |index: usize| entries[index].id.as_str();
+        let page = |order: AuditOrder, descending: bool| {
+            ws.read(|conn| {
+                query_page(
+                    conn,
+                    &AuditPageQuery {
+                        order: Some(order),
+                        descending: Some(descending),
+                        ..Default::default()
+                    },
+                )
+            })
+            .unwrap()
+        };
+        let default = ws
+            .read(|conn| query_page(conn, &AuditPageQuery::default()))
+            .unwrap();
+        assert_eq!(default.total, 5);
+        assert_eq!(ids_of(&default), vec![id(4), id(3), id(2), id(1), id(0)]);
+        assert_eq!(
+            ids_of(&page(AuditOrder::At, false)),
+            vec![id(0), id(1), id(2), id(3), id(4)]
+        );
+        assert_eq!(
+            ids_of(&page(AuditOrder::Cost, true)),
+            vec![id(1), id(2), id(0), id(4), id(3)]
+        );
+        assert_eq!(
+            ids_of(&page(AuditOrder::Cost, false)),
+            vec![id(3), id(4), id(0), id(2), id(1)]
+        );
+        assert_eq!(
+            ids_of(&page(AuditOrder::TokensIn, true)),
+            vec![id(1), id(0), id(4), id(2), id(3)]
+        );
+        assert_eq!(
+            ids_of(&page(AuditOrder::TokensOut, true)),
+            vec![id(2), id(0), id(4), id(1), id(3)]
+        );
+        // light before standard before deep, the latest first among equals
+        assert_eq!(
+            ids_of(&page(AuditOrder::Grade, false)),
+            vec![id(4), id(3), id(0), id(2), id(1)]
+        );
+        assert_eq!(
+            ids_of(&page(AuditOrder::Model, true)),
+            vec![id(2), id(1), id(4), id(3), id(0)]
+        );
+        assert_eq!(
+            ids_of(&page(AuditOrder::Outcome, false)),
+            vec![id(3), id(2), id(4), id(1), id(0)]
+        );
+        // an entry with no tool sorts before the tools going up
+        assert_eq!(
+            ids_of(&page(AuditOrder::Tool, false)),
+            vec![id(3), id(0), id(2), id(4), id(1)]
+        );
+    }
+
+    #[test]
+    fn a_page_filters_counts_and_offsets() {
+        let ws = Workspace::in_memory();
+        let (thread, entries) = varied(&ws);
+        let id = |index: usize| entries[index].id.as_str();
+        let page = |filter: AuditPageQuery| ws.read(|conn| query_page(conn, &filter)).unwrap();
+
+        let of_thread = page(AuditPageQuery {
+            thread_id: Some(thread.clone()),
+            ..Default::default()
+        });
+        assert_eq!(ids_of(&of_thread), vec![id(3), id(1), id(0)]);
+        for (kind, expected) in [
+            (SurfaceKind::Conversation, vec![id(3), id(0)]),
+            (SurfaceKind::Tool, vec![id(1)]),
+            (SurfaceKind::Page, vec![id(4), id(2)]),
+        ] {
+            let kept = page(AuditPageQuery {
+                kinds: vec![kind],
+                ..Default::default()
+            });
+            assert_eq!(ids_of(&kept), expected);
+        }
+        let tools = page(AuditPageQuery {
+            tools: vec!["kitchen.plan".into(), "substrate.find-similar".into()],
+            ..Default::default()
+        });
+        assert_eq!(ids_of(&tools), vec![id(4), id(1)]);
+        let grades = page(AuditPageQuery {
+            grades: vec![Grade::Deep, Grade::Standard],
+            ..Default::default()
+        });
+        assert_eq!(ids_of(&grades), vec![id(2), id(1)]);
+        let models = page(AuditPageQuery {
+            models: vec!["claude-opus-5-5".into()],
+            ..Default::default()
+        });
+        assert_eq!(ids_of(&models), vec![id(1)]);
+        let outcomes = page(AuditPageQuery {
+            outcomes: vec![Outcome::Error, Outcome::Budget],
+            ..Default::default()
+        });
+        assert_eq!(ids_of(&outcomes), vec![id(3), id(2)]);
+        let read = page(AuditPageQuery {
+            read_row: Some("r2".into()),
+            ..Default::default()
+        });
+        assert_eq!(ids_of(&read), vec![id(2)]);
+        let window = page(AuditPageQuery {
+            from_ms: Some(2_000),
+            to_ms: Some(4_000),
+            kinds: vec![SurfaceKind::Conversation, SurfaceKind::Tool],
+            ..Default::default()
+        });
+        assert_eq!(ids_of(&window), vec![id(3), id(1)]);
+
+        // the total is of the filter, not of the page; a limit of nothing is one, and a wild one is clamped
+        let second = page(AuditPageQuery {
+            limit: Some(2),
+            offset: Some(2),
+            ..Default::default()
+        });
+        assert_eq!(second.total, 5);
+        assert_eq!(ids_of(&second), vec![id(2), id(1)]);
+        let one = page(AuditPageQuery {
+            limit: Some(0),
+            ..Default::default()
+        });
+        assert_eq!(one.rows.len(), 1);
+        let past = page(AuditPageQuery {
+            offset: Some(10),
+            limit: Some(9_999),
+            ..Default::default()
+        });
+        assert_eq!((past.rows.len(), past.total), (0, 5));
+    }
+
+    #[test]
+    fn the_facets_are_distinct_and_the_threads_are_totalled() {
+        let ws = Workspace::in_memory();
+        let (thread, _) = varied(&ws);
+        let facets = ws.read(facets).unwrap();
+        assert_eq!(
+            facets.models,
+            vec![
+                "claude-haiku-4-5-20251001",
+                "claude-opus-5-5",
+                "claude-sonnet-5-5"
+            ]
+        );
+        assert_eq!(
+            facets.tools,
+            vec![
+                "kitchen.capture-haul",
+                "kitchen.plan",
+                "substrate.find-similar"
+            ]
+        );
+        // the budget's refusal never left, so the conversation is its turn and the tool it ran
+        let totals = ws.read(thread_totals).unwrap();
+        assert_eq!(totals.len(), 1);
+        assert_eq!(totals[0].thread_id, thread);
+        assert_eq!(totals[0].requests, 2);
+        assert_eq!((totals[0].tokens_in, totals[0].tokens_out), (1400, 60));
+        assert!((totals[0].cost_usd - 0.45).abs() < 1e-9);
+        assert_eq!(totals[0].last_at, 2_000);
     }
 
     #[test]
@@ -555,6 +1110,10 @@ pub(crate) mod tests {
             },
             AuditEntryInput {
                 id: Some(first.id.clone()),
+                ..input(1, None, &[])
+            },
+            AuditEntryInput {
+                day: Some("yesterday".into()),
                 ..input(1, None, &[])
             },
         ] {

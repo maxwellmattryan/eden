@@ -90,6 +90,12 @@ export interface FactProposal {
 	/** What the Gardener said, in its own words. */
 	text?: string
 	source?: string
+	/** The last day the fact holds, `YYYY-MM-DD`, when the owner gave an end. */
+	until?: string
+	/** The id of the fact this one takes the place of when it is accepted. */
+	replaces?: string
+	/** That fact's value as it stood when the proposal was made, so the card reads once the row is gone. */
+	replaced?: unknown
 }
 
 /** How long a replaced value stays in the history, as in the crate. */

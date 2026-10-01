@@ -3,7 +3,9 @@
 // the bytes Eden handed over.
 
 /** Everywhere a request leaves for. A new destination is added here, to the CSP's `connect-src` in
- * `src-tauri/tauri.conf.json`, and to `settings.privacy.destinations` in both locales. */
+ * `src-tauri/tauri.conf.json`, and to `settings.privacy.destinations` in both locales. `web-page` is a page the owner
+ * gave the address of (`fetchPage` in `@eden/shared/api`) and `web-image` a picture (`fetchImage`): the crate fetches
+ * each and records it, so neither has a CSP entry. */
 export const DESTINATIONS = [
 	'open-meteo',
 	'open-meteo-air-quality',
@@ -12,6 +14,8 @@ export const DESTINATIONS = [
 	'weatherkit',
 	'updater',
 	'anthropic',
+	'web-page',
+	'web-image',
 ] as const
 export type Destination = (typeof DESTINATIONS)[number]
 

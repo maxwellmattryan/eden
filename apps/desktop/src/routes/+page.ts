@@ -6,6 +6,11 @@ import { manifests } from '$lib/domains'
 // The root has no page of its own: the place the owner was last at, while it is still one, else the Garden, which is
 // home (product/substrate/shell.md).
 export function load() {
-	const known = [resolve('/today'), resolve('/garden'), ...manifests.map((manifest) => manifest.routes.href)]
+	const known = [
+		resolve('/today'),
+		resolve('/garden'),
+		resolve('/gardener/[[tab]]', {}),
+		...manifests.map((manifest) => manifest.routes.href),
+	]
 	redirect(307, lastPlace(known) ?? resolve('/garden'))
 }

@@ -4,7 +4,7 @@ status: draft
 summary: The Task primitive in detail: kinds, recurrence, routines, habits, reminders, the Today view and its Garden widget, the relationship to the calendar, Gardener tools, and how domains use tasks.
 read-this-if: You are designing anything the owner has to do, do again, or be reminded of.
 depends-on: [primitives, signals-notifications]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## Purpose and boundary
@@ -49,14 +49,25 @@ For the layer: a routine's `due` is `null`, so a range query never finds it; its
 
 | tool | reads | access | confirm | grade |
 |---|---|---|---|---|
-| `create-task` | `task` | write-draft | the draft card is the confirmation | plain |
-| `complete-task` | `task` | write | a tool card the first time, then inline undo | plain |
-| `summarize-day` | `task`, `event`, `forecast`, `alert` | read | none | `light` |
+| `draft-tasks` | `task` | write-draft | the draft card is the confirmation: a task alone, or several as a plan | plain |
+| `update-tasks` | `task` | write | a tool card the first time, which grants it standing; then undo. A call that deletes always asks (D-124) | plain |
+| `agenda` | `task`, `event`, `forecast`, `alert` | read | none | plain |
 | `what-you-know-about-me` | every fact type the grants allow | read | none | plain |
+| `usage-summary` | none of the registry: the usage rollup, this device's (D-121) | read | none | plain |
 | `log-quick` | none | write | a tool card the first time, which grants it standing; then undo (D-12) | plain |
 | `propose-fact` | none | write-draft | the proposal card is the confirmation (D-72) | plain |
+| `forget-fact` | none | write | a tool card every time, then undo (D-127) | plain |
+| `read-page` | none of the registry: one web page | read | none for an address the owner wrote; a tool card showing the whole address for any other (D-126) | plain |
 
 The substrate's tools are declared in code, since no manifest holds them (`substrate/ai.md`; `engineering/gardener.md`).
+
+What the task tools do (D-124, D-125):
+
+- `draft-tasks` drafts every task in one call: a todo, a routine when it names how it repeats, a habit when it names a target. Nothing is stored until the owner keeps the card.
+- `update-tasks` changes tasks that exist, in one write with one undo: a title, a day, a time, a priority or notes; done (a todo finished, a routine's occurrence today, one more on a habit); open again; a routine skipped today; a delete.
+- `agenda` answers what a day or a run of days holds, any day, with no model request: the events, the tasks due and done, the routines and what became of each, and, when the days reach today, what is overdue and where the habits stand. A conversation's context carries only the tasks that are open and those done in the last week; `agenda` reaches the rest.
+
+The Gardener cannot yet set a reminder that fires at a time: a `reminder` is stored and never shown or fired ("Notifications", below), so "remind me at four" is drafted as a todo with a time. A tool for it belongs with the notification center.
 
 ## Notifications
 
@@ -75,7 +86,7 @@ None of this is built with Today. Reminders can be stored but are never shown or
 | Wellspring (later) | medication routines with a stricter nudge | later |
 | Trails (candidate) | packing lists as checklists from templates | later |
 
-The one rule (D-75): the data layer emits nothing for a task. Any code that creates or completes a task for the owner, a domain's included, calls `emitTaskCreated` or `emitTaskCompleted` from `@eden/shared/tasks` after its write, and asks the Today store to reload (`tasks.reload()` in `apps/desktop/src/lib/shell/today/store.svelte.ts`). Code that skips this still writes the task, but no signal is emitted and Today does not show it until the next launch. Nothing outside the store creates a task yet.
+The one rule (D-75): the data layer emits nothing for a task. Any code that creates or completes a task for the owner, a domain's included, calls `emitTaskCreated` or `emitTaskCompleted` from `@eden/shared/tasks` after its write, and asks the Today store to reload (`tasks.reload()` in `apps/desktop/src/lib/shell/today/store.svelte.ts`). Code that skips this still writes the task, but no signal is emitted and Today does not show it until the next launch. Beside the store, the Gardener's `draft-tasks` and `update-tasks` create and change tasks, and they do it through the store's own methods.
 
 ## Non-goals
 

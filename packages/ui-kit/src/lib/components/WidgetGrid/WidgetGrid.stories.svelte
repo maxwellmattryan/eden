@@ -1,7 +1,7 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
 	import { expect, fn } from 'storybook/test'
-	import { canvasOf } from '../../../storybook/play.js'
+	import { canvasOf, hasCanvas } from '../../../storybook/play.js'
 	import { domainGlyph } from '$lib/icons/domain-glyphs.js'
 	import WidgetGrid from './WidgetGrid.svelte'
 	import Widget from '../Widget/Widget.svelte'
@@ -116,6 +116,23 @@
 <Story name="Mobile" parameters={{ platforms: ['mobile'] }}>
 	{#snippet template(args)}
 		<WidgetGrid {...args}>{@render garden()}</WidgetGrid>
+	{/snippet}
+</Story>
+
+<!-- Too narrow for four columns (a panel open beside the page): as many as fit, never fewer than two -->
+<Story
+	name="Narrow"
+	parameters={{ platforms: ['desktop'] }}
+	play={async ({ canvasElement }) => {
+		if (!hasCanvas(canvasElement)) return
+		const grid = canvasElement.querySelector<HTMLElement>('.ed-widget-grid')!
+		await expect(getComputedStyle(grid).gridTemplateColumns.split(' ')).toHaveLength(2)
+	}}
+>
+	{#snippet template(args)}
+		<div style="width: 420px">
+			<WidgetGrid {...args}>{@render garden()}</WidgetGrid>
+		</div>
 	{/snippet}
 </Story>
 

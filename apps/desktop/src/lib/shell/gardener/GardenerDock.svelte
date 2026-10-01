@@ -2,13 +2,15 @@
 	// The dock the Gardener's panel slides into (product/substrate/shell.md: the optional right panel), after Crate's
 	// right sidebar: the column is always in the grid, at no width while shut, so its width has a state to slide open
 	// from as well as shut to; the panel inside mounts on the first open and stays until the shut transition ends.
-	// The inner edge drags between a quarter and a half of the room beside the nav. The width the owner settles on
+	// The inner edge drags between a quarter and a half of the room beside the nav, less whatever the
+	// page's floor needs in a small window. The width the owner settles on
 	// is kept per device (`settings.gardenerPanelWidth`); dragging turns the transition off so the edge follows the
 	// pointer.
+	import { t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import GardenerPanel from './GardenerPanel.svelte'
 	import { gardenerUi } from './panel-ui.svelte'
-	import ResizeHandle from './ResizeHandle.svelte'
+	import ResizeHandle from '../ResizeHandle.svelte'
 
 	type Props = {
 		/** The room beside the nav sidebar, in px: what the quarter and the half are of. */
@@ -24,8 +26,11 @@
 	// mounted from the first open until the shut transition has ended
 	let mounted = $state(false)
 
-	const min = $derived(Math.round(room * MIN_FRACTION))
-	const max = $derived(Math.round(room * MAX_FRACTION))
+	// the least the page beside the dock keeps, in px: in a small window the half gives way to it
+	const PAGE_FLOOR = 420
+
+	const max = $derived(Math.max(0, Math.min(Math.round(room * MAX_FRACTION), room - PAGE_FLOOR)))
+	const min = $derived(Math.min(max, Math.round(room * MIN_FRACTION)))
 	const width = $derived(clamp(settings.gardenerPanelWidth ?? Math.round(room * DEFAULT_FRACTION)))
 
 	function clamp(value: number): number {
@@ -48,7 +53,12 @@
 
 <div class={['dock', !resizing && 'dock-sliding']} style:width="{gardenerUi.open ? width : 0}px" {ontransitionend}>
 	{#if mounted}
-		<ResizeHandle onresize={resize} onstart={() => (resizing = true)} onend={() => (resizing = false)} />
+		<ResizeHandle
+			label={$t('gardener.resize')}
+			onresize={resize}
+			onstart={() => (resizing = true)}
+			onend={() => (resizing = false)}
+		/>
 		<div class="dock-inner" style:width="{width}px">
 			<GardenerPanel />
 		</div>

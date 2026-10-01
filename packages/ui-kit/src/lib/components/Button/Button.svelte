@@ -6,8 +6,9 @@
 <script lang="ts">
 	// One action; primary at most once per view. Every variant hovers the same way, an ink wash over its own colour
 	// (6 % on paper, 8 % on a fill, 14 % on press), never a new hue. The press compresses the button from the top with
-	// its bottom edge fixed, as if it sank into its hole (D-49); a filled button's shadow collapses too. The height follows the platform
-	// through --ed-control unless a size is forced, and the label is set in --ed-t-button, which the brand dial owns.
+	// its bottom edge fixed, as if it sank into its hole (D-49). A fill casts no shadow and stops a pixel inside its
+	// box, so it reads the same size as an outlined button (D-99). The height follows the platform through
+	// --ed-control unless a size is forced, and the label is set in --ed-t-button, which the brand dial owns.
 	import type { HTMLButtonAttributes } from 'svelte/elements'
 	import type { IconName } from '../../icons/icons.js'
 	import Icon from '../../icons/Icon.svelte'
@@ -27,11 +28,11 @@
 
 	type Props = Omit<HTMLButtonAttributes, 'aria-label'> &
 		Named & {
-			/** primary once per view; danger for destructive confirms; ai and honey only on the Gardener's surfaces. */
+			/** primary once per view; danger for every destructive action (D-96); ai and honey only on the Gardener's surfaces. */
 			variant?: 'primary' | 'secondary' | 'quiet' | 'danger' | 'ai' | 'honey'
 			/** auto follows the platform (--ed-control); md forces the 32 px control, lg the 44 px touch target. */
 			size?: 'md' | 'lg' | 'auto'
-			/** A leading glyph. */
+			/** A leading glyph. Every button of a group carries one, or none does (D-96). */
 			icon?: IconName
 			/** A trailing glyph, for an action that leaves the app. */
 			iconRight?: IconName
@@ -147,32 +148,37 @@
 		border-color: transparent;
 	}
 
-	/* Filled variants: a 1 px ink edge, a top-lit sheen and an inner highlight, all set by the brand level */
+	/* Filled variants: a top-lit sheen, an inner highlight and a 1 px ink edge, all set by the brand level; no outer
+	   shadow (D-99). The fill stops inside the border box, so its mass matches the ground of an outlined button beside
+	   it and not that button's outline, which is how a solid reads the same size as an outline; the edge is drawn
+	   inside the fill for the same reason. */
 	.ed-btn-filled {
-		border-color: var(--ed-fill-edge);
+		border-color: transparent;
+		background-clip: padding-box;
 		background-image: linear-gradient(to bottom, rgba(255, 255, 255, var(--ed-fill-sheen)), rgba(255, 255, 255, 0));
 		box-shadow:
-			inset 0 1px 0 var(--ed-fill-highlight),
-			var(--ed-fill-shadow);
+			inset 0 0 0 1px var(--ed-fill-edge),
+			inset 0 2px 0 var(--ed-fill-highlight);
+	}
+	.ed-btn-filled::after {
+		inset: 0;
+		border-radius: calc(var(--ed-radius-control) - 1px);
 	}
 	.ed-btn-filled:not(:disabled):hover {
-		border-color: var(--ed-fill-edge);
+		border-color: transparent;
 	}
 	.ed-btn-filled:not(:disabled):hover::after {
 		opacity: 0.08;
 	}
 	.ed-btn-filled:focus-visible {
-		box-shadow: var(--focus-ring);
+		box-shadow:
+			inset 0 0 0 1px var(--ed-fill-edge),
+			var(--focus-ring);
 	}
-	/* The press (D-49): every variant compresses from the top, bottom edge fixed; a fill's shadow collapses as well */
+	/* The press (D-49): every variant compresses from the top, bottom edge fixed */
 	.ed-btn:not(:disabled):active {
 		transform: scale(1, var(--ed-press-scale));
 		transform-origin: 50% 100%;
-	}
-	.ed-btn-filled:not(:disabled):active {
-		box-shadow:
-			inset 0 1px 0 var(--ed-fill-highlight),
-			var(--ed-press-shadow);
 	}
 	.ed-btn-primary {
 		background-color: var(--brand-primary);

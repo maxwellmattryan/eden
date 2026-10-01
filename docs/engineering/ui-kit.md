@@ -4,7 +4,7 @@ status: draft
 summary: "`@eden/ui-kit` in `packages/ui-kit`: how it is built and consumed, the token pipeline and its generated files, the root attributes, fonts, icons, component conventions and internal primitives, the strings boundary, Storybook as the acceptance surface, and the gates CI runs."
 read-this-if: You are adding or changing a component, a token or an icon, or wiring an app to the kit.
 depends-on: [design/visual-language, design/ux-patterns, design/brand]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## Where it lives
@@ -63,11 +63,11 @@ Rules the generator enforces: every type size is on the scale 12, 13, 14, 15, 16
 
 **Type.** Each style is a `font` shorthand variable, `--ed-t-<style>` (for example `--ed-t-body: 400 14px/21px var(--ed-font-sans)`), with `--ed-t-<style>-opsz` and `--ed-t-<style>-tracking` beside it. Components write `font: var(--ed-t-voice)` and never a pixel size. Display styles take their weight, tracking and italic from `--ed-display-weight`, `--ed-display-tracking` and `--ed-display-italic`, which the face dial sets.
 
-**The brand dial** redefines `--ed-t-button`, `--ed-t-title`, `--ed-t-title-sm` and `--ed-t-voice` per level, which is how the display face says things at `tended` and `lush` and Inter says them at `plain`. It also sets `--ed-radius-control`, `--ed-radius-card`, `--ed-radius-sheet`, `--ed-btn-pad`, the fill sheen, edge, highlight and shadow, the secondary button ground, the chip edge, the sidebar's current-item colours and bar, the grain, its opacity and its motion (`--ed-grain-motion`, D-63: the `ed-grain` keyframes in `base.css`, whose offsets are `GRAIN_STEPS` in `build-tokens.mjs`) and the motif size. Components read these, never `--radius-*` directly.
+**The brand dial** redefines `--ed-t-button`, `--ed-t-title`, `--ed-t-title-sm` and `--ed-t-voice` per level, which is how the display face says things at `tended` and `lush` and Inter says them at `plain`. It also sets `--ed-radius-control`, `--ed-radius-card`, `--ed-radius-sheet`, `--ed-btn-pad`, the fill sheen, edge and highlight, the secondary button ground, the chip edge, the sidebar's current-item colours and bar, the grain, its blend (`--ed-grain-blend`, D-99), its opacity and its motion (`--ed-grain-motion`, D-63: the `ed-grain` keyframes in `base.css`, whose offsets are `GRAIN_STEPS` in `build-tokens.mjs`) and the motif size. Components read these, never `--radius-*` directly.
 
-**The relief dial** (`data-relief`, D-49) sits after the brand dial: `raised` keeps a toned-down sheen and shadow; `flat` zeroes them. Both set `--ed-press-scale` and `--ed-press-shadow`: every button-family control presses with `transform: scale(1, var(--ed-press-scale))` from its bottom edge, so it compresses from the top as if it sank into its hole, and a filled control's shadow collapses to `--ed-press-shadow`. Reduced motion zeroes the compression.
+**The relief dial** (`data-relief`, D-49) sits after the brand dial: `raised` keeps a toned-down sheen and inner highlight; `flat` zeroes them. Neither gives a filled control an outer shadow (D-99). Both set `--ed-press-scale`: every button-family control presses with `transform: scale(1, var(--ed-press-scale))` from its bottom edge, so it compresses from the top as if it sank into its hole. Reduced motion zeroes the compression.
 
-**The platform block** sets `--ed-control`, `--ed-row`, `--ed-t-text`, `--ed-t-text-sm`, `--ed-sheet-pad`, `--ed-gutter`, `--ed-tab-bar` and the four `--ed-safe-*` insets. Behavioural differences (a sheet's placement, a menu as an action sheet, the sidebar against the tab bar) are explicit props with an `auto` default that reads the nearest `data-platform` through `platformOf()`. The kit never uses `matchMedia` or a media query.
+**The platform block** sets `--ed-control`, `--ed-row`, `--ed-t-text`, `--ed-t-text-sm`, `--ed-sheet-pad`, `--ed-gutter`, `--ed-tab-bar` and the four `--ed-safe-*` insets. Behavioural differences (a sheet's placement, a menu as an action sheet, the sidebar against the tab bar) are explicit props with an `auto` default that reads the nearest `data-platform` through `platformOf()`. The kit never uses `matchMedia` or a media query. Where a component must give way to a narrow room on either platform it measures itself with `measure` (`Stepper`, `PageHeader`, `WidgetGrid`, `DataTable`; D-112), never a container query, since it may stand outside the app's `page` container.
 
 ## Fonts
 
@@ -151,7 +151,7 @@ Generative art is drawn on one canvas, the `Sketch` component (D-62); nothing el
 | when `frame.still` is set, `draw` composes the whole picture in one call | reduced motion gets a still, never an empty box |
 | a sketch has no DOM, no listeners and no timers | one definition serves a header, a tile and a full page |
 
-The kit's own sketches live in `src/lib/sketches` and are exported from the barrel (`skyField`); a domain's private sketch lives with the domain under `apps/*/src/lib/domains/<id>/` and imports the types from the kit. A nannou or p5.js sketch is ported to this shape, not embedded: nannou draws to a native window the WebView cannot host, and p5 brings its own loop, globals and canvas.
+The kit's own sketches live in `src/lib/sketches` and are exported from the barrel (`skyField`, `hearthEmbers`); a domain's private sketch lives with the domain under `apps/*/src/lib/domains/<id>/` and imports the types from the kit. A nannou or p5.js sketch is ported to this shape, not embedded: nannou draws to a native window the WebView cannot host, and p5 brings its own loop, globals and canvas.
 
 ## Files
 
@@ -187,7 +187,7 @@ A page is mocked in the kit's Storybook before it is built (D-54): `packages/ui-
 
 CI (`.github/workflows/ci.frontend.yml`) runs them on every push to `develop` and every pull request into it. Visual baselines (`scripts/vrt.mjs`, `{light, dark} × {desktop, mobile}` per story) are generated artifacts and never committed (D-50): `.github/workflows/vrt.yml` regenerates them on `main` and uploads them as a workflow artifact, and on a pull request downloads the latest set and fails on a pixel difference above 0.1 %. Locally `yarn vrt:update` writes them git-ignored and `yarn vrt` compares.
 
-The paper grain is a full-size pseudo-element over the page (D-61: `--ed-z-grain`, `mix-blend-mode: overlay`, pointer-inert; the sheet panel and every `[popover]` carry their own, as the top layer sits above the body's), and axe cannot see through one: without `ignorePseudo` on the colour-contrast check it marks every contrast result incomplete instead of failing it, and the gate is inert. The a11y config sets it. Known tension: `text-tertiary` at 12 or 13 px in light sits at 3.3:1 and fails axe's colour-contrast rule. Components use it only where `design/visual-language.md` allows (metadata a reader can do without) and mark that element with `data-tertiary`, the one attribute the a11y config exempts from the contrast rule; nothing else is exempted.
+The paper grain is a full-size pseudo-element over the page (D-61: `--ed-z-grain`, `mix-blend-mode: var(--ed-grain-blend)`, which is `multiply` in light and `screen` in dark (D-99), pointer-inert; the sheet panel and every `[popover]` carry their own, as the top layer sits above the body's), and axe cannot see through one: without `ignorePseudo` on the colour-contrast check it marks every contrast result incomplete instead of failing it, and the gate is inert. The a11y config sets it. Known tension: `text-tertiary` at 12 or 13 px in light sits at 3.3:1 and fails axe's colour-contrast rule. Components use it only where `design/visual-language.md` allows (metadata a reader can do without) and mark that element with `data-tertiary`, the one attribute the a11y config exempts from the contrast rule; nothing else is exempted.
 
 ## Not in the kit
 

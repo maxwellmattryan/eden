@@ -1,11 +1,12 @@
 // What a row id in the "can see" chip or the audit log stands for (product/substrate/ai.md: the chip is literal and
-// opens to the exact rows): a fact's value as the profile shows it, an entity's name or title, a primitive's title.
+// opens to the exact rows): a fact's value as the profile shows it, an entity's name or title (or what its domain calls it), a primitive's title.
 // Ids that resolve to nothing keep their id, so the list never lies about what was read.
 import { get } from 'svelte/store'
 import { getRow, type Entity, type PrimitiveRow } from '@eden/shared/data'
 import { t } from '@eden/shared/i18n'
 import { formatValue, queryFacts } from '@eden/shared/profile'
 import { resource } from '@eden/shared/registry'
+import { manifests } from '../../domains/index.js'
 
 export interface RowLabel {
 	id: string
@@ -38,11 +39,14 @@ export async function labelRows(registryId: string, ids: string[]): Promise<RowL
 		})
 	}
 	const type = row.category === 'kind' ? (row.primitive ?? registryId) : registryId
+	// a type whose rows hold no name is called as its domain says (a grocery list by its store)
+	const named = manifests.find((manifest) => manifest.labels?.[registryId])?.labels?.[registryId]
 	return Promise.all(
 		ids.map(async (id) => {
 			const uri = `eden://${type}/${id}`
 			const found = await getRow(uri).catch(() => null)
-			return { id, uri, label: (found && nameOf(found)) ?? id }
+			const own = found && 'payload' in found && named ? await named(found) : undefined
+			return { id, uri, label: own ?? (found && nameOf(found)) ?? id }
 		})
 	)
 }

@@ -85,6 +85,13 @@ export function validateMessage(input: MessageInput): Refusal | undefined {
 	return undefined
 }
 
+/** A calendar day as the usage rollup keys it, `YYYY-MM-DD`. */
+export function isDay(value: unknown): value is string {
+	if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+	const at = Date.parse(`${value}T00:00:00Z`)
+	return Number.isFinite(at) && new Date(at).toISOString().slice(0, 10) === value
+}
+
 const isCount = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value >= 0
 
 /** Why the log would not keep the entry, or nothing. */
@@ -105,6 +112,8 @@ export function validateAudit(input: AuditEntryInput): Refusal | undefined {
 	for (const field of ['tokensIn', 'tokensOut', 'cacheRead', 'costUsd'] as const) {
 		if (!isCount(input[field])) return audit(`${field} is a number, zero or more`)
 	}
+	if (input.cacheWrite !== undefined && !isCount(input.cacheWrite)) return audit('cacheWrite is a number, zero or more')
+	if (input.day !== undefined && !isDay(input.day)) return audit(`not a day: ${JSON.stringify(input.day)}`)
 	return undefined
 }
 

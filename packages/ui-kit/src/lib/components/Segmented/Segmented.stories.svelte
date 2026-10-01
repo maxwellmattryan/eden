@@ -6,7 +6,7 @@
 	import { quickLogs, sidebar } from '../../../stories/sample-data.js'
 
 	// Hearth's tabs under its page header; the Quick Log sheet's quick actions with their glyphs.
-	const hearthTabs = ['Stock', 'Recipes', 'Grocery', 'Tips']
+	const hearthTabs = ['Stock', 'Recipes', 'Grocery']
 	const quickLogTabs: SegmentedItem[] = quickLogs.map((log) => ({
 		id: log.id,
 		label: log.label,
@@ -45,17 +45,17 @@
 		await waitFor(() => expect(pill.style.transform).toBe(`translateX(${tabs[1]!.offsetLeft}px)`))
 		await expect(pill.style.width).toBe(`${tabs[1]!.offsetWidth}px`)
 		await userEvent.keyboard('{End}')
-		await expect(tabs[3]).toHaveFocus()
-		await expect(tabs[3]).toHaveAttribute('aria-selected', 'true')
-		await expect(args.onchange).toHaveBeenLastCalledWith(3)
+		await expect(tabs[2]).toHaveFocus()
+		await expect(tabs[2]).toHaveAttribute('aria-selected', 'true')
+		await expect(args.onchange).toHaveBeenLastCalledWith(2)
 		await userEvent.keyboard('{Home}')
 		await expect(tabs[0]).toHaveFocus()
 		await expect(args.onchange).toHaveBeenLastCalledWith(0)
 		await userEvent.keyboard('{ArrowLeft}')
-		await expect(tabs[3]).toHaveFocus()
-		await expect(tabs[3]).toHaveAttribute('aria-selected', 'true')
+		await expect(tabs[2]).toHaveFocus()
+		await expect(tabs[2]).toHaveAttribute('aria-selected', 'true')
 		await expect(tabs[0]).toHaveAttribute('aria-selected', 'false')
-		await expect(args.onchange).toHaveBeenLastCalledWith(3)
+		await expect(args.onchange).toHaveBeenLastCalledWith(2)
 	}}
 />
 
@@ -68,7 +68,7 @@
 	{/snippet}
 </Story>
 
-<Story name="In a header" args={{ items: hearthTabs.slice(0, 3) }}>
+<Story name="In a header">
 	{#snippet template(args)}
 		<header style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-4)">
 			<h2

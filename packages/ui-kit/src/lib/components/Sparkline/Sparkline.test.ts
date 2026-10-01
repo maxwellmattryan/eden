@@ -12,6 +12,12 @@ describe('sparkline', () => {
 		expect(g.area).toBe(`${g.line} L96.0 36.0 L4.0 36.0 Z`)
 		expect(g.last).toEqual({ x: 96, y: 20 })
 		expect(g.latest).toBe(2)
+		// a point for every value, where a pointer reads it
+		expect(g.points).toEqual([
+			{ x: 4, y: 36, value: 1 },
+			{ x: 50, y: 4, value: 3 },
+			{ x: 96, y: 20, value: 2 },
+		])
 		expect(JSON.stringify(g)).not.toContain('NaN')
 	})
 

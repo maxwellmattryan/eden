@@ -59,7 +59,7 @@ Orchard and Wellspring get their full specs (their stubs name the triggers). Plu
 | risk | where it bites | mitigation |
 |---|---|---|
 | Google OAuth app verification for calendar scopes | Phase 2 | start verification early; the owner's own project needs no verification for personal use |
-| vision quality for haul capture | Phase 1 | the verification sheet is the product; receipts as a fallback; OQ-11 |
+| vision quality for haul capture | Phase 1 | the verification sheet is the product; a receipt or the order's confirmation read beside the photo; D-86 |
 | passphrase loss with end-to-end sync | Phase 3 | recovery key shown once; local copy remains; OQ-12 |
 | provider cost and terms for maps and listings | Phase 3 | OQ-4; Meadow works with saved places and no provider |
 | Tauri mobile maturity and background limits | Phase 2 | mobile surfaces are few and read-heavy; background sync waits for Phase 3 |

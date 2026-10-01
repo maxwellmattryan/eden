@@ -4,7 +4,7 @@ status: draft
 summary: The single list of every resource a grant, a declared read or an audit entry can name: fact types, entity types and primitive kinds, each with an owner, a tier and a phase.
 read-this-if: You are declaring what an AI tool reads, writing a grant, adding an entity or a kind, or checking who owns a resource.
 depends-on: [privacy]
-updated: 2026-09-29
+updated: 2026-10-01
 ---
 
 ## Rules
@@ -63,11 +63,14 @@ updated: 2026-09-29
 | `household-size` | fact | T1 | |
 | `stock-item` | entity | T0 | |
 | `recipe` | entity | T0 | |
+| `grocery-store` | entity | T0 | a store Hearth shops at; each has a list of its own; `place.address` field is T2 (D-101) |
 | `grocery-list` | entity | T0 | |
 | `grocery-item` | entity | T0 | |
-| `storage-tip` | entity | T0 | |
 | `shop-day` | kind (event) | T0 | |
 | `haul-photo` | kind (attachment) | T1 | |
+| `item-photo` | kind (attachment) | T1 | a stock item's picture (D-90) |
+| `recipe-photo` | kind (attachment) | T1 | a recipe's picture (D-93) |
+| `store-photo` | kind (attachment) | T1 | a store's picture (D-103) |
 
 ## Toolbench (`toolbench`), Phase 1
 

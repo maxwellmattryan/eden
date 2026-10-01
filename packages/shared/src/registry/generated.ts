@@ -229,6 +229,15 @@ export const RESOURCES = [
 		"live": true
 	},
 	{
+		"id": "grocery-store",
+		"category": "entity",
+		"primitive": null,
+		"owner": "kitchen",
+		"tier": "T0",
+		"phase": 1,
+		"live": true
+	},
+	{
 		"id": "grocery-list",
 		"category": "entity",
 		"primitive": null,
@@ -247,15 +256,6 @@ export const RESOURCES = [
 		"live": true
 	},
 	{
-		"id": "storage-tip",
-		"category": "entity",
-		"primitive": null,
-		"owner": "kitchen",
-		"tier": "T0",
-		"phase": 1,
-		"live": true
-	},
-	{
 		"id": "shop-day",
 		"category": "kind",
 		"primitive": "event",
@@ -266,6 +266,33 @@ export const RESOURCES = [
 	},
 	{
 		"id": "haul-photo",
+		"category": "kind",
+		"primitive": "attachment",
+		"owner": "kitchen",
+		"tier": "T1",
+		"phase": 1,
+		"live": true
+	},
+	{
+		"id": "item-photo",
+		"category": "kind",
+		"primitive": "attachment",
+		"owner": "kitchen",
+		"tier": "T1",
+		"phase": 1,
+		"live": true
+	},
+	{
+		"id": "recipe-photo",
+		"category": "kind",
+		"primitive": "attachment",
+		"owner": "kitchen",
+		"tier": "T1",
+		"phase": 1,
+		"live": true
+	},
+	{
+		"id": "store-photo",
 		"category": "kind",
 		"primitive": "attachment",
 		"owner": "kitchen",
@@ -1091,10 +1118,6 @@ export const DECLARATIONS = {
 			{
 				"id": "grocery",
 				"label": "domains.kitchen.tabs.grocery"
-			},
-			{
-				"id": "tips",
-				"label": "domains.kitchen.tabs.tips"
 			}
 		],
 		"resources": [
@@ -1105,11 +1128,14 @@ export const DECLARATIONS = {
 			"household-size",
 			"stock-item",
 			"recipe",
+			"grocery-store",
 			"grocery-list",
 			"grocery-item",
-			"storage-tip",
 			"shop-day",
-			"haul-photo"
+			"haul-photo",
+			"item-photo",
+			"recipe-photo",
+			"store-photo"
 		],
 		"reads": [
 			"medical-dietary-restriction",
@@ -1154,8 +1180,9 @@ export const DECLARATIONS = {
 					"s"
 				],
 				"default": false,
-				"planned": true,
+				"planned": false,
 				"reads": [
+					"grocery-store",
 					"grocery-list",
 					"grocery-item"
 				],
@@ -1202,8 +1229,7 @@ export const DECLARATIONS = {
 				"access": "read",
 				"confirm": false,
 				"reads": [
-					"stock-item",
-					"storage-tip"
+					"stock-item"
 				],
 				"grade": "light",
 				"needs": [],
@@ -1227,6 +1253,7 @@ export const DECLARATIONS = {
 				"reads": [
 					"stock-item",
 					"recipe",
+					"grocery-store",
 					"grocery-list",
 					"grocery-item"
 				],
@@ -1240,6 +1267,79 @@ export const DECLARATIONS = {
 				"confirm": true,
 				"reads": [
 					"stock-item"
+				],
+				"grade": null,
+				"needs": [],
+				"minContext": null
+			},
+			{
+				"id": "update-stock",
+				"access": "write",
+				"confirm": true,
+				"reads": [
+					"stock-item",
+					"recipe"
+				],
+				"grade": null,
+				"needs": [],
+				"minContext": null
+			},
+			{
+				"id": "edit-grocery",
+				"access": "write",
+				"confirm": true,
+				"reads": [
+					"grocery-store",
+					"grocery-list",
+					"grocery-item",
+					"stock-item",
+					"recipe"
+				],
+				"grade": null,
+				"needs": [],
+				"minContext": null
+			},
+			{
+				"id": "edit-stores",
+				"access": "write",
+				"confirm": true,
+				"reads": [
+					"grocery-store",
+					"grocery-list",
+					"home-area"
+				],
+				"grade": null,
+				"needs": [],
+				"minContext": null
+			},
+			{
+				"id": "import-recipe",
+				"access": "write-draft",
+				"confirm": false,
+				"reads": [],
+				"grade": "light",
+				"needs": [
+					"vision"
+				],
+				"minContext": null
+			},
+			{
+				"id": "save-recipe",
+				"access": "write-draft",
+				"confirm": false,
+				"reads": [
+					"recipe"
+				],
+				"grade": null,
+				"needs": [],
+				"minContext": null
+			},
+			{
+				"id": "change-recipe",
+				"access": "write",
+				"confirm": true,
+				"reads": [
+					"recipe"
 				],
 				"grade": null,
 				"needs": [],
@@ -1281,7 +1381,7 @@ export const DECLARATIONS = {
 				"channel": "in-app",
 				"cadence": "weekly",
 				"default": true,
-				"signal": null,
+				"signal": "stock.low",
 				"when": null
 			},
 			{
@@ -1333,9 +1433,9 @@ export const DECLARATIONS = {
 		"export": [
 			"stock-item",
 			"recipe",
+			"grocery-store",
 			"grocery-list",
-			"grocery-item",
-			"storage-tip"
+			"grocery-item"
 		]
 	},
 	"toolbench": {

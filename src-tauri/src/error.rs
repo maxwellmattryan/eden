@@ -30,10 +30,11 @@ pub enum EdenError {
     Bundle(String),
 
     /// The grant store, the egress ledger, the profile, the scheduler, the signals, the secret store or the
-    /// Gardener's stores refused a write, or the Gardener could not send. The message starts with a stable code
-    /// (`grant:never`, `grant:invalid`, `egress:never`, `egress:invalid`, `fact:never`, `fact:invalid`,
-    /// `schedule:invalid`, `signal:invalid`, `secret:invalid`, `audit:invalid`, `thread:invalid`, `policy:invalid`,
-    /// `gardener:no-key`, `gardener:network`), which the frontend reads.
+    /// Gardener's stores refused a write, the Gardener could not send, or a web page could not be fetched. The
+    /// message starts with a stable code (`grant:never`, `grant:invalid`, `egress:never`, `egress:invalid`,
+    /// `fact:never`, `fact:invalid`, `schedule:invalid`, `signal:invalid`, `secret:invalid`, `audit:invalid`,
+    /// `thread:invalid`, `policy:invalid`, `gardener:no-key`, `gardener:network`, and the `web:` codes of
+    /// `commands/web.rs`), which the frontend reads.
     #[error("{0}")]
     Refused(String),
 

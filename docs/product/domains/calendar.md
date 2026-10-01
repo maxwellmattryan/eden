@@ -4,7 +4,7 @@ status: draft
 summary: Eden's own calendar over the Event primitive, with a layer stack of event filters and day annotations (holidays, sun and moon, weather, astrology); Google Calendar is a read-only source in Phase 2. Id `calendar`, Phase 2.
 read-this-if: You are working on calendar views, layers, holidays, Google Calendar, or anything that puts something on a date.
 depends-on: [substrate/registry, substrate/primitives, substrate/integrations, domains/weather, substrate/shell, substrate/ai]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## 1. Purpose
@@ -46,6 +46,8 @@ Written: none. Read: `home-area` (substrate, T1) to default holiday countries an
 | `summarize-week` | the same | read | none | `standard` |
 | `whats-on-date` | the same, plus `holiday-set`, `ephemeris`, `forecast` | read | none | plain |
 | `create-local-event` | `local-event` | write | confirm sheet naming date, time and place | plain |
+
+Until Almanac is built the Gardener makes no event of its own: no page shows one, so a `create-local-event` would write what the owner cannot see. The substrate's `agenda` (D-125) already answers a day's events with its tasks and Sky's reading; when these tools are built, `whats-on-date` either becomes it or adds what it lacks (`holiday-set`, `ephemeris`), and three things `agenda` leaves open are decided here: it does not expand an event's `recurrence`, it takes an all-day `endAt` as the event's last day, and it does not mark a mirrored event's title as untrusted.
 
 Never-do list: never sends invites or touches attendees; never writes to Google before Phase 3, and then only under a per-calendar grant (OQ-6); treats Google event content as untrusted data in any context pack.
 

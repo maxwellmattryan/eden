@@ -3,7 +3,7 @@
 	// top-right corner that widens into a pill only when the number needs it, and folds the number into the name.
 	// `fill` makes it a filled rounded square at its size, on the accent or on the Gardener's green: the composer's send button.
 	// `fab` is the floating + on mobile: a brand fill --fab wide. A fill hovers by the ink wash like any fill and
-	// presses like one under the raised relief. Hover and pressed grounds are rounded squares, never circles. `tooltip`
+	// presses like one (D-49), with no shadow of its own (D-99). Hover and pressed grounds are rounded squares, never circles. `tooltip`
 	// shows the label (or another string) on hover and keyboard focus, for a glyph that may not explain itself; with no
 	// `onclick` of its own (an info glyph) a click or tap toggles it too, so the pointer cursor never promises nothing.
 	import type { HTMLButtonAttributes } from 'svelte/elements'
@@ -152,12 +152,10 @@
 	}
 
 	/* A fill: the accent or the Gardener's green under the glyph, hovered and pressed by the ink wash (never a step onto
-	   a surface), pressed under the raised relief like a filled button; the fab is the brand fill at --fab */
+	   a surface), pressed like a filled button, with no outer shadow (D-99); the fab is the brand fill at --fab */
 	.ed-icon-btn-fill {
 		background-image: linear-gradient(to bottom, rgba(255, 255, 255, var(--ed-fill-sheen)), rgba(255, 255, 255, 0));
-		box-shadow:
-			inset 0 1px 0 var(--ed-fill-highlight),
-			var(--ed-fill-shadow);
+		box-shadow: inset 0 1px 0 var(--ed-fill-highlight);
 	}
 	.ed-icon-btn-fill-brand,
 	.ed-icon-btn-fill-brand:not(:disabled):hover,
@@ -193,9 +191,6 @@
 	}
 	.ed-icon-btn-fill:not(:disabled):active::after {
 		opacity: 0.14;
-	}
-	.ed-icon-btn-fill:not(:disabled):active {
-		box-shadow: var(--ed-press-shadow);
 	}
 	.ed-icon-btn-fill:focus-visible {
 		box-shadow: var(--focus-ring);

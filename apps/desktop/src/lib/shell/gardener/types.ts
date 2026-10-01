@@ -2,7 +2,35 @@
 // tool in its manifest, the substrate keeps its own in `substrate-tools.ts`, and the loop calls them by wire name.
 // A plain or a write tool runs here and answers the model; a model-backed one hands the runtime a prompt and reads
 // the answer back, since the request itself is the runtime's (D-74: its own single request, its own audit entry).
-import type { DraftCard, JsonSchema, ModelGrade } from '@eden/shared/gardener'
+import type { AttachmentBlock, DraftCard, JsonSchema, ModelGrade, PackAttachment } from '@eden/shared/gardener'
+import type { FactProposal } from '@eden/shared/profile'
+
+/**
+ * The files a tool is given: the ones on the owner's message in a conversation, or the ones a page staged for a
+ * tool it runs itself (Hearth's capture). The pack counts them by their blocks and reads each once, when it is sent.
+ */
+export interface ToolFiles {
+	blocks: AttachmentBlock[]
+	/** What is sent of one; left out for files stored in the workspace, which the pack's own reader reads. */
+	read?: (block: AttachmentBlock) => Promise<PackAttachment | undefined>
+}
+
+/**
+ * Why a tool did not answer, as a code a page can put its own words to. The `output` beside it is written for the
+ * model; a page that runs a tool itself (`runtime.runDirect`) reads this instead.
+ */
+export type ToolFailure =
+	| 'busy'
+	| 'no-key'
+	| 'unavailable'
+	| 'budget'
+	| 'network'
+	| 'refusal'
+	| 'max-tokens'
+	| 'cancelled'
+	| 'unreadable'
+	| 'empty'
+	| 'no-files'
 
 /** What a handler knows of the request it serves. */
 export interface ToolContext {
@@ -23,6 +51,10 @@ export interface ToolContext {
 	undo: (message: string, undo: () => void) => void
 	/** The URIs the conversation is about, when it was opened on something. */
 	focus: string[]
+	/** The files the tool may read: the owner's message's, else the latest earlier message's that had any. */
+	files?: ToolFiles
+	/** The `https` addresses the owner wrote in this conversation: the ones `read-page` fetches without asking. */
+	links: string[]
 }
 
 /** What a tool answers: what the model reads, the card the panel shows, the rows it touched (for the audit). */
@@ -31,7 +63,9 @@ export interface ToolResult {
 	card?: DraftCard
 	touched?: string[]
 	/** A proposal the tool made: the panel shows the card and the profile page too. */
-	proposal?: { id: string; type: string; value: unknown; confidence: number; text?: string; source?: string }
+	proposal?: FactProposal
+	/** Why nothing was answered, when nothing was. */
+	failure?: ToolFailure
 }
 
 /** A model-backed tool: what it asks the model, and what it makes of the answer. */
@@ -49,25 +83,32 @@ export interface Delegate {
 	 * `parse` then reads JSON it can rely on. Left out, the answer is prose.
 	 */
 	schema?: JsonSchema
-	/** An image to send with the prompt (`capture-haul`); the request needs `vision`. */
-	image?: (input: unknown, ctx: ToolContext) => Promise<ToolImage | undefined>
+	/**
+	 * The files to send with the prompt (`capture-haul`, `import-recipe`): photos, PDFs, text. A delegate that names
+	 * this and is given none is not run, and says so.
+	 */
+	files?: (input: unknown, ctx: ToolContext) => Promise<ToolFiles | undefined> | ToolFiles | undefined
+	/** Whether the request may run without files, when `files` answers none (a recipe pasted as text). */
+	filesOptional?: (input: unknown) => boolean
 	/** How many tokens the answer may take; the runtime's default otherwise. */
 	maxTokens?: number
 }
 
-export interface ToolImage {
-	/** The bytes, base64. */
-	data: string
-	mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
-	/** What the audit keeps of it (OQ-11): never the image. */
-	hash: string
-	width: number
-	height: number
-	/** Where the file is, for the attachment a commit makes. */
-	path?: string
-}
-
-export type ToolHandler = { run: (input: unknown, ctx: ToolContext) => Promise<ToolResult> } | { delegate: Delegate }
+export type ToolHandler =
+	| {
+			run: (input: unknown, ctx: ToolContext) => Promise<ToolResult>
+			/**
+			 * What the call would do, in the owner's words, for the card that waits on their confirm: one line per
+			 * change, naming each row by its name where the input names it by id. Left out, the card shows the input.
+			 */
+			preview?: (input: unknown) => string | undefined
+			/**
+			 * Whether this call waits on the owner's confirm whatever grant the tool has: a delete among a batch of
+			 * edits. A confirm it asked for records no standing grant.
+			 */
+			asks?: (input: unknown, ctx: ToolContext) => boolean
+	  }
+	| { delegate: Delegate }
 
 /** The model's answer to a delegated request, read as JSON where the prompt asked for it. */
 export function parseJson<T>(text: string): T | undefined {

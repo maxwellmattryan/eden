@@ -2,7 +2,8 @@
 	// The empty state of a page: a display-md title, one plain sentence, the one primary action, an optional quiet
 	// "Add sample data" link, and the unfurling frond in the accent, the one place a motif appears in a page besides
 	// the splash and onboarding. Copy is plain and never themed: "Nothing in the fridge yet". Widgets do not use this;
-	// they show a one-line prompt instead.
+	// they show a one-line prompt instead. `inline` is the quiet form for a list inside a page that has others: no
+	// frond, a title-sized line, a sentence and a secondary action, on the list's own card.
 	import type { HTMLAttributes } from 'svelte/elements'
 	import type { IconName } from '../../icons/icons.js'
 	import { useStrings } from '../../i18n/context.js'
@@ -19,14 +20,16 @@
 		sample?: { label?: string; onclick?: () => void }
 		/** The frond. Off for an empty state that should not repeat it. */
 		motif?: boolean
+		/** A list's own empty state inside a page: a card with a small title, no frond, no sample link. */
+		inline?: boolean
 	}
-	let { title, text, action, sample, motif = true, class: className = '', ...rest }: Props = $props()
+	let { title, text, action, sample, motif = true, inline = false, class: className = '', ...rest }: Props = $props()
 
 	const s = useStrings()
 </script>
 
-<div class={['ed-empty', className]} {...rest}>
-	{#if motif}
+<div class={['ed-empty', { 'ed-empty-inline': inline }, className]} {...rest}>
+	{#if motif && !inline}
 		<svg class="ed-empty-motif" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
 			<path d="M24 44V22" />
 			<path d="M24 30c0-6 4-10 11-10 0 6-4 10-11 10z" />
@@ -34,12 +37,21 @@
 			<path d="M24 22c0-5 2-9 6-12 1 4 0 8-3 11" />
 		</svg>
 	{/if}
-	<h2 class="ed-empty-title">{title}</h2>
+	{#if inline}
+		<p class="ed-empty-title">{title}</p>
+	{:else}
+		<h2 class="ed-empty-title">{title}</h2>
+	{/if}
 	{#if text}<p class="ed-empty-text">{text}</p>{/if}
-	{#if action || sample}
+	{#if action || (sample && !inline)}
 		<div class="ed-empty-actions">
-			{#if action}<Button variant="primary" label={action.label} icon={action.icon} onclick={action.onclick} />{/if}
-			{#if sample}
+			{#if action}<Button
+					variant={inline ? 'secondary' : 'primary'}
+					label={action.label}
+					icon={action.icon}
+					onclick={action.onclick}
+				/>{/if}
+			{#if sample && !inline}
 				<button class="ed-empty-link" type="button" onclick={sample.onclick}>{sample.label ?? s.addSampleData}</button>
 			{/if}
 		</div>
@@ -61,6 +73,30 @@
 		margin: 0 auto;
 		padding: var(--space-8) var(--space-6);
 		color: var(--text-primary);
+	}
+	/* A list's own: it sizes to its content on the list's card, with the title at the title size */
+	.ed-empty-inline {
+		flex: none;
+		max-width: none;
+		margin: 0;
+		gap: var(--space-1);
+		padding: var(--space-8) var(--space-6);
+		border: 1px solid var(--ed-card-border);
+		border-radius: var(--ed-radius-card);
+		background: var(--surface-1);
+	}
+	.ed-empty-inline .ed-empty-title {
+		font: var(--ed-t-title);
+		letter-spacing: var(--ed-t-title-tracking);
+		font-variation-settings: var(--ed-t-title-opsz);
+	}
+	.ed-empty-inline .ed-empty-text {
+		font: var(--ed-t-body-sm);
+		letter-spacing: var(--ed-t-body-sm-tracking);
+		font-variation-settings: var(--ed-t-body-sm-opsz);
+	}
+	.ed-empty-inline .ed-empty-actions {
+		margin-top: var(--space-2);
 	}
 	/* The frond: linework in the accent, sized by the brand dial */
 	.ed-empty-motif {

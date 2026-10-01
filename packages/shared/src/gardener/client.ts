@@ -8,6 +8,9 @@ import { DataError } from '../data/errors.js'
 import type {
 	AuditEntry,
 	AuditEntryInput,
+	AuditFacets,
+	AuditPage,
+	AuditPageQuery,
 	AuditQuery,
 	GardenerEvent,
 	GardenerRequest,
@@ -18,6 +21,9 @@ import type {
 	ThreadInput,
 	ThreadPatch,
 	ThreadQuery,
+	ThreadUsage,
+	UsageQuery,
+	UsageRow,
 } from './runtime-types.js'
 
 const unavailable = () => new DataError('unavailable', 'the Gardener runs in the installed app')
@@ -82,6 +88,28 @@ export function auditUsage(): Promise<Record<string, number>> {
 /** What the entries at or after the instant cost, together, in USD. */
 export function auditSpend(fromMs: number): Promise<number> {
 	return call('audit_spend', { fromMs }, (engine) => engine.auditSpend(fromMs))
+}
+
+/** One page of the log's table: filtered, sorted, with how many entries the filters keep in all (D-114). */
+export function queryAuditPage(filter: AuditPageQuery = {}): Promise<AuditPage> {
+	return call('query_audit_page', { filter }, (engine) => engine.queryAuditPage(filter))
+}
+
+/** The models and the tools the log holds, for the filters to offer. */
+export function auditFacets(): Promise<AuditFacets> {
+	return call('audit_facets', {}, (engine) => engine.auditFacets())
+}
+
+/** What each conversation's requests came to, over the entries the log still holds. */
+export function auditThreadTotals(): Promise<ThreadUsage[]> {
+	return call('audit_thread_totals', {}, (engine) => engine.auditThreadTotals())
+}
+
+// The usage rollup (`usage.rs`, D-115): this device's, kept past the log's ninety days.
+
+/** The sums over a range of days, grouped as asked. */
+export function queryUsage(filter: UsageQuery = {}): Promise<UsageRow[]> {
+	return call('query_usage', { filter }, (engine) => engine.queryUsage(filter))
 }
 
 // Threads and messages (`threads.rs`).

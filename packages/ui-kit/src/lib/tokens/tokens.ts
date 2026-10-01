@@ -345,6 +345,7 @@ export const sizes = {
 	"tab-bar": "56px",
 	"fab": "56px",
 	"sidebar": "220px",
+	"sidebar-rail": "56px",
 	"status-bar": "36px",
 	"sheet-sm": "360px",
 	"sheet-md": "440px",

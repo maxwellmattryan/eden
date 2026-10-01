@@ -4,6 +4,7 @@
 // edits live in. Rows cross the IPC as camelCase JSON, stamped like any row and ended by a tombstone.
 import type { GrantAccess } from '../grants/types.js'
 import type { FactProposal } from '../profile/types.js'
+import type { DraftTask } from '../tasks/draft.js'
 import type { ModelOverrides, ProviderEdits } from './types.js'
 
 /** The policy row the Gardener's own settings live under. */
@@ -156,15 +157,122 @@ export interface AuditEntry {
 	image: AuditImage | null
 	/** What the owner attached, as this request sent it: the message's files and the earlier ones still in the pack. */
 	attachments: AuditAttachment[]
+	/** The input the provider wrote to its cache, priced at its own rate (D-116). */
+	cacheWrite: number
 }
 
-export type AuditEntryInput = Omit<AuditEntry, 'id' | 'attachments'> & { id?: string; attachments?: AuditAttachment[] }
+export type AuditEntryInput = Omit<AuditEntry, 'id' | 'attachments' | 'cacheWrite'> & {
+	id?: string
+	attachments?: AuditAttachment[]
+	cacheWrite?: number
+	/** The owner's day the request was made on, `YYYY-MM-DD`, for the usage rollup (D-115); the device's when left out. */
+	day?: string
+}
 
 export interface AuditQuery {
 	threadId?: string
 	fromMs?: number
 	toMs?: number
 	limit?: number
+}
+
+export type AuditGrade = 'light' | 'standard' | 'deep'
+
+/** What a request was: a turn of a conversation, a tool a conversation ran, or a tool a page ran (D-86). */
+export type SurfaceKind = 'conversation' | 'tool' | 'page'
+
+/** The column a page of the log is sorted by. */
+export type AuditOrder = 'at' | 'tool' | 'grade' | 'model' | 'tokens-in' | 'tokens-out' | 'cost' | 'outcome'
+
+/** One page of the log's table: what to keep, how to sort it, and which rows of the result (D-114). */
+export interface AuditPageQuery {
+	threadId?: string
+	fromMs?: number
+	toMs?: number
+	kinds?: SurfaceKind[]
+	/** Tools as `<domain or substrate>.<id>`. */
+	tools?: string[]
+	grades?: AuditGrade[]
+	models?: string[]
+	outcomes?: AuditOutcome[]
+	/** A row id: only the entries that read it. */
+	readRow?: string
+	/** `at` when left out. */
+	order?: AuditOrder
+	/** The latest, the dearest first; so when left out. */
+	descending?: boolean
+	/** Fifty when left out, two hundred at most. */
+	limit?: number
+	offset?: number
+}
+
+export interface AuditPage {
+	rows: AuditEntry[]
+	/** How many entries the filters keep, whatever the page. */
+	total: number
+}
+
+/** What the log holds that a filter may name. */
+export interface AuditFacets {
+	models: string[]
+	/** Tools as `<domain or substrate>.<id>`. */
+	tools: string[]
+}
+
+/** What one conversation's requests came to, over the entries the log still holds. */
+export interface ThreadUsage {
+	threadId: string
+	requests: number
+	tokensIn: number
+	tokensOut: number
+	costUsd: number
+	lastAt: number
+}
+
+// The usage rollup (`usage.rs`, D-115): the log's sums by day, kept past the log's ninety days.
+
+export interface UsageSums {
+	requests: number
+	tokensIn: number
+	tokensOut: number
+	cacheRead: number
+	cacheWrite: number
+	costUsd: number
+}
+
+/** One day's requests of one model at one grade, of one kind and tool; '' where the requests had no such thing. */
+export interface UsageDay extends UsageSums {
+	day: string
+	provider: string
+	model: string
+	grade: AuditGrade | ''
+	kind: SurfaceKind
+	domain: string
+	tool: string
+}
+
+export type UsageSpan = 'day' | 'week' | 'month' | 'year'
+export type UsageGroup = UsageSpan | 'provider' | 'model' | 'grade' | 'kind' | 'domain' | 'tool'
+
+export interface UsageQuery {
+	/** The earliest day, inclusive, `YYYY-MM-DD`. */
+	fromDay?: string
+	/** The latest day, inclusive. */
+	toDay?: string
+	/** Nothing sums the whole range into one row. */
+	groupBy?: UsageGroup[]
+}
+
+/** One group's sums. A field the query did not group by is null. */
+export interface UsageRow extends UsageSums {
+	/** The day, the Monday of the week, the month (`YYYY-MM`) or the year, by the span asked for. */
+	bucket: string | null
+	provider: string | null
+	model: string | null
+	grade: string | null
+	kind: string | null
+	domain: string | null
+	tool: string | null
 }
 
 // The blocks of a message: what the panel renders and what the pack reads back as the thread. They are the
@@ -176,35 +284,75 @@ export type DraftState = 'pending' | 'committed' | 'discarded'
 
 /** What a `write-draft` tool offers; nothing is stored until the owner commits it. */
 export type DraftCard =
-	| { kind: 'task'; title: string; due?: string; timeOfDay?: string; priority?: 'low' | 'high'; notes?: string }
+	| ({ kind: 'task' } & DraftTask)
 	| {
 			kind: 'plan'
 			title: string
-			tasks: { title: string; due?: string; notes?: string }[]
+			tasks: DraftTask[]
 			events: { kind: string; title: string; day: string }[]
 			meals?: { day: string; meals: { name: string; recipeId?: string }[] }[]
 			/** What the plan's shop day needs, for the grocery list. */
-			grocery?: { name: string; qty: string }[]
+			grocery?: { name: string; brand?: string; size?: string; qty: string }[]
 			/** The project the tasks belong to, when they do. */
 			projectId?: string
 	  }
-	| { kind: 'grocery'; items: { name: string; qty: string; note?: string }[] }
+	| {
+			kind: 'grocery'
+			items: { name: string; brand?: string; size?: string; qty: string; note?: string }[]
+			/** The store whose list the items go on when kept; with none, each is filed where it was last bought (D-97). */
+			storeId?: string
+	  }
 	| { kind: 'code'; language: string; code: string; title?: string }
 	| {
 			kind: 'capture'
-			/** The recognised rows, as the capture sheet takes them (D-13). */
+			/** What the files were read as: a shop just brought home, or the shelves as they stand (D-89). */
+			mode?: 'haul' | 'stock'
+			/** The rows read from the owner's files, as Hearth's capture sheet takes them (D-13, D-86). */
 			rows: {
 				id: string
 				name: string
-				qty: number | string
+				brand?: string
+				size?: string
+				/** What one of it cost, from a receipt or an order (D-105). */
+				price?: number
+				qty: string
 				unit?: string
-				location: 'fridge' | 'freezer' | 'pantry' | 'counter'
+				location: 'fridge' | 'freezer' | 'pantry' | 'counter' | 'household'
+				/** An ISO date. */
 				expiry?: string
 				estimated?: boolean
-				merge?: string
+				category?: string
+				tip?: string
+				/** The stock item the row would be added to, as the sheet names it, and whether it will be. */
+				merge?: { id: string; name: string; on: boolean }
+				/** The file the item is seen in, counted from 1, and where in it, as fractions of the photo (D-90). */
+				seen?: { file: number; box: { left: number; top: number; right: number; bottom: number } }
 			}[]
-			/** Where the photo is on this device, for the attachment a commit makes; never the image itself. */
-			path?: string
+			/** The files the rows were read from, by their Attachment ids: never a path, never the bytes. */
+			sources?: { id: string; name: string; mime: string }[]
+			/** The shop the haul's receipt names, as printed, and its day as an ISO date (D-105). */
+			store?: string
+			boughtOn?: string
+	  }
+	| {
+			kind: 'recipe'
+			/** A recipe to check before it is saved: it opens in Hearth's Recipes view as a draft. */
+			recipe: {
+				name: string
+				serves: number
+				minutes: number
+				tags: string[]
+				ingredients: { name: string; qty: string; unit?: string; note?: string }[]
+				steps: string[]
+				sourceUrl?: string
+				sourceName?: string
+				author?: string
+				tip?: string
+				/** False for a recipe whose amounts do not follow its servings. */
+				scales?: boolean
+				/** Where the source shows a picture of the dish, for the draft to fetch. */
+				imageUrl?: string
+			}
 	  }
 
 /**

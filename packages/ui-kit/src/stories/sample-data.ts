@@ -12,78 +12,356 @@ export const owner = {
 
 export const today = new Date(2026, 8, 30, 7, 40)
 
-export type StockLocation = 'fridge' | 'freezer' | 'pantry' | 'counter'
+export type StockLocation = 'fridge' | 'freezer' | 'pantry' | 'counter' | 'household'
 export interface StockItem {
 	id: string
 	name: string
+	/** Who makes it and how much one package is, where the item has them (D-104). */
+	brand?: string
+	size?: string
 	qty: string
 	unit?: string
 	location: StockLocation
 	expiry?: string
 	estimated?: boolean
 	lowStock?: boolean
+	/** A category id from `haulCategories`; its glyph is the row's picture when the item has no photo. */
+	category?: string
 }
 export const stock: StockItem[] = [
-	{ id: 'st-01', name: 'Chicken thighs', qty: '900', unit: 'g', location: 'fridge', expiry: '10-02' },
-	{ id: 'st-02', name: 'Miso paste', qty: '400', unit: 'g', location: 'fridge', expiry: '12-15', estimated: true },
-	{ id: 'st-03', name: 'Eggs', qty: '8', location: 'fridge', expiry: '10-14' },
-	{ id: 'st-04', name: 'Spinach', qty: '200', unit: 'g', location: 'fridge', expiry: '10-01', estimated: true },
-	{ id: 'st-05', name: 'Greek yogurt', qty: '500', unit: 'g', location: 'fridge', expiry: '10-06' },
-	{ id: 'st-06', name: 'Lemons', qty: '3', location: 'fridge', expiry: '10-09', estimated: true },
+	{
+		id: 'st-01',
+		name: 'Chicken thighs',
+		qty: '900',
+		unit: 'g',
+		location: 'fridge',
+		expiry: '10-02',
+		category: 'meat-and-fish',
+	},
+	{
+		id: 'st-02',
+		name: 'Miso paste',
+		qty: '400',
+		unit: 'g',
+		location: 'fridge',
+		expiry: '12-15',
+		estimated: true,
+		category: 'condiments-and-spices',
+	},
+	{ id: 'st-03', name: 'Eggs', qty: '8', location: 'fridge', expiry: '10-14', category: 'dairy-and-eggs' },
+	{
+		id: 'st-04',
+		name: 'Spinach',
+		qty: '200',
+		unit: 'g',
+		location: 'fridge',
+		expiry: '10-01',
+		estimated: true,
+		category: 'produce',
+	},
+	{
+		id: 'st-05',
+		name: 'Greek yogurt',
+		brand: 'Fage',
+		size: '500 g',
+		qty: '500',
+		unit: 'g',
+		location: 'fridge',
+		expiry: '10-06',
+		category: 'dairy-and-eggs',
+	},
+	{ id: 'st-06', name: 'Lemons', qty: '3', location: 'fridge', expiry: '10-09', estimated: true, category: 'produce' },
 	{ id: 'st-07', name: 'Tofu', qty: '400', unit: 'g', location: 'fridge', expiry: '10-03' },
-	{ id: 'st-08', name: 'Edamame', qty: '450', unit: 'g', location: 'freezer', expiry: '2027-01', estimated: true },
-	{ id: 'st-09', name: 'Salmon fillets', qty: '2', location: 'freezer', expiry: '11-20', estimated: true },
-	{ id: 'st-10', name: 'Corn tortillas', qty: '12', location: 'freezer', expiry: '12-01', estimated: true },
-	{ id: 'st-11', name: 'Short-grain rice', qty: '2', unit: 'kg', location: 'pantry' },
-	{ id: 'st-12', name: 'Soba', qty: '300', unit: 'g', location: 'pantry' },
-	{ id: 'st-13', name: 'Canned black beans', qty: '2', location: 'pantry' },
-	{ id: 'st-14', name: 'Olive oil', qty: '500', unit: 'ml', location: 'pantry' },
-	{ id: 'st-15', name: 'Soy sauce (low sodium)', qty: '300', unit: 'ml', location: 'pantry' },
-	{ id: 'st-16', name: 'LMNT citrus', qty: '9', unit: 'packets', location: 'pantry', lowStock: true },
-	{ id: 'st-17', name: 'Avocados', qty: '2', location: 'counter', expiry: '10-01', estimated: true },
-	{ id: 'st-18', name: 'Garlic', qty: '1', unit: 'head', location: 'counter' },
-	{ id: 'st-19', name: 'Bananas', qty: '4', location: 'counter', expiry: '10-02', estimated: true },
+	{
+		id: 'st-08',
+		name: 'Edamame',
+		qty: '450',
+		unit: 'g',
+		location: 'freezer',
+		expiry: '2027-01',
+		estimated: true,
+		category: 'frozen',
+	},
+	{
+		id: 'st-09',
+		name: 'Salmon fillets',
+		qty: '2',
+		location: 'freezer',
+		expiry: '11-20',
+		estimated: true,
+		category: 'meat-and-fish',
+	},
+	{
+		id: 'st-10',
+		name: 'Corn tortillas',
+		qty: '12',
+		location: 'freezer',
+		expiry: '12-01',
+		estimated: true,
+		category: 'grains-and-pasta',
+	},
+	{ id: 'st-11', name: 'Short-grain rice', qty: '2', unit: 'kg', location: 'pantry', category: 'grains-and-pasta' },
+	{ id: 'st-12', name: 'Soba', qty: '300', unit: 'g', location: 'pantry', category: 'grains-and-pasta' },
+	{ id: 'st-13', name: 'Canned black beans', qty: '2', location: 'pantry', category: 'canned-and-jarred' },
+	{
+		id: 'st-14',
+		name: 'Olive oil',
+		brand: 'H-E-B',
+		size: '500 ml',
+		qty: '500',
+		unit: 'ml',
+		location: 'pantry',
+		category: 'condiments-and-spices',
+	},
+	{
+		id: 'st-15',
+		name: 'Soy sauce (low sodium)',
+		qty: '300',
+		unit: 'ml',
+		location: 'pantry',
+		category: 'condiments-and-spices',
+	},
+	{
+		id: 'st-16',
+		name: 'LMNT citrus',
+		qty: '9',
+		unit: 'packets',
+		location: 'pantry',
+		lowStock: true,
+		category: 'supplements-and-mixes',
+	},
+	{
+		id: 'st-17',
+		name: 'Avocados',
+		qty: '2',
+		location: 'counter',
+		expiry: '10-01',
+		estimated: true,
+		category: 'produce',
+	},
+	{ id: 'st-18', name: 'Garlic', qty: '1', unit: 'head', location: 'counter', category: 'produce' },
+	{
+		id: 'st-19',
+		name: 'Bananas',
+		qty: '4',
+		location: 'counter',
+		expiry: '10-02',
+		estimated: true,
+		category: 'produce',
+	},
+	// what is bought on the same trip and never cooked with (D-122)
+	{
+		id: 'st-30',
+		name: 'Paper towels',
+		brand: 'Bounty',
+		size: '6 ct',
+		qty: '4',
+		unit: 'rolls',
+		location: 'household',
+		category: 'cleaning-and-laundry',
+	},
+	{ id: 'st-31', name: 'Dish soap', qty: '1', unit: 'bottle', location: 'household', category: 'cleaning-and-laundry' },
+	{ id: 'st-32', name: 'Toothpaste', qty: '2', location: 'household', category: 'personal-care' },
+]
+
+/** What ran out lately (D-92): kept at nothing, each with the day it ran out, to be bought again. */
+export const ranOut: (StockItem & { outOn: string })[] = [
+	{
+		id: 'st-20',
+		name: 'Whole milk',
+		qty: '0',
+		unit: 'l',
+		location: 'fridge',
+		category: 'dairy-and-eggs',
+		outOn: '09-29',
+	},
+	{
+		id: 'st-21',
+		name: 'Rolled oats',
+		qty: '0',
+		unit: 'g',
+		location: 'pantry',
+		category: 'grains-and-pasta',
+		outOn: '09-27',
+	},
 ]
 
 export interface HaulRow {
 	id: string
 	name: string
-	qty: number | string
+	/** The maker and the package, apart from the name (D-104), and what one cost on the receipt (D-105). */
+	brand?: string
+	size?: string
+	price?: number
+	qty: string
 	unit?: string
 	location: StockLocation
+	/** An ISO date. */
 	expiry?: string
 	estimated?: boolean
-	merge?: string
+	/** A category id from `haulCategories`. */
+	category?: string
+	/** A storage tip worth showing beside the row. */
+	tip?: string
+	/** The stock item the row would merge into, and whether it will. */
+	merge?: { name: string; on: boolean }
 }
-/** The captured haul: photo, 09-29 18:12, provider Anthropic, about 0.6 cents. 11 recognised, 2 merge, 1 was a misread. */
+/** The categories a stock item or a haul row may be filed under: the app's fifteen, id and English name;
+ * the three before Other are a household item's (D-122). */
+export const haulCategories = [
+	{ id: 'produce', label: 'Produce' },
+	{ id: 'meat-and-fish', label: 'Meat and fish' },
+	{ id: 'dairy-and-eggs', label: 'Dairy and eggs' },
+	{ id: 'bakery', label: 'Bakery' },
+	{ id: 'grains-and-pasta', label: 'Grains and pasta' },
+	{ id: 'canned-and-jarred', label: 'Canned and jarred' },
+	{ id: 'frozen', label: 'Frozen' },
+	{ id: 'snacks', label: 'Snacks' },
+	{ id: 'drinks', label: 'Drinks' },
+	{ id: 'condiments-and-spices', label: 'Condiments and spices' },
+	{ id: 'supplements-and-mixes', label: 'Supplements and mixes' },
+	{ id: 'cleaning-and-laundry', label: 'Cleaning and laundry' },
+	{ id: 'personal-care', label: 'Personal care' },
+	{ id: 'health', label: 'Health' },
+	{ id: 'other', label: 'Other' },
+]
+/**
+ * The captured haul: 09-29 18:12, read by Anthropic's Haiku for about 0.6 cents from a photo of the bags, a photo of
+ * the receipt, the order's PDF and a pasted list. 11 recognised, 2 merge, 1 was a misread. Every row has a category
+ * but the tofu, which the capture could not place; the spinach carries a storage tip.
+ */
 export const haul = {
+	/** The stores the haul may have been bought at, and the one its receipt names (D-105). */
+	stores: [
+		{ id: 'gs-01', label: 'H-E-B' },
+		{ id: 'gs-02', label: 'Target' },
+	],
+	store: 'gs-01',
 	provider: 'Anthropic',
+	model: 'Haiku',
 	cost: '0.6 ¢',
 	capturedAt: '09-29 18:12',
+	sources: [
+		{ key: 'src-1', name: 'haul.jpg', detail: '2.4 MB' },
+		{ key: 'src-2', name: 'receipt.jpg', detail: '840 KB' },
+		{ key: 'src-3', name: 'heb-order.pdf', detail: '1.2 MB' },
+		{ key: 'src-4', name: 'Pasted text', detail: '6 lines' },
+	],
 	rows: [
-		{ id: 'h-01', name: 'Chicken thighs', qty: 900, unit: 'g', location: 'fridge', expiry: '10-02' },
-		{ id: 'h-02', name: 'Eggs', qty: 12, location: 'fridge', expiry: '10-14', merge: 'Eggs' },
+		{
+			id: 'h-01',
+			name: 'Chicken thighs',
+			qty: '900',
+			unit: 'g',
+			location: 'fridge',
+			expiry: '2026-10-02',
+			category: 'meat-and-fish',
+		},
+		{
+			id: 'h-02',
+			name: 'Eggs',
+			qty: '12',
+			location: 'fridge',
+			expiry: '2026-10-14',
+			category: 'dairy-and-eggs',
+			merge: { name: 'Eggs', on: true },
+		},
 		{
 			id: 'h-03',
 			name: 'Spinach',
-			qty: 200,
+			qty: '200',
 			unit: 'g',
 			location: 'fridge',
-			expiry: '10-01',
+			expiry: '2026-10-01',
 			estimated: true,
-			merge: 'Spinach',
+			category: 'produce',
+			tip: 'Wrap in a dry towel inside the bag; it wilts fastest in the door.',
+			merge: { name: 'Spinach', on: true },
 		},
-		{ id: 'h-04', name: 'Greek yogurt', qty: 500, unit: 'g', location: 'fridge', expiry: '10-06' },
-		{ id: 'h-05', name: 'Lemons', qty: 3, location: 'fridge', expiry: '10-09', estimated: true },
-		{ id: 'h-06', name: 'Tofu', qty: 400, unit: 'g', location: 'fridge', expiry: '10-03' },
-		{ id: 'h-07', name: 'Avocados', qty: 2, location: 'counter', expiry: '10-01', estimated: true },
-		{ id: 'h-08', name: 'Bananas', qty: 4, location: 'counter', expiry: '10-02', estimated: true },
-		{ id: 'h-09', name: 'Corn tortillas', qty: 12, location: 'freezer', expiry: '12-01', estimated: true },
-		{ id: 'h-10', name: 'Soy sauce (low sodium)', qty: 300, unit: 'ml', location: 'pantry' },
-		{ id: 'h-11', name: 'Napkins', qty: 1, location: 'pantry' },
+		{
+			id: 'h-04',
+			name: 'Greek yogurt',
+			brand: 'Fage',
+			size: '500 g',
+			price: 5.49,
+			qty: '500',
+			unit: 'g',
+			location: 'fridge',
+			expiry: '2026-10-06',
+			category: 'dairy-and-eggs',
+		},
+		{
+			id: 'h-05',
+			name: 'Lemons',
+			price: 0.5,
+			qty: '3',
+			location: 'fridge',
+			expiry: '2026-10-09',
+			estimated: true,
+			category: 'produce',
+		},
+		{ id: 'h-06', name: 'Tofu', qty: '400', unit: 'g', location: 'fridge', expiry: '2026-10-03' },
+		{
+			id: 'h-07',
+			name: 'Avocados',
+			qty: '2',
+			location: 'counter',
+			expiry: '2026-10-01',
+			estimated: true,
+			category: 'produce',
+		},
+		{
+			id: 'h-08',
+			name: 'Bananas',
+			qty: '4',
+			location: 'counter',
+			expiry: '2026-10-02',
+			estimated: true,
+			category: 'produce',
+		},
+		{
+			id: 'h-09',
+			name: 'Corn tortillas',
+			qty: '12',
+			location: 'freezer',
+			expiry: '2026-12-01',
+			estimated: true,
+			category: 'grains-and-pasta',
+		},
+		{
+			id: 'h-10',
+			name: 'Soy sauce (low sodium)',
+			qty: '300',
+			unit: 'ml',
+			location: 'pantry',
+			category: 'condiments-and-spices',
+		},
+		{ id: 'h-11', name: 'Napkins', qty: '1', location: 'pantry', category: 'other' },
 	] as HaulRow[],
 }
 
+/** One line of a recipe: the amount, the name, and the note that follows a comma. */
+export interface RecipeIngredient {
+	name: string
+	qty: string
+	unit?: string
+	note?: string
+}
+/** A recipe as the Recipes view reads it; `recipes` is a tuple of these. */
+export interface SampleRecipe {
+	id: string
+	name: string
+	serves: number
+	minutes: number
+	tags: readonly string[]
+	inStock: boolean
+	ingredients: readonly RecipeIngredient[]
+	steps: readonly string[]
+	/** A line worth knowing before cooking it: the info button beside its name. */
+	tip?: string
+	/** Where it was read from, when it came from a link. */
+	sourceUrl?: string
+}
 export const recipes = [
 	{
 		id: 'r-01',
@@ -92,19 +370,183 @@ export const recipes = [
 		minutes: 25,
 		tags: ['weeknight', 'low-sodium'],
 		inStock: true,
+		ingredients: [
+			{ name: 'salmon fillets', qty: '2' },
+			{ name: 'miso paste', qty: '2', unit: 'tbsp' },
+			{ name: 'soy sauce', qty: '1', unit: 'tbsp' },
+			{ name: 'spinach', qty: '200', unit: 'g' },
+			{ name: 'garlic', qty: '1', unit: 'clove', note: 'sliced' },
+			{ name: 'short-grain rice', qty: '150', unit: 'g' },
+		],
+		steps: [
+			'Cook the rice.',
+			'Stir the miso and the soy sauce together and brush it over the salmon.',
+			'Roast at 220 °C for 10 to 12 minutes, until the glaze darkens at the edges.',
+			'Wilt the spinach with the garlic in a hot pan and serve under the salmon.',
+		],
+		tip: 'Pat the fillets dry first: the glaze holds and the edges caramelise.',
 	},
-	{ id: 'r-02', name: 'Black bean tacos', serves: 2, minutes: 20, tags: [], inStock: true },
-	{ id: 'r-03', name: 'Soba with tofu and edamame', serves: 2, minutes: 15, tags: [], inStock: true },
-] as const
+	{
+		id: 'r-02',
+		name: 'Black bean tacos',
+		serves: 2,
+		minutes: 20,
+		tags: [],
+		inStock: true,
+		ingredients: [
+			{ name: 'canned black beans', qty: '1' },
+			{ name: 'corn tortillas', qty: '6' },
+			{ name: 'avocados', qty: '1' },
+			{ name: 'limes', qty: '1' },
+			{ name: 'garlic', qty: '1', unit: 'clove' },
+		],
+		steps: [
+			'Warm the beans with the garlic and a splash of their liquid, and crush a few.',
+			'Char the tortillas over a flame or in a dry pan.',
+			'Fill with the beans and sliced avocado, and finish with lime.',
+		],
+	},
+	{
+		id: 'r-03',
+		name: 'Soba with tofu and edamame',
+		serves: 2,
+		minutes: 15,
+		tags: [],
+		inStock: true,
+		ingredients: [
+			{ name: 'soba', qty: '200', unit: 'g' },
+			{ name: 'tofu', qty: '200', unit: 'g', note: 'cubed' },
+			{ name: 'edamame', qty: '150', unit: 'g' },
+			{ name: 'soy sauce', qty: '2', unit: 'tbsp' },
+			{ name: 'ginger', qty: '1', note: 'a thumb, grated' },
+		],
+		steps: [
+			'Boil the soba, adding the edamame for the last two minutes; rinse both cold.',
+			'Brown the tofu in a pan.',
+			'Toss everything with the soy sauce and the ginger.',
+		],
+	},
+] as const satisfies readonly SampleRecipe[]
 
-export const grocery = {
-	name: 'H-E-B Saturday',
-	shopDay: 'Sat 10-03 10:00',
+/**
+ * A recipe on its way in: read from a pasted link and open in the Recipes pane as a draft, not stored until it is
+ * saved there. Everything it asks for is in stock but the dill.
+ */
+export const recipeDraft: Omit<SampleRecipe, 'id' | 'inStock'> & { sourceUrl: string } = {
+	name: 'Lemon-yogurt chicken thighs',
+	serves: 2,
+	minutes: 35,
+	tags: ['weeknight'],
+	ingredients: [
+		{ name: 'chicken thighs', qty: '500', unit: 'g' },
+		{ name: 'Greek yogurt', qty: '150', unit: 'g' },
+		{ name: 'lemons', qty: '1', note: 'zest and juice' },
+		{ name: 'garlic', qty: '2', unit: 'cloves', note: 'grated' },
+		{ name: 'olive oil', qty: '1', unit: 'tbsp' },
+		{ name: 'dill', qty: '1', note: 'a small bunch' },
+	],
+	steps: [
+		'Stir the yogurt, the lemon, the garlic and the oil together and coat the chicken.',
+		'Roast at 220 °C for 25 minutes, until the edges char.',
+		'Rest for five minutes and scatter with the dill.',
+	],
+	sourceUrl: 'https://example.com/recipes/lemon-yogurt-chicken-thighs',
+}
+
+/** A store Hearth shops at (D-96): its name, what it sells, and what the owner keeps of it (D-101). */
+export interface SampleGroceryStore {
+	id: string
+	name: string
+	sells: ('grocery' | 'home goods')[]
+	/** The day its list was last completed, `MM-DD`. */
+	shoppedOn?: string
+	note?: string
+	address?: string
+	url?: string
+	phone?: string
+	/** The store's picture (D-103), as a data URL; one without shows the store glyph on a tile. */
+	picture?: string
+}
+/**
+ * A stand-in for a store's picture, as a data URL: a story needs no binary asset, the app's CSP has no blob:, and a
+ * real store's mark is not the kit's to ship.
+ */
+export const storePicture =
+	'data:image/svg+xml,' +
+	encodeURIComponent(
+		'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8"><rect width="8" height="8" fill="#fff"/><circle cx="4" cy="4" r="2.6" fill="#b5483a"/><rect x="2.4" y="3.5" width="3.2" height="1" fill="#fff"/></svg>'
+	)
+/** One list per store; the list with no store holds what is not filed yet. The shop day is optional. */
+export interface SampleGroceryList {
+	id: string
+	storeId?: string
+	shopDay?: string
+}
+export interface SampleGroceryItem {
+	id: string
+	listId: string
+	name: string
+	/** The brand and the package to buy, where the line names them (D-104). */
+	brand?: string
+	size?: string
+	/** What one costs: typed on the line, or what its store last charged (D-105). The list's sum is made of these. */
+	price?: number
+	qty: string
+	origin: string
+	done: boolean
+}
+
+/** The one shop day in the sample: H-E-B on Saturday morning. */
+export const groceryShopDay = 'Sat 10-03 10:00'
+
+export const grocery: { stores: SampleGroceryStore[]; lists: SampleGroceryList[]; items: SampleGroceryItem[] } = {
+	stores: [
+		{
+			id: 'gs-01',
+			name: 'H-E-B',
+			sells: ['grocery'],
+			shoppedOn: '09-26',
+			address: '2400 S Congress Ave, Austin',
+			url: 'https://www.heb.com',
+			picture: storePicture,
+		},
+		{
+			id: 'gs-02',
+			name: 'Target',
+			sells: ['grocery', 'home goods'],
+			shoppedOn: '09-25',
+			note: 'Park on the roof; the garage fills by noon.',
+		},
+	],
+	lists: [
+		{ id: 'gl-01', storeId: 'gs-01', shopDay: groceryShopDay },
+		{ id: 'gl-02', storeId: 'gs-02' },
+		{ id: 'gl-00' },
+	],
 	items: [
-		{ id: 'g-01', name: 'LMNT citrus', qty: '1 box', origin: 'low stock', done: false },
-		{ id: 'g-02', name: 'Limes', qty: '4', origin: 'recipe', done: false },
-		{ id: 'g-03', name: 'Ginger', qty: '1', origin: 'recipe: soba', done: true },
-		{ id: 'g-04', name: 'Paper towels', qty: '', origin: 'manual', done: false },
+		{
+			id: 'g-01',
+			listId: 'gl-01',
+			name: 'LMNT citrus',
+			size: '30 ct',
+			price: 45,
+			qty: '1 box',
+			origin: 'low stock',
+			done: false,
+		},
+		{ id: 'g-02', listId: 'gl-01', name: 'Limes', price: 0.33, qty: '4', origin: 'recipe', done: false },
+		{ id: 'g-03', listId: 'gl-01', name: 'Ginger', qty: '1', origin: 'recipe: soba', done: true },
+		{
+			id: 'g-04',
+			listId: 'gl-02',
+			name: 'Paper towels',
+			brand: 'Bounty',
+			size: '6 ct',
+			qty: '',
+			origin: 'manual',
+			done: false,
+		},
+		{ id: 'g-05', listId: 'gl-00', name: 'Coffee filters', qty: '', origin: 'manual', done: false },
 	],
 }
 
@@ -229,6 +671,9 @@ export const skyPlaceResults = [
 	{ id: 'austin-mn', name: 'Austin', region: 'Minnesota, United States' },
 	{ id: 'austin-nv', name: 'Austin', region: 'Nevada, United States' },
 ]
+/** Home's latitude: Hyde Park, Austin (design/sample-data.md, "The owner"). */
+export const homeLatitude = 30.31
+
 export const skyToday = {
 	sunrise: '07:22',
 	sunset: '19:14',
@@ -250,6 +695,12 @@ export const skyMotif = {
 	windGust: skyDetails.gust,
 	cloudCover: skyDetails.cloudCover,
 	precipitation: 0,
+}
+
+/** What the Hearth motif draws, on the same Wednesday: the stock, and what of it is dated on or before Friday. */
+export const hearthMotif = {
+	items: stock.length,
+	expiring: stock.filter((item) => item.expiry !== undefined && item.expiry <= '10-02').length,
 }
 
 /** Daily weight in kg, 09-17 to 09-30; seven-day average 82.7; goal 80.0 by 12-31. */
@@ -351,6 +802,44 @@ export const audit = {
 	cost: '1.1 ¢',
 	outcome: 'ok',
 }
+
+/**
+ * What the Gardener came to (design/sample-data.md, "Usage"): the fourteen days to 09-30 in USD by grade, the month
+ * by model, and the totals. The month's spend is the budget's 2.84.
+ */
+export const usageDays = [
+	'09-17',
+	'09-18',
+	'09-19',
+	'09-20',
+	'09-21',
+	'09-22',
+	'09-23',
+	'09-24',
+	'09-25',
+	'09-26',
+	'09-27',
+	'09-28',
+	'09-29',
+	'09-30',
+]
+export const usageByGrade = {
+	light: [0.01, 0.02, 0.01, 0, 0.02, 0.01, 0.03, 0.01, 0.02, 0.01, 0, 0.02, 0.01, 0.02],
+	standard: [0.12, 0.08, 0.21, 0, 0.15, 0.09, 0.3, 0.11, 0.18, 0.07, 0, 0.24, 0.13, 0.16],
+	deep: [0, 0, 0.2, 0, 0, 0, 0.25, 0, 0, 0, 0, 0.12, 0, 0],
+}
+export const usageTotals = { month: '2.84', last30: '2.84', allTime: '11.46', requests: 148, cap: '10.00', percent: 28 }
+export const usageByModel = [
+	{ model: 'claude-sonnet', requests: 79, tokensIn: '212,400', tokensOut: '31,900', cost: '$2.02' },
+	{ model: 'claude-opus', requests: 8, tokensIn: '61,200', tokensOut: '9,400', cost: '61 ¢' },
+	{ model: 'claude-haiku', requests: 61, tokensIn: '98,700', tokensOut: '14,300', cost: '21 ¢' },
+]
+export const usageByTool = [
+	{ tool: 'Conversations', requests: 96, cost: '$1.74' },
+	{ tool: 'capture-haul', requests: 14, cost: '52 ¢' },
+	{ tool: 'suggest-recipes', requests: 21, cost: '37 ¢' },
+	{ tool: 'brainstorm', requests: 17, cost: '21 ¢' },
+]
 
 /** The egress ledger for the audit day (design/sample-data.md, "Audit and grants"): where bytes went, by destination. */
 export const egress = [

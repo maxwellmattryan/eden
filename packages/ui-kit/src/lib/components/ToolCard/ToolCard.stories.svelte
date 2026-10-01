@@ -4,7 +4,7 @@
 	import { expect, fn, waitFor } from 'storybook/test'
 	import { canvasOf } from '../../../storybook/play.js'
 	import { defaultStrings } from '$lib/i18n/strings.js'
-	import { grocery } from '../../../stories/sample-data.js'
+	import { grocery, groceryShopDay } from '../../../stories/sample-data.js'
 	import ToolCard from './ToolCard.svelte'
 
 	const s = defaultStrings
@@ -19,7 +19,7 @@
 		name: 'google-calendar.push',
 		access: 'act-external',
 		text: 'Send the shop-day event to Google “Work”.',
-		payload: `${grocery.name} · ${grocery.shopDay}`,
+		payload: `${grocery.stores[0]!.name} · ${groceryShopDay}`,
 		confirm: 'Send to Google',
 	} as const
 
@@ -34,7 +34,7 @@
 		},
 	})
 
-	/** read and write-draft cards never carry buttons. */
+	/** A card with no `confirm` never carries buttons. */
 	const noButtons = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
 		await expect(canvasOf(canvasElement).queryAllByRole('button')).toHaveLength(0)
 	}
@@ -69,6 +69,26 @@
 	play={noButtons}
 />
 
+<!-- a read that asks: no badge, the address in full and the confirm inline; confirming starts the run -->
+<Story
+	name="Read that asks"
+	args={{
+		name: 'read-page',
+		access: 'read',
+		text: undefined,
+		payload: 'Read https://www.seriouseats.com/how-to-store-fresh-herbs',
+		confirm: 'Read this page',
+	}}
+	{template}
+	play={async ({ canvasElement, userEvent, args }) => {
+		const canvas = canvasOf(canvasElement)
+		await userEvent.click(canvas.getAllByRole('button', { name: 'Read this page' })[0]!)
+		await expect(args.onconfirm).toHaveBeenCalledTimes(1)
+		await expect(canvas.getAllByRole('status')[0]).toHaveTextContent(s.gardener.toolRunning)
+		await expect(canvas.queryByRole('button', { name: 'Read this page' })).toBeNull()
+	}}
+/>
+
 <!-- write-draft: the pencil badge; the draft becomes a proposal card, so nothing to confirm here -->
 <Story
 	name="Write draft"
@@ -87,7 +107,7 @@
 <Story
 	name="Draft waiting"
 	args={{
-		name: 'create-task',
+		name: 'draft-tasks',
 		access: 'write-draft',
 		text: undefined,
 		payload: undefined,
@@ -105,7 +125,7 @@
 <Story
 	name="Draft kept"
 	args={{
-		name: 'create-task',
+		name: 'draft-tasks',
 		access: 'write-draft',
 		text: undefined,
 		payload: undefined,
@@ -120,7 +140,7 @@
 <Story
 	name="Draft discarded"
 	args={{
-		name: 'create-task',
+		name: 'draft-tasks',
 		access: 'write-draft',
 		text: undefined,
 		payload: undefined,

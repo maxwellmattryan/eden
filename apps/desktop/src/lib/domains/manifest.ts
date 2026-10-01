@@ -80,10 +80,27 @@ export interface DomainBindings<D extends BuiltDomainId> {
 	 * itself is more than a request should pay for (D-85); `null` leaves the row out. A type with no entry is sent whole.
 	 */
 	pack?: Partial<Record<string, (row: Entity<object>) => Entity<object> | null>>
+	/**
+	 * What a row of one of the domain's entity types is called where the Gardener lists what it read (the "can see"
+	 * chip, the audit log), by type, for a type whose rows hold no name of their own. A type with no entry is called
+	 * by its `name`, `title` or `label`.
+	 */
+	labels?: Partial<Record<string, (row: Entity<object>) => Promise<string | undefined> | string | undefined>>
 	/** What each quick action writes, by its id; `log-quick` dispatches here and the Quick Log sheet (#27) reuses it. */
 	quickActionHandlers?: Partial<Record<string, QuickActionHandler>>
 	/** The domain's part of committing a draft its tool left; the substrate's parts (tasks, events) are the shell's. */
 	commitDraft?: (card: DraftCard) => Promise<{ undo: () => void } | undefined>
+	/**
+	 * Opens a draft on a surface of the domain's own, where the owner checks it before anything is stored (Hearth's
+	 * capture sheet, its Recipes pane), and answers whether it took the draft. `settle` is told when the owner keeps
+	 * or discards it there; until then the card stays as it was.
+	 */
+	openDraft?: (card: DraftCard, settle: (state: 'committed' | 'discarded') => void) => boolean
+	/**
+	 * A surface the domain shows over whatever page is open: the shell mounts it once, beside its own sheets. Hearth's
+	 * capture sheet is one, since a haul is captured from its page, from a drop and from a card in the Gardener's panel.
+	 */
+	overlay?: Component
 }
 
 /** A quick action's write: the value as typed, the undo back. */

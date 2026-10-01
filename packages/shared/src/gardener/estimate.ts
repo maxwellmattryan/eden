@@ -3,17 +3,34 @@
 import type { Pricing } from './types.js'
 
 export interface Usage {
+	/** The input the provider neither read from its cache nor wrote to it. */
 	tokensIn: number
 	tokensOut: number
 	cacheRead: number
+	/** The input the provider wrote to its cache; none when it is left out. */
+	cacheWrite?: number
 }
 
 const MILLION = 1_000_000
+/** What a five-minute cache write costs over the input price, where a pricing row names no price of its own (D-116). */
+export const CACHE_WRITE_RATIO = 1.25
 
-/** The cost of a usage in USD: the uncached input at the input price, the cached input at the cache price. */
+/** The price of a million tokens written to the cache: the row's own, or a quarter over its input price. */
+export function cacheWritePrice(pricing: Pricing): number {
+	return pricing.cacheWrite ?? pricing.input * CACHE_WRITE_RATIO
+}
+
+/**
+ * The cost of a usage in USD: the uncached input at the input price, the input read from the cache and the input
+ * written to it each at its own.
+ */
 export function estimateCost(usage: Usage, pricing: Pricing): number {
 	return (
-		(usage.tokensIn * pricing.input + usage.tokensOut * pricing.output + usage.cacheRead * pricing.cacheRead) / MILLION
+		(usage.tokensIn * pricing.input +
+			usage.tokensOut * pricing.output +
+			usage.cacheRead * pricing.cacheRead +
+			(usage.cacheWrite ?? 0) * cacheWritePrice(pricing)) /
+		MILLION
 	)
 }
 

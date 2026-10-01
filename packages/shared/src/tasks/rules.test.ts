@@ -5,6 +5,7 @@ import {
 	completion,
 	dueDay,
 	dueTime,
+	edited,
 	inverseOf,
 	isOverdue,
 	moveDue,
@@ -122,6 +123,67 @@ describe('what an action changes', () => {
 		expect(tallied(habit, '2026-09-30', 'monday')).toEqual({
 			progress: { days: { '2026-09-29': { count: 1 }, '2026-09-30': { count: 1 } } },
 			streak: 2,
+		})
+	})
+
+	it('opens a done todo again, and a checklist with every item open', () => {
+		const todo = task({ kind: 'todo', title: 't', due: '2026-09-30', done: true, completedAt: AT })
+		expect(reopened(todo, '2026-09-30')).toEqual({ done: false, completedAt: null })
+		const list = task({
+			kind: 'checklist',
+			title: 't',
+			done: true,
+			completedAt: AT,
+			items: [
+				{ text: 'a', done: true },
+				{ text: 'b', done: true },
+			],
+		})
+		expect(reopened(list, '2026-09-30')).toEqual({
+			done: false,
+			completedAt: null,
+			items: [
+				{ text: 'a', done: false },
+				{ text: 'b', done: false },
+			],
+		})
+	})
+
+	it('edits a todo: a new day keeps its time, a new time keeps its day, and an empty time leaves the day alone', () => {
+		const timed = task({ kind: 'todo', title: 'Call', due: '2026-09-28T20:00:00.000Z', notes: 'old' })
+		// 20:00Z is 15:00 in Chicago
+		expect(edited(timed, { due: '2026-10-02' }, '2026-09-30', CHICAGO)).toEqual({ due: '2026-10-02T20:00:00.000Z' })
+		expect(edited(timed, { timeOfDay: '09:30' }, '2026-09-30', CHICAGO)).toEqual({ due: '2026-09-28T14:30:00.000Z' })
+		expect(edited(timed, { timeOfDay: '' }, '2026-09-30', CHICAGO)).toEqual({ due: '2026-09-28' })
+		expect(edited(timed, { title: ' Ring the dentist ', notes: '', priority: 'high' }, '2026-09-30', CHICAGO)).toEqual({
+			title: 'Ring the dentist',
+			notes: null,
+			priority: 'high',
+		})
+		// a day alone moves to a day alone, and a time given to a task with no due lands on today
+		const dated = task({ kind: 'todo', title: 't', due: '2026-09-28' })
+		expect(edited(dated, { due: '2026-10-02' }, '2026-09-30', CHICAGO)).toEqual({ due: '2026-10-02' })
+		const loose = task({ kind: 'todo', title: 't' })
+		expect(edited(loose, { timeOfDay: '08:00' }, '2026-09-30', CHICAGO)).toEqual({ due: '2026-09-30T13:00:00.000Z' })
+		// nothing named changes nothing, and an empty title is not a title
+		expect(edited(timed, {}, '2026-09-30', CHICAGO)).toEqual({})
+		expect(edited(timed, { title: '  ' }, '2026-09-30', CHICAGO)).toEqual({})
+	})
+
+	it('edits a routine’s time as its own field and never gives it or a habit a due', () => {
+		const routine = task({
+			kind: 'routine',
+			title: 'Water',
+			timeOfDay: '07:00',
+			recurrence: { freq: 'daily', start: '2026-09-01' },
+		})
+		expect(edited(routine, { timeOfDay: '08:15', due: '2026-10-02' }, '2026-09-30', CHICAGO)).toEqual({
+			timeOfDay: '08:15',
+		})
+		expect(edited(routine, { timeOfDay: '' }, '2026-09-30', CHICAGO)).toEqual({ timeOfDay: null })
+		const habit = task({ kind: 'habit', title: 'Run', target: { count: 3, per: 'week' } })
+		expect(edited(habit, { due: '2026-10-02', timeOfDay: '07:00', title: 'Jog' }, '2026-09-30', CHICAGO)).toEqual({
+			title: 'Jog',
 		})
 	})
 

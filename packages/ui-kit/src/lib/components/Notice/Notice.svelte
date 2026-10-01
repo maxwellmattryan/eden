@@ -14,7 +14,8 @@
 	// leading edge only, as on a Banner; the words stay in the text colours. With `ondismiss` it carries a quiet
 	// cross at its top corner: the owner has read it and wants it gone. It leaves as things in Eden settle: it fades
 	// while the Breeze plays once beside its glyph (D-42), and `ondismissed` says when it has gone, which is when the
-	// parent takes it away. Under reduced motion that is at once.
+	// parent takes it away. Under reduced motion that is at once. With `breeze` off it leaves plainly, and at once: for
+	// a notice in a list whose own control carries the settle.
 	import type { HTMLAttributes } from 'svelte/elements'
 	import Icon from '../../icons/Icon.svelte'
 	import { useStrings } from '../../i18n/context.js'
@@ -39,6 +40,8 @@
 		ondismiss?: () => void
 		/** Called once the notice has faded and its Breeze has played: the parent takes it away. */
 		ondismissed?: () => void
+		/** Whether the Breeze plays as it leaves. Off, there is no effect and `ondismissed` follows `ondismiss` at once. */
+		breeze?: boolean
 	}
 	let {
 		tone = 'warning',
@@ -49,6 +52,7 @@
 		action,
 		ondismiss,
 		ondismissed,
+		breeze = true,
 		class: className = '',
 		...rest
 	}: Props = $props()
@@ -60,6 +64,7 @@
 		if (leaving) return
 		leaving = true
 		ondismiss?.()
+		if (!breeze) ondismissed?.()
 	}
 
 	const glyph = $derived(icon ?? TONE_ICON[tone])
@@ -72,7 +77,7 @@
 >
 	<span class="ed-notice-icon">
 		<Icon name={glyph} size="sm" />
-		{#if leaving}<Breeze onend={ondismissed} />{/if}
+		{#if leaving && breeze}<Breeze onend={ondismissed} />{/if}
 	</span>
 	<div class="ed-notice-text">
 		<p class="ed-notice-title">{title}</p>

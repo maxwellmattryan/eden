@@ -4,7 +4,8 @@
 	// go, else a <button>, so the browser handles Enter, middle-click and history for a link and nothing prevents a
 	// default. The current item sits on the nav ground the brand dial sets, its glyph and name in the dial's current
 	// colours, with the leaf bar beside it in the nav's gutter at every brand level. Becoming current fades the ground in
-	// and grows the bar from its middle; reduced motion keeps only the fade.
+	// and grows the bar from its middle; reduced motion keeps only the fade. Collapsed, the item is its glyph alone: the
+	// name stays as the accessible name and becomes the tooltip.
 	import type { HTMLAttributes } from 'svelte/elements'
 	import type { IconName } from '../../icons/icons.js'
 	import Icon from '../../icons/Icon.svelte'
@@ -29,6 +30,8 @@
 		showShortcut?: boolean
 		/** Renders a link to this URL instead of a button. */
 		href?: string
+		/** Shows the glyph alone, for the collapsed sidebar: the name is the tooltip. */
+		collapsed?: boolean
 		/** Called on activation, for a link and a button alike. */
 		onclick?: () => void
 	}
@@ -42,24 +45,34 @@
 		showSubtitle = false,
 		showShortcut = false,
 		href,
+		collapsed = false,
 		onclick,
 		class: className = '',
 		...rest
 	}: Props = $props()
 
-	const classes = $derived(['ed-side-item', { 'ed-side-item-with-sub': showSubtitle && !!subtitle }, className])
+	const classes = $derived([
+		'ed-side-item',
+		{ 'ed-side-item-with-sub': showSubtitle && !!subtitle && !collapsed, 'ed-side-item-collapsed': collapsed },
+		className,
+	])
 	// the getter form: read when the bubble opens, so it is empty while the subtitle is on show
-	const tip = () => (showSubtitle ? '' : (subtitle ?? ''))
+	const tip = () => (collapsed ? name : showSubtitle ? '' : (subtitle ?? ''))
 </script>
 
 {#snippet inner()}
 	<Icon name={icon} size="md" class="ed-side-glyph" />
-	<span class="ed-side-text">
-		<span class="ed-side-name">{name}</span>
-		{#if showSubtitle && subtitle}<span class="ed-side-sub" data-tertiary>{subtitle}</span>{/if}
-	</span>
+	{#if collapsed}
+		<span class="ed-sr-only">{name}</span>
+	{:else}
+		<span class="ed-side-text">
+			<span class="ed-side-name">{name}</span>
+			{#if showSubtitle && subtitle}<span class="ed-side-sub" data-tertiary>{subtitle}</span>{/if}
+		</span>
+	{/if}
 	<!-- hidden from the accessible name, which stays the entry's own name -->
-	{#if showShortcut && shortcut}<kbd class="ed-side-key" data-tertiary aria-hidden="true">{shortcut}</kbd>{/if}
+	{#if showShortcut && shortcut && !collapsed}<kbd class="ed-side-key" data-tertiary aria-hidden="true">{shortcut}</kbd
+		>{/if}
 {/snippet}
 
 {#if href}
@@ -115,6 +128,11 @@
 	/* two lines need a little air above and below inside the row */
 	.ed-side-item-with-sub {
 		padding-block: var(--space-1);
+	}
+	/* the glyph alone, centred in the rail */
+	.ed-side-item-collapsed {
+		justify-content: center;
+		padding: 0;
 	}
 	.ed-side-item:hover {
 		background: var(--surface-2);

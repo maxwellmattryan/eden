@@ -21,7 +21,6 @@
 	--ed-fill-sheen: 0.12;
 	--ed-fill-edge: rgba(31, 42, 34, 0.14);
 	--ed-fill-highlight: rgba(255, 255, 255, 0.08);
-	--ed-fill-shadow: 0 1px 1px rgba(31, 42, 34, 0.10), 0 3px 8px -4px color-mix(in srgb, var(--brand-primary) 25%, transparent);
 	--ed-secondary-bg: var(--surface-0);
 	--ed-secondary-border: var(--stroke);
 	--ed-chip-accent-border: color-mix(in srgb, var(--brand-primary) 45%, transparent);
@@ -31,15 +30,16 @@
 	--ed-nav-bar: 3px;
 	--ed-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='g' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23g)'/%3E%3C/svg%3E");
 	--ed-grain-motion: ed-grain 1.2s steps(1, end) infinite;
-	--ed-grain-opacity: 0.4;
+	--ed-grain-blend: multiply;
+	--ed-grain-opacity: 0.06;
 	--ed-motif-size: 64px;
 }
 [data-theme="dark"], [data-theme="dark"][data-brand="lush"], [data-theme="dark"] [data-brand="lush"] {
 	--ed-fill-sheen: 0.08;
 	--ed-fill-edge: rgba(0, 0, 0, 0.32);
 	--ed-fill-highlight: rgba(255, 255, 255, 0.04);
-	--ed-fill-shadow: 0 3px 8px -4px rgba(0, 0, 0, 0.5);
-	--ed-grain-opacity: 0.3;
+	--ed-grain-blend: screen;
+	--ed-grain-opacity: 0.03;
 }
 [data-brand="plain"] {
 	--ed-radius-control: var(--radius-control);
@@ -61,7 +61,6 @@
 	--ed-fill-sheen: 0;
 	--ed-fill-edge: rgba(31, 42, 34, 0.14);
 	--ed-fill-highlight: rgba(255, 255, 255, 0.04);
-	--ed-fill-shadow: none;
 	--ed-secondary-bg: var(--surface-1);
 	--ed-secondary-border: var(--stroke);
 	--ed-chip-accent-border: transparent;
@@ -71,6 +70,7 @@
 	--ed-nav-bar: 3px;
 	--ed-grain: none;
 	--ed-grain-motion: none;
+	--ed-grain-blend: normal;
 	--ed-grain-opacity: 0;
 	--ed-motif-size: 48px;
 }
@@ -78,7 +78,6 @@
 	--ed-fill-sheen: 0;
 	--ed-fill-edge: rgba(0, 0, 0, 0.32);
 	--ed-fill-highlight: rgba(255, 255, 255, 0.03);
-	--ed-fill-shadow: none;
 	--ed-grain-opacity: 0;
 }
 [data-brand="tended"] {
@@ -101,7 +100,6 @@
 	--ed-fill-sheen: 0.08;
 	--ed-fill-edge: rgba(31, 42, 34, 0.14);
 	--ed-fill-highlight: rgba(255, 255, 255, 0.06);
-	--ed-fill-shadow: 0 1px 1px rgba(31, 42, 34, 0.08);
 	--ed-secondary-bg: var(--surface-0);
 	--ed-secondary-border: var(--stroke);
 	--ed-chip-accent-border: color-mix(in srgb, var(--brand-primary) 35%, transparent);
@@ -111,6 +109,7 @@
 	--ed-nav-bar: 3px;
 	--ed-grain: none;
 	--ed-grain-motion: none;
+	--ed-grain-blend: normal;
 	--ed-grain-opacity: 0;
 	--ed-motif-size: 56px;
 }
@@ -118,24 +117,17 @@
 	--ed-fill-sheen: 0.06;
 	--ed-fill-edge: rgba(0, 0, 0, 0.32);
 	--ed-fill-highlight: rgba(255, 255, 255, 0.04);
-	--ed-fill-shadow: none;
 	--ed-grain-opacity: 0;
 }
 
 /* Relief (data-relief): raised, flat; default raised. After the brand dial, so a level wins over it in both themes (OQ-21). */
 :root, [data-relief="raised"] {
 	--ed-press-scale: 0.96;
-	--ed-press-shadow: 0 1px 1px rgba(31, 42, 34, 0.10);
-}
-[data-theme="dark"], [data-theme="dark"][data-relief="raised"], [data-theme="dark"] [data-relief="raised"] {
-	--ed-press-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
 }
 [data-relief="flat"], [data-theme="dark"][data-relief="flat"], [data-theme="dark"] [data-relief="flat"] {
 	--ed-fill-sheen: 0;
 	--ed-fill-highlight: rgba(255, 255, 255, 0);
-	--ed-fill-shadow: none;
 	--ed-press-scale: 0.96;
-	--ed-press-shadow: none;
 }
 
 /* Platform (data-platform): desktop, mobile; default desktop. Safe-area insets are read once here. */
@@ -194,7 +186,7 @@ input, textarea, [contenteditable]:not([contenteditable="false"]) {
 	color: var(--text-primary);
 }
 
-/* Paper grain at lush (D-61): a fixed layer over the whole page, overlay blended so one mid-grey tile reads in both themes without shifting colour, and at an opacity that leaves text crisp. It ignores the pointer. The tile is raw desaturated noise, never pushed for contrast, which is what keeps it fine (D-63), and it jumps to a new offset about eight times a second (D-63), which reads as fresh grain. .ed-canvas frames paint their own. */
+/* Paper grain at lush (D-61): a fixed layer over the whole page, blended by --ed-grain-blend (multiply on light, screen on dark, D-99) so it reads on the paper and fades on a saturated fill, and at an opacity that leaves text crisp. It ignores the pointer. The tile is raw desaturated noise, never pushed for contrast, which is what keeps it fine (D-63), and it jumps to a new offset about eight times a second (D-63), which reads as fresh grain. .ed-canvas frames paint their own. */
 body::before, .ed-canvas::before {
 	content: "";
 	position: fixed;
@@ -203,7 +195,7 @@ body::before, .ed-canvas::before {
 	pointer-events: none;
 	background-image: var(--ed-grain);
 	opacity: var(--ed-grain-opacity);
-	mix-blend-mode: overlay;
+	mix-blend-mode: var(--ed-grain-blend);
 	animation: var(--ed-grain-motion);
 }
 
@@ -217,7 +209,7 @@ body::before, .ed-canvas::before {
 	border-radius: inherit;
 	background-image: var(--ed-grain);
 	opacity: var(--ed-grain-opacity);
-	mix-blend-mode: overlay;
+	mix-blend-mode: var(--ed-grain-blend);
 	animation: var(--ed-grain-motion);
 }
 .ed-canvas {

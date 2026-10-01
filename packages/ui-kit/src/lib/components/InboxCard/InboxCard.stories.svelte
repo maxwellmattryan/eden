@@ -17,7 +17,7 @@
 	const actions: InboxAction[] = [
 		{ id: 'done', label: 'Done', icon: 'check', onclick: fn() },
 		{ id: 'snooze', label: 'Snooze', icon: 'clock', onclick: fn() },
-		{ id: 'open', label: 'Open', onclick: fn() },
+		{ id: 'open', label: 'Open', icon: 'arrow-right', onclick: fn() },
 	]
 
 	const { Story } = defineMeta({

@@ -1,6 +1,6 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
-	import { expect, fn } from 'storybook/test'
+	import { expect, fn, userEvent, waitFor } from 'storybook/test'
 	import { canvasOf, hasCanvas } from '../../../storybook/play.js'
 	import { domainGlyph } from '$lib/icons/domain-glyphs.js'
 	import Compass from '../Compass/Compass.svelte'
@@ -17,7 +17,7 @@
 	const hearthJa = sidebarJa.items.find((item) => item.id === 'kitchen')!
 	const actions: PageHeaderAction[] = [
 		{ label: 'Capture a haul', icon: 'camera', onclick: fn() },
-		{ label: 'Add', onclick: fn() },
+		{ label: 'Add', icon: 'plus', onclick: fn() },
 	]
 	const tabs = ['Stock', 'Recipes', 'Grocery']
 
@@ -66,6 +66,38 @@
 />
 
 <Story name="No actions" args={{ actions: [] }} />
+
+<!-- One Add that offers what can be added: the button opens a menu under itself, and a pick is the item's own -->
+<Story
+	name="Action with a menu"
+	args={{
+		actions: [
+			{
+				label: 'Add',
+				icon: 'plus',
+				menu: [
+					{ id: 'item', label: 'Add item', icon: 'list', onselect: fn() },
+					{ id: 'store', label: 'Add store', icon: 'map-pin', onselect: fn() },
+				],
+			},
+		],
+	}}
+	parameters={{ platforms: ['desktop'], platformFrame: 'inline' }}
+	play={async ({ canvasElement, args }) => {
+		if (!hasCanvas(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		const add = canvas.getByRole('button', { name: 'Add' })
+		await expect(add).toHaveAttribute('aria-expanded', 'false')
+		await userEvent.click(add)
+		const store = await canvas.findByRole('menuitem', { name: 'Add store' })
+		await expect(add).toHaveAttribute('aria-expanded', 'true')
+		await expect(canvas.getAllByRole('menuitem')).toHaveLength(2)
+		await userEvent.click(store)
+		await waitFor(() => expect(add).toHaveAttribute('aria-expanded', 'false'))
+		await expect(args.actions?.[0]?.menu?.[1]?.onselect).toHaveBeenCalledTimes(1)
+		await expect(args.actions?.[0]?.menu?.[0]?.onselect).not.toHaveBeenCalled()
+	}}
+/>
 
 <Story
 	name="Japanese"
@@ -118,6 +150,28 @@
 				<Chip label="Home · Hyde Park" tone="outline" icon="map-pin" />
 			{/snippet}
 		</PageHeader>
+	{/snippet}
+</Story>
+
+<!-- A header too narrow for the name and the actions on one line (a panel open beside the page) stacks as mobile does -->
+<Story
+	name="Narrow"
+	parameters={{ platforms: ['desktop'] }}
+	play={async ({ canvasElement }) => {
+		if (!hasCanvas(canvasElement)) return
+		const header = canvasElement.querySelector('.ed-page-header')!
+		await expect(header).toHaveClass(/ed-page-header-stacked/)
+	}}
+>
+	{#snippet template(args)}
+		<div style="width: 420px">
+			<PageHeader {...args}>
+				{#snippet filters()}
+					<Segmented items={tabs} label="Hearth sections" />
+					<Chip label="Low stock" tone="outline" selectable />
+				{/snippet}
+			</PageHeader>
+		</div>
 	{/snippet}
 </Story>
 

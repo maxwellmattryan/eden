@@ -29,6 +29,17 @@
 
 <Story name="No motif" args={{ motif: false }} />
 
+<!-- A list's own inside a page that has others: a card, no frond, a secondary action -->
+<Story
+	name="Inline"
+	args={{
+		inline: true,
+		title: 'No items in this list yet',
+		text: 'Add one, or mark what ran out in Stock.',
+		action: { label: 'Add an item', icon: 'plus', onclick: fn() },
+	}}
+/>
+
 <!-- The quiet link under the action seeds the page with the sample dataset -->
 <Story
 	name="With sample data link"

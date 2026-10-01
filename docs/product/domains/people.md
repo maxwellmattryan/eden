@@ -4,7 +4,7 @@ status: candidate
 summary: Candidate domain for relationships: people, birthdays, gift ideas, last contact, dietary notes for hosting, and the places you went together. Id `people`.
 read-this-if: You are considering a People domain or wondering where a person-related feature belongs.
 depends-on: [substrate/primitives, domains/_template]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## Purpose
@@ -17,7 +17,7 @@ Birthdays and "call your mother" reminders are the most common request in any li
 
 ## Entity sketch
 
-`person` (T1; name, how you know them, birthday, contact hints, gift ideas, dietary notes, notes T2), `interaction` (T1; date, kind, note, linked Place or outing). Birthdays become yearly Events of kind `birthday` (T1); the Gardener's day briefing (`summarize-day`, `engineering/gardener.md`) reads a day's Events, so a birthday is in it once the kind exists, and its prompt line should then say whose it is. Nudges are reminder tasks.
+`person` (T1; name, how you know them, birthday, contact hints, gift ideas, dietary notes, notes T2), `interaction` (T1; date, kind, note, linked Place or outing). Birthdays become yearly Events of kind `birthday` (T1); the Gardener's `agenda` tool (`engineering/gardener.md`, D-125) answers a day's Events, so a birthday is in it once the kind exists, and its row should then say whose it is. Nudges are reminder tasks.
 
 ## Facts
 

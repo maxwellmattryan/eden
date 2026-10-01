@@ -16,3 +16,19 @@ export function canvasOf(canvasElement: HTMLElement) {
 export function hasCanvas(canvasElement: HTMLElement) {
 	return canvasElement.querySelector('.ed-canvas') !== null
 }
+
+/**
+ * Moves the pointer to a place across an element: a fraction of its width, at its middle height. What a chart's
+ * story uses to read the point there.
+ */
+export function pointAcross(
+	userEvent: { pointer: (input: { target: Element; coords: { clientX: number; clientY: number } }) => Promise<void> },
+	el: Element,
+	across: number
+): Promise<void> {
+	const rect = el.getBoundingClientRect()
+	return userEvent.pointer({
+		target: el,
+		coords: { clientX: rect.left + rect.width * across, clientY: rect.top + rect.height / 2 },
+	})
+}

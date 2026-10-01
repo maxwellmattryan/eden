@@ -36,9 +36,11 @@
 		/** Which edge of the anchor the panel lines up with. */
 		align?: 'start' | 'end'
 		/** The preferred side; the panel flips when there is no room. */
-		side?: 'top' | 'bottom'
+		side?: 'top' | 'bottom' | 'right'
 		/** Space between the anchor and the panel, in px. */
 		gap?: number
+		/** For side="right": how far above the anchor's top the panel starts, in px. */
+		inset?: number
 		/** dialog (the default) traps Tab inside and focuses the first control; menu and the rest leave focus to their content. */
 		role?: AriaRole
 		/** The accessible name. */
@@ -53,6 +55,7 @@
 		align = 'start',
 		side = 'bottom',
 		gap = 6,
+		inset = 0,
 		role = 'dialog',
 		label,
 		onclose,
@@ -126,7 +129,7 @@
 	aria-label={label}
 	data-align={align}
 	data-unfurl={nativeUnfurl ? 'native' : undefined}
-	{@attach anchored(() => ({ anchor: open || leaving ? anchor : null, side, align, gap }))}
+	{@attach anchored(() => ({ anchor: open || leaving ? anchor : null, side, align, gap, inset }))}
 	{@attach dismiss(() => ({
 		when: open,
 		onDismiss: (why) => requestClose(why === 'focusout' ? 'outside' : why),
@@ -192,6 +195,12 @@
 		transform-origin: top left;
 	}
 	.ed-popover[data-side='bottom'][data-align='end'] {
+		transform-origin: top right;
+	}
+	.ed-popover[data-side='right'] {
+		transform-origin: top left;
+	}
+	.ed-popover[data-side='left'] {
 		transform-origin: top right;
 	}
 	.ed-popover[data-side='top'] {

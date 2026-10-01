@@ -5,7 +5,7 @@
 	import { canvasOf } from '../../../storybook/play.js'
 	import ConfirmSheet from './ConfirmSheet.svelte'
 	import Button from '../Button/Button.svelte'
-	import { budget, grocery, recipes } from '../../../stories/sample-data.js'
+	import { budget, groceryShopDay, recipes } from '../../../stories/sample-data.js'
 
 	// A destructive local write, and the Gardener sending the shop day to a calendar outside the device.
 	const del = {
@@ -21,7 +21,7 @@
 		subject: `Gardener · ${budget.model}`,
 		resource: 'shop-day',
 		destination: 'Google Calendar “Work”',
-		payload: `Shop day\n${grocery.shopDay}\nH-E-B, 2400 S Congress`,
+		payload: `Shop day\n${groceryShopDay}\nH-E-B, 2400 S Congress`,
 		verb: 'Send to Google',
 		danger: false,
 	}
@@ -74,7 +74,7 @@
 		await userEvent.click(canvas.getByRole('button', { name: trigger }))
 		const dialog = await canvas.findByRole('dialog', { name: send.title })
 		await waitFor(() => expect(canvas.getByText(send.destination)).toBeVisible())
-		await expect(dialog.querySelector('pre')).toHaveTextContent(grocery.shopDay)
+		await expect(dialog.querySelector('pre')).toHaveTextContent(groceryShopDay)
 		await userEvent.click(canvas.getByRole('button', { name: send.verb }))
 		await waitFor(() => expect(dialog).not.toBeVisible())
 		await waitFor(() => expect(args.onconfirm).toHaveBeenCalledTimes(1))

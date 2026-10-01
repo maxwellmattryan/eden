@@ -4,7 +4,7 @@ status: draft
 summary: The domain manifest and the resource registry as code: the manifest.json a domain declares itself in, the builder that checks it and generates the registry for TypeScript and Rust, the bindings an app adds, the functions the shell composes itself with, model grades and the resolution of a tool to a model, where a domain's code lives, and how isolation is enforced.
 read-this-if: You are adding or changing a domain, a registry row, a widget, a quick action, an intent, a palette entry or a tool's grade, or anything in the shell that lists domains, or sending a request to a model.
 depends-on: [product/substrate/domain-manifest, product/substrate/registry, product/substrate/shell, engineering/app-scaffold, engineering/data-layer]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## What this covers
@@ -22,7 +22,7 @@ A domain is what it **declares** and what an app **binds** to that.
 | half | where | holds |
 |---|---|---|
 | declaration | `packages/shared/src/domains/<id>/manifest.json` | data only: resources, reads, widgets, quick actions, tools, signals, rules, schedules, intents, palette entries, export sections. The same for every app and for the crate |
-| bindings | `apps/<app>/src/lib/domains/<id>/manifest.ts` | what the data cannot hold: the route, each widget's component and `hasData()`, the live glyph, the store's `load`, `seed`, `reload` and `extras`, and `subscribe`, which binds what the domain hears |
+| bindings | `apps/<app>/src/lib/domains/<id>/manifest.ts` | what the data cannot hold: the route, each widget's component and `hasData()`, the live glyph, the store's `load`, `seed`, `reload` and `extras`, `subscribe`, which binds what the domain hears, the tool handlers, and the surfaces a draft opens on (`openDraft`, `overlay`) |
 
 The declaration is JSON because two languages read it. A JSON import would widen every id to `string`, so the builder writes the declarations out again as `as const` TypeScript, and the types come from that.
 
@@ -114,9 +114,15 @@ Each app has `src/lib/domains/manifest.ts` with `defineDomain(id, bindings)`, wh
 
 `pack` is what the Gardener's context pack carries of a row, by entity type, for a type whose row is more than a request should pay for (D-85): the shell's pack readers apply it after the query, a type without an entry is sent whole, and `null` leaves a row out. Sky binds one for `forecast`.
 
+`labels` is what a row is called where the Gardener lists what it read (the "can see" chip, the audit log), by entity type, for a type whose rows hold no `name`, `title` or `label` of their own: `labelRows` (`apps/desktop/src/lib/shell/gardener/labels.ts`) asks it first and falls back to the row's name, then its id. Hearth binds one for `grocery-list`, which is called by its store, or "Miscellaneous" for the list of what is not filed.
+
 `subscribe` is where a domain hears its schedules and its signals and registers its mirrors with the refresh coordinator (`engineering/signals.md`). The shell calls it once when it starts, before any store is loaded, so what it binds reads rows and not the domain's store; its answer unbinds.
 
 `tools` binds a handler to each tool the domain declares and `quickActionHandlers` a store write to each quick action (`engineering/gardener.md`, "Tools"); the domain keeps them in `tools.ts`, which imports its own store and the shell and nothing of another domain.
+
+`commitDraft(card)` is the domain's part of committing a draft its tool left, from the card in the Gardener's panel (a grocery list, a plan's shop list); the substrate's parts, tasks and events, are the shell's. `openDraft(card, settle)` is for a draft the owner checks on a surface of the domain's own instead: it opens the draft there and answers whether it took it, and `settle` is told when the owner keeps or discards it, until which the card stays as it was. Hearth binds it for a `capture` draft, which opens its capture sheet at the rows, and for a `recipe` draft, which opens in its Recipes pane unsaved (D-86).
+
+`overlay` is a component the shell mounts once, over whatever page is open, beside its own sheets. Hearth's capture sheet is one, since a haul is captured from its page, from a drop and from a card in the Gardener's panel. The root layout mounts each enabled domain's overlay and names none of them.
 
 `src/lib/domains/index.ts` lists the enabled domains in the shell's order and exports their `declarations`. Disabling a domain is leaving it out of that list: its sidebar entry, its tiles, its palette entries, its quick actions, its rules and its schedules go, and its rows stay.
 
@@ -159,8 +165,8 @@ The Gardener's runtime (`engineering/gardener.md`) calls `resolveTool` before ev
 
 | side | path | holds |
 |---|---|---|
-| shared | `packages/shared/src/domains/<id>/` | `manifest.json`, and the modules both apps use: types, row mapping, formats, and what the domain does on its schedules (`signals.ts`) |
-| desktop | `apps/desktop/src/lib/domains/<id>/` | `manifest.ts` (bindings), `store.svelte.ts`, `seed.ts`, `views/`, `widgets/` |
+| shared | `packages/shared/src/domains/<id>/` | `manifest.json`, and the modules both apps use: types, row mapping, formats, what the domain does on its schedules (`signals.ts`), and its pure rules, each with its test beside it (Hearth's are listed in `engineering/data-layer.md`, "A store on rows") |
+| desktop | `apps/desktop/src/lib/domains/<id>/` | `manifest.ts` (bindings), `store.svelte.ts`, `seed.ts`, `tools.ts`, `views/`, `widgets/` |
 | mobile | `apps/mobile/src/lib/domains/<id>/` | `manifest.ts` (bindings), and its surfaces as they are built |
 | Rust | `src-tauri/src/domains/<id>/` | models, services and commands, for a domain that needs the crate |
 

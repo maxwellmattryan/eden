@@ -22,6 +22,8 @@ export interface UiStrings {
 	selected: (count: number) => string
 	/** The spoken state of a selected row outside a grid, where aria-selected is not allowed. */
 	selectedRow: string
+	/** The name of a row's checkbox: "Check off Limes". */
+	checkOff: (name: string) => string
 	actions: string
 	actionsFor: (name: string) => string
 	remove: (name: string) => string
@@ -43,6 +45,39 @@ export interface UiStrings {
 	/** The name of a glyph that explains a label, such as a table column's info button. */
 	about: (name: string) => string
 	noData: string
+	/** The sun arc's readout of the time of day under the pointer. */
+	sunArc: {
+		elevation: string
+		azimuth: string
+		/** What the light is at the sun's elevation. */
+		phases: {
+			day: string
+			golden: string
+			civil: string
+			nautical: string
+			astronomical: string
+			night: string
+		}
+		/** The eight points of the compass a bearing is rounded to. */
+		bearings: { n: string; ne: string; e: string; se: string; s: string; sw: string; w: string; nw: string }
+	}
+	/** A chart's readout of the point under the pointer. */
+	chart: {
+		/** The sum of a stacked bar's series. */
+		total: string
+	}
+	/** The pager under a long table. */
+	pagination: {
+		label: string
+		/** Which rows are showing, of how many: "51–100 of 312". */
+		range: (from: number, to: number, total: number) => string
+		first: string
+		previous: string
+		next: string
+		last: string
+	}
+	/** The letters that stand for a date's parts in an unset date field: MM/DD/YYYY, in the system's order. */
+	datePart: { year: string; month: string; day: string }
 	gardener: {
 		name: string
 		open: string
@@ -142,22 +177,66 @@ export interface UiStrings {
 		origin: string
 	}
 	capture: {
+		/** The sheet's title while the sources are collected and read. */
+		collectTitle: string
+		/** The sheet's title once there are rows to check. */
 		title: string
-		processedBy: (provider: string, cost: string) => string
+		/** The invitation in the empty drop area. */
+		invite: string
+		/** The line under the invitation: the ways in. The second is the phone's, where nothing is dropped. */
+		inviteHint: string
+		inviteHintTouch: string
+		/** The file button's name. */
+		chooseFiles: string
+		/** The accessible name of the sources: the staged files, and their thumbnails beside the rows. */
+		sources: string
+		/** The cost as the provider line says it: "about 0.8 ¢". */
+		estimate: (cost: string) => string
+		/** The provider line once the sources were read; `line` is the provider, the model and the cost. */
+		readBy: (line: string) => string
+		/** The first phase's primary button, and the status while it runs. */
+		read: string
+		reading: string
 		draftRows: string
-		mergesWith: (name: string) => string
+		addRow: string
+		/** The switch on a row that matches a stock item. */
+		mergeWith: (name: string) => string
 		everyRowRemoved: string
 		footer: (created: number, merged: number) => string
-		locations: { fridge: string; freezer: string; pantry: string; counter: string }
-		/** The accessible names of a draft row's editable name and quantity. */
+		locations: { fridge: string; freezer: string; pantry: string; counter: string; household: string }
+		/** The accessible names of a draft row's fields; the name and the unit are placeholders too. */
 		rowName: string
 		rowQty: string
+		rowUnit: string
+		rowExpiry: string
+		rowBrand: string
+		rowSize: string
+		rowPrice: string
+		/** The store a haul was bought at: the menu's name, its chip with none picked and with one, and "No store". */
+		store: string
+		pickStore: string
+		boughtAt: (store: string) => string
+		noStore: string
+		/** Under the chip while no store is picked: the name the sources gave, or that prices need a store. */
+		storeRead: (name: string) => string
+		pricesNeedStore: string
+		/** The category chip with nothing chosen and the menu's name; the chip's accessible name with a choice. */
+		category: string
+		categoryNamed: (label: string) => string
 		/** The accessible name of a row's location radio group. */
 		location: (name: string) => string
-		/** The label before a row's expiry. */
-		expires: string
-		/** The thumbnail's alt text. */
-		image: string
+		/** A row with no name yet, where its name is spoken: "Remove this row". */
+		unnamed: string
+		/** The words that differ when the shelves are read as they stand (`kind="stock"`): a match is updated. */
+		stock: {
+			collectTitle: string
+			title: string
+			invite: string
+			inviteHint: string
+			inviteHintTouch: string
+			mergeWith: (name: string) => string
+			footer: (created: number, updated: number) => string
+		}
 	}
 	confirmSheet: { subject: string; resource: string; destination: string; payload: string }
 	quickLog: {
@@ -252,6 +331,8 @@ export interface UiStrings {
 		missing: string
 		/** The file could not be read or stored. */
 		failed: string
+		/** The first row of a file button's menu of sources: the platform's picker. */
+		fromFile: string
 	}
 }
 
@@ -273,6 +354,7 @@ export const defaultStrings: UiStrings = {
 	select: 'Select',
 	selected: (count) => `${count} selected`,
 	selectedRow: 'Selected',
+	checkOff: (name) => `Check off ${name}`,
 	actions: 'Actions',
 	actionsFor: (name) => `Actions for ${name}`,
 	remove: (name) => `Remove ${name}`,
@@ -293,6 +375,29 @@ export const defaultStrings: UiStrings = {
 	step: (current, total) => `Step ${current} of ${total}`,
 	about: (name) => `About ${name}`,
 	noData: 'No data yet',
+	sunArc: {
+		elevation: 'Elevation',
+		azimuth: 'Azimuth',
+		phases: {
+			day: 'Daylight',
+			golden: 'Golden hour',
+			civil: 'Civil twilight',
+			nautical: 'Nautical twilight',
+			astronomical: 'Astronomical twilight',
+			night: 'Night',
+		},
+		bearings: { n: 'N', ne: 'NE', e: 'E', se: 'SE', s: 'S', sw: 'SW', w: 'W', nw: 'NW' },
+	},
+	chart: { total: 'Total' },
+	pagination: {
+		label: 'Pages',
+		range: (from, to, total) => `${from}–${to} of ${total}`,
+		first: 'First page',
+		previous: 'Previous page',
+		next: 'Next page',
+		last: 'Last page',
+	},
+	datePart: { year: 'YYYY', month: 'MM', day: 'DD' },
 	gardener: {
 		name: 'Gardener',
 		open: 'Open the Gardener',
@@ -305,7 +410,7 @@ export const defaultStrings: UiStrings = {
 		confirmed: (verb) => `${verb}. Done.`,
 		canSee: 'Can see',
 		canSeeTitle: 'What the Gardener can see',
-		inThisRequest: 'In this request',
+		inThisRequest: 'In your next message',
 		locked: (id) => `${id}, not shared: needs your grant`,
 		canSeeSummary: (facts, types) => `${facts} facts across ${types} types`,
 		notShared: (count) => `${count} not shared`,
@@ -374,18 +479,49 @@ export const defaultStrings: UiStrings = {
 		origin: 'origin',
 	},
 	capture: {
+		collectTitle: 'Capture a haul',
 		title: 'Verify the haul',
-		processedBy: (provider, cost) => `Processed by ${provider}, about ${cost}`,
+		invite: 'Add photos, a receipt or an order PDF',
+		inviteHint: 'Drop them here, choose files, or paste a list.',
+		inviteHintTouch: 'Choose files, or paste a list.',
+		chooseFiles: 'Choose files',
+		sources: 'Sources',
+		estimate: (cost) => `up to ${cost}`,
+		readBy: (line) => `Read by ${line}`,
+		read: 'Read',
+		reading: 'Reading…',
 		draftRows: 'Draft rows',
-		mergesWith: (name) => `Merges with ${name}`,
+		addRow: 'Add a row',
+		mergeWith: (name) => `Merge with ${name}`,
 		everyRowRemoved: 'Every row was removed. Nothing will be created.',
 		footer: (created, merged) => (merged ? `${created} to create, ${merged} to merge` : `${created} to create`),
-		locations: { fridge: 'Fridge', freezer: 'Freezer', pantry: 'Pantry', counter: 'Counter' },
+		locations: { fridge: 'Fridge', freezer: 'Freezer', pantry: 'Pantry', counter: 'Counter', household: 'Household' },
 		rowName: 'Name',
 		rowQty: 'Quantity',
+		rowUnit: 'Unit',
+		rowExpiry: 'Expiry',
+		rowBrand: 'Brand',
+		rowSize: 'Size',
+		rowPrice: 'Price',
+		store: 'Store',
+		pickStore: 'Pick the store',
+		boughtAt: (store) => `Bought at ${store}`,
+		noStore: 'No store',
+		storeRead: (name) => `Read as ${name}, which is not one of your stores.`,
+		pricesNeedStore: 'Prices are remembered once the store is picked.',
+		category: 'Category',
+		categoryNamed: (label) => `Category: ${label}`,
 		location: (name) => `Location of ${name}`,
-		expires: 'Expires',
-		image: 'The captured image',
+		unnamed: 'this row',
+		stock: {
+			collectTitle: 'Take stock',
+			title: 'Check what was found',
+			invite: 'Add photos of your fridge, freezer, pantry or counter',
+			inviteHint: 'Drop them here or choose files. What is in them becomes your stock.',
+			inviteHintTouch: 'Choose files. What is in them becomes your stock.',
+			mergeWith: (name) => `Update ${name}`,
+			footer: (created, updated) => (updated ? `${created} to create, ${updated} to update` : `${created} to create`),
+		},
 	},
 	confirmSheet: { subject: 'Subject', resource: 'Resource', destination: 'Destination', payload: 'Payload' },
 	quickLog: {
@@ -459,6 +595,7 @@ export const defaultStrings: UiStrings = {
 		open: (name) => `Open ${name}`,
 		missing: 'No longer on this device',
 		failed: 'Could not be added',
+		fromFile: 'From a file',
 	},
 }
 

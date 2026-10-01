@@ -1,6 +1,6 @@
 // Every tool's handler by wire name (docs/engineering/gardener.md, "Tools"): the substrate's own and each enabled
 // domain's from its bindings. A declared tool with no handler is unavailable and says so; `missingHandlers` lists
-// them, and a test asserts the list is empty.
+// them, and the shell logs it at startup.
 import { toolIndex, type GardenerTool } from '@eden/shared/gardener'
 import { declarations, manifestFor } from '$lib/domains'
 import { substrateTools } from './substrate-tools.js'

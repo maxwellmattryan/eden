@@ -49,6 +49,8 @@ export const storage = {
 	home: 'eden:home',
 	gardenerGrade: 'eden:gardener-grade',
 	gardenerPanelWidth: 'eden:gardener-panel-width',
+	sidebarWidth: 'eden:sidebar-width',
+	sidebarCollapsed: 'eden:sidebar-collapsed',
 } as const
 
 function read(key: string): string | null {
@@ -143,6 +145,10 @@ export class Settings {
 	gardenerGrade = $state<ModelGrade>('standard')
 	/** The Gardener's dock, in px, as the owner last dragged it; null until they do, and the dock takes its default. */
 	gardenerPanelWidth = $state<number | null>(null)
+	/** The sidebar, in px, as the owner last dragged it; null until they do, and it takes the kit's width. */
+	sidebarWidth = $state<number | null>(null)
+	/** Whether the sidebar is collapsed to its glyphs. */
+	sidebarCollapsed = $state(false)
 	/** The theme on <html>: the choice, or what "system" resolves to right now. */
 	resolvedTheme = $state<Theme>('light')
 
@@ -168,6 +174,8 @@ export class Settings {
 		this.weatherProvider = oneOf(read(storage.weatherProvider), weatherProviders, 'open-meteo')
 		this.gardenerGrade = oneOf(read(storage.gardenerGrade), GRADES, 'standard')
 		this.gardenerPanelWidth = positiveInt(read(storage.gardenerPanelWidth))
+		this.sidebarWidth = positiveInt(read(storage.sidebarWidth))
+		this.sidebarCollapsed = read(storage.sidebarCollapsed) === 'on'
 		this.home = readHome()
 		this.resolvedTheme = this.resolveTheme(this.theme)
 		this.apply()
@@ -285,6 +293,16 @@ export class Settings {
 	setGardenerPanelWidth(width: number | null) {
 		this.gardenerPanelWidth = positiveInt(width === null ? null : String(Math.round(width)))
 		write(storage.gardenerPanelWidth, this.gardenerPanelWidth === null ? null : String(this.gardenerPanelWidth))
+	}
+
+	setSidebarWidth(width: number | null) {
+		this.sidebarWidth = positiveInt(width === null ? null : String(Math.round(width)))
+		write(storage.sidebarWidth, this.sidebarWidth === null ? null : String(this.sidebarWidth))
+	}
+
+	setSidebarCollapsed(collapsed: boolean) {
+		this.sidebarCollapsed = collapsed
+		write(storage.sidebarCollapsed, collapsed ? 'on' : null)
 	}
 
 	setHome(home: HomePlace) {

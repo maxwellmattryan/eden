@@ -35,6 +35,8 @@ export { default as Skeleton } from './components/Skeleton/Skeleton.svelte'
 export { default as Stat } from './components/Stat/Stat.svelte'
 export { default as Sparkline } from './components/Sparkline/Sparkline.svelte'
 export { default as TrendChart } from './components/TrendChart/TrendChart.svelte'
+export { default as BarChart } from './components/BarChart/BarChart.svelte'
+export type { BarSeries } from './components/BarChart/bars.js'
 export { default as SunArc } from './components/SunArc/SunArc.svelte'
 
 // Brand
@@ -51,6 +53,7 @@ export type { SketchDefinition, SketchFrame } from './sketch/types.js'
 export { createRandom, type Random } from './sketch/random.js'
 export { createNoise, type Noise } from './sketch/noise.js'
 export { skyField, type SkyFieldParams } from './sketches/sky-field.js'
+export { hearthEmbers, type HearthEmbersParams } from './sketches/hearth-embers.js'
 
 // Actions and data
 export { default as Button } from './components/Button/Button.svelte'
@@ -69,6 +72,7 @@ export { tooltip } from './components/Tooltip/tooltip.js'
 
 // Files
 export { default as Dropzone } from './components/Dropzone/Dropzone.svelte'
+export { default as DropTarget } from './components/DropTarget/DropTarget.svelte'
 export {
 	checkFiles,
 	formatBytes,
@@ -96,7 +100,8 @@ export type { BannerPlacement, BannerTone } from './components/Banner/Banner.sve
 export { default as QuickAdd } from './components/QuickAdd/QuickAdd.svelte'
 export { defaultParse, type ParsedChip, type QuickAddParser } from './components/QuickAdd/QuickAdd.svelte'
 export { default as DataTable } from './components/DataTable/DataTable.svelte'
-export type { DataTableCell, DataTableColumn } from './components/DataTable/DataTable.svelte'
+export type { DataTableCell, DataTableColumn, DataTableSort } from './components/DataTable/DataTable.svelte'
+export { default as Pagination } from './components/Pagination/Pagination.svelte'
 export { default as Widget } from './components/Widget/Widget.svelte'
 export type { WidgetAction, WidgetSize } from './components/Widget/Widget.svelte'
 export { default as WidgetGrid } from './components/WidgetGrid/WidgetGrid.svelte'
@@ -111,6 +116,7 @@ export { default as Thread } from './components/GardenerMessage/Thread.svelte'
 export { default as Greeting } from './components/Greeting/Greeting.svelte'
 export { default as Markdown } from './components/Markdown/Markdown.svelte'
 export { default as Spinner } from './components/Spinner/Spinner.svelte'
+export { default as Thumbnail } from './components/Thumbnail/Thumbnail.svelte'
 export { default as Sprouting } from './components/Sprouting/Sprouting.svelte'
 export { default as CanSee } from './components/CanSee/CanSee.svelte'
 export type { CanSeeItem } from './components/CanSee/CanSee.svelte'
@@ -141,7 +147,16 @@ export { default as ConfirmSheet } from './components/ConfirmSheet/ConfirmSheet.
 export { default as QuickLogSheet } from './components/QuickLogSheet/QuickLogSheet.svelte'
 export type { QuickLog, QuickLogKind } from './components/QuickLogSheet/QuickLogSheet.svelte'
 export { default as CaptureSheet } from './components/CaptureSheet/CaptureSheet.svelte'
-export { LOCATIONS, type CaptureLocation, type CaptureRow } from './components/CaptureSheet/CaptureSheet.svelte'
+export {
+	LOCATIONS,
+	type CaptureCategory,
+	type CaptureStore,
+	type CaptureKind,
+	type CaptureFile,
+	type CaptureLocation,
+	type CapturePhase,
+	type CaptureRow,
+} from './components/CaptureSheet/CaptureSheet.svelte'
 
 // Navigation
 export { default as SidebarItem } from './components/SidebarItem/SidebarItem.svelte'

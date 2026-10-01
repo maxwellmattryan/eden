@@ -90,6 +90,7 @@ describe('the Garden', () => {
 		expect(catalog.map((widget) => widget.id)).toEqual([
 			'expiring-soon',
 			'cook-tonight',
+			'grocery-quick-add',
 			'resurfaced-idea',
 			'active-projects',
 			'weather-now',
@@ -145,7 +146,6 @@ describe('paletteIndex', () => {
 			'go.kitchen.stock',
 			'go.kitchen.recipes',
 			'go.kitchen.grocery',
-			'go.kitchen.tips',
 			'go.toolbench',
 			'go.toolbench.ideas',
 			'go.toolbench.projects',

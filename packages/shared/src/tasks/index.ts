@@ -9,6 +9,7 @@ export {
 	type RepeatDescription,
 	type TaskChip,
 } from './describe.js'
+export { REPEAT_EVERY, repeatOf, taskFromDraft, type DraftTask } from './draft.js'
 export { parseTask, type ParseContext, type ParsedTask } from './parse.js'
 export {
 	addTally,
@@ -26,6 +27,7 @@ export {
 	completion,
 	dueDay,
 	dueTime,
+	edited,
 	inverseOf,
 	isDateOnly,
 	isOverdue,
@@ -37,6 +39,7 @@ export {
 	targetMet,
 	taskSignal,
 	type TaskChange,
+	type TaskEdit,
 	type TaskSignal,
 } from './rules.js'
 export { emitTaskCompleted, emitTaskCreated } from './signals.js'

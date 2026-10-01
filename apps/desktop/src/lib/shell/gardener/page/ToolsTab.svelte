@@ -1,15 +1,14 @@
 <script lang="ts">
-	// The tools page (docs/engineering/gardener.md, "Tools"; docs/design/screens.md, `gardener-tools`): every tool the
+	// The tools (docs/engineering/gardener.md, "Tools"; docs/design/screens.md, `gardener-tools`): every tool the
 	// Gardener has, the substrate's first and then each domain's, one row each with its owner, its access, its grade
 	// and how many registry ids it may read. A row unfolds beneath itself to the same body the conversation's tool
-	// popover shows (`ToolAbout`), with the input's shape folded beside it. Linked from the Gardener tab and the
-	// panel's header.
-	import { DataTable, DetailSection, PageHeader, type DataTableCell, type DataTableColumn } from '@eden/ui-kit'
+	// popover shows (`ToolAbout`), with the input's shape folded beside it.
+	import { DataTable, DetailSection, type DataTableCell, type DataTableColumn } from '@eden/ui-kit'
 	import { SUBSTRATE, type GardenerTool } from '@eden/shared/gardener'
 	import { t } from '@eden/shared/i18n'
 	import { manifestFor } from '$lib/domains'
-	import { handlerOf, tools } from '$lib/shell/gardener/handlers'
-	import ToolAbout from '$lib/shell/gardener/ToolAbout.svelte'
+	import { handlerOf, tools } from '../handlers'
+	import ToolAbout from '../ToolAbout.svelte'
 
 	// the row that is unfolded, by its index in `shown`
 	let expanded = $state<number>()
@@ -47,45 +46,36 @@
 	)
 </script>
 
-<div class="page">
-	<PageHeader name={$t('tools.title')} subtitle={$t('tools.subtitle')} icon="wrench" />
-	<div class="body">
-		<DataTable {columns} {rows} label={$t('tools.title')} bind:expanded>
-			{#snippet detail(index)}
-				{@const tool = shown[index]}
-				{#if tool}
-					<div class="detail">
-						<ToolAbout {tool} />
-						{#if !handlerOf(tool)}
-							<DetailSection
-								rows={[
-									{
-										label: $t('tools.status'),
-										value: $t('tools.unavailable'),
-										icon: 'triangle-alert',
-										tone: 'warning',
-									},
-								]}
-							/>
-						{/if}
-						<DetailSection label={$t('tools.schema')} collapsible>
-							<pre class="schema">{JSON.stringify(tool.schema, null, 1)}</pre>
-						</DetailSection>
-					</div>
-				{/if}
-			{/snippet}
-		</DataTable>
-		<p class="quiet">{$t('tools.foot', { values: { count: shown.length } })}</p>
-	</div>
+<div class="body">
+	<DataTable {columns} {rows} label={$t('tools.title')} bind:expanded>
+		{#snippet detail(index)}
+			{@const tool = shown[index]}
+			{#if tool}
+				<div class="detail">
+					<ToolAbout {tool} />
+					{#if !handlerOf(tool)}
+						<DetailSection
+							rows={[
+								{
+									label: $t('tools.status'),
+									value: $t('tools.unavailable'),
+									icon: 'triangle-alert',
+									tone: 'warning',
+								},
+							]}
+						/>
+					{/if}
+					<DetailSection label={$t('tools.schema')} collapsible>
+						<pre class="schema">{JSON.stringify(tool.schema, null, 1)}</pre>
+					</DetailSection>
+				</div>
+			{/if}
+		{/snippet}
+	</DataTable>
+	<p class="quiet">{$t('tools.foot', { values: { count: shown.length } })}</p>
 </div>
 
 <style>
-	.page {
-		flex: 1 0 auto;
-		display: flex;
-		flex-direction: column;
-		padding-bottom: var(--space-8);
-	}
 	.body {
 		display: grid;
 		gap: var(--space-4);

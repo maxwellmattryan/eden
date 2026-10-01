@@ -73,6 +73,9 @@ zip = { version = "4", default-features = false, features = ["deflate"] }
 reqwest = { version = "0.13", default-features = false, features = ["json", "stream", "rustls-no-provider"] }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 futures-util = "0.3"
+# The page fetch (commands/web.rs) resolves a host itself and holds each hop to a deadline. Already in the tree with
+# these features through reqwest; direct so the crate can name it.
+tokio = { version = "1", features = ["net", "time"] }
 
 [dev-dependencies]
 # Real zones for the scheduler's tests: a daily time the clocks skip, and one they repeat.

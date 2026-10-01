@@ -19,7 +19,7 @@
 	import { formatValue, type Fact, type FactProposal } from '@eden/shared/profile'
 	import { undoToast } from '$lib/shell/undo'
 	import FactEditor from './FactEditor.svelte'
-	import { rowOf, type RowContext } from './rows'
+	import { proposalDetail, rowOf, type RowContext } from './rows'
 	import { profile } from './store.svelte'
 
 	const lang = $derived($locale ?? 'en')
@@ -57,7 +57,7 @@
 
 	/** The audit log, where "used by N requests" leads (product/substrate/ai.md, "Audit log"). */
 	function openAudit() {
-		void goto(resolve('/gardener/audit'))
+		void goto(resolve('/gardener/[[tab]]', { tab: 'audit' }))
 	}
 
 	function openAdd() {
@@ -87,8 +87,8 @@
 		else if (item.id === 'delete') undoToast($t('profile.toast.deleted', values), profile.remove(fact.id, name(fact)))
 	}
 	function accept(proposal: FactProposal) {
-		const result = profile.accept(proposal.id, name(proposal))
-		if (result) undoToast($t('profile.toast.accepted', { values: { name: name(proposal) } }), result.undo)
+		const { undo } = profile.accept(proposal, name(proposal))
+		undoToast($t('profile.toast.accepted', { values: { name: name(proposal) } }), undo)
 	}
 	function seed() {
 		undoToast($t('common.sampleAdded'), profile.seed($t('shell.profile')))
@@ -119,6 +119,7 @@
 					fact={proposal.type}
 					value={formatValue(proposal.type, proposal.value, $t)}
 					text={proposal.text}
+					detail={proposalDetail(proposal, $t, lang)}
 					onaccept={() => accept(proposal)}
 					ondismiss={() => profile.dismiss(proposal.id)}
 				/>

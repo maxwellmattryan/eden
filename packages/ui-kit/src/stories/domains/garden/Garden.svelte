@@ -58,7 +58,7 @@
 		},
 		untouched: (days) => `${days} days untouched`,
 		minutes: (minutes) => `${minutes} min`,
-		suggested: 'spinach expires tomorrow',
+		suggested: 'Uses up spinach',
 		sunrise: 'Sunrise',
 		sunset: 'Sunset',
 		goldenHour: 'Golden hour',

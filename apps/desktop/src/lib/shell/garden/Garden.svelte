@@ -137,27 +137,29 @@
 			{/each}
 		</WidgetGrid>
 		<aside class="feed" aria-label={$t('garden.activity')}>
-			<h2 class="feed-title">{$t('garden.activity')}</h2>
-			{#if firstRun}
-				<EmptyState
-					title={$t('empty.garden.title')}
-					text={$t('empty.garden.text')}
-					sample={{ onclick: seedAll }}
-					motif={false}
-				/>
-			{:else if feed.length === 0}
-				<p class="meta">{$t('garden.empty.feed')}</p>
-			{:else}
-				<ol class="feed-list">
-					{#each feed as entry (entry.id)}
-						<li class="feed-row">
-							<Icon name={entry.icon} size="sm" class="feed-glyph" />
-							<span class="row-text">{entry.line}</span>
-							<span class="row-meta">{entry.when}</span>
-						</li>
-					{/each}
-				</ol>
-			{/if}
+			<div class="feed-inner">
+				<h2 class="feed-title">{$t('garden.activity')}</h2>
+				{#if firstRun}
+					<EmptyState
+						title={$t('empty.garden.title')}
+						text={$t('empty.garden.text')}
+						sample={{ onclick: seedAll }}
+						motif={false}
+					/>
+				{:else if feed.length === 0}
+					<p class="meta">{$t('garden.empty.feed')}</p>
+				{:else}
+					<ol class="feed-list">
+						{#each feed as entry (entry.id)}
+							<li class="feed-row">
+								<Icon name={entry.icon} size="sm" class="feed-glyph" />
+								<span class="row-text">{entry.line}</span>
+								<span class="row-meta">{entry.when}</span>
+							</li>
+						{/each}
+					</ol>
+				{/if}
+			</div>
 		</aside>
 	</div>
 </div>
@@ -215,37 +217,69 @@
 	.content {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) calc(var(--sheet-sm) * 0.8);
-		align-items: start;
+		align-items: stretch;
 		gap: var(--space-6);
 		padding: 0 var(--ed-gutter);
 	}
+	/* narrow page */
+	@container page (max-width: 48rem) {
+		/* one column: the grid, then the feed under it */
+		.content {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.feed {
+			min-height: 0;
+		}
+		.feed-inner {
+			position: static;
+			max-height: 24rem;
+		}
+	}
+	/* The feed is as tall as the grid beside it, never taller: its inner box is taken out of flow so only the
+	   list scrolls when the entries run long */
 	.feed {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-3);
+		position: relative;
+		min-height: 16rem;
 		box-sizing: border-box;
-		padding: var(--space-4);
 		border: 1px solid var(--ed-card-border);
 		border-radius: var(--ed-radius-card);
 		background: var(--surface-1);
 		box-shadow: var(--shadow-card);
 	}
+	.feed-inner {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-3);
+		box-sizing: border-box;
+		padding: var(--space-4);
+		overflow: hidden;
+	}
 	.feed-title {
+		flex: none;
 		margin: 0;
 		font: var(--ed-t-title);
 		letter-spacing: var(--ed-t-title-tracking);
 		font-variation-settings: var(--ed-t-title-opsz);
 	}
 	.feed-list {
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
 		display: flex;
 		flex-direction: column;
 		margin: 0;
 		padding: 0;
 		list-style: none;
 	}
+	/* never shrunk: in the scrolling column a row that gave way below its content would let the wrapped line spill over its neighbours */
 	.feed-row {
+		flex: none;
 		display: flex;
 		align-items: center;
+		box-sizing: border-box;
+		padding-block: var(--space-1);
 		gap: var(--space-2);
 		min-height: var(--ed-row);
 		border-bottom: 1px solid var(--stroke-subtle);

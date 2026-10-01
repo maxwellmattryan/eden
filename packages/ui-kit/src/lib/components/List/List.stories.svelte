@@ -39,14 +39,17 @@
 		{ id: 'edit', label: 'Edit', icon: 'pencil' },
 		{ id: 'delete', label: 'Delete', icon: 'trash', destructive: true },
 	]
-	const groceries: ListRowData[] = grocery.items.map((item) => ({
-		id: item.id,
-		primary: item.name,
-		chips: item.qty ? [{ label: item.qty, mono: true }] : [],
-		badges: [{ kind: 'origin', label: item.origin }],
-		done: item.done,
-		actions: groceryActions,
-	}))
+	const heb = grocery.stores[0]!
+	const groceries: ListRowData[] = grocery.items
+		.filter((item) => item.listId === 'gl-01')
+		.map((item) => ({
+			id: item.id,
+			primary: item.name,
+			chips: item.qty ? [{ label: item.qty, mono: true }] : [],
+			badges: [{ kind: 'origin', label: item.origin }],
+			done: item.done,
+			actions: groceryActions,
+		}))
 
 	const ideaRows: ListRowData[] = ideas
 		.filter((idea) => idea.status !== 'archived')
@@ -68,7 +71,7 @@
 			docs: {
 				description: {
 					component:
-						'Rows on a card with a header and a select mode (D-41). "Select" in the header or at the top of any row’s menu turns the mode on: the marks slide in, a click or Space toggles a row, the header counts the selection and offers Done. The rows are one tab stop: arrows, Home and End move, a letter jumps to the next row starting with it, Enter opens.',
+						'Rows on a card with a header and a select mode (D-41). "Select" in the header or at the top of any row’s menu turns the mode on: the marks slide in, a click or Space toggles a row, the header counts the selection and offers Done. The rows are one tab stop: arrows, Home and End move, a letter jumps to the next row starting with it. A click picks a row and the caller’s `current` row is highlighted; a double-click, or Enter on the current row, opens it; a Ctrl, Cmd or Shift click starts the selection from where it lands (D-94). A `checkable` row leads with a checkbox, for a checklist.',
 				},
 			},
 		},
@@ -238,12 +241,64 @@
 <!-- Check-off rows: `done` strikes the name through; the origin badge says where the item came from -->
 <Story
 	name="Grocery"
-	args={{ header: grocery.name, count: groceries.length, rows: groceries }}
+	args={{
+		header: heb.name,
+		count: groceries.length,
+		rows: groceries.map((row) => ({ ...row, checkable: true })),
+		selectable: false,
+		onpick: fn(),
+		oncheck: fn(),
+	}}
 	{template}
-	play={async ({ canvasElement }) => {
+	play={async ({ canvasElement, args }) => {
 		const canvas = canvasOf(canvasElement)
-		await expect(canvas.getByRole('grid', { name: grocery.name })).toBeInTheDocument()
-		await expect(canvas.getAllByRole('row')).toHaveLength(groceries.length)
+		await expect(canvas.getByRole('grid', { name: heb.name })).toBeInTheDocument()
+		const rows = canvas.getAllByRole('row')
+		await expect(rows).toHaveLength(groceries.length)
+		// a checklist: every row leads with its checkbox, checked where the row is done
+		const boxes = canvas.getAllByRole('checkbox')
+		await expect(boxes).toHaveLength(groceries.length)
+		const done = groceries.findIndex((row) => row.done)
+		await expect(boxes[done]).toBeChecked()
+		const open = groceries.findIndex((row) => !row.done)
+		await userEvent.click(boxes[open]!)
+		await expect(args.oncheck).toHaveBeenCalledTimes(1)
+		// a press on the checkbox is not a press on the row
+		await expect(args.onpick).not.toHaveBeenCalled()
+		await userEvent.click(rows[open]!)
+		await expect(args.onpick).toHaveBeenCalledTimes(1)
+	}}
+/>
+
+<!-- A click picks a row and the caller's `current` row is highlighted; a double-click opens it; a Ctrl or Cmd click
+     starts the selection with the current row in it, and a Shift click takes the rows between (D-94) -->
+<Story
+	name="Picking"
+	args={{ current: fridge[1]!.id, onpick: fn(), onopen: fn() }}
+	{template}
+	play={async ({ canvasElement, args }) => {
+		const canvas = canvasOf(canvasElement)
+		const rows = canvas.getAllByRole('row')
+		await expect(rows[1]).toHaveAttribute('aria-current', 'true')
+		await userEvent.click(rows[0]!)
+		await expect(args.onpick).toHaveBeenCalledTimes(1)
+		await expect(args.onopen).not.toHaveBeenCalled()
+		await userEvent.dblClick(rows[0]!)
+		await expect(args.onopen).toHaveBeenCalledTimes(1)
+		const user = userEvent.setup()
+		await user.keyboard('{Control>}')
+		await user.click(rows[3]!)
+		await user.keyboard('{/Control}')
+		await expect(canvas.getByRole('grid')).toHaveAttribute('aria-multiselectable', 'true')
+		await expect(rows[1]).toHaveAttribute('aria-selected', 'true')
+		await expect(rows[3]).toHaveAttribute('aria-selected', 'true')
+		await expect(rows[2]).toHaveAttribute('aria-selected', 'false')
+		await user.keyboard('{Shift>}')
+		await user.click(rows[5]!)
+		await user.keyboard('{/Shift}')
+		await expect(rows[4]).toHaveAttribute('aria-selected', 'true')
+		await expect(rows[5]).toHaveAttribute('aria-selected', 'true')
+		await expect(canvas.getByText(strings.selected(4))).toBeVisible()
 	}}
 />
 

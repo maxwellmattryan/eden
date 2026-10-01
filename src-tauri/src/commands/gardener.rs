@@ -8,11 +8,15 @@ use tauri::{ipc::Channel, State};
 use crate::db::secret_store::SecretStore;
 use crate::error::{EdenError, Result};
 use crate::gardener::{anthropic, GardenerEvent, GardenerRequest, Inflight, KEY_SECRET};
-use crate::substrate::audit::{self, AuditEntry, AuditEntryInput, AuditQuery};
+use crate::substrate::audit::{
+    self, AuditEntry, AuditEntryInput, AuditFacets, AuditPage, AuditPageQuery, AuditQuery,
+    ThreadUsage,
+};
 use crate::substrate::policy::{self, PolicyRow};
 use crate::substrate::threads::{
     self, Message, MessageInput, Thread, ThreadInput, ThreadPatch, ThreadQuery,
 };
+use crate::substrate::usage::{self, UsageQuery, UsageRow};
 use crate::substrate::{egress, Workspace};
 
 // Secrets.
@@ -121,6 +125,32 @@ pub async fn audit_usage(
 #[tauri::command]
 pub async fn audit_spend(workspace: State<'_, Workspace>, from_ms: u64) -> Result<f64> {
     workspace.read(|conn| audit::spend_since(conn, from_ms))
+}
+
+#[tauri::command]
+pub async fn query_audit_page(
+    workspace: State<'_, Workspace>,
+    filter: AuditPageQuery,
+) -> Result<AuditPage> {
+    workspace.read(|conn| audit::query_page(conn, &filter))
+}
+
+#[tauri::command]
+pub async fn audit_facets(workspace: State<'_, Workspace>) -> Result<AuditFacets> {
+    workspace.read(audit::facets)
+}
+
+#[tauri::command]
+pub async fn audit_thread_totals(workspace: State<'_, Workspace>) -> Result<Vec<ThreadUsage>> {
+    workspace.read(audit::thread_totals)
+}
+
+#[tauri::command]
+pub async fn query_usage(
+    workspace: State<'_, Workspace>,
+    filter: UsageQuery,
+) -> Result<Vec<UsageRow>> {
+    workspace.read(|conn| usage::query(conn, &filter))
 }
 
 // Threads and messages.
