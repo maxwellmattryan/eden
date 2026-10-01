@@ -1,6 +1,7 @@
 <script lang="ts">
 	// The desktop shell (product/substrate/shell.md): the sidebar on the left, the content with its back affordance,
-	// the status bar along the bottom, and the overlays (toast, settings, crash) on top. It mounts the shared pieces
+	// the Gardener's panel docked on the right while it is open, the status bar along the bottom, and the overlays
+	// (toast, settings, crash) on top. It mounts the shared pieces
 	// once: settings, i18n, the global error handler, the hourly update check, signals and the scheduler. The splash
 	// covers it until they are ready, then fades out as the shell fades in.
 	import '../app.css'
@@ -39,6 +40,12 @@
 	import { useGlobalErrorHandler } from '$lib/hooks/useGlobalErrorHandler'
 	import SettingsSheet from '$lib/settings/SettingsSheet.svelte'
 	import { settingsUi } from '$lib/settings/settings-ui.svelte'
+	import GardenerDock from '$lib/shell/gardener/GardenerDock.svelte'
+	import { gardenerUi } from '$lib/shell/gardener/panel-ui.svelte'
+	import { gardenerSetup } from '$lib/shell/gardener/setup.svelte'
+	import { missingHandlers } from '$lib/shell/gardener/handlers'
+	import { fileDropGuard, isTauri, logError } from '@eden/shared/api'
+	import { formatUsd, GRADES } from '@eden/shared/gardener'
 
 	let { children } = $props()
 
@@ -146,6 +153,10 @@
 	// tab's position is kept as it is left and put back when it is returned to, and the place itself is remembered
 	// for the next launch (`@eden/shared/navigation`). A move within a tab (Hearth's tabs) keeps its own position.
 	let main = $state<HTMLElement>()
+	// the room beside the nav, which the Gardener's dock takes a quarter to a half of
+	let innerWidth = $state(0)
+	let navWidth = $state(0)
+	const room = $derived(Math.max(0, innerWidth - navWidth))
 	beforeNavigate((navigation) => {
 		if (main && navigation.to) rememberScroll(tabOf(navigation.from?.route), main.scrollTop)
 	})
@@ -167,14 +178,56 @@
 
 	function onselect(id: string) {
 		if (id === 'settings') settingsUi.show()
+		else if (id === 'gardener') gardenerUi.toggle()
 	}
 
-	// ⌘, opens Settings; ⌘1 to ⌘9 go to the sidebar positions (shell.md, keyboard model).
+	const GRADE_ICONS = { light: 'seed', standard: 'sprout', deep: 'tree-deciduous' } as const
+
+	// The status bar's Gardener chip (shell.md, "Status bar"): the conversation's grade and model with the switch,
+	// the budget meter, grey when this device has no key; it opens the panel.
+	const gardenerChip = $derived({
+		label: gardenerSetup.hasKey ? gardenerSetup.model : $t('shell.gardener'),
+		noKey: !gardenerSetup.hasKey,
+		budget: gardenerSetup.hasKey
+			? {
+					used: formatUsd(gardenerSetup.spentThisMonth),
+					cap: formatUsd(gardenerSetup.capUsd),
+					percent: gardenerSetup.percent,
+				}
+			: undefined,
+		grade: gardenerSetup.grade,
+		grades: GRADES.map((grade) => ({
+			id: grade,
+			label: $t(`settings.gardener.grades.${grade}`),
+			icon: GRADE_ICONS[grade],
+		})),
+		onchangegrade: (id: string) => settings.setGardenerGrade(id as (typeof GRADES)[number]),
+		onopen: () => gardenerUi.show(),
+	})
+
+	// The development clamp (D-81), said once: an info button just left of the grade switch whose tooltip names
+	// the models, in the app, where a request can be sent.
+	const clampNotice = $derived(
+		gardenerSetup.clamped && isTauri()
+			? {
+					label: $t('gardener.devClamp', {
+						values: { model: gardenerSetup.map.light.model, deep: gardenerSetup.map.deep.model },
+					}),
+				}
+			: undefined
+	)
+
+	// ⌘, opens Settings; ⌘G the Gardener; ⌘1 to ⌘9 go to the sidebar positions (shell.md, keyboard model).
 	function onkeydown(e: KeyboardEvent) {
 		if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return
 		if (e.key === ',') {
 			e.preventDefault()
 			settingsUi.show()
+			return
+		}
+		if (e.key === 'g' || e.key === 'G') {
+			e.preventDefault()
+			gardenerUi.toggle()
 			return
 		}
 		if (/^[1-9]$/.test(e.key)) {
@@ -191,11 +244,18 @@
 		let timer: ReturnType<typeof setInterval> | undefined
 		;(async () => {
 			settings.load()
+			// the panel comes back on the domain it was left on, while that domain is still one of the app's
+			if (gardenerUi.domain && !manifestFor(gardenerUi.domain)) gardenerUi.domain = undefined
 			await initializeI18n(settings.language)
 			void dismissSplash()
 			checkForUpdate().catch(() => null)
 			timer = setInterval(() => checkForUpdate().catch(() => null), UPDATE_INTERVAL)
 			void grants.load()
+			void gardenerSetup.load()
+			// every declared tool has a handler, or the log says which does not (engineering/gardener.md, "Tools")
+			const unhandled = missingHandlers()
+			if (unhandled.length)
+				void logError('gardener', 'Declared tools without a handler', unhandled.join(', ')).catch(() => null)
 		})()
 		// The inbox hears what is delivered before signals start, so a card made by the first take is not missed.
 		void inbox.load()
@@ -219,23 +279,28 @@
 	})
 </script>
 
-<svelte:window {onkeydown} />
+<!-- a file dropped anywhere no drop zone takes it does nothing, instead of opening in place of the app (D-84) -->
+<svelte:window {onkeydown} bind:innerWidth ondragover={fileDropGuard.over} ondrop={fileDropGuard.drop} />
 
 <SplashScreen show={$splashVisible} version={env.PUBLIC_APP_VERSION ?? ''} />
 
 <UiKitProvider strings={uiKitStrings($locale)}>
 	<div class={['shell', $splashVisible && 'shell-waiting']}>
-		<Sidebar {groups} {pinned} brand={$t('app.name')} subtitles={settings.subtitles} {current} {onselect} />
+		<div class="nav" bind:clientWidth={navWidth}>
+			<Sidebar {groups} {pinned} brand={$t('app.name')} subtitles={settings.subtitles} {current} {onselect} />
+		</div>
 		<main class="content" bind:this={main}>
 			<div class="content-back"><BackButton {onback} /></div>
 			{@render children()}
 		</main>
+		<GardenerDock {room} />
 		<StatusBar
 			class="bar"
 			sync={$t('shell.sync.local')}
 			{banner}
 			integrations={[]}
-			gardener={{ label: $t('shell.gardener'), noKey: true }}
+			gardener={gardenerChip}
+			notice={clampNotice}
 			inbox={notices}
 			logs={[]}
 			oninboxclose={() => void inbox.markRead()}
@@ -249,9 +314,13 @@
 <style>
 	.shell {
 		display: grid;
-		grid-template-columns: auto minmax(0, 1fr);
+		grid-template-columns: auto minmax(0, 1fr) minmax(0, auto);
 		grid-template-rows: minmax(0, 1fr) auto;
 		height: 100dvh;
+		/* The shell is the window and the document never scrolls: it holds what is positioned inside it, so nothing
+		   absolute (a visually hidden label deep in a scroller) lays out against the body and lengthens the page */
+		position: relative;
+		overflow: clip;
 		background: var(--surface-0);
 		transition: opacity var(--ed-duration-settle) var(--ed-ease-out);
 	}
@@ -260,9 +329,17 @@
 		opacity: 0;
 		pointer-events: none;
 	}
+	.nav {
+		grid-row: 1;
+		grid-column: 1;
+		min-height: 0;
+		display: flex;
+	}
 	.content {
 		grid-row: 1;
 		grid-column: 2;
+		/* positioned, so what is absolute inside scrolls with it */
+		position: relative;
 		overflow: auto;
 		display: flex;
 		flex-direction: column;

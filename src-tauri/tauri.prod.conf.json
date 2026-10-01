@@ -4,7 +4,7 @@
 		"createUpdaterArtifacts": true
 	},
 	"app": {
-		"windows": [{ "title": "Eden" }]
+		"windows": [{ "title": "Eden", "dragDropEnabled": false }]
 	},
 	"plugins": {
 		"updater": {

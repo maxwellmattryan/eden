@@ -12,10 +12,10 @@
 		PageHeader,
 		Segmented,
 		domainGlyph,
-		toast,
 		type PageHeaderAction,
 	} from '@eden/ui-kit'
 	import { t } from '@eden/shared/i18n'
+	import { gardenerUi } from '$lib/shell/gardener/panel-ui.svelte'
 	import { undoToast } from '$lib/shell/undo'
 	import { KITCHEN_TABS, type KitchenTab } from '../manifest'
 	import { kitchen } from '../store.svelte'
@@ -41,9 +41,10 @@
 	function focusQuickAdd() {
 		document.getElementById(quickAddId)?.focus()
 	}
-	// Capture a haul is Stock's primary action (D-13); the verification sheet arrives with the Gardener.
+	// Capture a haul is Stock's primary action (D-13): the Gardener's `capture-haul` picks the photo, reads it and
+	// opens the verification sheet on the rows.
 	function capture() {
-		toast({ message: $t('domains.kitchen.capture.notYet') })
+		gardenerUi.show('kitchen', [], { tool: 'kitchen.capture-haul', input: {} })
 	}
 	function clearChecked() {
 		const { count, undo } = kitchen.clearChecked()

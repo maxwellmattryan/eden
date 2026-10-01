@@ -131,7 +131,7 @@
 	{/snippet}
 </Story>
 
-<!-- The ⋯ button and the same menu from the keyboard: Shift+F10 opens it with the first item focused, Escape hands focus back to the row -->
+<!-- The ⋯ button and the same menu from the keyboard: Shift+F10 opens it with focus on the list and the first arrow lands on the first item, Escape hands focus back to the row -->
 <Story
 	name="With actions"
 	args={{ actions }}
@@ -147,18 +147,28 @@
 		await userEvent.keyboard('{Shift>}{F10}{/Shift}')
 		const menu = await canvas.findByRole('menu')
 		const items = canvas.getAllByRole('menuitem')
-		await waitFor(() => expect(items[0]).toHaveFocus())
+		await waitFor(() => expect(menu).toContainElement(document.activeElement as HTMLElement))
+		await userEvent.keyboard('{ArrowDown}')
+		await expect(items[0]).toHaveFocus()
 		await expect(more).toHaveAttribute('aria-expanded', 'true')
 		await expect(items[items.length - 1]).toHaveTextContent('Delete')
 		await expect(canvas.getByRole('separator')).toBeInTheDocument()
 		await userEvent.keyboard('{Escape}')
 		await waitFor(() => expect(menu).not.toBeVisible())
 		await waitFor(() => expect(row).toHaveFocus())
-		// the ⋯ button opens the same menu; a pick reaches onaction
+		// the ⋯ button opens the same menu, and pressed again closes it (a popover; the phone's sheet is modal)
 		await userEvent.click(more)
-		await canvas.findByRole('menu')
+		const opened = await canvas.findByRole('menu')
+		if (opened.closest('[popover]')) {
+			await userEvent.click(more)
+			await waitFor(() => expect(opened).not.toBeVisible())
+			await expect(more).toHaveAttribute('aria-expanded', 'false')
+			await userEvent.click(more)
+			await canvas.findByRole('menu')
+		}
+		// a pick reaches onaction
 		await userEvent.click(canvas.getByRole('menuitem', { name: 'Edit' }))
-		await expect(args.onaction).toHaveBeenLastCalledWith(actions[0])
+		await waitFor(() => expect(args.onaction).toHaveBeenLastCalledWith(actions[0]))
 	}}
 />
 

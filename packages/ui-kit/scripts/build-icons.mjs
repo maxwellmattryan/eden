@@ -1,4 +1,4 @@
-// icon-list.json + lucide-static → src/lib/icons/icons.ts: each glyph's nodes on Lucide's 24px grid and its drawn
+// icon-list.json + lucide-static (+ the hand-drawn `custom` glyphs, same grid and stroke) → src/lib/icons/icons.ts: each glyph's nodes on Lucide's 24px grid and its drawn
 // bounding box, which Icon.svelte uses to normalise every icon to one visual box. `--check` fails on drift.
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
@@ -54,14 +54,15 @@ function bbox([tag, a]) {
 }
 const round = (n) => Math.round(n * 100) / 100
 
-const names = [...new Set(list.icons)]
-if (names.length !== list.icons.length) fail('icon-list.json lists an icon twice')
+const custom = list.custom ?? {}
+const names = [...new Set([...list.icons, ...Object.keys(custom)])]
+if (names.length !== list.icons.length + Object.keys(custom).length) fail('icon-list.json lists an icon twice')
 for (const map of [list.domains, list.shell])
 	for (const [id, icon] of Object.entries(map))
 		if (!names.includes(icon)) fail(`"${id}" points at "${icon}", which is not in the icon list`)
 
 const entries = names.map((name) => {
-	const n = nodes[name]
+	const n = custom[name] ?? nodes[name]
 	if (!n) {
 		const near = Object.keys(nodes)
 			.filter((k) => k.includes(name.split('-')[0]) || name.includes(k.split('-')[0]))

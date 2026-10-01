@@ -50,7 +50,7 @@ The pre-paint script reads the localStorage keys in `storageKeys` (`eden:theme`,
 | file | holds |
 |---|---|
 | `styles/theme.css` | `@font-face` for the shipped fonts; the light and dark token blocks; scales, motion, z-order; the composed focus ring; families and the type styles; the accent blocks; `.ed-t-*` classes |
-| `styles/base.css` | reduced-motion overrides; the brand dial; the platform and density blocks; body defaults (including `user-select: none` for the whole app, with editable controls opted back in), selection colour, the paper grain overlay, `.ed-sr-only` |
+| `styles/base.css` | reduced-motion overrides; the brand dial; the platform and density blocks; body defaults (including `user-select: none` for the whole app, with editable controls opted back in; a component whose text is there to be read and kept, a Gardener message, a tool card's text, `Markdown`, opts in with `user-select: text` in its own scoped CSS), selection colour, the paper grain overlay, `.ed-sr-only` |
 | `styles/tailwind.css` | the `@theme inline` mapping and the custom variants |
 | `styles/faces.css` | the alternate faces and `[data-face]` blocks, gallery only |
 | `styles/prepaint.js`, `.storybook/preview-head.html` | the pre-paint script, standalone and inlined |
@@ -126,9 +126,11 @@ Newsreader (upright and italic), Inter and Geist Mono ship from `src/lib/fonts`,
 
 | primitive | does |
 |---|---|
-| `anchor(get)` | positions a `position: fixed` element against an element or a pointer rect, flips when there is no room, clamps to the viewport, sets `data-side` |
+| `anchor(get)` | positions a `position: fixed` element against an element or a pointer rect; chooses the side once per opening (the preferred one when it fits, else the other, else the roomier) and keeps it, so an element that grows never jumps across its anchor; sets the room on that side as `--ed-anchor-room` for the element to cap its height with, clamps to the viewport, sets `data-side`. It measures the element at the viewport margin, where its auto width has all the room it can get, so placing it from the resize callback never changes the size that callback observes |
 | `dismiss(get)` | Escape, pointer outside, optional focus-out; keeps a stack of open layers so Escape closes the innermost and a click inside a layer above does not count as outside |
-| `trapFocus(get)` | Tab cycling inside a layer and focus return; a `<dialog>` opened with `showModal()` makes the page inert and returns focus natively but does not cycle Tab, so `Sheet` uses the trap for the cycling only |
+| `trapFocus(get)` | Tab cycling inside a layer and focus return; a `<dialog>` opened with `showModal()` makes the page inert and returns focus natively but does not cycle Tab, so `Sheet` uses the trap for the cycling only. Its `initial` is `auto` by default: the layer's first text control when it has one, else the layer itself, never a button (`design/ux-patterns.md`, "Keyboard and focus") |
+| `smoothSize(get)` | eases a frame from its old size to its new one when the DOM inside its body changes (a MutationObserver, never a ResizeObserver: resizing from inside a resize callback is the loop the browser reports; Web Animations over the panel duration, no fill), so a popover that unfolds a row grows instead of jumping; `Popover` attaches it to its body |
+| `leave(el, done, watch)` | an overlay's way out: marks the element `data-closing` and inert, waits out the transition on `watch` (the element, or the part of it that moves), then calls `done` to really hide it; returns a cancel for one that is opened again on its way out; `isLeaving(el)` |
 | `roving(get)` | one tab stop per group, arrows, Home and End, optional first-letter typeahead |
 | `measure(cb)` | rect now, on resize and after fonts load |
 | `portal(target)` | fallback for a WebView without the popover API, behind `hasTopLayer()` |
@@ -136,7 +138,7 @@ Newsreader (upright and italic), Inter and Geist Mono ship from `src/lib/fonts`,
 | `platformOf(el)` | the nearest `data-platform`, desktop by default |
 | `runSketch(canvas, options)` | the engine under `Sketch`: sizes the backing store to the element and the screen (twice the density at most), resolves the sketch's colour tokens where the canvas stands and again when the theme changes, drives the frames, rests while the canvas is out of sight or paused; `motionReduced(el)` reads the zeroed duration tokens, so the stylesheet stays the one place that knows about reduced motion |
 
-Overlays use the browser's top layer: `Sheet` is a `<dialog>` opened with `showModal()` (native inertness, focus return, `::backdrop` scrim; Escape is handled on keydown, with the dialog's `cancel` event as the fallback for other close requests); `Popover` is `popover="manual"` placed by `anchor`. The floor is WebKit 17 for `popover` and 17.5 for `@starting-style`; the enter animation degrades to a class toggle below that.
+Overlays use the browser's top layer: `Sheet` is a `<dialog>` opened with `showModal()` (native inertness, focus return, `::backdrop` scrim; Escape is handled on keydown, with the dialog's `cancel` event as the fallback for other close requests); `Popover` is `popover="manual"` placed by `anchor`. The floor is WebKit 17 for `popover` and 17.5 for `@starting-style`; the enter animation degrades to a class toggle below that. Every overlay leaves the way it came: its stylesheet answers `data-closing` with the state `@starting-style` starts from, and `leave` holds the element shown, in the top layer, until that has played, then calls `hidePopover()` or `close()`. Nothing relies on `overlay` or `display` transitions, which WebKit does not have. So what follows a close waits for the fade: `Sheet`'s `onclose` and focus return, `Popover`'s `onclose` (its focus return is at once), `ConfirmSheet`'s answer, a pick on a sheet `Menu`. A consumer that unmounts an overlay does it from those callbacks, never while setting `open` to false, or the fade is cut. Under reduced motion the panel duration is zero and `leave` hides at once.
 
 ## Sketches
 
@@ -150,6 +152,10 @@ Generative art is drawn on one canvas, the `Sketch` component (D-62); nothing el
 | a sketch has no DOM, no listeners and no timers | one definition serves a header, a tile and a full page |
 
 The kit's own sketches live in `src/lib/sketches` and are exported from the barrel (`skyField`); a domain's private sketch lives with the domain under `apps/*/src/lib/domains/<id>/` and imports the types from the kit. A nannou or p5.js sketch is ported to this shape, not embedded: nannou draws to a native window the WebView cannot host, and p5 brings its own loop, globals and canvas.
+
+## Files
+
+`src/lib/files/check-files.ts` holds the rules a set of files is held to, and is exported from the barrel: `checkFiles(files, rules)` returns the files taken and the ones refused, each with the first rule it broke (`type`, `size`, `count`, `total`). A pattern is `image/*`, an exact MIME type or an extension, because an engine leaves `type` empty for a file it does not know (`.md`); `exclude` wins over `accept`. `Dropzone` runs it at the drop; an app runs the same function over what `FileButton` and a paste hand it, so every way in refuses the same files for the same reason. `groupOf`, `summarize` and `formatBytes` name a file's kind and size for a caption.
 
 ## Strings
 
@@ -185,4 +191,4 @@ The paper grain is a full-size pseudo-element over the page (D-61: `--ed-z-grain
 
 ## Not in the kit
 
-Page-level compositions belong to the app scaffold: the settings modal and its tab rail, the command palette, onboarding pages, the Gardener composer and thread list, Council columns, the activity feed, the Garden's edit mode, the accent picker (OQ-18). The domain glyph family, the app icon and the splash art are design deliverables; `domainGlyph()` isolates the swap.
+Page-level compositions belong to the app scaffold: the settings modal and its tab rail, the command palette, onboarding pages, the Gardener panel and its thread list, Council columns, the activity feed, the Garden's edit mode, the accent picker (OQ-18). The domain glyph family, the app icon and the splash art are design deliverables; `domainGlyph()` isolates the swap.

@@ -1,7 +1,7 @@
 <script lang="ts">
 	// The settings modal (product/substrate/settings-utilities.md): a centred kit Sheet with a tab rail on the left
 	// and the tab's panel on the right. The rail is one tab stop (arrows, Home and End) and deep-linkable by tab id
-	// through `settingsUi.show(tab)`. Six tabs are real; the other five say they are not built yet. Focus lands on
+	// through `settingsUi.show(tab)`. Seven tabs are real; the other four say they are not built yet. Focus lands on
 	// the sheet, not the rail, so no tab wears a ring until Tab is pressed. The frame follows the measured height of
 	// the content over the panel duration, so a taller tab grows the sheet instead of snapping it.
 	import { Icon, Sheet } from '@eden/ui-kit'
@@ -9,6 +9,7 @@
 	import { settingsTabIcons, settingsTabs, settingsUi, type SettingsTabId } from './settings-ui.svelte'
 	import AboutTab from './tabs/AboutTab.svelte'
 	import AppearanceTab from './tabs/AppearanceTab.svelte'
+	import GardenerTab from './tabs/GardenerTab.svelte'
 	import GeneralTab from './tabs/GeneralTab.svelte'
 	import IntegrationsTab from './tabs/IntegrationsTab.svelte'
 	import PlaceholderTab from './tabs/PlaceholderTab.svelte'
@@ -66,6 +67,8 @@
 					<GeneralTab />
 				{:else if settingsUi.tab === 'appearance'}
 					<AppearanceTab />
+				{:else if settingsUi.tab === 'gardener'}
+					<GardenerTab />
 				{:else if settingsUi.tab === 'privacy'}
 					<PrivacyTab />
 				{:else if settingsUi.tab === 'integrations'}
@@ -93,7 +96,8 @@
 	.frame {
 		--ring-room: calc(var(--focus-ring-offset) + var(--focus-ring-width));
 		box-sizing: content-box;
-		overflow: hidden;
+		/* clip, not hidden: hidden would make the frame a scroll container and unstick the rail from the body */
+		overflow: clip;
 		padding: var(--ring-room);
 		margin: calc(-1 * var(--ring-room));
 		transition: height var(--ed-duration-panel) var(--ed-ease-out);
@@ -109,7 +113,11 @@
 		gap: 24px;
 		min-height: 420px;
 	}
+	/* The rail stays put while a tall tab scrolls under it: sticky to the sheet's body, the nearest scroll container. */
 	.rail {
+		position: sticky;
+		top: 0;
+		align-self: start;
 		display: grid;
 		align-content: start;
 		gap: 2px;

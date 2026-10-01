@@ -6,6 +6,7 @@ mod commands;
 mod db;
 mod domains;
 mod error;
+mod gardener;
 mod models;
 mod services;
 mod substrate;
@@ -130,6 +131,8 @@ pub fn run() {
             commands::data::create_event,
             commands::data::create_place,
             commands::data::attach,
+            commands::data::attach_bytes,
+            commands::data::read_attachment,
             commands::data::update_task,
             commands::data::update_event,
             commands::data::update_place,
@@ -160,7 +163,28 @@ pub fn run() {
             commands::signals::emit_signal,
             commands::signals::query_inbox,
             commands::signals::mark_inbox_read,
+            commands::signals::withdraw_signal,
             commands::signals::show_notification,
+            commands::gardener::set_secret,
+            commands::gardener::has_secret,
+            commands::gardener::delete_secret,
+            commands::gardener::gardener_send,
+            commands::gardener::gardener_cancel,
+            commands::gardener::record_audit,
+            commands::gardener::query_audit,
+            commands::gardener::audit_usage,
+            commands::gardener::audit_spend,
+            commands::gardener::create_thread,
+            commands::gardener::update_thread,
+            commands::gardener::delete_thread,
+            commands::gardener::restore_thread,
+            commands::gardener::query_threads,
+            commands::gardener::append_message,
+            commands::gardener::update_message,
+            commands::gardener::delete_message,
+            commands::gardener::query_messages,
+            commands::gardener::get_policy,
+            commands::gardener::set_policy,
             domains::documents::load_domain_document,
             domains::documents::save_domain_document,
             domains::documents::remove_domain_document,
@@ -181,6 +205,12 @@ pub fn run() {
                 e
             })?;
             app.manage(workspace);
+            // The owner's secrets live beside the workspace, in the store the platform offers, never in it.
+            app.manage(db::secret_store::for_platform(&app_data_dir));
+            // The Gardener's TLS: one crypto provider for the process, installed before anything builds a client.
+            // The updater installs the same one if it gets there first, so a second install is nothing.
+            let _ = rustls::crypto::ring::default_provider().install_default();
+            app.manage(gardener::Inflight::default());
             app.manage(DiagnosticsService::new(app_data_dir));
             // The scheduler's tick: it reads the workspace, so it starts once that is managed.
             services::scheduler::start(app.handle().clone());

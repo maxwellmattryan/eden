@@ -45,6 +45,21 @@ function phaseOf(cycle: number): MoonPhase {
 	return 'waning-crescent'
 }
 
+/** The four phases that are a moment in the cycle, not a stretch of it. */
+export type MoonMoment = 'new' | 'first-quarter' | 'full' | 'last-quarter'
+
+const MOMENTS: Record<MoonMoment, number> = { new: 0, 'first-quarter': 0.25, full: 0.5, 'last-quarter': 0.75 }
+
+/** The next instant after `after` the moon reaches a phase, by the mean cycle: right to about half a day. */
+export function nextPhase(phase: MoonMoment, after: number = Date.now()): number {
+	const cycles = (after - KNOWN_NEW_MOON) / DAY_MS / SYNODIC_DAYS
+	const target = MOMENTS[phase]
+	const whole = Math.floor(cycles - target) + 1
+	const at = (n: number) => Math.round(KNOWN_NEW_MOON + (n + target) * SYNODIC_DAYS * DAY_MS)
+	// asked from the instant of the phase itself, the answer is still the one after
+	return at(whole) > after ? at(whole) : at(whole + 1)
+}
+
 /** The golden hour, forty minutes before sunset, as an instant. */
 export function goldenHourOf(sunset: number): number {
 	return sunset - GOLDEN_MINUTES * 60 * 1000

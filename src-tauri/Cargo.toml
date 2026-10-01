@@ -67,18 +67,29 @@ sha2 = "0.10"
 # The export bundle is a zip archive, which every system opens without a tool. Direct, so that mobile has it too: it
 # is otherwise in the tree only through the desktop updater.
 zip = { version = "4", default-features = false, features = ["deflate"] }
+# The Gardener's one provider call (docs/engineering/gardener.md, D-76): the same reqwest and rustls the desktop
+# updater brings, with the same features, so mobile has them too and no second TLS stack is built. The crate installs
+# the ring provider once at setup; `rustls-no-provider` leaves that to it.
+reqwest = { version = "0.13", default-features = false, features = ["json", "stream", "rustls-no-provider"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+futures-util = "0.3"
 
 [dev-dependencies]
 # Real zones for the scheduler's tests: a daily time the clocks skip, and one they repeat.
 chrono-tz = "0.10"
+# A runtime for the adapter's tests; already in the tree through Tauri.
+tokio = { version = "1", features = ["rt", "macros"] }
+
+# `security-framework` holds the database key (iOS) and the owner's secrets (macOS and iOS) in the Keychain; already
+# in the tree through Tauri.
+[target.'cfg(target_vendor = "apple")'.dependencies]
+security-framework = "3.7"
+security-framework-sys = "2"
 
 # iOS unified logging: a normally-launched app's stderr is discarded by iOS, so `env_logger` output never reaches
 # Console.app. `oslog` routes the `log` facade to os_log under the app's identifier as subsystem.
-# `security-framework` holds the database key in the Keychain; already in the tree through Tauri.
 [target.'cfg(target_os = "ios")'.dependencies]
 oslog = "0.2"
-security-framework = "3.7"
-security-framework-sys = "2"
 
 # Android counterpart: stderr never reaches logcat, so route the `log` facade there.
 # `jni` and `ndk-context` reach the Keystore-backed database key (`android/EdenDbKey.kt`); already in the tree.

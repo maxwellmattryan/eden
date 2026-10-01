@@ -8,6 +8,7 @@ import { t } from '@eden/shared/i18n'
 import { declarationOf, type TabId } from '@eden/shared/manifest'
 import { defineDomain } from '../manifest.js'
 import { toolbench } from './store.svelte.js'
+import { toolbenchCommitDraft, toolbenchQuickActions, toolbenchTools } from './tools.js'
 import ActiveProjects from './widgets/ActiveProjects.svelte'
 import ResurfacedIdea from './widgets/ResurfacedIdea.svelte'
 
@@ -49,4 +50,7 @@ export const toolbenchManifest = defineDomain('toolbench', {
 		return toolbenchExtras(toolbench.data())
 	},
 	seed: () => toolbench.seed(get(t)('domains.toolbench.name')),
+	tools: toolbenchTools,
+	quickActionHandlers: toolbenchQuickActions,
+	commitDraft: toolbenchCommitDraft,
 })

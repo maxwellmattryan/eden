@@ -23,8 +23,10 @@ use super::grants::{self, Grant, GrantsFile};
 use super::hlc::{self, Hlc};
 use super::ids::{self, Uri};
 use super::links::{self, Link};
+use super::policy::{self, PolicyRow};
 use super::primitives::{self, Primitive, Query, ATTACHMENT, PLACE};
 use super::rows::table_for;
+use super::threads::{self, Message, Thread};
 use super::{registry, Workspace, WriteCtx};
 use crate::error::{EdenError, Result};
 
@@ -40,6 +42,12 @@ const GRANT: &str = "grant";
 const FACTS: &str = "facts.jsonl";
 /// The type the manifest counts facts under.
 const FACT: &str = "fact";
+const THREADS: &str = "threads.jsonl";
+const THREAD: &str = "thread";
+const MESSAGES: &str = "messages.jsonl";
+const MESSAGE: &str = "message";
+const POLICY: &str = "policy.jsonl";
+const POLICY_TYPE: &str = "policy";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
@@ -182,6 +190,10 @@ struct Collected {
     grants: Vec<Grant>,
     /// The facts a full bundle carries, tombstones included.
     facts: Vec<Fact>,
+    /// The Gardener's threads, messages and policy a full bundle carries, tombstones included.
+    threads: Vec<Thread>,
+    messages: Vec<Message>,
+    policy: Vec<PolicyRow>,
     schema_version: i64,
     node: String,
 }
@@ -268,6 +280,18 @@ fn collect(conn: &Connection, scope: &Scope) -> Result<Collected> {
             Scope::Full => facts::exportable(conn)?,
             Scope::Domain { .. } => Vec::new(),
         },
+        threads: match scope {
+            Scope::Full => threads::exportable_threads(conn)?,
+            Scope::Domain { .. } => Vec::new(),
+        },
+        messages: match scope {
+            Scope::Full => threads::exportable_messages(conn)?,
+            Scope::Domain { .. } => Vec::new(),
+        },
+        policy: match scope {
+            Scope::Full => policy::exportable(conn)?,
+            Scope::Domain { .. } => Vec::new(),
+        },
         schema_version: crate::db::schema_version(conn)?,
         node: format!("{:08x}", hlc::node_id(conn)?),
     };
@@ -332,6 +356,35 @@ fn collect(conn: &Connection, scope: &Scope) -> Result<Collected> {
     Ok(collected)
 }
 
+/// Writes the rows of one stamped table one a line, in the order they came, a tombstone stripped of what it held,
+/// and counts the live ones under the type.
+fn stamped_lines<T: Serialize>(
+    collected: &mut Collected,
+    path: &str,
+    type_id: &str,
+    rows: &[T],
+    is_deleted: impl Fn(&T) -> bool,
+    stripped: impl Fn(&T) -> T,
+) -> Result<()> {
+    let mut bytes = Vec::new();
+    let (mut count, mut tombstones) = (0, 0);
+    for row in rows {
+        if is_deleted(row) {
+            serde_json::to_writer(&mut bytes, &stripped(row))?;
+            tombstones += 1;
+        } else {
+            serde_json::to_writer(&mut bytes, row)?;
+        }
+        bytes.push(b'\n');
+        count += 1;
+    }
+    collected.counts.insert(type_id.into(), count - tombstones);
+    collected
+        .files
+        .push((path.into(), bytes, Some((count, tombstones))));
+    Ok(())
+}
+
 fn readme(manifest: &Manifest) -> String {
     let mut text = String::from("# Eden export\n\n");
     text.push_str(&match &manifest.scope {
@@ -349,6 +402,9 @@ fn readme(manifest: &Manifest) -> String {
          | `friendly/` | the same data in formats made for reading: CSV and Markdown |\n\
          | `grants.json` | the grants: who may see or do what, and the ones you ended |\n\
          | `facts.jsonl` | what Eden knows about you, one fact a line, with where each one came from |\n\
+         | `threads.jsonl` | your conversations with the Gardener, one thread a line |\n\
+         | `messages.jsonl` | what was said in them, one message a line |\n\
+         | `policy.jsonl` | what you decided about how the Gardener runs: budgets, models |\n\
          | `settings.json` | your settings |\n\n\
          A file is only present when there is something to put in it.\n\n\
          ## Rows\n\n",
@@ -368,7 +424,7 @@ fn readme(manifest: &Manifest) -> String {
          `deletedAt` was deleted; it is kept, empty, so that another device learns of the deletion. `links` point at \
          other rows by their `uri`.\n\n\
          What is not here: what Eden caches from other services, which it fetches again; keys and secrets; \
-         diagnostics.\n\n\
+         diagnostics; the log of what Eden sent to a model, which stays on the device that sent it.\n\n\
          ## Checking a file\n\n\
          ```\nshasum -a 256 entities/recipe.jsonl\n```\n\n\
          The result is the `sha256` of that file in `manifest.json`.\n",
@@ -412,24 +468,44 @@ pub fn export(workspace: &Workspace, request: ExportRequest) -> Result<ExportRes
     let mut collected = workspace.read(|conn| collect(conn, &scope))?;
 
     if scope == Scope::Full {
-        // Facts leave one a line by id, a tombstone as its id, type and stamps and nothing of what it held.
+        // Facts leave one a line by id, a tombstone as its id, type and stamps and nothing of what it held; the
+        // Gardener's threads, messages and policy likewise.
         let facts = std::mem::take(&mut collected.facts);
-        let mut bytes = Vec::new();
-        let (mut rows, mut tombstones) = (0, 0);
-        for fact in &facts {
-            if fact.deleted_at.is_some() {
-                serde_json::to_writer(&mut bytes, &facts::stripped(fact))?;
-                tombstones += 1;
-            } else {
-                serde_json::to_writer(&mut bytes, fact)?;
-            }
-            bytes.push(b'\n');
-            rows += 1;
-        }
-        collected.counts.insert(FACT.into(), rows - tombstones);
-        collected
-            .files
-            .push((FACTS.into(), bytes, Some((rows, tombstones))));
+        stamped_lines(
+            &mut collected,
+            FACTS,
+            FACT,
+            &facts,
+            |fact| fact.deleted_at.is_some(),
+            facts::stripped,
+        )?;
+        let threads = std::mem::take(&mut collected.threads);
+        stamped_lines(
+            &mut collected,
+            THREADS,
+            THREAD,
+            &threads,
+            |thread| thread.deleted_at.is_some(),
+            threads::stripped_thread,
+        )?;
+        let messages = std::mem::take(&mut collected.messages);
+        stamped_lines(
+            &mut collected,
+            MESSAGES,
+            MESSAGE,
+            &messages,
+            |message| message.deleted_at.is_some(),
+            threads::stripped_message,
+        )?;
+        let policy = std::mem::take(&mut collected.policy);
+        stamped_lines(
+            &mut collected,
+            POLICY,
+            POLICY_TYPE,
+            &policy,
+            |row| row.deleted_at.is_some(),
+            policy::stripped,
+        )?;
         // Grants leave by id with their stamps, revocations included, so a merge can tell what was ended.
         let grants = std::mem::take(&mut collected.grants);
         let tombstones = grants
@@ -711,9 +787,18 @@ fn decide(local: Option<(&str, bool)>, stamp: &str, deleted: bool, delete_wins: 
 }
 
 fn state(conn: &Connection, table: &str, id: &str) -> Result<Option<(String, bool)>> {
+    state_by(conn, table, "id", id)
+}
+
+fn state_by(
+    conn: &Connection,
+    table: &str,
+    column: &str,
+    id: &str,
+) -> Result<Option<(String, bool)>> {
     Ok(conn
         .query_row(
-            &format!("SELECT updated_at, deleted_at IS NOT NULL FROM {table} WHERE id = ?1"),
+            &format!("SELECT updated_at, deleted_at IS NOT NULL FROM {table} WHERE {column} = ?1"),
             [id],
             |row| Ok((row.get(0)?, row.get(1)?)),
         )
@@ -767,8 +852,12 @@ fn rival(conn: &Connection, incoming: &Incoming) -> Result<Option<(String, Strin
 }
 
 fn tombstone(conn: &Connection, table: &str, id: &str, stamp: &str) -> Result<()> {
+    tombstone_by(conn, table, "id", id, stamp)
+}
+
+fn tombstone_by(conn: &Connection, table: &str, column: &str, id: &str, stamp: &str) -> Result<()> {
     conn.execute(
-        &format!("UPDATE {table} SET updated_at = ?1, deleted_at = ?1 WHERE id = ?2"),
+        &format!("UPDATE {table} SET updated_at = ?1, deleted_at = ?1 WHERE {column} = ?2"),
         [stamp, id],
     )?;
     Ok(())
@@ -785,11 +874,15 @@ fn parse_grants(bytes: &[u8]) -> Result<Vec<Grant>> {
     Ok(file.grants)
 }
 
-/// The facts of a bundle, one a line, each checked as a row is.
-fn parse_facts(bytes: &[u8]) -> Result<Vec<Fact>> {
+/// The rows of one stamped file, one a line, each checked as a row is.
+fn parse_stamped<T: serde::de::DeserializeOwned>(
+    path: &str,
+    bytes: &[u8],
+    validate: impl Fn(&T) -> std::result::Result<(), String>,
+) -> Result<Vec<T>> {
     let text = std::str::from_utf8(bytes)
-        .map_err(|e| bundle_error("unreadable", format!("{FACTS}: {e}")))?;
-    let mut facts = Vec::new();
+        .map_err(|e| bundle_error("unreadable", format!("{path}: {e}")))?;
+    let mut rows = Vec::new();
     for (index, line) in text
         .lines()
         .enumerate()
@@ -798,14 +891,104 @@ fn parse_facts(bytes: &[u8]) -> Result<Vec<Fact>> {
         let bad = |detail: String| {
             bundle_error(
                 "unreadable",
-                format!("{FACTS}, line {}: {detail}", index + 1),
+                format!("{path}, line {}: {detail}", index + 1),
             )
         };
-        let fact: Fact = serde_json::from_str(line).map_err(|e| bad(e.to_string()))?;
-        facts::validate_imported(&fact).map_err(bad)?;
-        facts.push(fact);
+        let row: T = serde_json::from_str(line).map_err(|e| bad(e.to_string()))?;
+        validate(&row).map_err(bad)?;
+        rows.push(row);
     }
-    Ok(facts)
+    Ok(rows)
+}
+
+/// The facts of a bundle, one a line, each checked as a row is.
+fn parse_facts(bytes: &[u8]) -> Result<Vec<Fact>> {
+    parse_stamped(FACTS, bytes, facts::validate_imported)
+}
+
+/// One row of a stamped table as the rule sees it: which table and key column, its key, its version and whether it
+/// arrives as a tombstone.
+struct Keyed<'a> {
+    table: &'a str,
+    column: &'a str,
+    id: &'a str,
+    updated_at: &'a str,
+    deleted: bool,
+}
+
+/// A row of a stamped table against the one here, by the rule rows follow.
+fn apply_stamped(
+    conn: &Connection,
+    row: &Keyed<'_>,
+    put: impl FnOnce() -> Result<()>,
+    summary: &mut ImportSummary,
+) -> Result<()> {
+    let local = state_by(conn, row.table, row.column, row.id)?;
+    let decision = decide(
+        local
+            .as_ref()
+            .map(|(stamp, deleted)| (stamp.as_str(), *deleted)),
+        row.updated_at,
+        row.deleted,
+        true,
+    );
+    match decision {
+        Decision::Insert => {
+            put()?;
+            summary.inserted += 1;
+        }
+        Decision::Replace => {
+            put()?;
+            summary.updated += 1;
+        }
+        Decision::Tombstone => {
+            tombstone_by(conn, row.table, row.column, row.id, row.updated_at)?;
+            summary.updated += 1;
+        }
+        Decision::Keep => summary.skipped += 1,
+    }
+    Ok(())
+}
+
+fn apply_thread(ctx: &mut WriteCtx, thread: &Thread, summary: &mut ImportSummary) -> Result<()> {
+    let conn = ctx.conn;
+    let keyed = Keyed {
+        table: "threads",
+        column: "id",
+        id: &thread.id,
+        updated_at: &thread.updated_at,
+        deleted: thread.deleted_at.is_some(),
+    };
+    apply_stamped(conn, &keyed, || threads::put_thread(conn, thread), summary)
+}
+
+fn apply_message(ctx: &mut WriteCtx, message: &Message, summary: &mut ImportSummary) -> Result<()> {
+    let conn = ctx.conn;
+    let keyed = Keyed {
+        table: "messages",
+        column: "id",
+        id: &message.id,
+        updated_at: &message.updated_at,
+        deleted: message.deleted_at.is_some(),
+    };
+    apply_stamped(
+        conn,
+        &keyed,
+        || threads::put_message(conn, message),
+        summary,
+    )
+}
+
+fn apply_policy(ctx: &mut WriteCtx, row: &PolicyRow, summary: &mut ImportSummary) -> Result<()> {
+    let conn = ctx.conn;
+    let keyed = Keyed {
+        table: "policy",
+        column: "key",
+        id: &row.key,
+        updated_at: &row.updated_at,
+        deleted: row.deleted_at.is_some(),
+    };
+    apply_stamped(conn, &keyed, || policy::put(conn, row), summary)
 }
 
 /// A fact of the bundle against the one here, by the rule rows follow. A live fact the substrate derived that finds
@@ -1003,11 +1186,13 @@ fn clear(conn: &Connection, scope: &Scope) -> Result<Vec<String>> {
         Scope::Domain { .. } => Some(entity_types(conn, scope)?),
     };
     delete("entities", "type", types)?;
-    // A domain's bundle carries no grants and no facts, so only a replace of the whole workspace clears them; the
-    // ledger is this device's and no import touches it.
+    // A domain's bundle carries no grants, facts, threads or policy, so only a replace of the whole workspace clears
+    // them; the ledger and the audit log are this device's and no import touches them.
     if *scope == Scope::Full {
         grants::clear(conn)?;
         facts::clear(conn)?;
+        threads::clear(conn)?;
+        policy::clear(conn)?;
     }
     Ok(removed_files)
 }
@@ -1028,6 +1213,9 @@ pub fn import(workspace: &Workspace, path: &Path, mode: Mode) -> Result<ImportSu
     let mut incoming = Vec::new();
     let mut incoming_grants = Vec::new();
     let mut incoming_facts = Vec::new();
+    let mut incoming_threads = Vec::new();
+    let mut incoming_messages = Vec::new();
+    let mut incoming_policy = Vec::new();
     let mut files = Vec::new();
     let mut settings = None;
     for file in &manifest.files {
@@ -1048,6 +1236,24 @@ pub fn import(workspace: &Workspace, path: &Path, mode: Mode) -> Result<ImportSu
             incoming_grants = parse_grants(&entry(&mut archive, GRANTS)?)?;
         } else if file.path == FACTS {
             incoming_facts = parse_facts(&entry(&mut archive, FACTS)?)?;
+        } else if file.path == THREADS {
+            incoming_threads = parse_stamped(
+                THREADS,
+                &entry(&mut archive, THREADS)?,
+                threads::validate_imported_thread,
+            )?;
+        } else if file.path == MESSAGES {
+            incoming_messages = parse_stamped(
+                MESSAGES,
+                &entry(&mut archive, MESSAGES)?,
+                threads::validate_imported_message,
+            )?;
+        } else if file.path == POLICY {
+            incoming_policy = parse_stamped(
+                POLICY,
+                &entry(&mut archive, POLICY)?,
+                policy::validate_imported,
+            )?;
         }
     }
 
@@ -1103,6 +1309,17 @@ pub fn import(workspace: &Workspace, path: &Path, mode: Mode) -> Result<ImportSu
         })
         .chain(incoming_grants.iter().map(|grant| grant.updated_at.clone()))
         .chain(incoming_facts.iter().map(|fact| fact.updated_at.clone()))
+        .chain(
+            incoming_threads
+                .iter()
+                .map(|thread| thread.updated_at.clone()),
+        )
+        .chain(
+            incoming_messages
+                .iter()
+                .map(|message| message.updated_at.clone()),
+        )
+        .chain(incoming_policy.iter().map(|row| row.updated_at.clone()))
         .max();
     let removed_files = workspace.write(|ctx| {
         if let Some(latest) = &latest {
@@ -1120,6 +1337,15 @@ pub fn import(workspace: &Workspace, path: &Path, mode: Mode) -> Result<ImportSu
         }
         for fact in &incoming_facts {
             apply_fact(ctx, fact, &mut summary)?;
+        }
+        for thread in &incoming_threads {
+            apply_thread(ctx, thread, &mut summary)?;
+        }
+        for message in &incoming_messages {
+            apply_message(ctx, message, &mut summary)?;
+        }
+        for row in &incoming_policy {
+            apply_policy(ctx, row, &mut summary)?;
         }
         Ok(removed)
     })?;
@@ -1203,8 +1429,8 @@ mod tests {
 
     /// A workspace with something of everything: rows in every table, tombstones, links live and removed, an
     /// overlay, a mirror, an attachment with its file, grants standing, revoked, for the session and for the
-    /// device, and facts the owner asserted, the substrate derived, the Gardener inferred, one edited and one
-    /// deleted.
+    /// device, facts the owner asserted, the substrate derived, the Gardener inferred, one edited and one
+    /// deleted, a thread with two messages, one deleted, and the Gardener's policy.
     fn populated(scratch: &Path) -> Workspace {
         let workspace = Workspace::in_memory();
         let photo = scratch.join("haul.jpg");
@@ -1291,6 +1517,27 @@ mod tests {
                 facts::assert(ctx, fact_of("disliked-ingredient", json!("cilantro"), facts::Provenance::AiInferred))?;
                 let name = facts::assert(ctx, fact_of("preferred-name", json!("Rowan"), facts::Provenance::UserAsserted))?;
                 facts::delete(ctx, &name.id)?;
+
+                let thread = threads::create_thread(
+                    ctx,
+                    threads::ThreadInput {
+                        id: None,
+                        domain: Some("kitchen".into()),
+                        title: "Dinner".into(),
+                        tier: Some(threads::Tier::T1),
+                    },
+                )?;
+                let message = |role, text: &str| threads::MessageInput {
+                    id: None,
+                    thread_id: thread.id.clone(),
+                    role,
+                    blocks: json!([{ "type": "text", "text": text }]),
+                    request_id: None,
+                };
+                threads::append_message(ctx, message(threads::Role::Owner, "What is for dinner?"))?;
+                let gone = threads::append_message(ctx, message(threads::Role::Gardener, "A private answer"))?;
+                threads::delete_message(ctx, &gone.id)?;
+                policy::set(ctx, "gardener", json!({ "monthlyUsd": 10, "grade": "standard" }))?;
                 Ok(dal)
             })
             .unwrap();
@@ -1417,12 +1664,15 @@ mod tests {
             "entities/project.jsonl",
             "entities/forecast.jsonl",
             "facts.jsonl",
+            "threads.jsonl",
+            "messages.jsonl",
+            "policy.jsonl",
             "grants.json",
             SETTINGS,
         ] {
             assert!(files.contains_key(name), "{name} is missing");
         }
-        assert_eq!(files.len(), 16);
+        assert_eq!(files.len(), 19);
 
         // The manifest lists every other file with its hash, and counts the live rows.
         let manifest: Manifest = serde_json::from_slice(&files[MANIFEST]).unwrap();
@@ -1438,6 +1688,9 @@ mod tests {
         assert_eq!(manifest.counts["forecast"], 1);
         assert_eq!(manifest.counts[GRANT], 1);
         assert_eq!(manifest.counts[FACT], 3);
+        assert_eq!(manifest.counts[THREAD], 1);
+        assert_eq!(manifest.counts[MESSAGE], 1);
+        assert_eq!(manifest.counts[POLICY_TYPE], 1);
         assert_eq!(result.counts, manifest.counts);
         let recipes = manifest
             .files
@@ -1500,6 +1753,27 @@ mod tests {
         assert!(!facts_text.contains("Rowan"));
         assert_eq!(count(&workspace, "fact_history"), 1);
 
+        // The thread leaves with its title and tier, its live message with its words, its deleted message as a
+        // tombstone with none, and the policy with its value.
+        let row_count = |path: &str| {
+            let file = manifest
+                .files
+                .iter()
+                .find(|file| file.path == path)
+                .unwrap();
+            (file.rows, file.tombstones)
+        };
+        assert_eq!(row_count(THREADS), (Some(1), Some(0)));
+        assert_eq!(row_count(MESSAGES), (Some(2), Some(1)));
+        assert_eq!(row_count(POLICY), (Some(1), Some(0)));
+        let threads_text = text(&files, THREADS);
+        assert!(threads_text.contains("Dinner") && threads_text.contains("\"T1\""));
+        let messages_text = text(&files, MESSAGES);
+        assert!(messages_text.contains("What is for dinner?"));
+        assert!(!messages_text.contains("A private answer"));
+        assert!(messages_text.contains("\"blocks\":[]"));
+        assert!(text(&files, POLICY).contains("monthlyUsd"));
+
         assert!(text(&files, README).contains("| recipe | 1 |"));
         cleanup(&scratch, &[&workspace]);
     }
@@ -1516,7 +1790,7 @@ mod tests {
         let summary = import(&second, &scratch.join("a.zip"), Mode::Merge).unwrap();
         // The local calendar source is in every workspace, the same row: it is the one skipped.
         assert_eq!(summary.skipped, 1);
-        assert_eq!(summary.inserted, 17);
+        assert_eq!(summary.inserted, 21);
         assert_eq!((summary.updated, summary.tombstoned), (0, 0));
         assert_eq!(summary.settings, Some(json!({ "measurement": "metric" })));
         assert_eq!(summary.backup_path, None);
@@ -1574,9 +1848,27 @@ mod tests {
         assert_eq!(count(&second, "facts"), 4);
         assert_eq!(count(&second, "fact_history"), 0);
 
+        // The thread landed with its live message, its tombstoned one, and the policy.
+        let opened = second
+            .read(|conn| threads::query_threads(conn, &threads::ThreadQuery::default()))
+            .unwrap();
+        assert_eq!(opened.len(), 1);
+        assert_eq!(opened[0].title, "Dinner");
+        let said = second
+            .read(|conn| threads::query_messages(conn, &opened[0].id))
+            .unwrap();
+        assert_eq!(said.len(), 1);
+        assert_eq!(said[0].blocks[0]["text"], "What is for dinner?");
+        assert_eq!(count(&second, "messages"), 2);
+        let gardener = second
+            .read(|conn| policy::get(conn, "gardener"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(gardener.value["monthlyUsd"], 10);
+
         // Importing the same bundle again changes nothing, and says so.
         let again = import(&second, &scratch.join("a.zip"), Mode::Merge).unwrap();
-        assert_eq!((again.inserted, again.updated, again.skipped), (0, 0, 18));
+        assert_eq!((again.inserted, again.updated, again.skipped), (0, 0, 22));
         cleanup(&scratch, &[&first, &second]);
     }
 
@@ -1599,7 +1891,7 @@ mod tests {
         let summary = import(&second, &scratch.join("a.zip"), Mode::Replace).unwrap();
         assert_eq!(
             (summary.inserted, summary.updated, summary.skipped),
-            (18, 0, 0)
+            (22, 0, 0)
         );
 
         // What was there went into the backup before it was cleared, and the backup is a bundle.
@@ -2099,6 +2391,55 @@ mod tests {
         import(&second, &kitchen, Mode::Replace).unwrap();
         assert_eq!(count(&second, "facts"), 4);
         cleanup(&scratch, &[&first, &second]);
+    }
+
+    /// The audit log is this device's: it is in no bundle, and a replace leaves it as it is.
+    #[test]
+    fn the_audit_never_leaves() {
+        let scratch = temp_dir("bundle-audit");
+        let workspace = populated(&scratch);
+        workspace
+            .write(|ctx| {
+                crate::substrate::audit::record(
+                    ctx.conn,
+                    crate::substrate::audit::tests::input(1_000, None, &["r1"]),
+                )
+            })
+            .unwrap();
+        export_to(&workspace, &scratch.join("a.zip"), Scope::Full);
+        let files = unzip(&scratch.join("a.zip"));
+        assert!(files.keys().all(|name| !name.contains("audit")));
+        let everything: Vec<u8> = files.values().flatten().copied().collect();
+        assert!(!String::from_utf8_lossy(&everything).contains("claude-haiku-4-5-20251001"));
+
+        import(&workspace, &scratch.join("a.zip"), Mode::Replace).unwrap();
+        assert_eq!(count(&workspace, "audit_entries"), 1);
+        cleanup(&scratch, &[&workspace]);
+    }
+
+    /// A secret is in no bundle: not one byte of its value is in any file of an export.
+    #[test]
+    fn a_secret_never_leaves() {
+        use crate::db::secret_store::{FileSecretStore, SecretStore};
+
+        let scratch = temp_dir("bundle-secret");
+        let workspace = populated(&scratch);
+        let secrets = FileSecretStore::new(&scratch);
+        let value = "sk-ant-api03-a-value-that-never-leaves";
+        secrets.set("anthropic-api-key", value).unwrap();
+        workspace
+            .write(|ctx| policy::set(ctx, "gardener", json!({ "provider": "anthropic" })))
+            .unwrap();
+
+        export_to(&workspace, &scratch.join("a.zip"), Scope::Full);
+        let needle = value.as_bytes();
+        for (name, bytes) in unzip(&scratch.join("a.zip")) {
+            assert!(
+                !bytes.windows(needle.len()).any(|window| window == needle),
+                "{name} carries the secret"
+            );
+        }
+        cleanup(&scratch, &[&workspace]);
     }
 
     #[test]

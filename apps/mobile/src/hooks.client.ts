@@ -8,6 +8,7 @@
 // resolved tokens behind them.
 import './app.css'
 import { mount, unmount } from 'svelte'
+import { isBenignErrorEvent } from '@eden/shared/errors'
 import { colors, storageKeys, type ColorToken, type Theme } from '@eden/ui-kit/tokens'
 
 interface EarlyError {
@@ -131,7 +132,7 @@ async function showFallbackCrashScreen(error: EarlyError): Promise<void> {
 }
 
 function handleError(event: ErrorEvent): void {
-	if (svelteKitReady) return
+	if (svelteKitReady || isBenignErrorEvent(event)) return
 	event.preventDefault()
 	void showFallbackCrashScreen({
 		message: event.message || 'An unexpected error occurred',

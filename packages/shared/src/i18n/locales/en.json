@@ -4,7 +4,9 @@
 	},
 	"common": {
 		"undo": "Undo",
-		"sampleAdded": "Sample data added."
+		"sampleAdded": "Sample data added.",
+		"close": "Close",
+		"save": "Save"
 	},
 	"shell": {
 		"garden": "Garden",
@@ -99,7 +101,13 @@
 			"taskSnoozed": "{title} snoozed",
 			"taskSkipped": "{title} skipped today",
 			"taskTallied": "{title} logged",
-			"taskDeleted": "{title} deleted"
+			"taskDeleted": "{title} deleted",
+			"haulCaptured": "Captured a haul: {count, plural, one {# item} other {# items}}",
+			"stockAddedMany": "{count, plural, one {# item} other {# items}} added to stock",
+			"groceryAddedMany": "{count, plural, one {# item} other {# items}} added to the list",
+			"ideaBrainstormed": "Brainstormed {title}",
+			"projectPlanned": "{count, plural, one {# step} other {# steps}} planned for {name}",
+			"tasksAdded": "{count, plural, one {# task} other {# tasks}} added to Today"
 		},
 		"profile": "What Eden knows"
 	},
@@ -172,7 +180,8 @@
 					"added": "{name} added to stock.",
 					"removed": "{name} removed from stock.",
 					"moved": "{name} moved to the {location}.",
-					"addedToGrocery": "{name} added to the list."
+					"addedToGrocery": "{name} added to the list.",
+					"addedMany": "{count, plural, one {# item} other {# items}} added to stock."
 				}
 			},
 			"grocery": {
@@ -215,6 +224,10 @@
 					"title": "No tips yet",
 					"text": "Storage tips gather here, bundled and your own."
 				}
+			},
+			"plan": {
+				"title": "The week's meals",
+				"shopDay": "Shop day"
 			}
 		},
 		"toolbench": {
@@ -292,6 +305,10 @@
 					"title": "No notes yet",
 					"text": "Technical notes, commands and config recipes gather here, searchable."
 				}
+			},
+			"plan": {
+				"title": "A plan for {name}",
+				"untitled": "A plan"
 			}
 		},
 		"weather": {
@@ -544,7 +561,6 @@
 			"dismissed": "Dismissed"
 		},
 		"owners": {
-			"substrate": "Eden",
 			"health": "Wellspring"
 		},
 		"provenance": {
@@ -856,6 +872,7 @@
 				"nws": "National Weather Service",
 				"weatherkit": "Apple WeatherKit",
 				"updater": "Updates",
+				"anthropic": "Anthropic",
 				"vault-ai": "Vault → AI"
 			},
 			"never": {
@@ -884,6 +901,58 @@
 		"placeholder": {
 			"title": "Not built yet",
 			"text": "This tab arrives with its substrate."
+		},
+		"gardener": {
+			"key": {
+				"label": "Anthropic key on this device",
+				"help": "Bring your own key (D-7). It is kept in this device's keychain, never shown again, never exported or synced.",
+				"present": "A key is present on this device.",
+				"field": "API key",
+				"save": "Save key",
+				"replace": "Replace key",
+				"remove": "Remove",
+				"failed": "Couldn't keep the key on this device."
+			},
+			"grades": {
+				"label": "Models by grade",
+				"help": "Which model runs each grade of work (D-74). Light parses and extracts, standard summarises and drafts, deep reasons and plans.",
+				"light": "Light",
+				"standard": "Standard",
+				"deep": "Deep"
+			},
+			"overrides": {
+				"label": "Overrides",
+				"help": "A model for one domain or one tool, in place of the map. None keeps the map.",
+				"none": "From the map",
+				"columns": {
+					"tool": "Tool",
+					"grade": "Grade",
+					"model": "Model"
+				}
+			},
+			"budget": {
+				"label": "Budget",
+				"help": "A hard stop on this month's spend across every request, and the most tokens one request may carry.",
+				"cap": "Monthly cap",
+				"tokens": "Tokens per request",
+				"tokensDefault": "The model's context",
+				"spent": "{spent} of {cap} USD this month."
+			},
+			"audit": {
+				"label": "Audit log",
+				"help": "One entry per request: what it read, what it ran, what it cost.",
+				"open": "Open the audit log"
+			},
+			"dearer": {
+				"title": "A dearer model",
+				"text": "This model costs about {ratio}× the seeded one for this grade. Use it anyway?",
+				"verb": "Use it"
+			},
+			"tools": {
+				"label": "Tools",
+				"help": "Every tool the Gardener has: what it does, what it may read, whether it asks first.",
+				"open": "Browse the tools"
+			}
 		}
 	},
 	"crash": {
@@ -933,5 +1002,234 @@
 			"action": "Add a fact"
 		}
 	},
-	"uiKit": {}
+	"uiKit": {},
+	"gardener": {
+		"conversation": "Conversation",
+		"global": "Everywhere",
+		"ask": "Ask the Gardener",
+		"askPlaceholder": "Ask the Gardener",
+		"askInDomain": "Ask about {domain}",
+		"greeting": {
+			"any": {
+				"1": { "named": "What's up, {name}?", "plain": "What's up?" },
+				"2": { "named": "What's on your mind, {name}?", "plain": "What's on your mind?" },
+				"3": { "named": "Where shall we start, {name}?", "plain": "Where shall we start?" },
+				"4": { "named": "What needs tending, {name}?", "plain": "What needs tending?" }
+			},
+			"morning": {
+				"1": { "named": "Good morning, {name}.", "plain": "Good morning." },
+				"2": { "named": "Up with the sun, {name}?", "plain": "Up with the sun?" }
+			},
+			"afternoon": {
+				"1": { "named": "Good afternoon, {name}.", "plain": "Good afternoon." },
+				"2": { "named": "How's the day going, {name}?", "plain": "How's the day going?" }
+			},
+			"evening": {
+				"1": { "named": "Good evening, {name}.", "plain": "Good evening." },
+				"2": { "named": "How was today, {name}?", "plain": "How was today?" }
+			},
+			"night": {
+				"1": { "named": "Still up, {name}?", "plain": "Still up?" },
+				"2": { "named": "A quiet hour, {name}.", "plain": "A quiet hour." }
+			}
+		},
+		"send": "Send",
+		"stop": "Stop",
+		"threads": "Conversations",
+		"newThread": "New conversation",
+		"deleteThread": "Delete conversation",
+		"deleteSelected": "Delete selected",
+		"noThreads": "No conversations yet.",
+		"runsInApp": "The Gardener runs in the installed app. This is a scripted reply.",
+		"noKey": {
+			"title": "No key on this device",
+			"text": "Paste your Anthropic API key. It stays in this device's keychain and never leaves it except to sign your requests."
+		},
+		"devClamp": "Development build: light and standard run on {model}, deep on {deep}.",
+		"budgetReached": "The monthly budget is reached. Raise it in Settings → Gardener to keep asking.",
+		"budgetWarning": "The Gardener has used {percent}% of this month's budget.",
+		"openBudgets": "Open budgets",
+		"saveFailed": "Couldn't save the conversation.",
+		"attach": "Attach files",
+		"attachments": {
+			"canSee": "Attached files",
+			"failed": "The files could not be attached. Nothing was sent.",
+			"refused": {
+				"type": "Only images, PDFs and text files can be attached.",
+				"size": "{name} is too large to attach.",
+				"count": "Up to {max} files per message.",
+				"total": "These files are too large to send together.",
+				"empty": "{name} is empty."
+			}
+		},
+		"lockedThread": "This conversation read T2 data and stays out of future context.",
+		"noRows": "No facts of this type in this request.",
+		"trimmed": "Trimmed to fit: {ids}",
+		"cutShort": "Cut short by the token cap.",
+		"interrupted": {
+			"title": "This reply was interrupted.",
+			"text": "Eden closed before it finished. What arrived is kept."
+		},
+		"retry": "Retry",
+		"ranTool": "Ran {tool} as its own request.",
+		"confirmTool": "Run {tool}",
+		"toolRun": {
+			"same": "{tool} × {count}",
+			"mixed": "{count, plural, one {# tool} other {# tools}}"
+		},
+		"confirm": {
+			"title": "Send this request?",
+			"text": "This will cost about {estimate}.",
+			"verb": "Send"
+		},
+		"unavailable": {
+			"no-provider": "No provider is configured.",
+			"no-capable-model": "No model can run this: it needs {missing}.",
+			"plain": "This tool runs no model."
+		},
+		"toast": {
+			"logged": "{value} logged.",
+			"deleted": "{title} deleted.",
+			"deletedMany": "{count} conversations deleted."
+		},
+		"draft": {
+			"task": "A task to add",
+			"grocery": "{count, plural, one {# item} other {# items}} for the list",
+			"code": "A scaffold to copy",
+			"capture": "{count, plural, one {# item} other {# items}} from the photo",
+			"captureText": "Verify the rows before they become stock.",
+			"captureCost": "sent",
+			"planCommitted": "{count, plural, =0 {Plan added} one {# task added} other {# tasks added}}.",
+			"groceryCommitted": "{count, plural, one {# item} other {# items}} added to the list.",
+			"captureCommitted": "{count, plural, one {# item} other {# items}} added to stock.",
+			"plusGrocery": "and {count, plural, one {# item} other {# items}} for the list",
+			"copy": "Copy",
+			"copied": "Copied",
+			"done": "Done",
+			"addTask": "Add task",
+			"createTasks": "{count, plural, =0 {Create} one {Create # task} other {Create # tasks}}",
+			"addToList": "Add to the list",
+			"verify": "Verify",
+			"discard": "Discard",
+			"committed": "Added",
+			"discarded": "Discarded"
+		},
+		"resize": "Resize the Gardener",
+		"allowed": "{id} shared with the Gardener.",
+		"allow": {
+			"title": "Share with the Gardener?",
+			"text": "{id} is T2. A standing grant lets the Gardener read it whenever a tool declares it, until you revoke it.",
+			"verb": "Share"
+		},
+		"tool": {
+			"about": "About this tool",
+			"grade": "Grade",
+			"plain": "None: it runs no model",
+			"reads": "Reads",
+			"input": "Input",
+			"output": "Output",
+			"error": "Error",
+			"substrate": "Eden",
+			"declared": "Declared",
+			"thisCall": "This call",
+			"access": "Access",
+			"accessKinds": {
+				"read": "Read",
+				"write-draft": "Draft",
+				"write": "Write",
+				"act-external": "External"
+			},
+			"confirm": "Asks first",
+			"confirmYes": "Yes, with a confirm",
+			"confirmNo": "No",
+			"readsNothing": "Nothing"
+		},
+		"openTools": "Browse the tools",
+		"openAudit": "Open the audit log"
+	},
+	"audit": {
+		"title": "Audit log",
+		"subtitle": "Every Gardener request on this device",
+		"columns": {
+			"when": "When",
+			"surface": "Surface",
+			"tool": "Tool",
+			"grade": "Grade",
+			"model": "Model",
+			"tokens": "In / out",
+			"cost": "Cost",
+			"outcome": "Outcome"
+		},
+		"hints": {
+			"surface": "Where the request came from: the conversation, a domain's conversation, or a tool run on its own.",
+			"tool": "The tool the request ran, if it ran one.",
+			"grade": "The model grade the request ran at. A dash means it ran no model.",
+			"model": "The model that answered.",
+			"tokens": "Tokens sent to the model, then tokens it wrote back.",
+			"cost": "What the request cost, in US dollars.",
+			"outcome": "How the request ended."
+		},
+		"outcomes": {
+			"ok": "ok",
+			"refusal": "refused",
+			"max-tokens": "cut short",
+			"error": "error",
+			"cancelled": "cancelled",
+			"declined": "declined",
+			"budget": "over budget",
+			"interrupted": "interrupted"
+		},
+		"error": "Couldn't read the audit log.",
+		"empty": {
+			"title": "Nothing yet",
+			"text": "Every request the Gardener makes lands here, for ninety days."
+		},
+		"filteredByFact": "Showing the requests that read this fact.",
+		"open": "Open an entry",
+		"surfaces": {
+			"chat": "Conversation",
+			"domainChat": "Conversation about {domain}",
+			"delegated": "Tool run"
+		},
+		"detail": {
+			"model": "Model",
+			"tokens": "Tokens",
+			"outcome": "Outcome",
+			"reads": "Read",
+			"entities": "Touched",
+			"tools": "Tools",
+			"grants": "Allowed by",
+			"image": "Image",
+			"attachment": "Attached",
+			"parent": "Called from",
+			"parentOpen": "Open the calling request",
+			"provider": "Provider",
+			"grade": "Grade",
+			"usage": "Usage",
+			"request": "Request",
+			"cached": "Cached"
+		},
+		"openThread": "Open the conversation",
+		"retention": "Entries stay ninety days on this device. They are never exported or synced."
+	},
+	"tools": {
+		"title": "Tools",
+		"subtitle": "Everything the Gardener can do, and what each may read",
+		"columns": {
+			"tool": "Tool",
+			"owner": "From",
+			"access": "Access",
+			"grade": "Grade",
+			"reads": "Reads"
+		},
+		"hints": {
+			"access": "Whether the tool only reads your data or changes it. A write asks you first.",
+			"grade": "The model grade a tool runs at. A dash means it runs no model.",
+			"reads": "How many kinds of registry data the tool is declared to read. It can see nothing else."
+		},
+		"foot": "{count, plural, one {# tool} other {# tools}}. A plain tool runs no model; a write asks first.",
+		"schema": "Input shape",
+		"status": "Status",
+		"unavailable": "No handler: it cannot run"
+	}
 }

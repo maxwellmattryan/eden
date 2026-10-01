@@ -59,6 +59,15 @@ pub async fn mark_inbox_read(workspace: State<'_, Workspace>, ids: Vec<String>) 
     workspace.write(|ctx| signals::mark_read(ctx.conn, &ids))
 }
 
+#[tauri::command]
+pub async fn withdraw_signal(
+    workspace: State<'_, Workspace>,
+    name: String,
+    dedupe_key: String,
+) -> Result<Vec<String>> {
+    workspace.write(|ctx| signals::withdraw(ctx.conn, &name, &dedupe_key))
+}
+
 /// Shows an OS notification with the words the shell wrote for a card. Answers whether it was handed to the system:
 /// not while the owner has the capability off on this device. The system itself reports nothing back.
 #[tauri::command]

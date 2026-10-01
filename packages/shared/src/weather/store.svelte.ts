@@ -1,18 +1,24 @@
 // Sky's store (product/domains/weather.md), shared by both apps: the forecast for the home place from the provider the
-// owner chose (D-56), kept as the `weather` document so the last good forecast survives a relaunch and reads while
-// offline (D-32: mirrors are per device, never synced), the NWS alerts beside it, the air quality and the allergens
-// as supplementary slots that fail on their own (D-59), and the light and the moon computed here. The mirror is
-// metric and the page converts, so a change of units never needs the network; the week and every time are the
-// place's (D-58).
+// owner chose (D-56), kept as mirror rows in the data layer so the last good forecast survives a relaunch and reads
+// while offline (D-32: mirrors are per device, never synced; D-85; `rows.ts` is between this and the rows), the NWS
+// alerts beside it, the air quality and the allergens as supplementary slots that fail on their own (D-59), and the
+// light and the moon computed here. The mirror is metric and the page converts, so a change of units never needs
+// the network; the week and every time are the place's (D-58).
+//
+// A mirror is not the owner's data: a write has no undo and no queue, and one that fails is logged and made again by
+// the next refresh.
 //
 // When it is fetched again is the refresh coordinator's (D-73): the forecast while something reads it and it is a
 // quarter of an hour old, and whenever the owner asks; the alerts every five minutes on the scheduler, read or not,
 // because a severe one is told even while the window is hidden. Each alert is emitted as `weather.alert`, once.
+import { logError } from '../api/diagnostics.js'
+import { applyBatch, queryEntities } from '../data/client.js'
+import { importLegacyDocument } from '../data/legacy.js'
+import type { BatchOp, Entity } from '../data/types.js'
 import { nowIso } from '../dates/index.js'
-import { load, save } from '../persistence/index.js'
 import { coordinator } from '../refresh/index.js'
 import { settings } from '../settings/settings.svelte.js'
-import { emit } from '../signals/runtime.js'
+import { emit, withdraw } from '../signals/runtime.js'
 import type { HomePlace } from '../types/index.js'
 import { goldenHourOf, moonAt, type Moon } from './ephemeris.js'
 import {
@@ -27,29 +33,27 @@ import {
 	type ProviderId,
 	type SupplementSlot,
 } from './model.js'
-import { fetchAlerts, type WeatherAlert } from './nws.js'
+import { fetchAlerts } from './nws.js'
 import { OfflineError } from './provider.js'
 import { DEFAULT_PROVIDER, airQualitySources, allergenSources, providerFor } from './registry.js'
+import {
+	alertOp,
+	legacyOps,
+	placeKey,
+	SKY,
+	skyFromRows,
+	skyOps,
+	type AlertPayload,
+	type ForecastPayload,
+	type SlotPayload,
+	type WeatherData,
+} from './rows.js'
 import { fillSlot, slotStale } from './supplement.js'
 import { temperature } from './units.js'
 import { hoursFrom, mergeDays, todayOf, weekHasGap, weekOf, type WeekDay } from './view.js'
 import { addDays, placeToday } from './week.js'
 
-export interface WeatherData {
-	/** When the forecast was fetched, as an ISO timestamp: the "last good" time. */
-	fetchedAt: string
-	place: HomePlace
-	forecast: Forecast
-	alerts: WeatherAlert[]
-	/** When the alerts were last answered, as an ISO timestamp; a mirror from before they were fetched apart has none. */
-	alertsAt?: string
-	/** `false` once the alert service said it does not cover the place: it is not asked again until the place changes. */
-	alertsCovered?: boolean
-	airQuality: SupplementSlot<AirQuality>
-	allergens: SupplementSlot<Allergens>
-	/** The ids of the alerts the owner has dismissed; one is forgotten once its alert is no longer issued. */
-	dismissed?: string[]
-}
+export type { WeatherData }
 
 export interface Sun {
 	sunrise: number
@@ -58,9 +62,8 @@ export interface Sun {
 	moon: Moon
 }
 
+/** The document the store kept before the data layer, brought over once (`legacyOps`). */
 const DOCUMENT = 'weather'
-/** 2: the provider-neutral model. A mirror is never migrated: an older document is dropped and fetched again. */
-const VERSION = 2
 /** The forecast is refreshed once it is this old, while something reads it (weather.md, "Refresh"). */
 const STALE_MS = 15 * 60 * 1000
 /** The alerts are the scheduler's, every five minutes; a forecast refresh brings them along only when they are older. */
@@ -69,6 +72,8 @@ const ALERTS_STALE_MS = 5 * 60 * 1000
 export const FORECAST_RESOURCE = 'weather.forecast'
 /** The schedule Sky declares for the alerts (`manifest.json`), and the resource bound to it. */
 export const ALERTS_SCHEDULE = 'weather.alerts'
+/** What each active alert is emitted as, keyed by its id. */
+const ALERT_SIGNAL = 'weather.alert'
 const AIR_STALE_MS = 60 * 60 * 1000
 const ALLERGENS_STALE_MS = 3 * 60 * 60 * 1000
 const HOURS_SHOWN = 12
@@ -141,6 +146,10 @@ export class WeatherStore {
 	}
 
 	#reading: Promise<void> | null = null
+	/** The rows Sky's types hold, as of the last read or write: what a write may have to drop. */
+	#held: readonly Pick<Entity, 'uri' | 'type' | 'source' | 'externalId'>[] = []
+	/** The writes, one at a time, so each knows the rows the one before it left. */
+	#writing: Promise<void> = Promise.resolve()
 	#ticker: ReturnType<typeof setInterval> | null = null
 	#alerting: Promise<void> | null = null
 
@@ -169,11 +178,31 @@ export class WeatherStore {
 		return this.forecastAge >= STALE_MS
 	}
 
+	async #rows() {
+		const [forecasts, alerts, airQuality, allergens] = await Promise.all([
+			queryEntities<ForecastPayload>({ type: SKY.forecast }),
+			queryEntities<AlertPayload>({ type: SKY.alert }),
+			queryEntities<SlotPayload<AirQuality>>({ type: SKY.airQuality }),
+			queryEntities<SlotPayload<Allergens>>({ type: SKY.allergens }),
+		])
+		this.#held = [...forecasts, ...alerts, ...airQuality, ...allergens]
+		return { forecasts, alerts, airQuality, allergens }
+	}
+
 	#read(): Promise<void> {
-		return (this.#reading ??= load<WeatherData>(DOCUMENT).then((document) => {
-			if (document?.version === VERSION && document.data?.forecast) this.data = document.data
-			this.ready = true
-		}))
+		const failed = (what: string) => (error: unknown) => logError('weather', what, String(error)).catch(() => null)
+		return (this.#reading ??= importLegacyDocument<unknown>(DOCUMENT, legacyOps)
+			// an old document that could not be brought over is tried again at the next launch
+			.catch(failed('Could not import the old document'))
+			.then(() => this.#rows())
+			.then((rows) => {
+				this.data = skyFromRows(rows, $state.snapshot(settings.home), settings.weatherProvider)
+			})
+			// rows that cannot be read are a forecast not held: it is fetched, and the reason is in the log
+			.catch(failed('Could not read the mirror'))
+			.then(() => {
+				this.ready = true
+			}))
 	}
 
 	/** Reads the mirror once, then refreshes whenever it is stale; every page that shows the sky calls this on mount. */
@@ -234,16 +263,42 @@ export class WeatherStore {
 		}
 	}
 
-	/** Takes an alert off the page for as long as it is issued; the mirror remembers it across a relaunch. */
+	/**
+	 * Takes an alert off the page for as long as it is issued, and its card out of the inbox; the mirror remembers
+	 * it across a relaunch.
+	 */
 	async dismissAlert(id: string): Promise<void> {
 		if (!this.data || this.data.dismissed?.includes(id)) return
 		this.data.dismissed = [...(this.data.dismissed ?? []), id]
-		await this.#save()
+		const alert = this.data.alerts.find((entry) => entry.id === id)
+		const place = placeKey(this.data.place)
+		if (alert) await this.#write(() => [alertOp($state.snapshot(alert), place, true)])
+		await withdraw(ALERT_SIGNAL, id).catch(() => null)
 	}
 
-	#save(): Promise<unknown> {
-		if (!this.data) return Promise.resolve()
-		return save<WeatherData>(DOCUMENT, { version: VERSION, data: $state.snapshot(this.data) }).catch(() => null)
+	/** Writes everything held as its rows, and drops the rows that are no longer held. */
+	#save(): Promise<void> {
+		return this.#write(() => (this.data ? skyOps($state.snapshot(this.data), this.#held) : []), true)
+	}
+
+	/**
+	 * One batch, after the writes before it. Never rejects: a mirror that could not be written is fetched and written
+	 * again. A batch of everything (`whole`) leaves the rows it put as the rows held; after a failure they are read
+	 * again, since a batch that was refused may have named a row that is gone.
+	 */
+	#write(ops: () => BatchOp[], whole = false): Promise<void> {
+		const run = async () => {
+			try {
+				const batch = ops()
+				if (batch.length === 0) return
+				const { rows } = await applyBatch(batch)
+				if (whole) this.#held = rows
+			} catch (error) {
+				await logError('weather', 'Could not write the mirror', String(error)).catch(() => null)
+				await this.#rows().catch(() => null)
+			}
+		}
+		return (this.#writing = this.#writing.then(run))
 	}
 
 	/**
@@ -273,11 +328,13 @@ export class WeatherStore {
 		for (const alert of answer.alerts) {
 			const { id, severity, event, headline, ends } = alert
 			await emit(
-				'weather.alert',
+				ALERT_SIGNAL,
 				{ alertId: id, severity, event, headline, ...(ends ? { ends } : {}) },
 				{ dedupeKey: id }
 			).catch(() => null)
 		}
+		// a dismissed alert has no card: one left by a withdrawal that failed, or from before there was one, goes now
+		for (const id of data.dismissed) await withdraw(ALERT_SIGNAL, id).catch(() => null)
 	}
 
 	/**

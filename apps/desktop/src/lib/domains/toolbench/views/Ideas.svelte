@@ -1,8 +1,8 @@
 <script lang="ts">
 	// Toolbench's Ideas view, ported from Domains/Toolbench/Ideas: the quick-add line that files an idea in five
 	// seconds, the inbox as a List with the area, the status and the days an idea has rested, and the selected idea in
-	// a detail pane with its fields, its log and its brainstorm thread. The thread shows stored messages only; the
-	// Gardener's brainstorm arrives with its substrate, so the button waits disabled.
+	// a detail pane with its fields, its log and its brainstorm thread. The thread shows stored messages; the button
+	// opens the Gardener on the idea and runs its brainstorm, which appends to the thread (D-76).
 	import {
 		Badge,
 		Button,
@@ -16,6 +16,7 @@
 		type MenuItem,
 	} from '@eden/ui-kit'
 	import { t } from '@eden/shared/i18n'
+	import { gardenerUi } from '$lib/shell/gardener/panel-ui.svelte'
 	import { undoToast } from '$lib/shell/undo'
 	import { formatDay } from '@eden/shared/dates'
 	import { ideaChips } from '../parse'
@@ -165,11 +166,19 @@
 								<GardenerMessage text={message.text} owner={message.owner} />
 							{/each}
 						</Thread>
-					{:else}
-						<div>
-							<Button label={$t('domains.toolbench.ideas.brainstormWith')} variant="ai" icon="sparkles" disabled />
-						</div>
 					{/if}
+					<div>
+						<Button
+							label={$t('domains.toolbench.ideas.brainstormWith')}
+							variant="ai"
+							icon="sparkles"
+							onclick={() =>
+								gardenerUi.show('toolbench', [`eden://idea/${detail.id}`], {
+									tool: 'toolbench.brainstorm',
+									input: { ideaId: detail.id },
+								})}
+						/>
+					</div>
 				</section>
 			</aside>
 		{/if}

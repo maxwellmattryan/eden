@@ -23,11 +23,12 @@ Engineering started with the UI kit (D-43) ahead of the rest of the docs reachin
 - Export and import: the bundle's layout, merge and replace (`engineering/data-layer.md`, "The bundle").
 - The grant store and the egress ledger: the check every read and confirm asks, what stays on a device, what Eden counts as bytes out (D-70, D-71, `engineering/data-layer.md`, "Grants", "The egress ledger").
 - The scheduler on desktop, signals, rules and the inbox: the alarm in the crate and the take in the webview, rules from the manifests, the refresh coordinator (D-73, `engineering/signals.md`).
+- The Gardener v0: the key in the keychain, the request sent from the crate and streamed back, the context pack from declared reads, every declared tool with a handler, budgets, the audit log, threads as rows, the development clamp (D-74, D-76, `engineering/gardener.md`).
 
 ## Questions the engineering docs must answer
 
 - The Vault: separate store, per-item keys, keychain and Secure Enclave, biometric session, the tests that prove T3 never crosses the AI boundary.
-- The AI runtime: provider adapters, the sidecar pattern from Forge for the Claude Agent SDK, the context-pack assembler with declared reads, the scrub step, budgets, the audit log. Model grades are answered (D-74); the runtime consumes `@eden/shared/gardener` (`engineering/domain-module.md`, "Model grades").
+- The AI runtime beyond v0: OpenAI and Google adapters, local models, the Council, the chat on mobile (`engineering/gardener.md`, "Where it stands").
 - Sync: Crate's client-side merge over blobs, extended with end-to-end encryption and a passphrase-derived key; the vendor-agnostic backend trait.
 - The scheduler within mobile background limits, and how punctual the desktop alarm is in a hidden window, which is not measured yet (`engineering/signals.md`, "Testing").
 - The mobile native surface: the Android half of the database key, which is written and not yet run (`engineering/data-layer.md`, "The Android checklist"), the Secure Enclave, biometrics, camera, on-device OCR through Vision and ML Kit, HealthKit and Health Connect, local notifications, the share sheet, background sync.

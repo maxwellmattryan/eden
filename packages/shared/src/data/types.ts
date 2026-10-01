@@ -62,6 +62,15 @@ export interface EntityInput<T = Record<string, unknown>> {
 	snapshot?: unknown
 }
 
+/** A mirror as a refresh writes it (D-32): the row is named by its type, its source and its external id. */
+export interface MirrorInput<T = Record<string, unknown>> {
+	type: string
+	source: string
+	externalId: string
+	payload: T
+	snapshot?: unknown
+}
+
 export interface EntityQuery {
 	type: string
 	ids?: string[]
@@ -88,6 +97,10 @@ export type BatchOp =
 	| { op: 'delete'; uri: string }
 	| { op: 'restore'; uri: string }
 	| { op: 'link'; owner: string; link: LinkInput }
+	/** Creates the mirror its source and external id name, or replaces it and brings it back, keeping its id. */
+	| { op: 'putMirror'; input: MirrorInput<object> }
+	/** Removes a mirror outright, with its links; a row that is not a mirror is refused. */
+	| { op: 'dropMirror'; uri: string }
 
 export interface BatchResult {
 	/** False when the batch carried a marker that was already there, and so did nothing. */
@@ -209,6 +222,18 @@ export interface AttachInput {
 	path: string
 	fileName?: string
 	mime?: string
+	captured?: unknown
+	links?: LinkInput[]
+}
+/** A file given as its bytes, as the webview holds one that was dropped, picked or pasted (D-84). */
+export interface AttachBytesInput {
+	id?: string
+	kind: AttachmentKind
+	fileName: string
+	/** The media type; guessed from the extension when it is left out. */
+	mime?: string
+	/** A small picture of the file, as a data URL. */
+	thumbnail?: string
 	captured?: unknown
 	links?: LinkInput[]
 }

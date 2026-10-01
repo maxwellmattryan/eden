@@ -4,7 +4,7 @@ status: draft
 summary: The token architecture extended from Crate, the light "morning garden" and dark "night forest" themes with their values, the accent set, semantic colours and the Gardener's two colours, typography, iconography, spacing, radius, elevation, motion, chart colours and accessibility targets.
 read-this-if: You are styling anything, building the theme, or drawing a mockup.
 depends-on: [brand]
-updated: 2026-09-29
+updated: 2026-09-30
 ---
 
 ## Token architecture
@@ -78,11 +78,11 @@ Ten accents the owner can pick, replacing `--brand-*` at runtime as in Crate. Li
 |---|---|---|
 | danger | `#B0413E` | `#E0706C` |
 | warning | `#B8821F` | `#E3B24F` |
-| success | the accent | the accent |
+| success | `#28794A` | `#86D9A2` |
 | info | `#4A82A6` | `#7FB2D6` |
 | Gardener surfaces | `--ai` on `--ai-muted` when it speaks, `--honey` on `--honey-muted` when it acts | same |
 
-The Gardener's colours are distinct from the accent so an AI surface is always recognisable whatever accent is chosen: green when it speaks, honey when it acts (D-40).
+The Gardener's colours are distinct from the accent so an AI surface is always recognisable whatever accent is chosen: green when it speaks, honey when it acts (D-40). Success is its own green too, never the accent, so a done check or an ok outcome reads as success under every accent (D-78); it stays beside a check or a word.
 
 ## Typography
 
@@ -104,7 +104,7 @@ Four-pixel base; component padding 8, 12, 16; section gaps 24, 32. Radius: 6 for
 
 ## Motion
 
-Micro-interactions 150 ms, panels and sheets 220 ms, ease-out (`cubic-bezier(0.22, 1, 0.36, 1)`). Panels "unfurl": scale from 0.98 and fade. Growth is the only metaphorical motion: a completed task or a committed capture settles rather than pops. With reduced motion on, only opacity animates. The Breeze specks are an exception to the no-loops rule (D-42): they play once, 700 ms, on an accepted proposal or a settled action, and render nothing under reduced motion. A page header's motif is the other (D-62): it loops, at no more than thirty frames a second, and is a single still under reduced motion. Hover on a filled control is an ink wash, never a new hue. A press compresses the control from the top with its bottom edge fixed, as if it sank into its hole (D-49); reduced motion removes the movement.
+Micro-interactions 150 ms, panels and sheets 220 ms, ease-out (`cubic-bezier(0.22, 1, 0.36, 1)`). Panels "unfurl": scale from 0.98 and fade. Whatever appears over the page (a sheet and its scrim, a popover, a menu, a tooltip, a toast) leaves by the same transition played backwards, never by vanishing. Growth is the only metaphorical motion: a completed task or a committed capture settles rather than pops. With reduced motion on, only opacity animates. The Breeze specks are an exception to the no-loops rule (D-42): they play once, 700 ms, on an accepted proposal or a settled action, and render nothing under reduced motion; on a tool card they play on the success check that replaces the spinner, and never on a failure, which only fades to a danger x. A page header's motif is another (D-62): it loops, at no more than thirty frames a second, and is a single still under reduced motion. The spinner is another (D-79): the refresh arrows, turning only while a tool call or a refresh runs, still under reduced motion, never a page's loading state. The sprout is the last (D-80): it grows once every 2.4 s in the Gardener's bubble while a reply is awaited, and stands fully grown under reduced motion. Hover on a filled control is an ink wash, never a new hue. A press compresses the control from the top with its bottom edge fixed, as if it sank into its hole (D-49); reduced motion removes the movement.
 
 ## Charts
 

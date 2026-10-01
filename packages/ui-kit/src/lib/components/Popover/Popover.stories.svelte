@@ -76,14 +76,20 @@
 		await expect(panel).toHaveAttribute('data-side', 'bottom')
 		await userEvent.keyboard('{Escape}')
 		await waitFor(() => expect(panel).not.toBeVisible())
-		await expect(args.onclose).toHaveBeenLastCalledWith('escape')
+		await waitFor(() => expect(args.onclose).toHaveBeenLastCalledWith('escape'))
 		await waitFor(() => expect(trigger).toHaveFocus())
 		// a pointer down outside closes too
 		await userEvent.click(trigger)
 		await waitFor(() => expect(panel).toBeVisible())
 		await userEvent.click(canvasElement)
 		await waitFor(() => expect(panel).not.toBeVisible())
-		await expect(args.onclose).toHaveBeenLastCalledWith('outside')
+		await waitFor(() => expect(args.onclose).toHaveBeenLastCalledWith('outside'))
+		// the trigger is a toggle: pressed while the panel is open, it closes it
+		await userEvent.click(trigger)
+		await waitFor(() => expect(panel).toBeVisible())
+		await userEvent.click(trigger)
+		await waitFor(() => expect(panel).not.toBeVisible())
+		await waitFor(() => expect(args.onclose).toHaveBeenLastCalledWith('api'))
 	}}
 >
 	{#snippet template(args)}
@@ -253,7 +259,7 @@
 		await expect(panel.contains(document.activeElement)).toBe(true)
 		await userEvent.keyboard('{Escape}')
 		await waitFor(() => expect(panel).not.toBeVisible())
-		await expect(args.onclose).toHaveBeenLastCalledWith('escape')
+		await waitFor(() => expect(args.onclose).toHaveBeenLastCalledWith('escape'))
 		await waitFor(() => expect(trigger).toHaveFocus())
 	}}
 >
@@ -312,7 +318,7 @@
 		await waitFor(() => expect(panel).toBeVisible())
 		await userEvent.click(canvasElement)
 		await waitFor(() => expect(panel).not.toBeVisible())
-		await expect(args.onclose).toHaveBeenLastCalledWith('outside')
+		await waitFor(() => expect(args.onclose).toHaveBeenLastCalledWith('outside'))
 	}}
 >
 	{#snippet template(args)}

@@ -9,6 +9,8 @@
 		/** Sentence-case verb. */
 		label: string
 		icon?: IconName
+		/** Marks the current choice: a trailing check and aria-current, beside any leading icon. */
+		checked?: boolean
 		/** Rendered last, after a separator, in the danger colour. */
 		destructive?: boolean
 		/** A hint such as ⌘C, shown in mono; the menu does not bind it. */
@@ -35,7 +37,9 @@
 	// A Popover with role="menu" on desktop; on mobile a bottom Sheet listing the same items as full-width rows
 	// (`presentation="auto"` reads data-platform once). `roving` moves focus (arrows, Home, End, first-letter
 	// typeahead); Enter, Space or a click picks, which calls the item's onselect, then the menu's, then closes; Escape
-	// and Tab close without picking. Every close hands focus back to the anchor.
+	// and Tab close without picking. Every close hands focus back to the anchor. A sheet is modal until it has faded and
+	// closed, and only then can focus go back, so a pick on a sheet is reported once it has: a pick that removes the
+	// opener finds the focus where it expects it.
 	import type { AnchorLike } from '../../internal/anchor.js'
 	import Icon from '../../icons/Icon.svelte'
 	import { useStrings } from '../../i18n/context.js'
@@ -57,7 +61,7 @@
 		label?: string
 		/** auto is a popover menu on desktop and a bottom sheet on mobile, decided once from data-platform. */
 		presentation?: MenuPresentation
-		/** Called with the picked item, after the item's own onselect and before the menu closes. */
+		/** Called with the picked item, after the item's own onselect: as a popover menu starts to close, once a sheet has closed. */
 		onselect?: (item: MenuItem) => void
 		class?: string
 	}
@@ -84,10 +88,22 @@
 		presentation === 'auto' ? (platformOf(probe) === 'mobile' ? 'sheet' : 'menu') : presentation
 	)
 
-	function pick(item: MenuItem) {
+	// the pick made on a sheet, held until the sheet has closed
+	let picked: MenuItem | undefined
+
+	function report(item: MenuItem) {
 		item.onselect?.(item)
 		onselect?.(item)
+	}
+	function pick(item: MenuItem) {
+		if (mode === 'sheet') picked = item
+		else report(item)
 		open = false
+	}
+	function onsheetclose() {
+		const item = picked
+		picked = undefined
+		if (item) report(item)
 	}
 	// Tab leaves a popover menu: it closes, focus lands on the anchor, and the browser moves on from there.
 	function onkeydown(e: KeyboardEvent) {
@@ -95,11 +111,12 @@
 	}
 
 	$effect(() => {
-		// effect: imperative DOM. The first enabled item takes focus once the panel shows, a microtask after this flush.
+		// effect: imperative DOM. The list takes focus once the panel shows, a microtask after this flush: nothing looks
+		// chosen until the owner presses an arrow, which lands on the first item (ux-patterns.md, "Keyboard and focus").
 		const root = list
 		if (!open || !root) return
 		queueMicrotask(() => {
-			if (open) root.querySelector<HTMLElement>(ROVING.selector)?.focus({ preventScroll: true })
+			if (open) root.focus({ preventScroll: true })
 		})
 	})
 </script>
@@ -114,10 +131,12 @@
 			tabindex="-1"
 			disabled={item.disabled}
 			aria-disabled={item.disabled ? 'true' : undefined}
+			aria-current={item.checked ? 'true' : undefined}
 			onclick={() => pick(item)}
 		>
 			{#if item.icon}<Icon name={item.icon} size={mode === 'sheet' ? 'md' : 'sm'} />{/if}
 			<span class="ed-menu-label">{item.label}</span>
+			{#if item.checked}<Icon name="check" size={mode === 'sheet' ? 'md' : 'sm'} />{/if}
 			{#if item.shortcut}<kbd class="ed-menu-key" data-tertiary>{item.shortcut}</kbd>{/if}
 		</button>
 	{/each}
@@ -126,12 +145,13 @@
 <span class="ed-menu-probe" bind:this={probe} hidden></span>
 
 {#if mode === 'sheet'}
-	<Sheet bind:open placement="bottom" label={name}>
+	<Sheet bind:open placement="bottom" label={name} onclose={onsheetclose}>
 		<div
 			class={['ed-menu', 'ed-menu-sheet', className]}
 			role="menu"
 			aria-label={name}
 			bind:this={list}
+			tabindex="-1"
 			{@attach roving(() => ROVING)}
 		>
 			{@render rows()}
@@ -139,7 +159,7 @@
 	</Sheet>
 {:else}
 	<Popover bind:open {anchor} {align} role="menu" label={name} {onkeydown}>
-		<div class={['ed-menu', className]} bind:this={list} {@attach roving(() => ROVING)}>
+		<div class={['ed-menu', className]} bind:this={list} tabindex="-1" {@attach roving(() => ROVING)}>
 			{@render rows()}
 		</div>
 	</Popover>
@@ -193,6 +213,10 @@
 		background: var(--surface-2);
 	}
 	/* the ring sits inside the row, so a full-width row on a sheet keeps all of it */
+	/* the list takes focus only on open (tabindex -1), never from Tab, so it draws no ring of its own */
+	.ed-menu:focus-visible {
+		outline: none;
+	}
 	.ed-menu-item:focus-visible {
 		outline: 2px solid transparent;
 		background: var(--surface-2);

@@ -183,6 +183,11 @@
 
 	function openMenu(anchor: AnchorLike, align: 'start' | 'end', fromRow: boolean) {
 		if (!actions.length) return
+		// the ⋯ button pressed again while its menu is open closes it
+		if (menuOpen && menuAnchor === anchor) {
+			menuOpen = false
+			return
+		}
 		menuAnchor = anchor
 		menuAlign = align
 		returnToRow = fromRow

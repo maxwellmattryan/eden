@@ -4,7 +4,7 @@
 // the Garden and the palette's index from the result and nothing else.
 import type { Component } from 'svelte'
 import type { ResolvedPathname } from '$app/types'
-import type { BundleExtra } from '@eden/shared/data'
+import type { BundleExtra, Entity } from '@eden/shared/data'
 import {
 	declarationOf,
 	type BuiltDomainId,
@@ -15,6 +15,8 @@ import {
 	type WidgetDeclaration as DeclaredWidget,
 } from '@eden/shared/manifest'
 import { domainGlyph, type IconName } from '@eden/ui-kit'
+import type { DraftCard } from '@eden/shared/gardener'
+import type { ToolHandler } from '../shell/gardener/types.js'
 
 /** The route ids a domain may own; a page with tabs takes the tab as an optional parameter. */
 export type DomainRoute = '/kitchen/[[tab]]' | '/toolbench/[[tab]]' | '/weather'
@@ -68,7 +70,24 @@ export interface DomainBindings<D extends BuiltDomainId> {
 	 * can be exported on its own.
 	 */
 	extras?: () => Promise<BundleExtra[]>
+	/**
+	 * A handler for each tool the domain declares (`engineering/gardener.md`, "Tools"): `run` for a plain or a write
+	 * tool, `delegate` for a model-backed one. A declared tool with no handler is unavailable, and a test says so.
+	 */
+	tools?: Partial<Record<string, ToolHandler>>
+	/**
+	 * What the Gardener's context pack carries of a row of one of the domain's entity types, by type, where the row
+	 * itself is more than a request should pay for (D-85); `null` leaves the row out. A type with no entry is sent whole.
+	 */
+	pack?: Partial<Record<string, (row: Entity<object>) => Entity<object> | null>>
+	/** What each quick action writes, by its id; `log-quick` dispatches here and the Quick Log sheet (#27) reuses it. */
+	quickActionHandlers?: Partial<Record<string, QuickActionHandler>>
+	/** The domain's part of committing a draft its tool left; the substrate's parts (tasks, events) are the shell's. */
+	commitDraft?: (card: DraftCard) => Promise<{ undo: () => void } | undefined>
 }
+
+/** A quick action's write: the value as typed, the undo back. */
+export type QuickActionHandler = (value: string) => { undo: () => void } | Promise<{ undo: () => void }>
 
 export interface DomainManifest extends Omit<DomainBindings<BuiltDomainId>, 'routes' | 'widgets'> {
 	/** Everything the domain declares: its resources and reads, its tools, its intents, its palette entries. */

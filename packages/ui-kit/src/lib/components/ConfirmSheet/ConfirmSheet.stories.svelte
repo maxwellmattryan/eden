@@ -45,7 +45,7 @@
 	<ConfirmSheet {...args} bind:open />
 {/snippet}
 
-<!-- The verb button repeats the action in danger; confirming calls onconfirm and closes -->
+<!-- The verb button repeats the action in danger; confirming closes the sheet, then calls onconfirm -->
 <Story
 	name="Delete"
 	args={{ onconfirm: fn(), oncancel: fn() }}
@@ -57,8 +57,9 @@
 		await expect(dialog).toBeVisible()
 		await waitFor(() => expect(canvas.getByText(del.text)).toBeVisible())
 		await userEvent.click(canvas.getByRole('button', { name: del.verb }))
-		await expect(args.onconfirm).toHaveBeenCalledTimes(1)
 		await waitFor(() => expect(dialog).not.toBeVisible())
+		// the answer is reported once the sheet has closed
+		await waitFor(() => expect(args.onconfirm).toHaveBeenCalledTimes(1))
 		await expect(args.oncancel).not.toHaveBeenCalled()
 	}}
 />
@@ -75,8 +76,8 @@
 		await waitFor(() => expect(canvas.getByText(send.destination)).toBeVisible())
 		await expect(dialog.querySelector('pre')).toHaveTextContent(grocery.shopDay)
 		await userEvent.click(canvas.getByRole('button', { name: send.verb }))
-		await expect(args.onconfirm).toHaveBeenCalledTimes(1)
 		await waitFor(() => expect(dialog).not.toBeVisible())
+		await waitFor(() => expect(args.onconfirm).toHaveBeenCalledTimes(1))
 	}}
 />
 
@@ -92,10 +93,11 @@
 		const opener = canvas.getByRole('button', { name: trigger })
 		await userEvent.click(opener)
 		const dialog = await canvas.findByRole('dialog', { name: del.title })
-		await expect(dialog.contains(document.activeElement)).toBe(true)
+		// focus is on the sheet itself, never on Cancel or the confirm button
+		await waitFor(() => expect(document.activeElement).toBe(dialog.querySelector('.ed-sheet-panel')))
 		await userEvent.keyboard('{Escape}')
 		await waitFor(() => expect(args.oncancel).toHaveBeenCalledTimes(1))
-		await expect(dialog).not.toBeVisible()
+		await waitFor(() => expect(dialog).not.toBeVisible())
 		await expect(args.onconfirm).not.toHaveBeenCalled()
 		await waitFor(() => expect(document.activeElement).toBe(opener))
 		// the Cancel button takes the same path, once
@@ -103,6 +105,6 @@
 		await canvas.findByRole('dialog', { name: del.title })
 		await userEvent.click(canvas.getByRole('button', { name: 'Cancel' }))
 		await waitFor(() => expect(dialog).not.toBeVisible())
-		await expect(args.oncancel).toHaveBeenCalledTimes(2)
+		await waitFor(() => expect(args.oncancel).toHaveBeenCalledTimes(2))
 	}}
 />

@@ -6,6 +6,7 @@
 	import { defaultStrings } from '$lib/i18n/strings.js'
 	import { grocery, ideas, stock } from '../../../stories/sample-data.js'
 	import EmptyState from '../EmptyState/EmptyState.svelte'
+	import IconButton from '../IconButton/IconButton.svelte'
 	import type { MenuItem } from '../Menu/Menu.svelte'
 	import List, { type ListRowData } from './List.svelte'
 
@@ -56,6 +57,8 @@
 			meta: 'untouchedDays' in idea ? `${idea.untouchedDays} d` : idea.status,
 			metaWarn: 'untouchedDays' in idea,
 		}))
+
+	const ondelete = fn()
 
 	const { Story } = defineMeta({
 		title: 'Components/Data/List',
@@ -126,7 +129,7 @@
 		const items = canvas.getAllByRole('menuitem')
 		await expect(items[0]).toHaveTextContent(strings.select)
 		await userEvent.click(canvas.getByRole('menuitem', { name: 'Delete' }))
-		await expect(args.onaction).toHaveBeenLastCalledWith(fridgeActions[2], fridge[0])
+		await waitFor(() => expect(args.onaction).toHaveBeenLastCalledWith(fridgeActions[2], fridge[0]))
 		await expect(args.onselect).not.toHaveBeenCalled()
 	}}
 />
@@ -166,6 +169,45 @@
 		await expect(canvas.getByText(String(fridge.length))).toBeVisible()
 	}}
 />
+
+<!-- `bulk` puts the caller's action on the selection in the header, beside the count, only while selecting -->
+<Story
+	name="Bulk action"
+	play={async ({ canvasElement }) => {
+		const canvas = canvasOf(canvasElement)
+		ondelete.mockClear()
+		await expect(canvas.queryByRole('button', { name: 'Delete selected' })).toBeNull()
+		await userEvent.click(canvas.getByRole('button', { name: strings.select }))
+		const remove = canvas.getByRole('button', { name: 'Delete selected' })
+		await expect(remove).toBeDisabled()
+		const rows = canvas.getAllByRole('row')
+		await userEvent.click(rows[0]!)
+		await userEvent.click(rows[2]!)
+		await expect(remove).toBeEnabled()
+		await userEvent.click(remove)
+		await expect(ondelete).toHaveBeenLastCalledWith([fridge[0]!.id, fridge[2]!.id])
+		await userEvent.click(canvas.getByRole('button', { name: strings.done }))
+		await expect(canvas.queryByRole('button', { name: 'Delete selected' })).toBeNull()
+	}}
+>
+	{#snippet template(args: ComponentProps<typeof List>)}
+		<div class="col">
+			<List {...args}>
+				{#snippet bulk(ids: string[])}
+					<IconButton
+						icon="trash"
+						size="xs"
+						label="Delete selected"
+						danger
+						tooltip
+						disabled={!ids.length}
+						onclick={() => ondelete(ids)}
+					/>
+				{/snippet}
+			</List>
+		</div>
+	{/snippet}
+</Story>
 
 <!-- Compact hides the detail lines; the 32 px rows come from data-density -->
 <Story

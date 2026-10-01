@@ -1,7 +1,8 @@
 // The tooltip attachment: `<IconButton {@attach tooltip(s.back)} />`. One bubble, mounted into <body> the first time it
 // is needed, serves every host: it moves to whichever control is hovered (mouse or pen, never touch) or focused from
 // the keyboard, names it through aria-describedby while it shows, and hides on leave, blur, Escape, pointer down or
-// when the host goes away. A tooltip is the visible form of a label that already exists (an icon's name, a collapsed
+// when the host goes away. It leaves the way it came, fading back towards the host before it is hidden; a host that
+// asks for it meanwhile gets it back at once. A tooltip is the visible form of a label that already exists (an icon's name, a collapsed
 // subtitle); it is never the only place a fact lives, and it never appears on touch hover. A `toggle` host, one with no
 // action of its own such as an info glyph, also shows it on click or tap and hides it on the next; shown that way it
 // stays through pointer leave until a click, a pointer down elsewhere, Escape or blur.
@@ -9,6 +10,7 @@ import { mount } from 'svelte'
 import type { Attachment } from 'svelte/attachments'
 import { anchor } from '../../internal/anchor.js'
 import { dismiss } from '../../internal/dismiss.js'
+import { isLeaving, leave } from '../../internal/leave.js'
 import { hasTopLayer } from '../../internal/portal.js'
 import TooltipBubble from './TooltipBubble.svelte'
 
@@ -33,6 +35,7 @@ let pinned = false
 let hideTimer: ReturnType<typeof setTimeout> | undefined
 let unanchor: (() => void) | undefined
 let undismiss: (() => void) | undefined
+let unleave: (() => void) | undefined
 
 function ensureBubble(): HTMLElement {
 	if (bubble) return bubble
@@ -63,6 +66,7 @@ function show(next: HTMLElement, text: string, side: 'top' | 'bottom', pin = fal
 	const el = ensureBubble()
 	clearTimeout(hideTimer)
 	hideTimer = undefined
+	unleave?.()
 	if (host && host !== next) undescribe(host, el.id)
 	host = next
 	pinned = pin
@@ -85,6 +89,7 @@ function show(next: HTMLElement, text: string, side: 'top' | 'bottom', pin = fal
 
 function settle() {
 	hideTimer = undefined
+	// the bubble stays where it is while it fades: a host that has gone has no rect to follow
 	unanchor?.()
 	unanchor = undefined
 	undismiss?.()
@@ -92,12 +97,15 @@ function settle() {
 	if (host && bubble) undescribe(host, bubble.id)
 	host = undefined
 	pinned = false
-	if (!bubble) return
-	if (hasTopLayer()) {
-		if (bubble.matches(':popover-open')) bubble.hidePopover()
-	} else {
-		delete bubble.dataset.open
-	}
+	const el = bubble
+	if (!el || isLeaving(el)) return
+	unleave = leave(el, () => {
+		if (hasTopLayer()) {
+			if (el.matches(':popover-open')) el.hidePopover()
+		} else {
+			delete el.dataset.open
+		}
+	})
 }
 
 /** Hides after a short grace period, so moving between neighbouring controls does not flicker; `now` skips it. */
@@ -108,7 +116,7 @@ function hide(now = false) {
 }
 
 /** True while a tooltip is up or on its way out: the next host shows its own at once. */
-const warm = () => host !== undefined
+const warm = () => host !== undefined || isLeaving(bubble)
 
 /**
  * Attaches a tooltip to a control: `<button {@attach tooltip(s.back)}>`. `text` may be a getter, read each time the

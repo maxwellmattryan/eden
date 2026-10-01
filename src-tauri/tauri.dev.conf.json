@@ -12,6 +12,6 @@
 		]
 	},
 	"app": {
-		"windows": [{ "title": "Eden [DEV]" }]
+		"windows": [{ "title": "Eden [DEV]", "dragDropEnabled": false }]
 	}
 }

@@ -16,18 +16,12 @@ const ids = (groups: ReturnType<typeof sidebarGroups>) => groups.map((group) => 
 const without = (id: string) => declarations.filter((declaration) => declaration.id !== id)
 
 describe('sidebarGroups', () => {
-	it('groups Today; Garden, Gardener and Toolbench; then the domains (D-64)', () => {
+	it('groups Today; Garden and Toolbench; then the domains, with the Gardener pinned (D-64, D-77)', () => {
 		const groups = sidebarGroups(declarations, shell)
 		expect(groups.map((group) => group.id)).toEqual(['today', 'shell', 'domains'])
-		expect(ids(groups)).toEqual([['today'], ['garden', 'gardener', 'toolbench'], ['kitchen', 'weather']])
-		expect(groups[1]?.items[1]).toEqual({
-			id: 'gardener',
-			kind: 'shell',
-			name: 'shell.gardener',
-			subtitle: 'shell.gardenerSubtitle',
-			place: false,
-			key: 'G',
-		})
+		expect(ids(groups)).toEqual([['today'], ['garden', 'toolbench'], ['kitchen', 'weather']])
+		expect(shell.sidebar.pinned.map((entry) => entry.id)).toEqual(['gardener', 'settings'])
+		expect(shell.sidebar.pinned[0]).toMatchObject({ id: 'gardener', name: 'shell.gardener', key: 'G' })
 		expect(groups[2]?.items[0]).toMatchObject({ kind: 'domain', name: 'domains.kitchen.name', place: true })
 	})
 
@@ -35,18 +29,18 @@ describe('sidebarGroups', () => {
 		expect(ids(sidebarGroups(declarations, shell, { order: ['weather'] }))[2]).toEqual(['weather', 'kitchen'])
 		expect(ids(sidebarGroups(declarations, shell, { order: ['weather', 'kitchen', 'toolbench'] }))).toEqual([
 			['today'],
-			['garden', 'gardener', 'toolbench'],
+			['garden', 'toolbench'],
 			['weather', 'kitchen'],
 		])
 	})
 
 	it('leaves out what the owner hid, and a group with nothing in it', () => {
 		const groups = sidebarGroups(declarations, shell, { hidden: ['kitchen', 'weather', 'toolbench'] })
-		expect(ids(groups)).toEqual([['today'], ['garden', 'gardener']])
+		expect(ids(groups)).toEqual([['today'], ['garden']])
 	})
 
 	it('leaves out a domain that is not enabled', () => {
-		expect(ids(sidebarGroups(without('toolbench'), shell))[1]).toEqual(['garden', 'gardener'])
+		expect(ids(sidebarGroups(without('toolbench'), shell))[1]).toEqual(['garden'])
 	})
 })
 

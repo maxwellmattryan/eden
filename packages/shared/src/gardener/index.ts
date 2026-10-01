@@ -1,5 +1,49 @@
-// Model grades for the Gardener (docs/product/substrate/ai.md; docs/engineering/domain-module.md, "Model grades"):
-// the provider registry's seed, the owner's edits over it, and the model a request resolves to.
+// The Gardener for the apps (docs/product/substrate/ai.md; docs/engineering/domain-module.md, "Model grades"): the
+// provider registry's seed and the owner's edits over it, the model a request resolves to, the tool registry, the
+// context pack with its scrub and persona, the estimates and the budget, the policy row, and the runtime's client.
+export {
+	budgetState,
+	requestTokenCap,
+	startOfMonthMs,
+	WARN_PERCENT,
+	type BudgetInput,
+	type BudgetState,
+} from './budget.js'
+export * from './attachment-limits.js'
+export {
+	attachmentKind,
+	attachmentsOf,
+	attachmentTokens,
+	auditOf,
+	hasVisual,
+	imageTokens,
+	sentBytes,
+	sentSize,
+} from './attachments.js'
+export * from './client.js'
+export { clampForDevelopment, isDevEnvironment } from './dev.js'
+export { greetingKey, GREETINGS, partOfDay, type GreetingPool } from './greeting.js'
+export { estimateBefore, estimateCost, formatCost, formatUsd, type Usage } from './estimate.js'
+export { openRequests, OPEN_REQUESTS_KEY, type OpenRequests } from './open-requests.js'
+export {
+	buildPack,
+	WINDOW,
+	type Pack,
+	type PackAttachment,
+	type PackPrimitive,
+	type PackReaders,
+	type PackRequest,
+	type PackRow,
+	type SystemBlock,
+} from './pack.js'
+export {
+	GARDENER_PANEL_KEY,
+	gardenerPanelState,
+	rememberGardenerPanel,
+	type GardenerPanelState,
+} from './panel-state.js'
+export { persona, type Persona, type PersonaDomain, type PersonaInput } from './persona.js'
+export { DEFAULT_POLICY, effectiveSetup, readPolicy, type EffectiveSetup } from './policy.js'
 export {
 	ANTHROPIC,
 	ANTHROPIC_SEED,
@@ -11,4 +55,27 @@ export {
 	validateProvider,
 } from './providers.js'
 export { resolveGrade, resolveTool, type ToolRequest } from './resolve.js'
+export * from './rules.js'
+export * from './runtime-types.js'
+export { awaitsWords, segmentsOf, type Segment, type ToolBlock } from './segments.js'
+export { scrub, scrubValue, type ScrubHits, type Scrubbed } from './scrub.js'
+export {
+	answer,
+	DOMAIN_BLURBS,
+	factShapeWords,
+	parseWireName,
+	PROPOSABLE_FACTS,
+	QUICK_ACTION_WORDS,
+	quickActionsFor,
+	SCHEMAS,
+	SUBSTRATE,
+	SUBSTRATE_TOOLS,
+	toApiTool,
+	toolIndex,
+	toolsFor,
+	validateTools,
+	wireName,
+	type GardenerTool,
+	type JsonSchema,
+} from './tools.js'
 export * from './types.js'

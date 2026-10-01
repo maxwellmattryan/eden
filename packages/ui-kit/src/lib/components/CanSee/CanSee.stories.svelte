@@ -1,6 +1,6 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
-	import { expect, fn } from 'storybook/test'
+	import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 	import { canvasOf } from '../../../storybook/play.js'
 	import { defaultStrings } from '$lib/i18n/strings.js'
 	import { canSee, canSeeLocked, stock } from '../../../stories/sample-data.js'
@@ -8,59 +8,148 @@
 
 	const s = defaultStrings.gardener
 	const first = canSee[0]!
+	const lockedIds = new Set(canSeeLocked)
 	/** The ids this request was granted: the locked one is kept out of the items. */
-	const granted = canSee.filter((item) => !canSeeLocked.includes(item.id))
+	const granted: CanSeeItem[] = canSee.filter((item) => !lockedIds.has(item.id))
+	/** The names the owner knows the ids by. */
+	const names: Record<string, string> = {
+		'stock-item': 'Stock',
+		recipe: 'Recipes',
+		'dietary-preference': 'Dietary preferences',
+		allergy: 'Allergies',
+		'medical-dietary-restriction': 'Medical dietary restriction',
+	}
+	const labelled = (items: CanSeeItem[]): CanSeeItem[] => items.map((item) => ({ ...item, label: names[item.id] }))
+	const locked = labelled(canSeeLocked.map((id) => ({ id })))
+	const withEmpty: CanSeeItem[] = [...granted.slice(0, 2), { id: 'local-event', count: 0 }, { id: 'task', count: 0 }]
+	const trimmed = ['recipe', 'stock-item']
 	const rows = stock.slice(0, 3)
-	const chipName = (item: CanSeeItem) => s.contextRows(item.count, item.id)
+	const total = (items: CanSeeItem[]) =>
+		items.reduce((sum, item) => sum + (typeof item.count === 'number' ? item.count : 0), 0)
+	const chipName = new RegExp(`^${s.canSee}`)
+
+	/** Presses the button and waits for the panel. */
+	async function openPanel(canvasElement: HTMLElement) {
+		const canvas = canvasOf(canvasElement)
+		const chip = canvas.getByRole('button', { name: chipName })
+		await userEvent.click(chip)
+		const dialog = await canvas.findByRole('dialog', { name: s.canSeeTitle })
+		await waitFor(() => expect(dialog).toBeVisible())
+		return { canvas, chip, dialog, panel: within(dialog) }
+	}
 
 	const { Story } = defineMeta({
 		title: 'Components/Gardener/CanSee',
 		component: CanSee,
 		tags: ['autodocs'],
-		args: { items: canSee, locked: [], onexpand: fn(), onaudit: fn() },
+		parameters: {
+			platformFrame: 'inline',
+			docs: {
+				description: {
+					component:
+						'The “can see” button at the composer’s foot: an eye `IconButton`, like the paperclip beside it, that opens a `DetailPopover` saying, literally, what the Gardener can see in this request. One row per id with rows to read, each opening to the rows themselves or to a sentence saying how many there are; the ids with nothing to read behind a quiet toggle; what was trimmed; the T2 ids kept out, each with an Allow when the app can ask for the grant; the audit log one quiet button away.',
+				},
+			},
+		},
+		args: { items: canSee, locked: [], trimmed: [], onexpand: fn() },
 	})
 </script>
 
-<!-- A chip opens to its region and closes again; the audit log is one quiet button away -->
+<!-- The button opens the panel, whose caption counts the rows; a row opens to its sentence and back -->
 <Story
 	name="Default"
-	play={async ({ canvasElement, userEvent, args }) => {
+	play={async ({ canvasElement, args }) => {
 		const canvas = canvasOf(canvasElement)
-		const chip = canvas.getAllByRole('button', { name: chipName(first) })[0]!
+		const chip = canvas.getByRole('button', { name: chipName })
 		await expect(chip).toHaveAttribute('aria-expanded', 'false')
-		await userEvent.click(chip)
+		const { panel, dialog } = await openPanel(canvasElement)
 		await expect(chip).toHaveAttribute('aria-expanded', 'true')
-		const region = canvas.getByRole('region', { name: chipName(first) })
-		await expect(region).toHaveTextContent(s.inContext(first.count, first.id))
+		await expect(panel.getByText(s.canSeeSummary(total(canSee), canSee.length))).toBeVisible()
+		for (const item of canSee) {
+			await expect(panel.getByRole('button', { name: new RegExp(`^${item.id} ${item.count}$`) })).toBeVisible()
+		}
+		const row = panel.getByRole('button', { name: new RegExp(`^${first.id} ${first.count}$`) })
+		await expect(row).toHaveAttribute('aria-expanded', 'false')
+		await userEvent.click(row)
+		await expect(row).toHaveAttribute('aria-expanded', 'true')
 		await expect(args.onexpand).toHaveBeenCalledWith(first)
-		await userEvent.click(chip)
-		await expect(chip).toHaveAttribute('aria-expanded', 'false')
-		await expect(canvas.queryByRole('region')).toBeNull()
+		const region = panel.getByRole('region', { name: new RegExp(`^${first.id} ${first.count}$`) })
+		await expect(region).toHaveTextContent(s.inContext(first.count, first.id))
+		await userEvent.click(row)
+		await expect(row).toHaveAttribute('aria-expanded', 'false')
+		await expect(panel.queryByRole('region')).toBeNull()
 		await expect(args.onexpand).toHaveBeenCalledTimes(1)
-		await userEvent.click(canvas.getAllByRole('button', { name: s.openAuditLog })[0]!)
-		await expect(args.onaudit).toHaveBeenCalledTimes(1)
+		await expect(panel.queryByRole('button', { name: s.openAuditLog })).toBeNull()
+		await userEvent.keyboard('{Escape}')
+		await waitFor(() => expect(dialog).not.toBeVisible())
+		await waitFor(() => expect(chip).toHaveFocus())
 	}}
 />
 
-<!-- A T2 id kept out of this request: grey with a lock, and said so for a screen reader -->
+<!-- The names the owner knows the ids by, in place of the ids -->
+<Story
+	name="With labels"
+	args={{ items: labelled(canSee) }}
+	play={async ({ canvasElement }) => {
+		const { panel } = await openPanel(canvasElement)
+		await expect(panel.getByRole('button', { name: new RegExp(`^${names[first.id]} ${first.count}$`) })).toBeVisible()
+		await expect(panel.queryByText(first.id)).toBeNull()
+	}}
+/>
+
+<!-- A T2 id kept out of this request sits under "Not shared" with a lock; with onunlock, Allow asks for the grant -->
 <Story
 	name="With locked"
-	args={{ items: granted, locked: canSeeLocked }}
-	play={async ({ canvasElement }) => {
-		const canvas = canvasOf(canvasElement)
-		await expect(canvas.getByText(s.locked(canSeeLocked[0]!))).toBeInTheDocument()
-		await expect(canvas.queryByRole('button', { name: chipName(canSee[4]!) })).toBeNull()
+	args={{ items: granted, locked, onunlock: fn() }}
+	play={async ({ canvasElement, args }) => {
+		const id = canSeeLocked[0]!
+		const { panel } = await openPanel(canvasElement)
+		await expect(
+			panel.getByText(`${s.canSeeSummary(total(granted), granted.length)} · ${s.notShared(1)}`)
+		).toBeVisible()
+		const group = panel.getByRole('group', { name: s.notSharedLabel })
+		await expect(group).toBeVisible()
+		await expect(within(group).getByRole('button', { name: s.notSharedExplain })).toBeVisible()
+		await expect(within(group).getByText(names[id]!)).toBeVisible()
+		await expect(panel.queryByRole('button', { name: new RegExp(`^${id}`) })).toBeNull()
+		await userEvent.click(within(group).getByRole('button', { name: s.allow }))
+		await expect(args.onunlock).toHaveBeenCalledWith(id)
 	}}
 />
 
-<!-- The consumer's snippet fills the region with the rows themselves: the chip is literal, never a summary -->
+<!-- Without onunlock the locked row is a picture with a spoken sentence beside it -->
+<Story
+	name="Locked, no grant"
+	args={{ items: granted, locked }}
+	play={async ({ canvasElement }) => {
+		const { panel } = await openPanel(canvasElement)
+		await expect(panel.getByText(s.locked(canSeeLocked[0]!))).toBeInTheDocument()
+		await expect(panel.queryByRole('button', { name: s.allow })).toBeNull()
+	}}
+/>
+
+<!-- Ids with nothing to read are not listed, and the caption counts only the types that are -->
+<Story
+	name="Nothing to read"
+	args={{ items: withEmpty }}
+	play={async ({ canvasElement }) => {
+		const { panel } = await openPanel(canvasElement)
+		await expect(panel.getByText(s.canSeeSummary(total(withEmpty), 2))).toBeVisible()
+		await expect(panel.queryByText('local-event')).toBeNull()
+		await expect(panel.queryByText('task')).toBeNull()
+	}}
+/>
+
+<!-- The consumer's snippet fills the region with the rows themselves: the row is literal, never a summary; the panel
+     eases to its new height rather than jumping -->
 <Story
 	name="Expanded"
-	play={async ({ canvasElement, userEvent }) => {
-		const canvas = canvasOf(canvasElement)
-		await userEvent.click(canvas.getAllByRole('button', { name: chipName(first) })[0]!)
-		const region = canvas.getByRole('region', { name: chipName(first) })
+	play={async ({ canvasElement }) => {
+		const { panel, dialog } = await openPanel(canvasElement)
+		await userEvent.click(panel.getByRole('button', { name: new RegExp(`^${first.id} ${first.count}$`) }))
+		const region = panel.getByRole('region', { name: new RegExp(`^${first.id} ${first.count}$`) })
 		await expect(region.querySelectorAll('li')).toHaveLength(rows.length)
+		await waitFor(() => expect(dialog.getAnimations().length).toBeGreaterThan(0), { timeout: 1000 })
 	}}
 >
 	{#snippet template(args)}
@@ -80,6 +169,27 @@
 		</CanSee>
 	{/snippet}
 </Story>
+
+<!-- What was cut to fit the pack closes the section in a caption -->
+<Story
+	name="Trimmed"
+	args={{ trimmed }}
+	play={async ({ canvasElement }) => {
+		const { panel } = await openPanel(canvasElement)
+		await expect(panel.getByText(s.trimmed(trimmed.join(', ')))).toBeVisible()
+	}}
+/>
+
+<!-- With onaudit the footer carries the audit log button -->
+<Story
+	name="With audit"
+	args={{ onaudit: fn() }}
+	play={async ({ canvasElement, args }) => {
+		const { panel } = await openPanel(canvasElement)
+		await userEvent.click(panel.getByRole('button', { name: s.openAuditLog }))
+		await expect(args.onaudit).toHaveBeenCalledTimes(1)
+	}}
+/>
 
 <style>
 	.rows-title {

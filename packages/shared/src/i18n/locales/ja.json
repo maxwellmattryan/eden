@@ -4,7 +4,9 @@
 	},
 	"common": {
 		"undo": "元に戻す",
-		"sampleAdded": "サンプルデータを追加しました。"
+		"sampleAdded": "サンプルデータを追加しました。",
+		"close": "閉じる",
+		"save": "保存"
 	},
 	"shell": {
 		"garden": "庭",
@@ -99,7 +101,13 @@
 			"taskSnoozed": "{title}を延期",
 			"taskSkipped": "{title}を今日はスキップ",
 			"taskTallied": "{title}を記録",
-			"taskDeleted": "{title}を削除"
+			"taskDeleted": "{title}を削除",
+			"haulCaptured": "買い物を取り込み: {count}品",
+			"stockAddedMany": "{count}品を在庫に追加",
+			"groceryAddedMany": "{count}品をリストに追加",
+			"ideaBrainstormed": "{title} をブレインストーム",
+			"projectPlanned": "{name} に{count}件の手順を計画",
+			"tasksAdded": "{count}件のタスクを今日に追加"
 		},
 		"profile": "Edenが知っていること"
 	},
@@ -172,7 +180,8 @@
 					"added": "{name}を在庫に追加しました。",
 					"removed": "{name}を在庫から削除しました。",
 					"moved": "{name}を{location}へ移動しました。",
-					"addedToGrocery": "{name}を買い物リストに追加しました。"
+					"addedToGrocery": "{name}を買い物リストに追加しました。",
+					"addedMany": "{count}品を在庫に追加しました。"
 				}
 			},
 			"grocery": {
@@ -215,6 +224,10 @@
 					"title": "コツはまだありません",
 					"text": "保存のコツがここに集まります。"
 				}
+			},
+			"plan": {
+				"title": "今週の献立",
+				"shopDay": "買い出しの日"
 			}
 		},
 		"toolbench": {
@@ -292,6 +305,10 @@
 					"title": "ノートはまだありません",
 					"text": "技術メモ、コマンド、設定のレシピがここに集まり、検索できます。"
 				}
+			},
+			"plan": {
+				"title": "{name} の計画",
+				"untitled": "計画"
 			}
 		},
 		"weather": {
@@ -544,7 +561,6 @@
 			"dismissed": "見送りました"
 		},
 		"owners": {
-			"substrate": "Eden",
 			"health": "泉"
 		},
 		"provenance": {
@@ -856,6 +872,7 @@
 				"nws": "米国国立気象局",
 				"weatherkit": "Apple WeatherKit",
 				"updater": "更新",
+				"anthropic": "Anthropic",
 				"vault-ai": "金庫 → AI"
 			},
 			"never": {
@@ -884,6 +901,58 @@
 		"placeholder": {
 			"title": "まだありません",
 			"text": "このタブは基盤とともに届きます。"
+		},
+		"gardener": {
+			"key": {
+				"label": "この端末のAnthropicキー",
+				"help": "自分のキーを使います (D-7)。この端末のキーチェーンに保管され、再表示・書き出し・同期はされません。",
+				"present": "この端末にキーがあります。",
+				"field": "APIキー",
+				"save": "キーを保存",
+				"replace": "キーを置き換える",
+				"remove": "削除",
+				"failed": "キーをこの端末に保管できませんでした。"
+			},
+			"grades": {
+				"label": "グレードごとのモデル",
+				"help": "どのモデルがどのグレードの仕事をするか (D-74)。ライトは解析と抽出、スタンダードは要約と下書き、ディープは推論と計画。",
+				"light": "ライト",
+				"standard": "スタンダード",
+				"deep": "ディープ"
+			},
+			"overrides": {
+				"label": "上書き",
+				"help": "対応表の代わりに、ひとつの領域やツールに使うモデル。「なし」なら対応表のまま。",
+				"none": "対応表どおり",
+				"columns": {
+					"tool": "ツール",
+					"grade": "グレード",
+					"model": "モデル"
+				}
+			},
+			"budget": {
+				"label": "予算",
+				"help": "今月の全リクエストの支出の上限と、ひとつのリクエストが運べる最大トークン数。",
+				"cap": "月の上限",
+				"tokens": "リクエストあたりのトークン",
+				"tokensDefault": "モデルのコンテキスト",
+				"spent": "今月 {cap} USD 中 {spent} を使用。"
+			},
+			"audit": {
+				"label": "監査ログ",
+				"help": "リクエストごとに1件: 何を読み、何を実行し、いくらかかったか。",
+				"open": "監査ログを開く"
+			},
+			"dearer": {
+				"title": "高価なモデル",
+				"text": "このモデルはこのグレードの初期設定モデルのおよそ {ratio} 倍の費用です。それでも使いますか？",
+				"verb": "使う"
+			},
+			"tools": {
+				"label": "ツール",
+				"help": "庭師が持つすべてのツール: 何をし、何を読め、先に確認するか。",
+				"open": "ツールを見る"
+			}
 		}
 	},
 	"crash": {
@@ -934,6 +1003,7 @@
 		}
 	},
 	"uiKit": {
+		"about": "{0}について",
 		"compass": {
 			"north": "北"
 		},
@@ -965,7 +1035,73 @@
 		"gardener": {
 			"name": "庭師",
 			"open": "庭師を開く",
-			"noKeyOnDevice": "この端末にキーがありません"
+			"noKeyOnDevice": "この端末にキーがありません",
+			"switchGrade": "庭師のグレードを切り替える",
+			"grade": "グレード",
+			"unavailableNoProvider": "プロバイダーが設定されていません。",
+			"unavailableNoCapableModel": "これを実行できるモデルがありません: {0} が必要です。",
+			"unavailableNoKey": "この端末にキーがありません",
+			"budgetReached": "今月の予算に達しました。",
+			"offline": "オフラインではクラウドのモデルは使えません。",
+			"confirmCost": "費用はおよそ {0} です。送りますか？",
+			"trimmed": "収めるために省いたもの: {0}",
+			"runsInApp": "庭師はインストール版のアプリで動きます。",
+			"devClamp": "開発ビルド: すべてのグレードが {0} で動きます。",
+			"cutShort": "トークン上限で途中までです。",
+			"continueReply": "続ける",
+			"stop": "停止",
+			"send": "送信",
+			"newThread": "新しい会話",
+			"threads": "会話一覧",
+			"askPlaceholder": "庭師に聞く",
+			"askInDomain": "{0}について聞く",
+			"focus": "対象: {0}",
+			"lockedThread": "この会話はT2のデータを読んだため、今後の文脈には含まれません。",
+			"includeThread": "この会話を含める",
+			"delegated": "{0} を単独のリクエストとして実行しました。",
+			"copyCode": "コピー",
+			"copied": "コピーしました",
+			"addTask": "タスクを追加",
+			"createTasks": "{0}件のタスクを作成",
+			"addToList": "リストに追加",
+			"discard": "破棄",
+			"committed": "追加しました",
+			"discarded": "破棄しました",
+			"pastedText": "貼り付けたテキスト.txt",
+			"canSee": "見えているもの",
+			"openAuditLog": "監査ログを開く",
+			"budgets": "予算",
+			"budget": "{0} / {1} USD",
+			"tool": "ツール",
+			"thread": "会話",
+			"proposedFact": "気づいたこと",
+			"inferred": "推定",
+			"accept": "受け入れる",
+			"savedToProfile": "プロフィールに保存しました",
+			"dismissedNotStored": "却下しました。何も保存されていません",
+			"cancelledNothingChanged": "中止しました。何も変わっていません",
+			"confirmed": "{0}しました",
+			"useLocalModel": "ローカルモデルを使う",
+			"aboutTool": "このツールについて",
+			"toolRunning": "実行中",
+			"toolDone": "完了",
+			"toolFailed": "失敗",
+			"toolCancelled": "中止",
+			"toolWaiting": "確認待ち",
+			"writing": "返信を書いています",
+			"sentAt": "{0} に送信",
+			"receivedAt": "{0} に受信",
+			"copyMessage": "メッセージをコピー",
+			"canSeeSummary": "{1}種類、{0}件",
+			"inContext": "{1}: このリクエストに{0}件",
+			"notShared": "{0}件は未共有",
+			"notSharedLabel": "未共有",
+			"notSharedChip": "{0}: 庭師と未共有です。許可が必要です。共有する。",
+			"locked": "{0}、未共有: 許可が必要です",
+			"canSeeTitle": "庭師に見えているもの",
+			"inThisRequest": "このリクエストで",
+			"notSharedExplain": "ツールが求めましたが、T2の項目はあなたが共有するまでどのリクエストにも含まれません。「許可」で庭師に常時の読み取りを与え、いつでも取り消せます。",
+			"allow": "許可"
 		},
 		"statusBar": {
 			"inbox": "受信箱",
@@ -998,6 +1134,253 @@
 			"hail": "雹",
 			"wind": "強風",
 			"tornado": "竜巻"
+		},
+		"show": "表示",
+		"hide": "隠す",
+		"dropzone": {
+			"drop": "ファイルをドロップ",
+			"groups": {
+				"image": "画像 {0} 件",
+				"pdf": "PDF {0} 件",
+				"text": "テキスト {0} 件",
+				"other": "その他 {0} 件"
+			},
+			"tooMany": "一度に {0} 件まで",
+			"notAccepted": "このファイルは追加できません"
+		},
+		"file": {
+			"open": "{0}を開く",
+			"missing": "このデバイスにはもうありません",
+			"failed": "追加できませんでした"
 		}
+	},
+	"gardener": {
+		"conversation": "会話",
+		"global": "全体",
+		"ask": "庭師に聞く",
+		"askPlaceholder": "庭師に聞く",
+		"askInDomain": "{domain}について聞く",
+		"greeting": {
+			"any": {
+				"1": { "named": "{name}さん、どうしましたか？", "plain": "どうしましたか？" },
+				"2": { "named": "{name}さん、何を考えていますか？", "plain": "何を考えていますか？" },
+				"3": { "named": "{name}さん、どこから始めましょう？", "plain": "どこから始めましょう？" },
+				"4": { "named": "{name}さん、何の手入れをしましょう？", "plain": "何の手入れをしましょう？" }
+			},
+			"morning": {
+				"1": { "named": "おはようございます、{name}さん。", "plain": "おはようございます。" },
+				"2": { "named": "{name}さん、早起きですね。", "plain": "早起きですね。" }
+			},
+			"afternoon": {
+				"1": { "named": "こんにちは、{name}さん。", "plain": "こんにちは。" },
+				"2": { "named": "{name}さん、今日は順調ですか？", "plain": "今日は順調ですか？" }
+			},
+			"evening": {
+				"1": { "named": "こんばんは、{name}さん。", "plain": "こんばんは。" },
+				"2": { "named": "{name}さん、今日はどうでしたか？", "plain": "今日はどうでしたか？" }
+			},
+			"night": {
+				"1": { "named": "{name}さん、まだ起きていますか？", "plain": "まだ起きていますか？" },
+				"2": { "named": "静かな時間ですね、{name}さん。", "plain": "静かな時間ですね。" }
+			}
+		},
+		"send": "送信",
+		"stop": "停止",
+		"threads": "会話一覧",
+		"newThread": "新しい会話",
+		"deleteThread": "会話を削除",
+		"deleteSelected": "選択した会話を削除",
+		"noThreads": "まだ会話はありません。",
+		"runsInApp": "庭師はインストール版のアプリで動きます。これは台本どおりの返事です。",
+		"noKey": {
+			"title": "この端末にキーがありません",
+			"text": "Anthropic のAPIキーを貼り付けてください。キーはこの端末のキーチェーンに保管され、リクエストの署名以外で外に出ることはありません。"
+		},
+		"devClamp": "開発ビルド: ライトとスタンダードは {model}、ディープは {deep} で動きます。",
+		"budgetReached": "今月の予算に達しました。続けるには「設定 → 庭師」で上限を上げてください。",
+		"budgetWarning": "庭師は今月の予算の {percent}% を使いました。",
+		"openBudgets": "予算を開く",
+		"saveFailed": "会話を保存できませんでした。",
+		"attach": "ファイルを添付",
+		"attachments": {
+			"canSee": "添付ファイル",
+			"failed": "ファイルを添付できませんでした。何も送信していません。",
+			"refused": {
+				"type": "添付できるのは画像、PDF、テキストファイルだけです。",
+				"size": "{name} は大きすぎて添付できません。",
+				"count": "1 件のメッセージに {max} 件まで添付できます。",
+				"total": "これらのファイルは合わせると大きすぎて送信できません。",
+				"empty": "{name} は空です。"
+			}
+		},
+		"lockedThread": "この会話はT2のデータを読んだため、今後の文脈には含まれません。",
+		"noRows": "この種類の項目はこのリクエストにありません。",
+		"trimmed": "収めるために省いたもの: {ids}",
+		"cutShort": "トークン上限で途中までです。",
+		"interrupted": {
+			"title": "この返信は中断されました。",
+			"text": "完了する前に Eden が閉じました。届いた分は残っています。"
+		},
+		"retry": "再試行",
+		"ranTool": "{tool} を単独のリクエストとして実行しました。",
+		"confirmTool": "{tool} を実行",
+		"toolRun": {
+			"same": "{tool} × {count}",
+			"mixed": "ツール {count} 件"
+		},
+		"confirm": {
+			"title": "このリクエストを送りますか？",
+			"text": "費用はおよそ {estimate} です。",
+			"verb": "送信"
+		},
+		"unavailable": {
+			"no-provider": "プロバイダーが設定されていません。",
+			"no-capable-model": "これを実行できるモデルがありません: {missing} が必要です。",
+			"plain": "このツールはモデルを使いません。"
+		},
+		"toast": {
+			"logged": "{value} を記録しました。",
+			"deleted": "{title} を削除しました。",
+			"deletedMany": "{count} 件の会話を削除しました。"
+		},
+		"draft": {
+			"task": "追加するタスク",
+			"grocery": "リストに入れる{count}品",
+			"code": "コピーする雛形",
+			"capture": "写真から{count}品",
+			"captureText": "在庫にする前に行を確認してください。",
+			"captureCost": "送信済み",
+			"planCommitted": "{count}件のタスクを追加しました。",
+			"groceryCommitted": "{count}品をリストに追加しました。",
+			"captureCommitted": "{count}品を在庫に追加しました。",
+			"plusGrocery": "とリスト用の{count}品",
+			"copy": "コピー",
+			"copied": "コピーしました",
+			"done": "完了",
+			"addTask": "タスクを追加",
+			"createTasks": "{count}件のタスクを作成",
+			"addToList": "リストに追加",
+			"verify": "確認する",
+			"discard": "破棄",
+			"committed": "追加しました",
+			"discarded": "破棄しました"
+		},
+		"resize": "庭師の幅を変える",
+		"allowed": "{id} を庭師と共有しました。",
+		"allow": {
+			"title": "庭師と共有しますか？",
+			"text": "{id} はT2です。継続的な許可を与えると、ツールが宣言するたびに庭師が読めるようになります。取り消すまで続きます。",
+			"verb": "共有"
+		},
+		"tool": {
+			"about": "このツールについて",
+			"grade": "グレード",
+			"plain": "なし: モデルを使いません",
+			"reads": "読むもの",
+			"input": "入力",
+			"output": "出力",
+			"error": "エラー",
+			"substrate": "Eden",
+			"declared": "宣言",
+			"thisCall": "この呼び出し",
+			"access": "アクセス",
+			"accessKinds": {
+				"read": "読み取り",
+				"write-draft": "下書き",
+				"write": "書き込み",
+				"act-external": "外部"
+			},
+			"confirm": "先に確認",
+			"confirmYes": "はい、確認します",
+			"confirmNo": "いいえ",
+			"readsNothing": "なし"
+		},
+		"openTools": "ツールを見る",
+		"openAudit": "監査ログを開く"
+	},
+	"audit": {
+		"title": "監査ログ",
+		"subtitle": "この端末での庭師のすべてのリクエスト",
+		"columns": {
+			"when": "日時",
+			"surface": "場所",
+			"tool": "ツール",
+			"grade": "グレード",
+			"model": "モデル",
+			"tokens": "入力 / 出力",
+			"cost": "費用",
+			"outcome": "結果"
+		},
+		"hints": {
+			"surface": "リクエストの出どころ: 会話、領域の会話、または単独で実行したツール。",
+			"tool": "リクエストが実行したツール(実行した場合)。",
+			"grade": "リクエストが動いたモデルのグレード。「—」はモデルを使っていません。",
+			"model": "応答したモデル。",
+			"tokens": "モデルに送ったトークン数と、返ってきたトークン数。",
+			"cost": "リクエストの費用(米ドル)。",
+			"outcome": "リクエストの終わり方。"
+		},
+		"outcomes": {
+			"ok": "成功",
+			"refusal": "拒否",
+			"max-tokens": "途中まで",
+			"error": "エラー",
+			"cancelled": "中止",
+			"declined": "見送り",
+			"budget": "予算超過",
+			"interrupted": "中断"
+		},
+		"error": "監査ログを読めませんでした。",
+		"empty": {
+			"title": "まだありません",
+			"text": "庭師のすべてのリクエストが90日間ここに残ります。"
+		},
+		"filteredByFact": "この事実を読んだリクエストを表示しています。",
+		"open": "項目を開く",
+		"surfaces": {
+			"chat": "会話",
+			"domainChat": "{domain}についての会話",
+			"delegated": "ツールの実行"
+		},
+		"detail": {
+			"model": "モデル",
+			"tokens": "トークン",
+			"outcome": "結果",
+			"reads": "読んだもの",
+			"entities": "触れたもの",
+			"tools": "ツール",
+			"grants": "許可",
+			"image": "画像",
+			"attachment": "添付",
+			"parent": "呼び出し元",
+			"parentOpen": "呼び出し元のリクエストを開く",
+			"provider": "プロバイダー",
+			"grade": "グレード",
+			"usage": "使用量",
+			"request": "リクエスト",
+			"cached": "キャッシュ"
+		},
+		"openThread": "会話を開く",
+		"retention": "項目はこの端末に90日間残ります。書き出しや同期はされません。"
+	},
+	"tools": {
+		"title": "ツール",
+		"subtitle": "庭師にできることと、それぞれが読めるもの",
+		"columns": {
+			"tool": "ツール",
+			"owner": "提供元",
+			"access": "アクセス",
+			"grade": "グレード",
+			"reads": "読む種類"
+		},
+		"hints": {
+			"access": "データを読むだけか、変更するか。書き込みは先に確認します。",
+			"grade": "ツールが動くモデルのグレード。「—」はモデルを使いません。",
+			"reads": "読めると宣言されたレジストリのデータの種類の数。それ以外は見えません。"
+		},
+		"foot": "{count}個のツール。モデルを使わないツールもあり、書き込みは先に確認します。",
+		"schema": "入力の形",
+		"status": "状態",
+		"unavailable": "ハンドラーがなく、実行できません"
 	}
 }

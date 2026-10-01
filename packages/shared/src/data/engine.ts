@@ -27,12 +27,34 @@ import { declare, setOnce, takeDue, validateDeclared, validateOnce } from '../sc
 import type { DeclaredSchedule, FiredSchedule, ScheduleRow } from '../scheduler/types.js'
 import { signalCutoff, validateSignal } from '../signals/rules.js'
 import type { Delivery, Emitted, InboxEntry, InboxQuery, Signal, SignalInput } from '../signals/types.js'
+import {
+	auditCutoff,
+	validateAudit,
+	validateMessage,
+	validatePolicy,
+	validateThread,
+	validateThreadPatch,
+} from '../gardener/rules.js'
+import type {
+	AuditEntry,
+	AuditEntryInput,
+	AuditQuery,
+	Message,
+	MessageInput,
+	PolicyRow,
+	Thread,
+	ThreadInput,
+	ThreadPatch,
+	ThreadQuery,
+} from '../gardener/runtime-types.js'
 import { DataError } from './errors.js'
 import { formatStamp, parseStamp, tick, type Hlc } from './hlc.js'
 import { createIdGenerator, isUlid } from './ulid.js'
 import { isResourceId, parseUri, toUri } from './uri.js'
 import {
 	RELATIONS,
+	type AttachBytesInput,
+	type AttachmentRow,
 	type BatchOp,
 	type BatchResult,
 	type Entity,
@@ -41,6 +63,7 @@ import {
 	type Link,
 	type LinkInput,
 	type LinkQuery,
+	type MirrorInput,
 	type PrimitiveRow,
 	type Primitives,
 	type PrimitiveType,
@@ -97,6 +120,13 @@ interface State {
 	signals: Omit<Signal, 'at'>[]
 	/** One rule's card for one signal; its words are the signal's. */
 	inbox: InboxRow[]
+	/** The audit log (`audit.rs`): this browser's, ninety days. */
+	audit: AuditEntry[]
+	/** The Gardener's threads and their messages (`threads.rs`), tombstones included. */
+	threads: Thread[]
+	messages: Message[]
+	/** Workspace policy (`policy.rs`): the Gardener's settings, tombstones included. */
+	policy: PolicyRow[]
 }
 
 interface InboxRow extends Delivery {
@@ -199,12 +229,17 @@ const sameLink = (link: Link, owner: string, uri: string, relation: string) =>
 	link.owner === owner && link.uri === uri && link.relation === relation
 const text = (value: unknown) => (typeof value === 'string' ? value : null)
 
+/** Mirrors are kept this long after they were last written (product/substrate/data.md, "Retention"). */
+const MIRROR_MS = 7 * 24 * 60 * 60 * 1000
+
 export type Engine = ReturnType<typeof createEngine>
 
 export function createEngine(storage: EngineStorage, options: EngineOptions = {}) {
 	const now = options.now ?? Date.now
 	const newId = options.newId ?? createIdGenerator()
 	const today = options.today ?? todayIso
+	/** The bytes of the files attached in this session, by attachment id: memory only, gone at the next load. */
+	const files = new Map<string, Uint8Array>()
 
 	function fresh(): State {
 		const node = options.node ?? ((crypto.getRandomValues(new Uint32Array(1))[0] ?? 0) | 1) >>> 0
@@ -220,6 +255,10 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 			schedules: [],
 			signals: [],
 			inbox: [],
+			audit: [],
+			threads: [],
+			messages: [],
+			policy: [],
 		}
 		// what the first migration seeds in the crate
 		const stamp = formatStamp({ wallMs: 0, counter: 0, node: 0 })
@@ -244,6 +283,14 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 					state.schedules ??= []
 					state.signals ??= []
 					state.inbox ??= []
+					state.audit ??= []
+					state.threads ??= []
+					state.messages ??= []
+					state.policy ??= []
+					// The log is swept when the workspace opens, as in the crate.
+					const cutoff = auditCutoff(now())
+					state.audit = state.audit.filter((entry) => entry.at >= cutoff)
+					sweepMirrors(state)
 					return state
 				}
 			} catch {
@@ -368,6 +415,40 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 		const row = { ...common(input.type, id, stamp(state), input), payload: structuredClone(input.payload) }
 		state.rows[id] = row
 		return withLinks(state, row)
+	}
+
+	/** The mirror its source and external id name, replaced and brought back, or made (D-32). */
+	function putMirror(state: State, input: MirrorInput<object>): Entity {
+		if (!isObject(input.payload)) throw invalid("an entity's payload is a JSON object")
+		const held = Object.values(state.rows).find(
+			(row) =>
+				row.type === input.type && row.mirror && row.source === input.source && row.externalId === input.externalId
+		)
+		if (!held) return createEntity(state, { ...input, mirror: true })
+		held.payload = structuredClone(input.payload)
+		held.snapshot = structuredClone(input.snapshot) ?? null
+		held.deletedAt = null
+		held.updatedAt = stamp(state)
+		return withLinks(state, held)
+	}
+
+	/** Removes a mirror outright, with its links: there is no tombstone to carry. */
+	function dropMirror(state: State, uri: string): void {
+		const row = find(state, uri)
+		if (isPrimitive(row.type)) throw notFound(uri)
+		if (!row.mirror) throw invalid(`not a mirror: ${uri}`)
+		state.links = state.links.filter((entry) => entry.owner !== row.uri)
+		delete state.rows[row.id]
+	}
+
+	/** Lets go of the entity mirrors last written more than seven days ago, as the crate does when it opens. */
+	function sweepMirrors(state: State): void {
+		const cutoff = formatStamp({ wallMs: Math.max(0, now() - MIRROR_MS), counter: 0, node: 0 })
+		for (const row of Object.values(state.rows)) {
+			if (!row.mirror || isPrimitive(row.type) || row.updatedAt >= cutoff) continue
+			state.links = state.links.filter((entry) => entry.owner !== row.uri)
+			delete state.rows[row.id]
+		}
 	}
 
 	function updateEntity(state: State, id: string, payload: object): Entity {
@@ -502,6 +583,15 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 		return structuredClone(made)
 	}
 
+	/** The attachments that are `part-of` a thread and whose tombstone is as given: live ones for `null`. */
+	const threadFiles = (state: State, threadUri: string, deletedAt: string | null) =>
+		Object.values(state.rows).filter(
+			(row) =>
+				row.type === 'attachment' &&
+				row.deletedAt === deletedAt &&
+				state.links.some((entry) => sameLink(entry, row.uri, threadUri, 'part-of') && !entry.deletedAt)
+		)
+
 	const linked = (state: State, row: StoredRow, target: string, relation?: string) =>
 		state.links.some(
 			(entry) =>
@@ -568,6 +658,33 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 			throw new DataError('unavailable', 'a file can only be attached in the app')
 		},
 
+		/**
+		 * The row of a file given as bytes, with the hash the caller made of them. The row is kept like any other; the
+		 * bytes are kept in memory only, so they are gone at the next load and the file then reads as missing.
+		 */
+		attachBytes(input: AttachBytesInput, bytes: Uint8Array, hash: string): AttachmentRow {
+			if (!bytes.length) throw invalid('an attachment has bytes')
+			const { mime, ...rest } = input
+			const row = write((state) =>
+				createPrimitive(state, 'attachment', {
+					...rest,
+					mime: mime ?? 'application/octet-stream',
+					size: bytes.length,
+					hash,
+					store: 'workspace',
+				})
+			)
+			files.set(row.id, bytes.slice())
+			return row
+		},
+
+		/** The bytes of a live attachment, or `null` when this browser no longer holds them. */
+		readAttachment(id: string): Uint8Array | null {
+			const row = load().rows[id]
+			if (!row || row.type !== 'attachment' || row.deletedAt) throw notFound(toUri('attachment', id))
+			return files.get(id)?.slice() ?? null
+		},
+
 		/** Sets what the patch names, clears with `null` and leaves the rest. */
 		update<T extends PrimitiveType>(type: T, id: string, patch: Primitives[T]['patch']): Primitives[T]['row'] {
 			return write((state) => updatePrimitive(state, type, id, patch))
@@ -628,6 +745,8 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 					else if (op.op === 'updatePrimitive') rows.push(updatePrimitive(state, batchable(op.type), op.id, op.patch))
 					else if (op.op === 'delete') setDeleted(state, op.uri, true)
 					else if (op.op === 'restore') setDeleted(state, op.uri, false)
+					else if (op.op === 'putMirror') rows.push(putMirror(state, op.input))
+					else if (op.op === 'dropMirror') dropMirror(state, op.uri)
 					else link(state, op.owner, op.link)
 				}
 				if (marker !== undefined) state.markers.push(marker)
@@ -1005,6 +1124,248 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 				const unread = state.inbox.filter((card) => ids.includes(card.id) && !card.read)
 				for (const card of unread) card.read = true
 				return unread.length
+			})
+		},
+
+		/** Takes the cards of one signal out of the inbox; the signal stays, so its key is still spent. */
+		withdrawSignal(name: string, dedupeKey: string): string[] {
+			return write((state) => {
+				const signals = state.signals.filter((signal) => signal.name === name && signal.dedupeKey === dedupeKey)
+				const went = state.inbox.filter((card) => signals.some((signal) => signal.id === card.signalId))
+				state.inbox = state.inbox.filter((card) => !went.includes(card))
+				return went.map((card) => card.id)
+			})
+		},
+
+		// The audit log (`audit.rs`; docs/product/substrate/ai.md, "Audit log"): this browser's, never exported.
+
+		/** Keeps one entry, whole. */
+		recordAudit(input: AuditEntryInput): AuditEntry {
+			const refusal = validateAudit(input)
+			if (refusal) throw new DataError(refusal[0], refusal[1])
+			return write((state) => {
+				const id = input.id ?? newId()
+				if (state.audit.some((entry) => entry.id === id)) throw new DataError('audit:invalid', `the id is taken: ${id}`)
+				const entry: AuditEntry = structuredClone({ ...input, attachments: input.attachments ?? [], id })
+				state.audit.push(entry)
+				return structuredClone(entry)
+			})
+		},
+
+		/** The entries within the filter, the newest first. */
+		queryAudit(filter: AuditQuery = {}): AuditEntry[] {
+			const limit = Math.max(1, Math.min(filter.limit ?? 200, 1000))
+			return structuredClone(
+				load()
+					.audit.filter((entry) => !filter.threadId || entry.threadId === filter.threadId)
+					.filter((entry) => filter.fromMs === undefined || entry.at >= filter.fromMs)
+					.filter((entry) => filter.toMs === undefined || entry.at <= filter.toMs)
+					.sort((a, b) => b.at - a.at || byText(b.id, a.id))
+					.slice(0, limit)
+			)
+		},
+
+		/** Every row id any entry read, with how many entries read it: what a fact's "used by N requests" shows. */
+		auditUsage(): Record<string, number> {
+			const usage: Record<string, number> = {}
+			for (const entry of load().audit) {
+				const rows = new Set(entry.reads.flatMap((read) => read.rows))
+				for (const row of rows) usage[row] = (usage[row] ?? 0) + 1
+			}
+			return usage
+		},
+
+		/** What the entries at or after the instant cost, together. */
+		auditSpend(fromMs: number): number {
+			return load()
+				.audit.filter((entry) => entry.at >= fromMs)
+				.reduce((sum, entry) => sum + entry.costUsd, 0)
+		},
+
+		// Threads and messages (`threads.rs`): stamped rows with tombstones, exported and merged like facts.
+
+		createThread(input: ThreadInput): Thread {
+			const refusal = validateThread(input)
+			if (refusal) throw new DataError(refusal[0], refusal[1])
+			return write((state) => {
+				const id = input.id ?? newId()
+				if (state.threads.some((row) => row.id === id)) throw new DataError('thread:invalid', `the id is taken: ${id}`)
+				const at = stamp(state)
+				const row: Thread = {
+					uri: toUri('thread', id),
+					id,
+					domain: input.domain ?? null,
+					title: input.title,
+					tier: input.tier ?? 'T0',
+					createdAt: at,
+					updatedAt: at,
+					deletedAt: null,
+				}
+				state.threads.push(row)
+				return structuredClone(row)
+			})
+		},
+
+		updateThread(id: string, patch: ThreadPatch): Thread {
+			const refusal = validateThreadPatch(patch)
+			if (refusal) throw new DataError(refusal[0], refusal[1])
+			return write((state) => {
+				const row = state.threads.find((entry) => entry.id === id)
+				if (!row || row.deletedAt) throw notFound(`thread ${id}`)
+				if (patch.title !== undefined) row.title = patch.title
+				if (patch.tier !== undefined) row.tier = patch.tier
+				if ('domain' in patch) row.domain = patch.domain ?? null
+				row.updatedAt = stamp(state)
+				return structuredClone(row)
+			})
+		},
+
+		/** Tombstones the thread and its live messages at the same stamp. Deleting a deleted thread changes nothing. */
+		deleteThread(id: string): Thread {
+			return write((state) => {
+				const row = state.threads.find((entry) => entry.id === id)
+				if (!row) throw notFound(`thread ${id}`)
+				if (!row.deletedAt) {
+					const at = stamp(state)
+					row.updatedAt = at
+					row.deletedAt = at
+					for (const message of state.messages) {
+						if (message.threadId === id && !message.deletedAt) {
+							message.updatedAt = at
+							message.deletedAt = at
+						}
+					}
+					// the files attached to its messages go with it, as in the crate
+					for (const file of threadFiles(state, row.uri, null)) {
+						file.updatedAt = at
+						file.deletedAt = at
+					}
+				}
+				return structuredClone(row)
+			})
+		},
+
+		/** Lifts the tombstone, and those of the messages deleted with it. Restoring a live thread changes nothing. */
+		restoreThread(id: string): Thread {
+			return write((state) => {
+				const row = state.threads.find((entry) => entry.id === id)
+				if (!row) throw notFound(`thread ${id}`)
+				if (row.deletedAt) {
+					const deletedAt = row.deletedAt
+					const at = stamp(state)
+					row.updatedAt = at
+					row.deletedAt = null
+					for (const message of state.messages) {
+						if (message.threadId === id && message.deletedAt === deletedAt) {
+							message.updatedAt = at
+							message.deletedAt = null
+						}
+					}
+					for (const file of threadFiles(state, row.uri, deletedAt)) {
+						file.updatedAt = at
+						file.deletedAt = null
+					}
+				}
+				return structuredClone(row)
+			})
+		},
+
+		/** The threads, the latest updated first: the live ones unless the query asks for the deleted ones too. */
+		queryThreads(filter: ThreadQuery = {}): Thread[] {
+			return structuredClone(
+				load()
+					.threads.filter((row) => filter.includeDeleted || !row.deletedAt)
+					.filter((row) => !filter.domain || row.domain === filter.domain)
+					.sort((a, b) => byText(b.updatedAt, a.updatedAt) || byText(b.id, a.id))
+			)
+		},
+
+		/** Appends a message to a live thread, which is touched. */
+		appendMessage(input: MessageInput): Message {
+			const refusal = validateMessage(input)
+			if (refusal) throw new DataError(refusal[0], refusal[1])
+			return write((state) => {
+				const thread = state.threads.find((entry) => entry.id === input.threadId)
+				if (!thread || thread.deletedAt) throw new DataError('thread:invalid', `no live thread ${input.threadId}`)
+				const id = input.id ?? newId()
+				if (state.messages.some((row) => row.id === id)) throw new DataError('thread:invalid', `the id is taken: ${id}`)
+				const at = stamp(state)
+				const row: Message = {
+					uri: toUri('message', id),
+					id,
+					threadId: input.threadId,
+					role: input.role,
+					blocks: structuredClone(input.blocks),
+					requestId: input.requestId ?? null,
+					createdAt: at,
+					updatedAt: at,
+					deletedAt: null,
+				}
+				state.messages.push(row)
+				thread.updatedAt = at
+				return structuredClone(row)
+			})
+		},
+
+		/** Replaces the blocks whole, under a new stamp. */
+		updateMessage(id: string, blocks: unknown[]): Message {
+			if (!Array.isArray(blocks)) throw new DataError('thread:invalid', 'blocks are a list')
+			return write((state) => {
+				const row = state.messages.find((entry) => entry.id === id)
+				if (!row || row.deletedAt) throw notFound(`message ${id}`)
+				row.blocks = structuredClone(blocks)
+				row.updatedAt = stamp(state)
+				return structuredClone(row)
+			})
+		},
+
+		/** Tombstones one message. Deleting a deleted message changes nothing. */
+		deleteMessage(id: string): Message {
+			return write((state) => {
+				const row = state.messages.find((entry) => entry.id === id)
+				if (!row) throw notFound(`message ${id}`)
+				if (!row.deletedAt) {
+					const at = stamp(state)
+					row.updatedAt = at
+					row.deletedAt = at
+				}
+				return structuredClone(row)
+			})
+		},
+
+		/** The live messages of a thread, in id order, which is the order they were made in. */
+		queryMessages(threadId: string): Message[] {
+			return structuredClone(
+				load()
+					.messages.filter((row) => row.threadId === threadId && !row.deletedAt)
+					.sort((a, b) => byText(a.id, b.id))
+			)
+		},
+
+		// Workspace policy (`policy.rs`, D-37): one JSON value per key, renewed in place.
+
+		/** The live row under the key, or nothing. */
+		getPolicy(key: string): PolicyRow | null {
+			const row = load().policy.find((entry) => entry.key === key && !entry.deletedAt)
+			return row ? structuredClone(row) : null
+		},
+
+		/** Sets the value under the key: the row is renewed in place, or made, or its tombstone lifted. */
+		setPolicy(key: string, value: unknown): PolicyRow {
+			const refusal = validatePolicy(key, value)
+			if (refusal) throw new DataError(refusal[0], refusal[1])
+			return write((state) => {
+				const at = stamp(state)
+				const existing = state.policy.find((entry) => entry.key === key)
+				if (existing) {
+					existing.value = structuredClone(value)
+					existing.updatedAt = at
+					existing.deletedAt = null
+					return structuredClone(existing)
+				}
+				const row: PolicyRow = { key, value: structuredClone(value), createdAt: at, updatedAt: at, deletedAt: null }
+				state.policy.push(row)
+				return structuredClone(row)
 			})
 		},
 	}

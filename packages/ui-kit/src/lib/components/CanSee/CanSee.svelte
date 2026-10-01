@@ -1,134 +1,169 @@
 <script module lang="ts">
-	/** One registry id the request reads, with how many of its rows are in the context pack. */
-	export interface CanSeeItem {
-		/** A registry id: kebab-case, no domain prefix. */
-		id: string
-		/** The row count, or the app's own rendering of it. */
-		count: number | string
-	}
+	import type { ReadItem } from '../ReadList/ReadList.svelte'
+	/** One registry id in a request: what the Gardener reads, or a T2 id kept out until the owner allows it. */
+	export type CanSeeItem = ReadItem
 </script>
 
 <script lang="ts">
-	// The "can see" row above the composer (product/substrate/ai.md): one green chip per registry id the request
-	// reads, with its row count, and a grey locked chip for each T2 id kept out of this request. It is the privacy
-	// story made literal, never a summary: a chip opens to the exact rows (the consumer's `expanded` snippet) or, at
-	// the least, to a sentence saying how many are in the request. One chip is open at a time. Green because the
-	// Gardener is saying what it can see (D-40); the audit log is one quiet button away.
+	// The "can see" button in the composer's foot (product/substrate/ai.md): an eye IconButton, beside the paperclip
+	// and like it, that opens a DetailPopover saying, literally, what the Gardener can see in this request. The
+	// popover is green because the Gardener is saying what it reads (D-40); its caption carries the count. Inside: the
+	// ReadList (one row per id with rows to read, each opening to the exact rows or to a sentence; what was trimmed);
+	// then the T2 ids kept out, each with an Allow when the app can ask for the grant; and the audit log one quiet
+	// button away.
 	import type { Snippet } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
+	import Icon from '../../icons/Icon.svelte'
 	import { useStrings } from '../../i18n/context.js'
 	import Button from '../Button/Button.svelte'
-	import Chip from '../Chip/Chip.svelte'
+	import DetailPopover from '../DetailPopover/DetailPopover.svelte'
+	import DetailSection from '../DetailPopover/DetailSection.svelte'
+	import IconButton from '../IconButton/IconButton.svelte'
+	import ReadList from '../ReadList/ReadList.svelte'
 
 	type Props = HTMLAttributes<HTMLElement> & {
 		/** The registry ids in the context pack, with counts. */
 		items: CanSeeItem[]
-		/** T2 ids excluded from this request: grey, with a lock. */
-		locked?: string[]
-		/** Called with the item when its chip opens. */
+		/** T2 ids excluded from this request. */
+		locked?: CanSeeItem[]
+		/** The ids whose rows were cut to fit the pack. */
+		trimmed?: string[]
+		/** The button's size; sm sits beside the composer's paperclip. */
+		size?: 'xs' | 'sm' | 'md'
+		/** Called with the item when its row opens. */
 		onexpand?: (item: CanSeeItem) => void
-		/** Called by the trailing "Open the audit log" button, which renders only when this is given. */
+		/** Given, each locked row ends in an Allow button asking for the grant; called with the id. */
+		onunlock?: (id: string) => void
+		/** Called by the footer's "Open the audit log" button, which renders only when this is given. */
 		onaudit?: () => void
-		/** Fills an open chip's region with the rows themselves; without it, one sentence says how many there are. */
+		/** Fills an open row's region with the rows themselves; without it, one sentence says how many there are. */
 		expanded?: Snippet<[CanSeeItem]>
 	}
-	let { items, locked = [], onexpand, onaudit, expanded, class: className = '', ...rest }: Props = $props()
+	let {
+		items,
+		locked = [],
+		trimmed = [],
+		size = 'sm',
+		onexpand,
+		onunlock,
+		onaudit,
+		expanded,
+		class: className = '',
+		...rest
+	}: Props = $props()
 
 	const s = useStrings()
 	const uid = $props.id()
-	const labelId = `${uid}-label`
-	const regionId = `${uid}-region`
-	const chipId = (id: string) => `${uid}-${id}`
+	const nameId = (id: string) => `${uid}-${id}-name`
 
-	let openId = $state<string>()
-	const openItem = $derived(items.find((item) => item.id === openId))
+	let open = $state(false)
+	let anchor = $state<HTMLElement>()
+	// bumped as the popover closes, so the list opens folded next time
+	let generation = $state(0)
 
-	function toggle(item: CanSeeItem) {
-		if (openId === item.id) {
-			openId = undefined
-			return
-		}
-		openId = item.id
-		onexpand?.(item)
-	}
+	// The caption's count: a count the app rendered as a string counts as no rows.
+	const rowTotal = $derived(items.reduce((sum, item) => sum + (typeof item.count === 'number' ? item.count : 0), 0))
+	// the types counted are the ones the list shows: an id with nothing to read is not in the request
+	const types = $derived(items.filter((item) => item.count !== 0).length)
+	const summary = $derived(
+		s.gardener.canSeeSummary(rowTotal, types) + (locked.length ? ` · ${s.gardener.notShared(locked.length)}` : '')
+	)
 </script>
 
-<div class={['ed-cansee', className]} role="group" aria-labelledby={labelId} {...rest}>
-	<div class="ed-cansee-row">
-		<span class="ed-cansee-label" id={labelId}>{s.gardener.canSee}</span>
-		{#each items as item (item.id)}
-			<Chip
-				id={chipId(item.id)}
-				class="ed-cansee-chip"
-				tone="ai"
-				mono
-				label={item.id}
-				count={item.count}
-				aria-label={s.gardener.contextRows(item.count, item.id)}
-				aria-expanded={openId === item.id}
-				aria-controls={openId === item.id ? regionId : undefined}
-				onclick={() => toggle(item)}
-			/>
-		{/each}
-		{#each locked as id (id)}
-			<!-- the chip is the picture; the sentence beside it is what a screen reader gets, lock included -->
-			<span class="ed-cansee-locked">
-				<Chip tone="grey" mono icon="lock" label={id} aria-hidden="true" />
-				<span class="ed-sr-only">{s.gardener.locked(id)}</span>
-			</span>
-		{/each}
-		{#if onaudit}
-			<Button class="ed-cansee-audit" variant="quiet" label={s.gardener.openAuditLog} onclick={() => onaudit?.()} />
+{#snippet auditFooter()}
+	<Button variant="quiet" size="md" label={s.gardener.openAuditLog} onclick={() => onaudit?.()} />
+{/snippet}
+
+<div class={['ed-cansee', className]} {...rest}>
+	<span class="ed-cansee-anchor" bind:this={anchor}>
+		<IconButton
+			icon="eye"
+			{size}
+			label={s.gardener.canSee}
+			active={open}
+			tooltip
+			aria-haspopup="dialog"
+			aria-expanded={open}
+			onclick={() => (open = !open)}
+		/>
+	</span>
+	<DetailPopover
+		bind:open
+		{anchor}
+		tone="ai"
+		icon="eye"
+		title={s.gardener.canSeeTitle}
+		subtitle={summary}
+		side="top"
+		width="md"
+		footer={onaudit ? auditFooter : undefined}
+		onclose={() => generation++}
+	>
+		<DetailSection label={s.gardener.inThisRequest}>
+			{#key generation}
+				<ReadList {items} {trimmed} {onexpand} {expanded} />
+			{/key}
+		</DetailSection>
+		{#if locked.length}
+			<DetailSection label={s.gardener.notSharedLabel} hint={s.gardener.notSharedExplain}>
+				<div class="ed-cansee-list">
+					{#each locked as item (item.id)}
+						<div class="ed-cansee-locked">
+							<Icon name="lock" size="sm" class="ed-cansee-lock" />
+							<span class="ed-cansee-name" id={nameId(item.id)}>{item.label ?? item.id}</span>
+							{#if onunlock}
+								<Button
+									class="ed-cansee-allow"
+									variant="quiet"
+									size="md"
+									label={s.gardener.allow}
+									aria-describedby={nameId(item.id)}
+									onclick={() => onunlock(item.id)}
+								/>
+							{:else}
+								<span class="ed-sr-only">{s.gardener.locked(item.id)}</span>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			</DetailSection>
 		{/if}
-	</div>
-	{#if openItem}
-		<div class="ed-cansee-region" role="region" id={regionId} aria-labelledby={chipId(openItem.id)}>
-			{#if expanded}
-				{@render expanded(openItem)}
-			{:else}
-				<p class="ed-cansee-sentence">{s.gardener.inContext(openItem.count, openItem.id)}</p>
-			{/if}
-		</div>
-	{/if}
+	</DetailPopover>
 </div>
 
 <style>
 	.ed-cansee {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-2);
-	}
-	.ed-cansee-row {
-		display: flex;
-		flex-wrap: wrap;
+		display: inline-flex;
 		align-items: center;
-		gap: var(--space-1) var(--space-2);
 	}
-	.ed-cansee-label {
-		font: var(--ed-t-label);
-		letter-spacing: var(--ed-t-label-tracking);
-		color: var(--ai);
-	}
-	.ed-cansee-locked {
+	.ed-cansee-anchor {
 		display: inline-flex;
 	}
-	/* The open chip shows its state by a firmer edge in its own colour, not by a new hue */
-	.ed-cansee :global(.ed-cansee-chip[aria-expanded='true']) {
-		border-color: color-mix(in srgb, var(--ai) 40%, transparent);
+	.ed-cansee-list {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-1);
+		min-width: 0;
 	}
-	.ed-cansee :global(.ed-cansee-audit) {
-		margin-left: auto;
-	}
-	.ed-cansee-region {
+	.ed-cansee-locked {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		min-height: var(--control-height);
+		min-width: 0;
 		font: var(--ed-t-body-sm);
 		letter-spacing: var(--ed-t-body-sm-tracking);
-		color: var(--text-secondary);
-		padding: var(--space-2) var(--space-3);
-		border-radius: var(--ed-radius-control);
-		border: 1px solid var(--ed-card-border);
-		background: var(--surface-1);
+		font-variation-settings: var(--ed-t-body-sm-opsz);
+		color: var(--text-primary);
 	}
-	.ed-cansee-sentence {
-		margin: 0;
+	.ed-cansee-name {
+		min-width: 0;
+		overflow-wrap: anywhere;
+	}
+	.ed-cansee-locked :global(.ed-cansee-lock) {
+		color: var(--text-secondary);
+	}
+	.ed-cansee-locked :global(.ed-cansee-allow) {
+		margin-left: auto;
 	}
 </style>

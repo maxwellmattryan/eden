@@ -13,6 +13,7 @@ import {
 	type Density,
 	type Theme,
 } from '@eden/ui-kit/tokens'
+import { GRADES } from '../gardener/types.js'
 import { setLanguage as setI18nLanguage } from '../i18n/index.js'
 import {
 	DEFAULT_HOME,
@@ -29,6 +30,7 @@ import {
 	type HomePlace,
 	type Language,
 	type MeasurementSystem,
+	type ModelGrade,
 	type ThemeSetting,
 	type WeatherProvider,
 	type WeekStart,
@@ -45,6 +47,8 @@ export const storage = {
 	clock: 'eden:clock',
 	weatherProvider: 'eden:weather-provider',
 	home: 'eden:home',
+	gardenerGrade: 'eden:gardener-grade',
+	gardenerPanelWidth: 'eden:gardener-panel-width',
 } as const
 
 function read(key: string): string | null {
@@ -67,6 +71,13 @@ function write(key: string, value: string | null) {
 
 /** The temperature-only setting the measurement system replaced; read once to carry the choice over, then removed. */
 const LEGACY_UNITS = 'eden:units'
+
+/** A whole number above zero, or nothing. */
+function positiveInt(value: string | null): number | null {
+	if (value === null) return null
+	const parsed = Number.parseInt(value, 10)
+	return Number.isInteger(parsed) && parsed > 0 ? parsed : null
+}
 
 function oneOf<T extends string>(value: string | null, allowed: readonly T[], fallback: T): T {
 	return value !== null && (allowed as readonly string[]).includes(value) ? (value as T) : fallback
@@ -128,6 +139,10 @@ export class Settings {
 	weatherProvider = $state<WeatherProvider>('open-meteo')
 	/** The home place Sky forecasts for, until Places exist (D-38). */
 	home = $state<HomePlace>(DEFAULT_HOME)
+	/** The grade the Gardener's conversation runs at until the owner switches it on the chip (D-74). */
+	gardenerGrade = $state<ModelGrade>('standard')
+	/** The Gardener's dock, in px, as the owner last dragged it; null until they do, and the dock takes its default. */
+	gardenerPanelWidth = $state<number | null>(null)
 	/** The theme on <html>: the choice, or what "system" resolves to right now. */
 	resolvedTheme = $state<Theme>('light')
 
@@ -151,6 +166,8 @@ export class Settings {
 		this.weekStart = oneOf(read(storage.weekStart), weekStarts, 'monday')
 		this.clock = oneOf(read(storage.clock), clockFormats, '24h')
 		this.weatherProvider = oneOf(read(storage.weatherProvider), weatherProviders, 'open-meteo')
+		this.gardenerGrade = oneOf(read(storage.gardenerGrade), GRADES, 'standard')
+		this.gardenerPanelWidth = positiveInt(read(storage.gardenerPanelWidth))
 		this.home = readHome()
 		this.resolvedTheme = this.resolveTheme(this.theme)
 		this.apply()
@@ -258,6 +275,16 @@ export class Settings {
 	setWeatherProvider(provider: WeatherProvider) {
 		this.weatherProvider = oneOf(provider, weatherProviders, 'open-meteo')
 		write(storage.weatherProvider, this.weatherProvider === 'open-meteo' ? null : this.weatherProvider)
+	}
+
+	setGardenerGrade(grade: ModelGrade) {
+		this.gardenerGrade = oneOf(grade, GRADES, 'standard')
+		write(storage.gardenerGrade, this.gardenerGrade === 'standard' ? null : this.gardenerGrade)
+	}
+
+	setGardenerPanelWidth(width: number | null) {
+		this.gardenerPanelWidth = positiveInt(width === null ? null : String(Math.round(width)))
+		write(storage.gardenerPanelWidth, this.gardenerPanelWidth === null ? null : String(this.gardenerPanelWidth))
 	}
 
 	setHome(home: HomePlace) {

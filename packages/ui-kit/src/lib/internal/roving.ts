@@ -48,8 +48,17 @@ export function roving(get: () => RovingOptions): Attachment<HTMLElement> {
 		const onKeyDown = (e: KeyboardEvent) => {
 			const list = items()
 			const from = list.indexOf(document.activeElement as HTMLElement)
-			if (from === -1) return
 			const o = options.orientation ?? 'vertical'
+			// focus on the group itself (a menu just opened): the first arrow lands on the current item, or the last
+			if (from === -1) {
+				if (document.activeElement !== el || !list.length) return
+				const forward = e.key === (o === 'horizontal' ? 'ArrowRight' : 'ArrowDown') || e.key === 'Home'
+				const backward = e.key === (o === 'horizontal' ? 'ArrowLeft' : 'ArrowUp') || e.key === 'End'
+				if (!forward && !backward) return
+				e.preventDefault()
+				focusIndex(forward ? currentIndex() : list.length - 1)
+				return
+			}
 			const next = o !== 'horizontal' && e.key === 'ArrowDown' ? 1 : o !== 'vertical' && e.key === 'ArrowRight' ? 1 : 0
 			const prev = o !== 'horizontal' && e.key === 'ArrowUp' ? 1 : o !== 'vertical' && e.key === 'ArrowLeft' ? 1 : 0
 			if (next || prev) {

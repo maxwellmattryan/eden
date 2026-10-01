@@ -21,7 +21,7 @@ Each screen below lists: id, platform, purpose, must show, primary actions, stat
 | `garden-edit` | desktop | arrange widgets | drag handles, resize, catalog sheet by domain | done | | |
 | `today`, built in `apps/desktop`, mocked as `Domains/Today/Today` (the mirror of the page, under the owner's exception to D-54) | both | tasks and routines | overdue (closed until opened), due today, routines, habits, Quick Log strip, quick-add with parsed chips | add, done, snooze, skip, tally, delete, each with undo | empty, overdue, parsed quick-add | Wednesday's tasks, the routine done and the habit at 2 / 3 |
 | `palette` | desktop | ⌘K | verbs, fuzzy results, recents | run | no results | "log weight 82.4", "go to almanac" |
-| `gardener-panel` | both | the assistant | thread list, conversation, "can see" chip row, model chip with budget meter, composer | send, expand chip | no key, offline, budget exhausted, tool confirm | the Hearth audit entry as a conversation |
+| `gardener-panel` | both | the assistant | thread list, conversation (Markdown replies, a sent or received time and a copy glyph under each message), "can see" chip row, model chip with budget meter, composer | send, expand chip, copy a message | no key, offline, budget exhausted, tool confirm, tool running, tool failed | the Hearth audit entry as a conversation |
 | `council` | desktop | side-by-side models | columns per model, cost preview, optional chair | run | | a "which recipe tonight" question to two models |
 | `capture-sheet` | both | verify a haul | image, provider named, cost, draft rows with location chips and estimated badges, merge indicators | commit | recognised nothing, provider unavailable | the captured haul |
 | `quick-log-sheet` | both | one-field logging | field, unit chip, last value, sparkline | save | | weight 82.4 |
@@ -29,7 +29,8 @@ Each screen below lists: id, platform, purpose, must show, primary actions, stat
 | `profile`, mocked as `Domains/Garden/Profile`, built in `apps/desktop` (Garden → What Eden knows about me) | desktop | What Eden knows about me | facts by domain, provenance, "used by N requests", lock glyphs on T2 | add, edit, delete | empty | the facts table |
 | `grants-ledger` | desktop | permissions (Phase 2 UI) | grants by subject, revoke, history | revoke | | the grants list |
 | `egress-ledger`, built in `apps/desktop` (Settings → Privacy) | desktop | bytes out by destination | a table by destination and day; the Vault → AI row at zero | | | provider, Open-Meteo, Google |
-| `audit-log` | desktop | Gardener requests | one row per request; expand to registry ids and tools | | | the audit entry |
+| `audit-log` | desktop | Gardener requests | one row per request; a row unfolds beneath itself to registry ids and tools | | | the audit entry |
+| `gardener-tools` | desktop | what the Gardener can do | one row per tool: owner, access, grade, reads; a row unfolds beneath itself to its description, declaration and input shape | open a tool | a tool without a handler | the declared tools |
 | `settings-*` | both | each tab in `product/substrate/settings-utilities.md` | the tab's contents | | | |
 | `vault` | both | T3 attachments | count and lock; after auth, the list | open, share, add | locked | one identity document |
 | `status-bar` | desktop | global state | sync, integration chips, Gardener chip with budget, bell, + | | offline, no key, granted-not-connected | 2.84 of 10.00 |

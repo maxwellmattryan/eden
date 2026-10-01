@@ -7,9 +7,11 @@ export * from './units.js'
 export * from './view.js'
 export * from './week.js'
 export { conditionLabel, CONDITION_KEY } from './conditions.js'
-export { goldenHourOf, moonAt, type Moon, type MoonPhase } from './ephemeris.js'
+export { goldenHourOf, moonAt, nextPhase, type Moon, type MoonMoment, type MoonPhase } from './ephemeris.js'
 export { MIN_QUERY, homeFrom, searchPlaces, type PlaceResult } from './geocoding.js'
 export { fetchAlerts, readAlerts, type AlertsAnswer, type AlertSeverity, type WeatherAlert } from './nws.js'
+export { forecastForPack, PACK_DAYS } from './pack.js'
+export { SKY, placeKey, type AlertPayload, type ForecastPayload, type SlotPayload } from './rows.js'
 export {
 	ALERTS_SCHEDULE,
 	FORECAST_RESOURCE,

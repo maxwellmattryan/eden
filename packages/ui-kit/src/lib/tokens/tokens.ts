@@ -64,7 +64,7 @@ export const colors = {
 		"on-danger": "#ffffff",
 		"warning": "#b8821f",
 		"info": "#4a82a6",
-		"success": "#4f7a5a",
+		"success": "#28794a",
 		"accent-moss": "#4f7a5a",
 		"accent-fern": "#3e8e5e",
 		"accent-sage": "#6f8f7c",
@@ -117,7 +117,7 @@ export const colors = {
 		"on-danger": "#0f1512",
 		"warning": "#e3b24f",
 		"info": "#7fb2d6",
-		"success": "#7fb58a",
+		"success": "#86d9a2",
 		"accent-moss": "#7fb58a",
 		"accent-fern": "#8cd3a0",
 		"accent-sage": "#a3c4b1",
@@ -355,6 +355,8 @@ export const motion = {
 	"duration-panel": "220ms",
 	"duration-settle": "320ms",
 	"duration-breeze": "700ms",
+	"duration-spin": "1050ms",
+	"duration-grow": "2400ms",
 	"ease-out": "cubic-bezier(0.22, 1, 0.36, 1)"
 } as const
 export const zIndex = {

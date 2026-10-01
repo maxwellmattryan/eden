@@ -11,13 +11,21 @@
 		large?: boolean
 		/** Keeps the border and the ring in danger. */
 		invalid?: boolean
+		/** Grows with a multiline field: the control height is the floor, the content sets the rest. */
+		grow?: boolean
 		/** The input and whatever sits beside it: an icon, a unit chip, a trailing control. */
 		children?: Snippet
 	}
-	let { large = false, invalid = false, children, class: className = '', ...rest }: Props = $props()
+	let { large = false, invalid = false, grow = false, children, class: className = '', ...rest }: Props = $props()
 </script>
 
-<div class="ed-input-wrap {className}" class:ed-input-wrap-lg={large} class:ed-input-wrap-invalid={invalid} {...rest}>
+<div
+	class="ed-input-wrap {className}"
+	class:ed-input-wrap-lg={large}
+	class:ed-input-wrap-invalid={invalid}
+	class:ed-input-wrap-grow={grow}
+	{...rest}
+>
 	{@render children?.()}
 </div>
 
@@ -55,5 +63,11 @@
 	.ed-input-wrap-lg {
 		height: var(--field-lg);
 		padding-left: var(--space-4);
+	}
+	/* A growing field keeps its chrome on the first line: the icon and the chip sit where a one-line field has them */
+	.ed-input-wrap-grow {
+		height: auto;
+		min-height: var(--ed-control);
+		align-items: flex-start;
 	}
 </style>

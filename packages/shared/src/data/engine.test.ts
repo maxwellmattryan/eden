@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createEngine, DATA_KEY, LOCAL_CALENDAR_SOURCE, type EngineStorage } from './engine.js'
 import { dataErrorCode } from './errors.js'
+import type { Entity } from './types.js'
 import { newId } from './ulid.js'
 
 function memory(): EngineStorage & { map: Map<string, string> } {
@@ -298,6 +299,20 @@ describe('engine', () => {
 		expect(ids(again.queryInbox({ unreadOnly: true }))).toEqual(ids(second.deliveries))
 		expect(again.queryInbox({ limit: 1 })).toHaveLength(1)
 
+		// A withdrawn signal's card leaves the inbox; its key stays spent, so it is not emitted again.
+		const alert = () =>
+			engine.emitSignal({
+				name: 'weather.alert',
+				tier: 'T0',
+				dedupeKey: 'urn:1',
+				deliveries: [{ rule: 'weather.severe-alert', channel: 'os' }],
+			})
+		const issued = alert()!
+		expect(engine.withdrawSignal('weather.alert', 'urn:1')).toEqual(ids(issued.deliveries))
+		expect(engine.withdrawSignal('weather.alert', 'urn:1')).toEqual([])
+		expect(engine.queryInbox()).toHaveLength(2)
+		expect(alert()).toBeNull()
+
 		expect(codeOf(() => engine.emitSignal({ name: 'expiring', tier: 'T0' }))).toBe('signal:invalid')
 		expect(
 			codeOf(() =>
@@ -478,6 +493,73 @@ describe('engine', () => {
 		engine.createEntity({ ...overlay, externalId: 'work' })
 	})
 
+	it('puts a mirror, replaces it and drops it', () => {
+		const { engine } = setup()
+		const put = (payload: object) =>
+			engine.applyBatch([
+				{ op: 'putMirror', input: { type: 'forecast', source: 'open-meteo', externalId: '30.31,-97.74', payload } },
+			]).rows[0] as Entity
+
+		const first = put({ temp: 21 })
+		expect(first.mirror).toBe(true)
+
+		// putting it again replaces the row it names: the same id, a later stamp, the new payload whole
+		const second = put({ hi: 30 })
+		expect(second.id).toBe(first.id)
+		expect(second.payload).toEqual({ hi: 30 })
+		expect(second.updatedAt > first.updatedAt).toBe(true)
+		expect(engine.queryEntities({ type: 'forecast' })).toHaveLength(1)
+
+		// a deleted mirror still holds its key, and a put brings it back
+		engine.deleteRows([first.uri])
+		expect(engine.queryEntities({ type: 'forecast' })).toHaveLength(0)
+		const third = put({ hi: 31 })
+		expect(third.id).toBe(first.id)
+		expect(third.deletedAt).toBeNull()
+
+		// a drop takes the row and its links, and leaves no tombstone
+		const place = `eden://place/${newId()}`
+		engine.applyBatch([
+			{ op: 'link', owner: first.uri, link: { uri: place, relation: 'at' } },
+			{ op: 'dropMirror', uri: first.uri },
+		])
+		expect(engine.queryEntities({ type: 'forecast', includeDeleted: true })).toEqual([])
+		expect(engine.queryLinks({ target: place })).toEqual([])
+	})
+
+	it('refuses to drop what is not a mirror', () => {
+		const { engine } = setup()
+		const recipe = engine.createEntity({ type: 'recipe', payload: { name: 'Dal' } })
+		expect(codeOf(() => engine.applyBatch([{ op: 'dropMirror', uri: recipe.uri }]))).toBe('invalid')
+		expect(engine.queryEntities({ type: 'recipe' })).toHaveLength(1)
+		expect(codeOf(() => engine.applyBatch([{ op: 'dropMirror', uri: `eden://forecast/${newId()}` }]))).toBe('not-found')
+		// a mirror names a registered type and carries an object, as any entity does
+		const bad = { source: 'nws', externalId: 'a' }
+		expect(
+			codeOf(() => engine.applyBatch([{ op: 'putMirror', input: { ...bad, type: 'spaceship', payload: {} } }]))
+		).toBe('invalid')
+		expect(
+			codeOf(() =>
+				engine.applyBatch([{ op: 'putMirror', input: { ...bad, type: 'alert', payload: 'text' as unknown as object } }])
+			)
+		).toBe('invalid')
+	})
+
+	it('sweeps the mirrors past their retention', () => {
+		const { engine, clock } = setup()
+		engine.applyBatch([
+			{ op: 'putMirror', input: { type: 'alert', source: 'nws', externalId: 'a', payload: {} } },
+			{ op: 'createEntity', input: { type: 'recipe', payload: { name: 'Dal' } } },
+		])
+		const day = 24 * 60 * 60 * 1000
+		clock.now += 6 * day
+		expect(engine.queryEntities({ type: 'alert' })).toHaveLength(1)
+		clock.now += 2 * day
+		expect(engine.queryEntities({ type: 'alert', includeDeleted: true })).toEqual([])
+		// what is not a mirror is the owner's, however old
+		expect(engine.queryEntities({ type: 'recipe' })).toHaveLength(1)
+	})
+
 	it('applies a batch whole or not at all', () => {
 		const { storage, engine } = setup()
 		const project = newId()
@@ -577,6 +659,76 @@ describe('engine', () => {
 		expect(codeOf(() => engine.attach())).toBe('unavailable')
 	})
 
+	it('attaches a file given as bytes, and keeps the bytes for the session only', () => {
+		const { engine, storage, clock } = setup()
+		const bytes = new Uint8Array([1, 2, 3])
+		const thread = `eden://thread/${newId()}`
+		const row = engine.attachBytes(
+			{
+				kind: 'photo',
+				fileName: 'basket.png',
+				mime: 'image/png',
+				thumbnail: 'data:image/jpeg;base64,AAAA',
+				captured: { width: 4, height: 3 },
+				links: [{ uri: thread, relation: 'part-of' }],
+			},
+			bytes,
+			'abc'
+		)
+		expect(row).toMatchObject({
+			type: 'attachment',
+			kind: 'photo',
+			fileName: 'basket.png',
+			mime: 'image/png',
+			size: 3,
+			hash: 'abc',
+			store: 'workspace',
+			thumbnail: 'data:image/jpeg;base64,AAAA',
+		})
+		expect(engine.query('attachment', { linkedTo: thread, relation: 'part-of' }).map((entry) => entry.id)).toEqual([
+			row.id,
+		])
+		// a copy: what the caller does to its bytes afterwards changes nothing here
+		bytes[0] = 9
+		expect(engine.readAttachment(row.id)).toEqual(new Uint8Array([1, 2, 3]))
+
+		expect(codeOf(() => engine.attachBytes({ kind: 'photo', fileName: 'a.png' }, new Uint8Array(), 'h'))).toBe(
+			'invalid'
+		)
+		expect(codeOf(() => engine.attachBytes({ kind: 'spaceship' as 'photo', fileName: 'a.png' }, bytes, 'h'))).toBe(
+			'invalid'
+		)
+		expect(codeOf(() => engine.readAttachment(newId()))).toBe('not-found')
+
+		// the next load has the row and not the bytes
+		const again = createEngine(storage, { now: () => clock.now })
+		expect(again.query('attachment', {}).map((entry) => entry.id)).toEqual([row.id])
+		expect(again.readAttachment(row.id)).toBeNull()
+		engine.deleteRows([row.uri])
+		expect(codeOf(() => engine.readAttachment(row.id))).toBe('not-found')
+	})
+
+	it('deletes a thread’s attachments with it and restores them with it', () => {
+		const { engine } = setup()
+		const thread = engine.createThread({ domain: null, title: 'Dinner', tier: 'T0' })
+		const file = (name: string) =>
+			engine.attachBytes(
+				{ kind: 'photo', fileName: name, links: [{ uri: thread.uri, relation: 'part-of' }] },
+				new Uint8Array([1]),
+				'h'
+			)
+		const kept = file('a.png')
+		const gone = file('b.png')
+		engine.deleteRows([gone.uri])
+		const live = () => engine.query('attachment', {}).map((row) => row.id)
+
+		engine.deleteThread(thread.id)
+		expect(live()).toEqual([])
+		engine.restoreThread(thread.id)
+		// the one deleted before the thread stays gone
+		expect(live()).toEqual([kept.id])
+	})
+
 	it('seeds the local calendar source, which an event belongs to', () => {
 		const { engine } = setup()
 		const source = engine.getRow(`eden://calendar-source/${LOCAL_CALENDAR_SOURCE}`)
@@ -643,5 +795,129 @@ describe('engine', () => {
 		expect(
 			codeOf(() => engine.applyBatch([{ op: 'createPrimitive', type: 'attachment' as 'task', input: {} as never }]))
 		).toBe('invalid')
+	})
+
+	it('keeps threads and messages with tombstones, and takes the messages with the thread', () => {
+		const { engine, clock } = setup()
+		const thread = engine.createThread({ title: 'Dinner', domain: 'kitchen' })
+		expect(thread.uri).toBe(`eden://thread/${thread.id}`)
+		expect(thread).toMatchObject({ domain: 'kitchen', tier: 'T0', deletedAt: null, createdAt: thread.updatedAt })
+
+		clock.now += 1000
+		const asked = engine.appendMessage({ threadId: thread.id, role: 'owner', blocks: [{ kind: 'text', text: 'Hi' }] })
+		const answered = engine.appendMessage({ threadId: thread.id, role: 'gardener', blocks: [], requestId: newId() })
+		expect(asked.uri).toBe(`eden://message/${asked.id}`)
+		expect(engine.queryMessages(thread.id)).toEqual([asked, answered])
+		// The thread is touched by a message and is the latest updated.
+		expect(engine.queryThreads()[0]?.updatedAt).toBe(answered.createdAt)
+
+		clock.now += 1000
+		const retitled = engine.updateThread(thread.id, { title: 'Dinner plans', tier: 'T2', domain: null })
+		expect(retitled).toMatchObject({ title: 'Dinner plans', tier: 'T2', domain: null })
+		expect(retitled.updatedAt > thread.updatedAt).toBe(true)
+		const edited = engine.updateMessage(answered.id, [{ kind: 'text', text: 'Dal.' }])
+		expect(edited.blocks).toEqual([{ kind: 'text', text: 'Dal.' }])
+		expect(edited.updatedAt > answered.updatedAt).toBe(true)
+
+		clock.now += 1000
+		const deleted = engine.deleteThread(thread.id)
+		expect(deleted.deletedAt).toBe(deleted.updatedAt)
+		expect(engine.queryThreads()).toEqual([])
+		expect(engine.queryThreads({ includeDeleted: true })).toEqual([deleted])
+		expect(engine.queryMessages(thread.id)).toEqual([])
+		expect(engine.deleteThread(thread.id)).toEqual(deleted)
+		expect(codeOf(() => engine.appendMessage({ threadId: thread.id, role: 'owner', blocks: [] }))).toBe(
+			'thread:invalid'
+		)
+		expect(codeOf(() => engine.appendMessage({ threadId: newId(), role: 'owner', blocks: [] }))).toBe('thread:invalid')
+
+		clock.now += 1000
+		const restored = engine.restoreThread(thread.id)
+		expect(restored.deletedAt).toBeNull()
+		expect(engine.queryMessages(thread.id).map((row) => row.id)).toEqual([asked.id, answered.id])
+		expect(engine.queryMessages(thread.id).every((row) => row.updatedAt === restored.updatedAt)).toBe(true)
+		expect(engine.queryThreads({ domain: 'kitchen' })).toEqual([])
+		expect(engine.restoreThread(thread.id)).toEqual(restored)
+
+		expect(codeOf(() => engine.createThread({ title: ' ' }))).toBe('thread:invalid')
+		expect(codeOf(() => engine.createThread({ title: 'x', tier: 'T3' as 'T2' }))).toBe('thread:invalid')
+		expect(codeOf(() => engine.updateThread(newId(), { title: 'x' }))).toBe('not-found')
+		expect(codeOf(() => engine.updateMessage(newId(), []))).toBe('not-found')
+
+		clock.now += 1000
+		const gone = engine.deleteMessage(answered.id)
+		expect(gone.deletedAt).toBe(gone.updatedAt)
+		expect(engine.queryMessages(thread.id).map((row) => row.id)).toEqual([asked.id])
+		expect(engine.deleteMessage(answered.id)).toEqual(gone)
+		expect(codeOf(() => engine.deleteMessage(newId()))).toBe('not-found')
+		expect(codeOf(() => engine.appendMessage({ threadId: thread.id, role: 'bot' as 'owner', blocks: [] }))).toBe(
+			'thread:invalid'
+		)
+	})
+
+	it('renews a policy row in place and refuses a key that is not kebab-case', () => {
+		const { engine, clock } = setup()
+		expect(engine.getPolicy('gardener')).toBeNull()
+		const first = engine.setPolicy('gardener', { monthlyCapUsd: 10 })
+		expect(first).toMatchObject({ key: 'gardener', value: { monthlyCapUsd: 10 }, deletedAt: null })
+		clock.now += 1000
+		const second = engine.setPolicy('gardener', { monthlyCapUsd: 25 })
+		expect(second.createdAt).toBe(first.createdAt)
+		expect(second.updatedAt > first.updatedAt).toBe(true)
+		expect(second.value).toEqual({ monthlyCapUsd: 25 })
+		expect(engine.getPolicy('gardener')).toEqual(second)
+		expect(codeOf(() => engine.setPolicy('Gardener', {}))).toBe('policy:invalid')
+		expect(codeOf(() => engine.setPolicy('gardener.v2', {}))).toBe('policy:invalid')
+	})
+
+	it('keeps the audit log for ninety days, counts the rows read and sums the spend', () => {
+		const { engine, clock } = setup()
+		const rice = newId()
+		const dal = newId()
+		const entry = (at: number, rows: string[], costUsd: number) =>
+			engine.recordAudit({
+				at,
+				surface: 'panel',
+				threadId: null,
+				parentRequestId: null,
+				tool: null,
+				domain: null,
+				declaredGrade: 'standard',
+				grade: 'standard',
+				source: 'map',
+				provider: 'anthropic',
+				model: 'claude-sonnet-5-5',
+				reads: [
+					{ id: 'stock-item', count: rows.length, rows },
+					{ id: 'recipe', count: rows.length, rows },
+				],
+				entities: [],
+				tools: [],
+				confirmOutcome: null,
+				tokensIn: 100,
+				tokensOut: 10,
+				cacheRead: 0,
+				costUsd,
+				outcome: 'ok',
+				grants: [],
+				image: null,
+			})
+		const old = entry(clock.now - 91 * 24 * 60 * 60 * 1000, [rice], 0.5)
+		const a = entry(clock.now - 1000, [rice, dal], 0.25)
+		const b = entry(clock.now, [rice], 0.125)
+		expect(old.id).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/)
+		expect(engine.queryAudit()).toEqual([b, a])
+		expect(engine.queryAudit({ fromMs: clock.now })).toEqual([b])
+		expect(engine.queryAudit({ toMs: clock.now - 1000, limit: 1 })).toEqual([a])
+		// A row read twice in one entry counts once for it.
+		expect(engine.auditUsage()).toEqual({ [rice]: 2, [dal]: 1 })
+		expect(engine.auditSpend(clock.now - 1000)).toBe(0.375)
+		expect(engine.auditSpend(clock.now + 1)).toBe(0)
+		expect(codeOf(() => entry(-1, [], 0))).toBe('audit:invalid')
+		expect(codeOf(() => engine.recordAudit({ ...a, outcome: 'lost' as 'ok' }))).toBe('audit:invalid')
+		// Ninety days on, the rest are swept when the workspace opens.
+		clock.now += 90 * 24 * 60 * 60 * 1000 + 1
+		expect(engine.queryAudit()).toEqual([])
+		expect(engine.auditUsage()).toEqual({})
 	})
 })

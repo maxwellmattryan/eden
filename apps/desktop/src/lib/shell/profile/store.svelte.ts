@@ -2,7 +2,7 @@
 // the facts read once, expired ones included so the page can grey them, and every write the page makes. A write
 // changes the store at once and is sent after, in order (`WriteQueue`), hands back an undo (D-12) and lands in the
 // Garden's feed. It is the shell's, so a domain may import it: Sky hands it the home the owner chose, and the
-// Gardener will hand it what it noticed. "Used by N requests" waits on the audit log (issue 35): every count is zero.
+// Gardener hands it what it noticed. "Used by N requests" is read from the audit log (`refreshUsage`).
 import { logError } from '@eden/shared/api'
 import { newId, WriteQueue } from '@eden/shared/data'
 import { todayIso } from '@eden/shared/dates'
@@ -21,6 +21,7 @@ import {
 	type FactPatch,
 	type FactProposal,
 } from '@eden/shared/profile'
+import { auditUsage } from '@eden/shared/gardener'
 import { ownerOf, type OwnerId } from '@eden/shared/registry'
 import type { HomePlace } from '@eden/shared/types'
 import { facts as sampleFacts } from '@eden/ui-kit/sample-data'
@@ -51,7 +52,7 @@ export class ProfileStore {
 	facts = $state<Fact[]>([])
 	/** What the Gardener noticed and has not been answered: shell state, never a row. */
 	proposals = $state<FactProposal[]>([])
-	/** How many Gardener requests read each fact, by id. The audit log fills it; until then every count is zero. */
+	/** How many Gardener requests read each fact, by id, from the audit log. */
 	usage = $state<Record<string, number>>({})
 
 	readonly groups = $derived.by<FactGroup[]>(() => {
@@ -98,6 +99,16 @@ export class ProfileStore {
 			this.failed = true
 		} finally {
 			this.ready = true
+		}
+		await this.refreshUsage()
+	}
+
+	/** Reads the counts again, after a request was audited. */
+	async refreshUsage(): Promise<void> {
+		try {
+			this.usage = await auditUsage()
+		} catch {
+			// the counts keep what they had
 		}
 	}
 

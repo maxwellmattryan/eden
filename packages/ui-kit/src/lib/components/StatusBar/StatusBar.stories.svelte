@@ -20,6 +20,8 @@
 	/** The sync line is the first integration's last good time. */
 	const sync = googleWork.detail!
 	const offline = `Offline. Showing the forecast from ${skyToday.lastGood}.`
+	/** What a development build says about the models it runs on. */
+	const clamp = `Development build: light and standard run on ${budget.model}.`
 
 	/** The sample notifications as inbox items: the domain glyph, its themed name, one quiet action to snooze. */
 	const notices: InboxItem[] = inbox.map((notice) => ({
@@ -37,6 +39,12 @@
 		budget: { used: budget.used, cap: budget.cap, percent: budget.percent },
 		onopen: fn(),
 	}
+	/** The three grades a v0 Gardener switches between. */
+	const grades = [
+		{ id: 'light', label: 'Light', icon: 'seed' as const },
+		{ id: 'standard', label: 'Standard', icon: 'sprout' as const },
+		{ id: 'deep', label: 'Deep', icon: 'tree-deciduous' as const },
+	]
 
 	/** A status chip's name is its label followed by the spoken status word. */
 	const chipNamed = (integration: StatusBarIntegration) => (name: string) => name.startsWith(integration.label)
@@ -121,6 +129,22 @@
 	}}
 />
 
+<!-- A standing note from the app: an info button between the chip and the grade caret, named by its sentence -->
+<Story
+	name="With notice"
+	{template}
+	args={{ gardener: { ...gardener, grade: 'standard', grades, onchangegrade: fn() }, notice: { label: clamp } }}
+	play={async ({ canvasElement }) => {
+		if (!framed(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		const note = canvas.getByRole('button', { name: clamp })
+		const caret = canvas.getByRole('button', { name: strings.gardener.switchGrade })
+		await expect(note.compareDocumentPosition(caret) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+		const chip = canvas.getByRole('button', { name: (name: string) => name.startsWith(budget.model) })
+		await expect(chip.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+	}}
+/>
+
 <!-- Offline: the banner takes the sync line's place, in info, with the time of the last good data -->
 <Story
 	name="Offline banner"
@@ -131,6 +155,43 @@
 		const canvas = canvasOf(canvasElement)
 		await expect(canvas.getByRole('status')).toHaveTextContent(offline)
 		await expect(canvas.queryByText(sync)).toBeNull()
+	}}
+/>
+
+<!-- The app hands the chip its grades: a caret beside it opens them as a menu, the current one checked; picking
+     another reports its id, and the chip itself still opens the Gardener -->
+<Story
+	name="Grade switch"
+	{template}
+	args={{ gardener: { ...gardener, grade: 'standard', grades, onchangegrade: fn() } }}
+	play={async ({ canvasElement, args }) => {
+		if (!framed(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		const caret = canvas.getByRole('button', { name: strings.gardener.switchGrade })
+		await expect(caret).toHaveAttribute('aria-expanded', 'false')
+		await userEvent.click(caret)
+		const menu = await canvas.findByRole('menu', { name: strings.gardener.grade })
+		await waitFor(() => expect(menu).toBeVisible())
+		await expect(caret).toHaveAttribute('aria-expanded', 'true')
+		const items = within(menu).getAllByRole('menuitem')
+		await expect(items.map((item) => item.textContent?.trim())).toEqual(grades.map((grade) => grade.label))
+		// every grade carries its glyph; the current one is also marked current, with a trailing check
+		for (const item of items) await expect(item.querySelector('.ed-icon')).not.toBeNull()
+		await expect(items[1]!).toHaveAttribute('aria-current', 'true')
+		await expect(items[2]!).not.toHaveAttribute('aria-current')
+		await expect(items[1]!.querySelectorAll('.ed-icon')).toHaveLength(2)
+		await expect(items[2]!.querySelectorAll('.ed-icon')).toHaveLength(1)
+		await userEvent.click(within(menu).getByRole('menuitem', { name: 'Deep' }))
+		await expect(args.gardener?.onchangegrade).toHaveBeenCalledWith('deep')
+		await waitFor(() => expect(menu).not.toBeVisible())
+		await waitFor(() => expect(caret).toHaveFocus())
+		// the chip keeps the model's name and its meter, and still opens the Gardener
+		const model = canvas.getByRole('button', {
+			name: strings.statusBar.gardenerBudget(budget.model, strings.gardener.budget(budget.used, budget.cap)),
+		})
+		await expect(within(model).getByRole('meter')).toBeVisible()
+		await userEvent.click(model)
+		await expect(args.gardener?.onopen).toHaveBeenCalled()
 	}}
 />
 

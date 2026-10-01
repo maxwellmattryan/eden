@@ -37,7 +37,11 @@ export interface UiStrings {
 	required: string
 	on: string
 	off: string
+	show: string
+	hide: string
 	step: (current: number, total: number) => string
+	/** The name of a glyph that explains a label, such as a table column's info button. */
+	about: (name: string) => string
 	noData: string
 	gardener: {
 		name: string
@@ -49,10 +53,27 @@ export interface UiStrings {
 		dismissedNotStored: string
 		cancelledNothingChanged: string
 		confirmed: (verb: string) => string
+		/** The eye button at the composer's foot. */
 		canSee: string
-		contextRows: (count: number | string, id: string) => string
+		/** The title of the panel the button opens. */
+		canSeeTitle: string
+		/** The panel's first section: the ids with rows to read. */
+		inThisRequest: string
+		/** The spoken sentence beside a locked row when the app cannot ask for the grant. */
 		locked: (id: string) => string
+		/** The panel's caption: how many facts, across how many types. */
+		canSeeSummary: (facts: number, types: number) => string
+		/** The caption's tail when ids are kept out. */
+		notShared: (count: number) => string
+		/** The label of the locked section. */
+		notSharedLabel: string
+		/** The tooltip on the locked section's info glyph. */
+		notSharedExplain: string
+		/** The button at a locked row's end that asks for the grant. */
+		allow: string
 		openAuditLog: string
+		/** The info glyph on a tool card's head. */
+		aboutTool: string
 		noKeyOnDevice: string
 		useLocalModel: string
 		budgets: string
@@ -60,8 +81,56 @@ export interface UiStrings {
 		tool: string
 		/** The conversation log's accessible name. */
 		thread: string
-		/** The one-line expansion of a can-see chip when there are no rows to show. */
-		inContext: (count: number | string, id: string) => string
+		/** The one-line expansion of a read when there are no rows to show: the type by name, and how many. */
+		inContext: (count: number | string, name: string) => string
+		/** The caret beside the model chip that opens the grade menu. */
+		switchGrade: string
+		grade: string
+		unavailableNoProvider: string
+		unavailableNoCapableModel: (missing: string) => string
+		unavailableNoKey: string
+		budgetReached: string
+		offline: string
+		confirmCost: (estimate: string) => string
+		trimmed: (ids: string) => string
+		runsInApp: string
+		devClamp: (model: string) => string
+		cutShort: string
+		continueReply: string
+		stop: string
+		send: string
+		newThread: string
+		threads: string
+		askPlaceholder: string
+		askInDomain: (domain: string) => string
+		focus: (title: string) => string
+		lockedThread: string
+		includeThread: string
+		delegated: (tool: string) => string
+		copyCode: string
+		copied: string
+		/** The spoken word for a tool card's status glyph. */
+		toolRunning: string
+		toolDone: string
+		toolFailed: string
+		toolCancelled: string
+		toolWaiting: string
+		/** The spoken name of the sprout that grows while a reply is awaited. */
+		writing: string
+		/** The line under the owner's message: when it was sent. */
+		sentAt: (time: string) => string
+		/** The line under a reply: when it was received. */
+		receivedAt: (time: string) => string
+		/** The copy glyph under a message. */
+		copyMessage: string
+		addTask: string
+		createTasks: (n: number) => string
+		addToList: string
+		discard: string
+		committed: string
+		discarded: string
+		/** The name of the file a long paste into the composer becomes. */
+		pastedText: string
 	}
 	access: {
 		read: string
@@ -161,6 +230,29 @@ export interface UiStrings {
 		/** The drag handle's name in the Garden's edit mode. */
 		move: (title: string) => string
 	}
+	dropzone: {
+		/** The overlay's headline while files are dragged over; 0 when the count is not known. */
+		drop: (count: number) => string
+		/** How many of each kind are being dragged. */
+		groups: {
+			image: (count: number) => string
+			pdf: (count: number) => string
+			text: (count: number) => string
+			other: (count: number) => string
+		}
+		/** The drag holds more files than there is room for. */
+		tooMany: (max: number) => string
+		/** Nothing in the drag is of a type taken here. */
+		notAccepted: string
+	}
+	file: {
+		/** A file chip's body as a button. */
+		open: (name: string) => string
+		/** The file is no longer on this device. */
+		missing: string
+		/** The file could not be read or stored. */
+		failed: string
+	}
 }
 
 export const defaultStrings: UiStrings = {
@@ -196,7 +288,10 @@ export const defaultStrings: UiStrings = {
 	required: 'Required',
 	on: 'On',
 	off: 'Off',
+	show: 'Show',
+	hide: 'Hide',
 	step: (current, total) => `Step ${current} of ${total}`,
+	about: (name) => `About ${name}`,
 	noData: 'No data yet',
 	gardener: {
 		name: 'Gardener',
@@ -209,16 +304,65 @@ export const defaultStrings: UiStrings = {
 		cancelledNothingChanged: 'Cancelled. Nothing was changed.',
 		confirmed: (verb) => `${verb}. Done.`,
 		canSee: 'Can see',
-		contextRows: (count, id) => `${count} ${id}`,
-		locked: (id) => `${id}, excluded from this request`,
+		canSeeTitle: 'What the Gardener can see',
+		inThisRequest: 'In this request',
+		locked: (id) => `${id}, not shared: needs your grant`,
+		canSeeSummary: (facts, types) => `${facts} facts across ${types} types`,
+		notShared: (count) => `${count} not shared`,
+		notSharedLabel: 'Not shared',
+		notSharedExplain:
+			'A tool declared these, but T2 facts stay out of every request until you share them. Allow gives the Gardener a standing read you can revoke at any time.',
+		allow: 'Allow',
 		openAuditLog: 'Open the audit log',
+		aboutTool: 'About this tool',
 		noKeyOnDevice: 'No key on this device',
 		useLocalModel: 'Use local model',
 		budgets: 'Budgets',
 		budget: (used, cap) => `${used} of ${cap}`,
 		tool: 'Tool',
 		thread: 'Conversation with the Gardener',
-		inContext: (count, id) => `${count} ${id} rows are in this request.`,
+		inContext: (count, name) => `${name}: ${count} in this request.`,
+		switchGrade: 'Switch the Gardener’s grade',
+		grade: 'Grade',
+		unavailableNoProvider: 'No provider is configured.',
+		unavailableNoCapableModel: (missing) => `No model can run this: it needs ${missing}.`,
+		unavailableNoKey: 'No key on this device',
+		budgetReached: 'The monthly budget is reached.',
+		offline: 'Cloud models are unavailable offline.',
+		confirmCost: (estimate) => `This will cost about ${estimate}. Send it?`,
+		trimmed: (ids) => `Trimmed to fit: ${ids}`,
+		runsInApp: 'The Gardener runs in the installed app.',
+		devClamp: (model) => `Development build: every grade runs on ${model}.`,
+		cutShort: 'Cut short by the token cap.',
+		continueReply: 'Continue',
+		stop: 'Stop',
+		send: 'Send',
+		newThread: 'New conversation',
+		threads: 'Conversations',
+		askPlaceholder: 'Ask the Gardener',
+		askInDomain: (domain) => `Ask about ${domain}`,
+		focus: (title) => `About: ${title}`,
+		lockedThread: 'This conversation read T2 data and stays out of future context.',
+		includeThread: 'Include this conversation',
+		delegated: (tool) => `Ran ${tool} as its own request.`,
+		copyCode: 'Copy',
+		copied: 'Copied',
+		toolRunning: 'Running',
+		toolDone: 'Done',
+		toolFailed: 'Failed',
+		toolCancelled: 'Cancelled',
+		toolWaiting: 'Waiting on you',
+		writing: 'Writing a reply',
+		sentAt: (time) => `Sent at ${time}`,
+		receivedAt: (time) => `Received at ${time}`,
+		copyMessage: 'Copy message',
+		addTask: 'Add task',
+		createTasks: (n) => (n === 1 ? 'Create 1 task' : `Create ${n} tasks`),
+		addToList: 'Add to the list',
+		discard: 'Discard',
+		committed: 'Added',
+		discarded: 'Discarded',
+		pastedText: 'Pasted text.txt',
 	},
 	access: {
 		read: 'read',
@@ -299,6 +443,22 @@ export const defaultStrings: UiStrings = {
 	},
 	widget: {
 		move: (title) => `Move ${title}`,
+	},
+	dropzone: {
+		drop: (count) => (count === 1 ? 'Drop 1 file' : count > 1 ? `Drop ${count} files` : 'Drop files'),
+		groups: {
+			image: (count) => (count === 1 ? '1 image' : `${count} images`),
+			pdf: (count) => (count === 1 ? '1 PDF' : `${count} PDFs`),
+			text: (count) => (count === 1 ? '1 text file' : `${count} text files`),
+			other: (count) => (count === 1 ? '1 other file' : `${count} other files`),
+		},
+		tooMany: (max) => (max === 1 ? 'One file at a time' : `Up to ${max} files at a time`),
+		notAccepted: 'These files cannot be added here',
+	},
+	file: {
+		open: (name) => `Open ${name}`,
+		missing: 'No longer on this device',
+		failed: 'Could not be added',
 	},
 }
 

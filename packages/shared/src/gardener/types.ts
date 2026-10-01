@@ -33,6 +33,11 @@ export interface ModelRow {
 	/** The tokens its context holds. */
 	contextTokens: number
 	pricing: Pricing
+	/**
+	 * It reasons before it answers whether asked to or not, and that reasoning counts toward a request's output
+	 * limit: a request to it is given room for both.
+	 */
+	thinks?: boolean
 }
 
 export interface ProviderRow {
@@ -69,6 +74,7 @@ export interface ModelEdit {
 	flags?: readonly ModelFlag[]
 	contextTokens?: number
 	pricing?: Partial<Pricing>
+	thinks?: boolean
 }
 
 /** What a model lacks that a tool needs: one of its flags, or the context size. */

@@ -23,6 +23,7 @@
 
 <script lang="ts">
 	let typed = $state('')
+	let note = $state('')
 	/** A form's draft: nothing is set until its field is typed in. */
 	let draft = $state<Record<string, string>>({})
 </script>
@@ -111,6 +112,36 @@
 />
 
 <Story name="Mono" args={{ label: 'Repository', value: repo, mono: true }} />
+
+<!-- A textarea in the same chrome: one line to begin with, growing with what is typed to about eight; Enter still
+     reaches onkeydown, so a composer can submit on it -->
+<Story
+	name="Multiline"
+	args={{ label: 'Note', placeholder: 'Ask the Gardener', multiline: true, icon: 'sparkles' }}
+	play={async ({ canvasElement, userEvent, args }) => {
+		const canvas = canvasOf(canvasElement)
+		const input = canvas.getByRole('textbox', { name: 'Note' })
+		await expect(input.tagName).toBe('TEXTAREA')
+		await expect(input).toHaveAttribute('rows', '1')
+		const before = input.getBoundingClientRect().height
+		await userEvent.type(input, 'First line{Shift>}{Enter}{/Shift}Second line{Shift>}{Enter}{/Shift}Third line')
+		await expect(input).toHaveValue('First line\nSecond line\nThird line')
+		await expect(canvas.getByRole('status')).toHaveTextContent('Third line')
+		await expect(args.oninput).toHaveBeenCalled()
+		await expect(args.onkeydown).toHaveBeenCalled()
+		// engines with field-sizing grow the field with its lines; the rest keep it one row tall and scroll
+		if (CSS.supports('field-sizing', 'content')) {
+			await expect(input.getBoundingClientRect().height).toBeGreaterThan(before)
+		}
+	}}
+>
+	{#snippet template(args)}
+		<div style="display: grid; gap: var(--space-2); max-width: 320px">
+			<Field {...args} bind:value={note} />
+			<output style="font: var(--ed-t-caption); color: var(--text-secondary); white-space: pre-line">{note}</output>
+		</div>
+	{/snippet}
+</Story>
 
 <Story name="Trailing snippet" args={{ label: weight.label, value: String(weightSeries.at(-1)), unit: weight.unit }}>
 	{#snippet template(args)}

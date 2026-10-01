@@ -67,6 +67,21 @@ export { default as Stepper } from './components/Stepper/Stepper.svelte'
 export { default as Tooltip } from './components/Tooltip/Tooltip.svelte'
 export { tooltip } from './components/Tooltip/tooltip.js'
 
+// Files
+export { default as Dropzone } from './components/Dropzone/Dropzone.svelte'
+export {
+	checkFiles,
+	formatBytes,
+	groupOf,
+	matchesType,
+	summarize,
+	type FileCheck,
+	type FileGroup,
+	type FileLike,
+	type FileRefusal,
+	type FileRules,
+} from './files/check-files.js'
+
 // Feedback
 export { default as Toast } from './toast/Toast.svelte'
 export { default as ToastHost } from './toast/ToastHost.svelte'
@@ -81,7 +96,7 @@ export type { BannerPlacement, BannerTone } from './components/Banner/Banner.sve
 export { default as QuickAdd } from './components/QuickAdd/QuickAdd.svelte'
 export { defaultParse, type ParsedChip, type QuickAddParser } from './components/QuickAdd/QuickAdd.svelte'
 export { default as DataTable } from './components/DataTable/DataTable.svelte'
-export type { DataTableColumn } from './components/DataTable/DataTable.svelte'
+export type { DataTableCell, DataTableColumn } from './components/DataTable/DataTable.svelte'
 export { default as Widget } from './components/Widget/Widget.svelte'
 export type { WidgetAction, WidgetSize } from './components/Widget/Widget.svelte'
 export { default as WidgetGrid } from './components/WidgetGrid/WidgetGrid.svelte'
@@ -93,15 +108,31 @@ export { default as InboxCard } from './components/InboxCard/InboxCard.svelte'
 export type { InboxAction } from './components/InboxCard/InboxCard.svelte'
 export { default as GardenerMessage } from './components/GardenerMessage/GardenerMessage.svelte'
 export { default as Thread } from './components/GardenerMessage/Thread.svelte'
+export { default as Greeting } from './components/Greeting/Greeting.svelte'
+export { default as Markdown } from './components/Markdown/Markdown.svelte'
+export { default as Spinner } from './components/Spinner/Spinner.svelte'
+export { default as Sprouting } from './components/Sprouting/Sprouting.svelte'
 export { default as CanSee } from './components/CanSee/CanSee.svelte'
+export type { CanSeeItem } from './components/CanSee/CanSee.svelte'
+export { default as ReadList } from './components/ReadList/ReadList.svelte'
+export type { ReadItem } from './components/ReadList/ReadList.svelte'
+export { default as Composer } from './components/Composer/Composer.svelte'
+export { default as FileChip } from './components/FileChip/FileChip.svelte'
+export { default as FileButton } from './components/FileButton/FileButton.svelte'
 export { default as ToolCard } from './components/ToolCard/ToolCard.svelte'
 export type { ToolAccess, ToolState } from './components/ToolCard/ToolCard.svelte'
+export { default as ToolRun } from './components/ToolCard/ToolRun.svelte'
+export type { ToolStatus } from './components/ToolCard/ToolChrome.svelte'
 export { default as ProposalCard } from './components/ProposalCard/ProposalCard.svelte'
 export type { ProposalState } from './components/ProposalCard/ProposalCard.svelte'
 
 // Overlays
 export { default as Popover } from './components/Popover/Popover.svelte'
 export type { PopoverAnchor, PopoverCloseReason } from './components/Popover/Popover.svelte'
+export { default as DetailPopover } from './components/DetailPopover/DetailPopover.svelte'
+export type { DetailTone, DetailWidth } from './components/DetailPopover/DetailPopover.svelte'
+export { default as DetailSection } from './components/DetailPopover/DetailSection.svelte'
+export type { DetailRow, DetailRowTone } from './components/DetailPopover/DetailSection.svelte'
 export { default as Menu } from './components/Menu/Menu.svelte'
 export type { MenuItem, MenuPresentation } from './components/Menu/Menu.svelte'
 
@@ -123,7 +154,12 @@ export type { SwipeAction, SwipeLeading, SwipeTrailing } from './components/Swip
 
 // The status bar
 export { default as StatusBar } from './components/StatusBar/StatusBar.svelte'
-export type { InboxItem, StatusBarGardener, StatusBarIntegration } from './components/StatusBar/StatusBar.svelte'
+export type {
+	InboxItem,
+	StatusBarGardener,
+	StatusBarIntegration,
+	StatusBarNotice,
+} from './components/StatusBar/StatusBar.svelte'
 
 // Lists
 export { default as ListRow } from './components/ListRow/ListRow.svelte'

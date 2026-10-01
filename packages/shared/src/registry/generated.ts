@@ -1670,6 +1670,7 @@ export const DECLARATIONS = {
 				"confirm": false,
 				"reads": [
 					"forecast",
+					"alert",
 					"home-area",
 					"venue"
 				],
@@ -1791,18 +1792,15 @@ export const SHELL = {
 				"order": 0,
 				"place": true,
 				"key": null
-			},
+			}
+		],
+		"pinned": [
 			{
 				"id": "gardener",
 				"name": "shell.gardener",
 				"subtitle": "shell.gardenerSubtitle",
-				"group": "shell",
-				"order": 5,
-				"place": false,
 				"key": "G"
-			}
-		],
-		"pinned": [
+			},
 			{
 				"id": "settings",
 				"name": "shell.settings",

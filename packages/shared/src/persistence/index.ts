@@ -1,5 +1,6 @@
 // The document store: a JSON document per domain, read and written whole, for what stays on this device and out of
-// every export (the Garden's feed until it moves onto signals, Sky's mirror). The owner's data lives in the data layer
+// every export (the Garden's feed until it moves onto signals; Sky's mirror was here until D-85, and its old document
+// is read once more by the import). The owner's data lives in the data layer
 // (`@eden/shared/data`). Under Tauri the crate keeps a document at <app data dir>/domains/<id>.json
 // (`src-tauri/src/domains/documents.rs`); in a plain browser (`yarn dev:web`) it lives in localStorage under
 // `documentKey(id)`. The store owns the document's shape and bumps `version` when it changes.

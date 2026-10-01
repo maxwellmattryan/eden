@@ -11,6 +11,7 @@
 	import { page } from '$app/state'
 	import { env } from '$env/dynamic/public'
 	import { BottomTabBar, ToastHost, UiKitProvider, domainGlyph, type BottomTab, type GlyphId } from '@eden/ui-kit'
+	import { fileDropGuard } from '@eden/shared/api'
 	import { initializeI18n, locale, t, uiKitStrings } from '@eden/shared/i18n'
 	import { shell, tabBar } from '@eden/shared/manifest'
 	import { rememberPlace, rememberScroll, scrollOf, tabOf } from '@eden/shared/navigation'
@@ -98,6 +99,9 @@
 		}
 	})
 </script>
+
+<!-- a file dropped on the app (an iPad's drag) does nothing, instead of opening in place of it (D-84) -->
+<svelte:window ondragover={fileDropGuard.over} ondrop={fileDropGuard.drop} />
 
 <SplashScreen show={$splashVisible} version={env.PUBLIC_APP_VERSION ?? ''} />
 

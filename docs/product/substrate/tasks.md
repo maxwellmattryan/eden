@@ -47,11 +47,16 @@ For the layer: a routine's `due` is `null`, so a range query never finds it; its
 
 ## Gardener tools (Phase 1)
 
-| tool | reads | access | confirm |
-|---|---|---|---|
-| `create-task` | `task` | write-draft | the draft card is the confirmation |
-| `complete-task` | `task` | write | inline undo |
-| `summarize-day` | `task`, `event` | read | none |
+| tool | reads | access | confirm | grade |
+|---|---|---|---|---|
+| `create-task` | `task` | write-draft | the draft card is the confirmation | plain |
+| `complete-task` | `task` | write | a tool card the first time, then inline undo | plain |
+| `summarize-day` | `task`, `event`, `forecast`, `alert` | read | none | `light` |
+| `what-you-know-about-me` | every fact type the grants allow | read | none | plain |
+| `log-quick` | none | write | a tool card the first time, which grants it standing; then undo (D-12) | plain |
+| `propose-fact` | none | write-draft | the proposal card is the confirmation (D-72) | plain |
+
+The substrate's tools are declared in code, since no manifest holds them (`substrate/ai.md`; `engineering/gardener.md`).
 
 ## Notifications
 

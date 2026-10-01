@@ -21,9 +21,11 @@ export {
 	emit,
 	onDelivered,
 	onSchedule,
+	onWithdrawn,
 	SCHEDULER_FIRED,
 	startSignals,
 	subscribe,
+	withdraw,
 	type DeclaredSignal,
 	type SignalsStart,
 } from './runtime.js'

@@ -582,7 +582,7 @@
 				</Popover>
 			{/if}
 			<!-- one control fetches everything the page polls again; the arrows turn while it does, and the tooltip says so -->
-			<span class={['anchor', { 'refresh-busy': weather.loading }]}>
+			<span class={['anchor', 'refresh', { 'refresh-busy': weather.loading }]}>
 				<IconButton
 					icon="refresh-cw"
 					size="xs"
@@ -944,8 +944,14 @@
 		display: inline-flex;
 	}
 	/* The arrows turn clockwise while a refresh runs; under reduced motion the duration is zero and they stand still */
+	/* The alerts button is taller than the xs refresh, so the refresh's place is as tall as the larger control and
+	   the row keeps its height whether the button is there or not */
+	.refresh {
+		align-items: center;
+		min-height: var(--ed-control);
+	}
 	.refresh-busy :global(.ed-icon) {
-		animation: refresh-turn calc(var(--ed-duration-breeze) * 1.5) linear infinite;
+		animation: refresh-turn var(--ed-duration-spin) linear infinite;
 	}
 	@keyframes refresh-turn {
 		to {

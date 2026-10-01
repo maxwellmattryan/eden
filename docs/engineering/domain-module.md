@@ -55,7 +55,7 @@ All under `packages/shared/src/`, hand-edited and formatted by Prettier:
 | `notificationKinds` | consumed | `id`, `channel` (`in-app`, `os`), `cadence`, `default`. With `signal` (one of the domain's own) it is a rule, and `when` is its condition: fields, each with the words it may be. Its words are `domains.<id>.notifications.<kind>.line` and, for `os`, `.title` |
 | `schedules` | consumed | `id` with `daily` (`HH:MM`) or `every` (seconds, sixty at least); the scheduler knows it as `<id of the domain>.<id>` |
 | `deviceCapabilities` | consumed | what it needs of the device; `os-notifications` is what an `os` rule needs |
-| `tools`, `captureSources` | declared | checked and generated; their consumers arrive with the Gardener and Capture. A tool is `id`, `access`, `confirm`, `reads`, and, when a model runs it, `grade` (`light`, `standard`, `deep`), `needs` (`tools`, `vision`) and `minContext` in tokens; no grade is a plain tool (D-74, "Model grades") |
+| `tools`, `captureSources` | consumed (`tools`), declared (`captureSources`) | checked and generated; the Gardener's runtime consumes `tools` (`engineering/gardener.md`) and Capture will consume `captureSources`. A tool is `id`, `access`, `confirm`, `reads`, and, when a model runs it, `grade` (`light`, `standard`, `deep`), `needs` (`tools`, `vision`) and `minContext` in tokens; no grade is a plain tool (D-74, "Model grades") |
 | `parent`, `integrations`, `dayAnnotations`, `dailyLine`, `mobile`, `settings` | planned | the builder refuses them until a domain consumes one. `settings` is Phase 1 in the manifest doc and waits for the Domains tab |
 
 The name, the subtitle, the glyph and a widget's title and prompt are derived from ids (`domains.<id>.name`, `domainGlyph(id)`, `garden.widgets.<widgetId>`, `garden.empty.<widgetId>`, the id in camelCase), so a manifest never repeats them.
@@ -112,7 +112,11 @@ An entity URI resolves to its owner through `ownerOf`, so a link survives a chan
 
 Each app has `src/lib/domains/manifest.ts` with `defineDomain(id, bindings)`, which joins a declaration to what the app binds. On desktop the widget bindings are typed over the declaration's built widget ids: a widget without a binding does not compile, and neither does a binding for a widget nobody declared. The phone binds a route and a live glyph, and its widgets when its Garden is built.
 
+`pack` is what the Gardener's context pack carries of a row, by entity type, for a type whose row is more than a request should pay for (D-85): the shell's pack readers apply it after the query, a type without an entry is sent whole, and `null` leaves a row out. Sky binds one for `forecast`.
+
 `subscribe` is where a domain hears its schedules and its signals and registers its mirrors with the refresh coordinator (`engineering/signals.md`). The shell calls it once when it starts, before any store is loaded, so what it binds reads rows and not the domain's store; its answer unbinds.
+
+`tools` binds a handler to each tool the domain declares and `quickActionHandlers` a store write to each quick action (`engineering/gardener.md`, "Tools"); the domain keeps them in `tools.ts`, which imports its own store and the shell and nothing of another domain.
 
 `src/lib/domains/index.ts` lists the enabled domains in the shell's order and exports their `declarations`. Disabling a domain is leaving it out of that list: its sidebar entry, its tiles, its palette entries, its quick actions, its rules and its schedules go, and its rows stay.
 
@@ -149,7 +153,7 @@ A tool declares a grade and what it needs of a model; which model runs it is res
 
 The per-tool override is keyed `<domain>.<tool>`, the per-domain one by the domain's id. A tool's grade is read from its declaration each time, never cached, so a tool may gain a grade later (OQ-22).
 
-Nothing imports the module yet: there is no request path until the Gardener's runtime. When it arrives, it calls `resolveTool` before every model-backed tool request and `resolveGrade` for the conversation, estimates from the resolved model's pricing row, and never sends while `confirm` is owed; a caller with no owner present, such as a rule, stops there and leaves a card. It writes the audit entry from the result (`declared`, `grade`, `provider`, `model`, `source`, the confirm's outcome) with the thread and the request that called it (`product/substrate/ai.md`, "Audit log"). It also settles whether a tool id is unique across domains: the builder holds one per domain (refusal 7), a grant names a bare tool id (`@eden/shared/grants`), and an override is keyed by both, which is safe either way.
+The Gardener's runtime (`engineering/gardener.md`) calls `resolveTool` before every model-backed tool request and `resolveGrade` for the conversation, estimates from the resolved model's pricing row, and never sends while `confirm` is owed. It writes the audit entry from the result (`declared`, `grade`, `provider`, `model`, `source`, the confirm's outcome) with the thread and the request that called it (`product/substrate/ai.md`, "Audit log"). A tool id is unique within its domain (refusal 7); on the wire it is `<domain>_<id>`, a grant names the bare id (`@eden/shared/grants`), and an override is keyed `<domain>.<tool>` (D-76). In development the map is clamped before it is handed to the resolver: the light model for light and standard, the standard one for deep (D-81).
 
 ## Where a domain's code lives
 
@@ -160,7 +164,7 @@ Nothing imports the module yet: there is no request path until the Gardener's ru
 | mobile | `apps/mobile/src/lib/domains/<id>/` | `manifest.ts` (bindings), and its surfaces as they are built |
 | Rust | `src-tauri/src/domains/<id>/` | models, services and commands, for a domain that needs the crate |
 
-Every folder under a `domains/` is a domain, named by its plain id. What belongs to the shell lives in `src/lib/shell/`: the Garden (`shell/garden/`), the activity feed (`shell/feed.svelte.ts`), the inbox (`shell/inbox.svelte.ts`), the undo toast. Sky's model, providers and store predate this layout and stay in `packages/shared/src/weather/`; its manifest is in `domains/weather/`. In the crate, `domains/documents.rs` is the document store and not a domain.
+Every folder under a `domains/` is a domain, named by its plain id. What belongs to the shell lives in `src/lib/shell/`: the Garden (`shell/garden/`), the activity feed (`shell/feed.svelte.ts`), the inbox (`shell/inbox.svelte.ts`), the undo toast. Sky's model, providers, row mapping and store predate this layout and stay in `packages/shared/src/weather/`; its manifest is in `domains/weather/`. In the crate, `domains/documents.rs` is the document store and not a domain.
 
 ## Isolation
 

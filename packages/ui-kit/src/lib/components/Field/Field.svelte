@@ -5,8 +5,11 @@
 	// The input is controlled (value plus oninput) because the compiler forbids bind:value with a dynamic `type`.
 	// `value` has no fallback on purpose: a bindable with one throws when it is bound to something unset, such as a
 	// key a record does not hold yet, and a form binds its fields to exactly that. Unset reads as empty.
+	// `multiline` swaps the input for a textarea in the same chrome: it starts `rows` tall, grows with its content
+	// (`field-sizing: content`, where the engine has it; otherwise it stays `rows` tall and scrolls) and stops at about
+	// eight lines. Its events reach `oninput` and `onkeydown` as the input's would, so Enter can submit from either.
 	import type { Snippet } from 'svelte'
-	import type { HTMLInputAttributes } from 'svelte/elements'
+	import type { HTMLInputAttributes, HTMLTextareaAttributes } from 'svelte/elements'
 	import type { IconName } from '../../icons/icons.js'
 	import Icon from '../../icons/Icon.svelte'
 	import Chip from '../Chip/Chip.svelte'
@@ -33,6 +36,10 @@
 		mono?: boolean
 		/** The Quick Log value: data-lg in mono, --field-lg tall, a decimal keypad on touch. */
 		large?: boolean
+		/** A textarea in the same chrome, growing with its content to about eight lines. */
+		multiline?: boolean
+		/** multiline only: the lines shown before anything is typed, and the height where the engine cannot size to content. */
+		rows?: number
 		type?: HTMLInputAttributes['type']
 		/** The input's id; the label and the helper point at it. */
 		id?: string
@@ -54,6 +61,8 @@
 		icon,
 		mono = false,
 		large = false,
+		multiline = false,
+		rows = 1,
 		type = 'text',
 		id = uid,
 		oninput,
@@ -66,33 +75,59 @@
 	const message = $derived(error || helper)
 	const messageId = $derived(`${id}-message`)
 
-	function input(e: Event & { currentTarget: EventTarget & HTMLInputElement }) {
+	/** Either control's event, forwarded under the input's type: both carry `currentTarget.value`. */
+	type Target = EventTarget & (HTMLInputElement | HTMLTextAreaElement)
+	function input(e: Event & { currentTarget: Target }) {
 		value = e.currentTarget.value
-		oninput?.(e)
+		oninput?.(e as Event & { currentTarget: EventTarget & HTMLInputElement })
 	}
+	function keydown(e: KeyboardEvent & { currentTarget: Target }) {
+		onkeydown?.(e as KeyboardEvent & { currentTarget: EventTarget & HTMLInputElement })
+	}
+	/** The pass-through attributes, under the textarea's type when that is what renders. */
+	const textareaRest = $derived(rest as unknown as HTMLTextareaAttributes)
 </script>
 
-<div class="ed-field {className}">
+<div class="ed-field {className}" class:ed-field-multiline={multiline}>
 	{#if label}<label class="ed-field-label" for={id}>{label}</label>{/if}
-	<InputWrap {large} invalid={!!error}>
-		{#if icon}<Icon name={icon} size="sm" class="ed-field-icon" />{/if}
-		<input
-			class="ed-field-input"
-			class:ed-field-input-mono={mono}
-			class:ed-field-input-lg={large}
-			{id}
-			{type}
-			{placeholder}
-			value={value ?? ''}
-			inputmode={large ? 'decimal' : undefined}
-			aria-invalid={error ? 'true' : undefined}
-			aria-describedby={message ? messageId : undefined}
-			oninput={input}
-			{onkeydown}
-			{...rest}
-		/>
-		{#if unit}<Chip label={unit} mono />{/if}
-		{@render trailing?.()}
+	<InputWrap {large} invalid={!!error} grow={multiline}>
+		{#if icon}<span class="ed-field-side"><Icon name={icon} size="sm" class="ed-field-icon" /></span>{/if}
+		{#if multiline}
+			<textarea
+				class="ed-field-input ed-field-textarea"
+				class:ed-field-input-mono={mono}
+				{id}
+				{rows}
+				{placeholder}
+				value={value ?? ''}
+				aria-invalid={error ? 'true' : undefined}
+				aria-describedby={message ? messageId : undefined}
+				oninput={input}
+				onkeydown={keydown}
+				{...textareaRest}></textarea>
+		{:else}
+			<input
+				class="ed-field-input"
+				class:ed-field-input-mono={mono}
+				class:ed-field-input-lg={large}
+				{id}
+				{type}
+				{placeholder}
+				value={value ?? ''}
+				inputmode={large ? 'decimal' : undefined}
+				aria-invalid={error ? 'true' : undefined}
+				aria-describedby={message ? messageId : undefined}
+				oninput={input}
+				onkeydown={keydown}
+				{...rest}
+			/>
+		{/if}
+		{#if unit || trailing}
+			<span class="ed-field-side">
+				{#if unit}<Chip label={unit} mono />{/if}
+				{@render trailing?.()}
+			</span>
+		{/if}
 	</InputWrap>
 	{#if message}
 		<p class="ed-field-message" class:ed-field-error={!!error} id={messageId}>{message}</p>
@@ -114,6 +149,18 @@
 	.ed-field :global(.ed-field-icon) {
 		color: var(--text-tertiary);
 	}
+	/* What sits beside the text: full height in a one-line field, the first line's height in a growing one */
+	.ed-field-side {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-2);
+		align-self: stretch;
+		flex: none;
+	}
+	.ed-field-multiline .ed-field-side {
+		align-self: flex-start;
+		height: calc(var(--ed-control) - 2px);
+	}
 	.ed-field-input {
 		flex: 1;
 		min-width: 0;
@@ -131,6 +178,18 @@
 	}
 	.ed-field-input::placeholder {
 		color: var(--text-tertiary);
+	}
+	/* The textarea sizes to its content where the engine can (Chromium 123, WebKit 26); elsewhere it keeps `rows` and
+	   scrolls. Its first line sits where the input's does, and it stops growing at about eight lines. */
+	.ed-field-textarea {
+		height: auto;
+		min-height: 1lh;
+		max-height: 8lh;
+		padding-block: calc((var(--ed-control) - 2px - 1lh) / 2);
+		resize: none;
+		field-sizing: content;
+		overflow-y: auto;
+		line-height: inherit;
 	}
 	.ed-field-input-mono {
 		font: var(--ed-t-data);

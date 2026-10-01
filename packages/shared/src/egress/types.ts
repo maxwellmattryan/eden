@@ -11,6 +11,7 @@ export const DESTINATIONS = [
 	'nws',
 	'weatherkit',
 	'updater',
+	'anthropic',
 ] as const
 export type Destination = (typeof DESTINATIONS)[number]
 

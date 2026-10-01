@@ -278,5 +278,79 @@ pub fn get_migrations() -> Vec<&'static str> {
         );
         CREATE UNIQUE INDEX inbox_once ON inbox (signal_id, rule);
         "#,
+        // Migration 6: the Gardener's audit log, threads, messages and policy (docs/engineering/gardener.md, D-76).
+        // An audit entry is one request to a model as the owner may see it afterwards: what was read, by which
+        // grants, what it cost and how it ended. It is this device's: never exported, never cleared by a replace,
+        // swept at ninety days. A thread and its messages are stamped rows with tombstones like any other, and so is
+        // a policy row, keyed by name; all three export, sync and merge.
+        r#"
+        CREATE TABLE audit_entries (
+            id                TEXT PRIMARY KEY NOT NULL CHECK (length(id) = 26),
+            at                INTEGER NOT NULL CHECK (at >= 0),
+            surface           TEXT NOT NULL CHECK (length(surface) > 0),
+            thread_id         TEXT,
+            parent_request_id TEXT,
+            tool              TEXT,
+            domain            TEXT,
+            declared_grade    TEXT CHECK (declared_grade IS NULL OR declared_grade IN ('light', 'standard', 'deep')),
+            grade             TEXT CHECK (grade IS NULL OR grade IN ('light', 'standard', 'deep')),
+            source            TEXT CHECK (source IS NULL OR source IN ('tool-override', 'domain-override', 'map')),
+            provider          TEXT NOT NULL CHECK (length(provider) > 0),
+            model             TEXT NOT NULL CHECK (length(model) > 0),
+            reads             TEXT NOT NULL CHECK (json_valid(reads) AND json_type(reads) = 'array'),
+            entities          TEXT NOT NULL CHECK (json_valid(entities) AND json_type(entities) = 'array'),
+            tools             TEXT NOT NULL CHECK (json_valid(tools) AND json_type(tools) = 'array'),
+            grants            TEXT NOT NULL CHECK (json_valid(grants) AND json_type(grants) = 'array'),
+            confirm_outcome   TEXT CHECK (confirm_outcome IS NULL OR confirm_outcome IN ('confirmed', 'cancelled')),
+            tokens_in         INTEGER NOT NULL DEFAULT 0 CHECK (tokens_in >= 0),
+            tokens_out        INTEGER NOT NULL DEFAULT 0 CHECK (tokens_out >= 0),
+            cache_read        INTEGER NOT NULL DEFAULT 0 CHECK (cache_read >= 0),
+            cost_usd          REAL NOT NULL DEFAULT 0 CHECK (cost_usd >= 0),
+            outcome           TEXT NOT NULL CHECK (outcome IN
+                                  ('ok', 'refusal', 'max-tokens', 'error', 'cancelled', 'declined', 'budget',
+                                   'interrupted')),
+            image             TEXT CHECK (image IS NULL OR json_valid(image))
+        );
+        CREATE INDEX audit_at ON audit_entries (at);
+        CREATE INDEX audit_thread ON audit_entries (thread_id, at) WHERE thread_id IS NOT NULL;
+
+        CREATE TABLE threads (
+            id         TEXT PRIMARY KEY NOT NULL CHECK (length(id) = 26),
+            domain     TEXT,
+            title      TEXT NOT NULL,
+            tier       TEXT NOT NULL CHECK (tier IN ('T0', 'T1', 'T2')),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            deleted_at TEXT
+        );
+        CREATE INDEX threads_live ON threads (updated_at DESC, id) WHERE deleted_at IS NULL;
+
+        CREATE TABLE messages (
+            id         TEXT PRIMARY KEY NOT NULL CHECK (length(id) = 26),
+            thread_id  TEXT NOT NULL CHECK (length(thread_id) = 26),
+            role       TEXT NOT NULL CHECK (role IN ('owner', 'gardener')),
+            blocks     TEXT NOT NULL CHECK (json_valid(blocks) AND json_type(blocks) = 'array'),
+            request_id TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            deleted_at TEXT
+        );
+        CREATE INDEX messages_thread ON messages (thread_id, id) WHERE deleted_at IS NULL;
+
+        CREATE TABLE policy (
+            key        TEXT PRIMARY KEY NOT NULL CHECK (length(key) > 0),
+            value      TEXT NOT NULL CHECK (json_valid(value)),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            deleted_at TEXT
+        ) WITHOUT ROWID;
+        "#,
+        // Migration 7: what the owner attached to a message, in the audit log (D-83): each file's hash, type, size
+        // and dimensions, never its bytes. `image` stays what a delegated request sent with its prompt.
+        r#"
+        ALTER TABLE audit_entries
+            ADD COLUMN attachments TEXT NOT NULL DEFAULT '[]'
+                CHECK (json_valid(attachments) AND json_type(attachments) = 'array');
+        "#,
     ]
 }
