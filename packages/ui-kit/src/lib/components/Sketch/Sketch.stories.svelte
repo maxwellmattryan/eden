@@ -3,8 +3,9 @@
 	import type { ComponentProps } from 'svelte'
 	import { expect, waitFor } from 'storybook/test'
 	import Sketch from './Sketch.svelte'
+	import { hearthEmbers } from '../../sketches/hearth-embers.js'
 	import { skyField } from '../../sketches/sky-field.js'
-	import { skyMotif } from '../../../stories/sample-data.js'
+	import { hearthMotif, skyMotif } from '../../../stories/sample-data.js'
 
 	/** The backing store holds something: the sketch has drawn. */
 	function painted(canvas: HTMLCanvasElement): boolean {
@@ -22,7 +23,7 @@
 			docs: {
 				description: {
 					component:
-						'The kit’s one canvas. A sketch is a plain definition, `setup` and `draw`, in nannou’s shape; the component sizes the backing store, resolves the theme’s colours where it stands, drives the frames at no more than `fps`, rests while it is out of sight, and under reduced motion draws the sketch once as a still. It fills its container. The stories draw `skyField`, Sky’s motif: the wind as a flow field.',
+						'The kit’s one canvas. A sketch is a plain definition, `setup` and `draw`, in nannou’s shape; the component sizes the backing store, resolves the theme’s colours where it stands, drives the frames at no more than `fps`, rests while it is out of sight, and under reduced motion draws the sketch once as a still. It fills its container. The stories draw `skyField`, Sky’s motif: the wind as a flow field, and `hearthEmbers`, Hearth’s: the stock as sparks off a fire.',
 				},
 			},
 		},
@@ -62,6 +63,30 @@
 
 <!-- A calm: the streaks wander, since there is no wind to hold them to a line -->
 <Story name="Calm" {template} args={{ params: { ...skyMotif, windSpeed: 0, windGust: 0 } }} />
+
+<!-- Hearth's motif: 22 items in stock, four of them expiring by Friday, which rise in the accent -->
+<Story
+	name="Embers"
+	{template}
+	args={{ sketch: hearthEmbers, params: hearthMotif }}
+	play={async ({ canvasElement }) => {
+		const canvas = surface(canvasElement)
+		await waitFor(() => expect(painted(canvas)).toBe(true))
+	}}
+/>
+
+<!-- A full larder: every spark rises -->
+<Story name="Embers, full larder" {template} args={{ sketch: hearthEmbers, params: { items: 80, expiring: 6 } }} />
+
+<!-- An empty one still glows -->
+<Story name="Embers, bare" {template} args={{ sketch: hearthEmbers, params: { items: 0, expiring: 0 } }} />
+
+<!-- Nothing expiring: no spark takes the accent -->
+<Story
+	name="Embers, none expiring"
+	{template}
+	args={{ sketch: hearthEmbers, params: { ...hearthMotif, expiring: 0 } }}
+/>
 
 <!-- A sketch that says something carries a name and is an image -->
 <Story

@@ -32,7 +32,8 @@
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { copyText } from '$lib/clipboard'
-	import { formatValue } from '@eden/shared/profile'
+	import { formatValue, type FactProposal } from '@eden/shared/profile'
+	import { proposalDetail } from '../profile/rows'
 	import { profile } from '../profile/store.svelte'
 	import { undoToast } from '../undo'
 	import { threadAttachments } from './attachments.svelte'
@@ -117,10 +118,12 @@
 	})
 	const copy = $derived(text.length && !live ? () => copyText(text.join('\n\n')) : undefined)
 
-	function accept(index: number, proposal: { id: string; type: string }) {
-		const result = profile.accept(proposal.id, $t(`profile.facts.${proposal.type}`))
-		if (result)
-			undoToast($t('profile.toast.accepted', { values: { name: $t(`profile.facts.${proposal.type}`) } }), result.undo)
+	async function accept(index: number, proposal: FactProposal) {
+		const name = $t(`profile.facts.${proposal.type}`)
+		// the facts are read first: the one this proposal takes the place of has to be there to go
+		await profile.load()
+		const { undo } = profile.accept(proposal, name)
+		undoToast($t('profile.toast.accepted', { values: { name } }), undo)
 		runtime.settleProposal(message.id, index, 'accepted')
 	}
 	function dismiss(index: number, proposal: { id: string }) {
@@ -157,9 +160,9 @@
 		access={block.call.access}
 		payload={payload(block)}
 		text={block.call.error}
-		confirm={block.call.access === 'write' || block.call.access === 'act-external'
-			? $t('gardener.confirmTool', { values: { tool: block.call.tool } })
-			: undefined}
+		confirm={block.call.access === 'read'
+			? $t('gardener.confirmRead')
+			: $t('gardener.confirmTool', { values: { tool: block.call.tool } })}
 		state={stateOf(block.state)}
 		draft={draftOf(index, block.call.id)}
 		onconfirm={() => runtime.answerTool(block.call.id, true)}
@@ -205,6 +208,7 @@
 					fact={proposal.type}
 					value={formatValue(proposal.type, proposal.value, $t)}
 					text={proposal.text}
+					detail={proposalDetail(proposal, $t, $locale ?? 'en')}
 					state={segment.block.state}
 					onaccept={() => accept(segment.index, proposal)}
 					ondismiss={() => dismiss(segment.index, proposal)}

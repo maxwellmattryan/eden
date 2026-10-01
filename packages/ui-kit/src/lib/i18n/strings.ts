@@ -45,6 +45,37 @@ export interface UiStrings {
 	/** The name of a glyph that explains a label, such as a table column's info button. */
 	about: (name: string) => string
 	noData: string
+	/** The sun arc's readout of the time of day under the pointer. */
+	sunArc: {
+		elevation: string
+		azimuth: string
+		/** What the light is at the sun's elevation. */
+		phases: {
+			day: string
+			golden: string
+			civil: string
+			nautical: string
+			astronomical: string
+			night: string
+		}
+		/** The eight points of the compass a bearing is rounded to. */
+		bearings: { n: string; ne: string; e: string; se: string; s: string; sw: string; w: string; nw: string }
+	}
+	/** A chart's readout of the point under the pointer. */
+	chart: {
+		/** The sum of a stacked bar's series. */
+		total: string
+	}
+	/** The pager under a long table. */
+	pagination: {
+		label: string
+		/** Which rows are showing, of how many: "51–100 of 312". */
+		range: (from: number, to: number, total: number) => string
+		first: string
+		previous: string
+		next: string
+		last: string
+	}
 	/** The letters that stand for a date's parts in an unset date field: MM/DD/YYYY, in the system's order. */
 	datePart: { year: string; month: string; day: string }
 	gardener: {
@@ -172,7 +203,7 @@ export interface UiStrings {
 		mergeWith: (name: string) => string
 		everyRowRemoved: string
 		footer: (created: number, merged: number) => string
-		locations: { fridge: string; freezer: string; pantry: string; counter: string }
+		locations: { fridge: string; freezer: string; pantry: string; counter: string; household: string }
 		/** The accessible names of a draft row's fields; the name and the unit are placeholders too. */
 		rowName: string
 		rowQty: string
@@ -344,6 +375,28 @@ export const defaultStrings: UiStrings = {
 	step: (current, total) => `Step ${current} of ${total}`,
 	about: (name) => `About ${name}`,
 	noData: 'No data yet',
+	sunArc: {
+		elevation: 'Elevation',
+		azimuth: 'Azimuth',
+		phases: {
+			day: 'Daylight',
+			golden: 'Golden hour',
+			civil: 'Civil twilight',
+			nautical: 'Nautical twilight',
+			astronomical: 'Astronomical twilight',
+			night: 'Night',
+		},
+		bearings: { n: 'N', ne: 'NE', e: 'E', se: 'SE', s: 'S', sw: 'SW', w: 'W', nw: 'NW' },
+	},
+	chart: { total: 'Total' },
+	pagination: {
+		label: 'Pages',
+		range: (from, to, total) => `${from}–${to} of ${total}`,
+		first: 'First page',
+		previous: 'Previous page',
+		next: 'Next page',
+		last: 'Last page',
+	},
 	datePart: { year: 'YYYY', month: 'MM', day: 'DD' },
 	gardener: {
 		name: 'Gardener',
@@ -357,7 +410,7 @@ export const defaultStrings: UiStrings = {
 		confirmed: (verb) => `${verb}. Done.`,
 		canSee: 'Can see',
 		canSeeTitle: 'What the Gardener can see',
-		inThisRequest: 'In this request',
+		inThisRequest: 'In your next message',
 		locked: (id) => `${id}, not shared: needs your grant`,
 		canSeeSummary: (facts, types) => `${facts} facts across ${types} types`,
 		notShared: (count) => `${count} not shared`,
@@ -442,7 +495,7 @@ export const defaultStrings: UiStrings = {
 		mergeWith: (name) => `Merge with ${name}`,
 		everyRowRemoved: 'Every row was removed. Nothing will be created.',
 		footer: (created, merged) => (merged ? `${created} to create, ${merged} to merge` : `${created} to create`),
-		locations: { fridge: 'Fridge', freezer: 'Freezer', pantry: 'Pantry', counter: 'Counter' },
+		locations: { fridge: 'Fridge', freezer: 'Freezer', pantry: 'Pantry', counter: 'Counter', household: 'Household' },
 		rowName: 'Name',
 		rowQty: 'Quantity',
 		rowUnit: 'Unit',

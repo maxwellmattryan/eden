@@ -8,8 +8,9 @@
 
 <script lang="ts">
 	// A tool call inside a Gardener reply, in honey: the Gardener acting rather than speaking (D-40). The badge says the
-	// access level. A write or act-external card carries its confirm inline, with the payload in full and a button that
-	// repeats the verb, so the owner confirms exactly what will happen; read and write-draft cards have no buttons.
+	// access level. A card given a `confirm` carries it inline, with the payload in full and a button that repeats the
+	// verb, so the owner confirms exactly what will happen: a write or act-external card, and a read that reaches
+	// outside the app for something the owner has yet to see. A card with no `confirm` has no buttons.
 	// `pending` waits on that confirm. From there the state is the glyph at the end of the title line: a spinner while
 	// the tool runs, a success check when it is done, a danger x with the error in the body when it failed, and a danger
 	// x with "nothing was changed" when the owner cancelled. A done card whose `draft` still waits on the owner is not
@@ -31,7 +32,7 @@
 		text?: string
 		/** The exact payload, shown in full. */
 		payload?: string
-		/** The verb the confirm button repeats ("Create event"). With write or act-external access it puts the confirm inline. */
+		/** The verb the confirm button repeats ("Create event"). Given, it puts the confirm inline while the card is pending. */
 		confirm?: string
 		/** Called when the owner confirms. */
 		onconfirm?: () => void
@@ -60,7 +61,7 @@
 	}: Props = $props()
 
 	const s = useStrings()
-	const confirmable = $derived(!!confirm && (access === 'write' || access === 'act-external'))
+	const confirmable = $derived(!!confirm)
 	// the draft decides how a done card reads; any other state is the tool's own
 	const shown = $derived<ToolStatus | undefined>(
 		state === 'pending'

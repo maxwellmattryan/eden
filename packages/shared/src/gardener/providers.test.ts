@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { cacheWritePrice } from './estimate.js'
 import { declarations } from '../manifest/index.js'
 import {
 	ANTHROPIC,
@@ -27,6 +28,16 @@ describe('the seed', () => {
 			['claude-opus-5-5', ['tools', 'vision'], 1_000_000, { input: 4, output: 20, cacheRead: 0.2 }],
 			['claude-fable-5-1', ['tools', 'vision'], 1_000_000, { input: 10, output: 50, cacheRead: 0.25 }],
 		])
+	})
+
+	it('prices a cache write at a quarter over the input, and takes a row that names its own', () => {
+		for (const model of ANTHROPIC_SEED.models) expect(cacheWritePrice(model.pricing)).toBe(model.pricing.input * 1.25)
+		const first = ANTHROPIC_SEED.models[0]!
+		const rest = ANTHROPIC_SEED.models.slice(1)
+		const own = { ...first, pricing: { ...first.pricing, cacheWrite: 2 } }
+		expect(validateProvider({ ...ANTHROPIC_SEED, models: [own, ...rest] })).toEqual([])
+		const wrong = { ...first, pricing: { ...first.pricing, cacheWrite: -1 } }
+		expect(validateProvider({ ...ANTHROPIC_SEED, models: [wrong, ...rest] })).toHaveLength(1)
 	})
 
 	it('maps Haiku, Sonnet and Opus to the three grades, and Fable to none', () => {

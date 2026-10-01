@@ -919,5 +919,88 @@ describe('engine', () => {
 		clock.now += 90 * 24 * 60 * 60 * 1000 + 1
 		expect(engine.queryAudit()).toEqual([])
 		expect(engine.auditUsage()).toEqual({})
+		// The rollup of what they came to is never swept (D-115).
+		expect(engine.queryUsage()).toEqual([
+			{
+				bucket: null,
+				provider: null,
+				model: null,
+				grade: null,
+				kind: null,
+				domain: null,
+				tool: null,
+				requests: 3,
+				tokensIn: 300,
+				tokensOut: 30,
+				cacheRead: 0,
+				cacheWrite: 0,
+				costUsd: 0.875,
+			},
+		])
+	})
+
+	it('pages the audit log and rolls each entry into its day', () => {
+		const { engine, clock } = setup()
+		const thread = newId()
+		const base = {
+			surface: 'global-chat',
+			threadId: thread,
+			parentRequestId: null,
+			tool: null,
+			domain: null,
+			declaredGrade: 'light' as const,
+			grade: 'light' as const,
+			source: 'map' as const,
+			provider: 'anthropic',
+			model: 'claude-haiku-4-5-20251001',
+			reads: [],
+			entities: [],
+			tools: [],
+			confirmOutcome: null,
+			tokensIn: 100,
+			tokensOut: 10,
+			cacheRead: 0,
+			outcome: 'ok' as const,
+			grants: [],
+			image: null,
+		}
+		const chat = engine.recordAudit({ ...base, at: clock.now, costUsd: 0.5, cacheWrite: 40, day: '2026-09-30' })
+		const tool = engine.recordAudit({
+			...base,
+			at: clock.now + 1,
+			surface: 'delegated',
+			parentRequestId: chat.id,
+			tool: 'plan',
+			domain: 'kitchen',
+			grade: 'deep',
+			model: 'claude-opus-5-5',
+			costUsd: 2,
+			day: '2026-10-01',
+		})
+		const stopped = engine.recordAudit({ ...base, at: clock.now + 2, costUsd: 0, outcome: 'budget', day: '2026-10-01' })
+		expect(chat.cacheWrite).toBe(40)
+		expect(tool.cacheWrite).toBe(0)
+		expect(chat).not.toHaveProperty('day')
+
+		expect(engine.queryAuditPage()).toEqual({ rows: [stopped, tool, chat], total: 3 })
+		expect(engine.queryAuditPage({ order: 'cost', limit: 1, offset: 1 })).toEqual({ rows: [chat], total: 3 })
+		expect(engine.queryAuditPage({ kinds: ['tool'], tools: ['kitchen.plan'] }).rows).toEqual([tool])
+		expect(engine.auditFacets()).toEqual({
+			models: ['claude-haiku-4-5-20251001', 'claude-opus-5-5'],
+			tools: ['kitchen.plan'],
+		})
+		// the request the budget stopped never left: it is in the log, and in no sum
+		expect(engine.auditThreadTotals()).toEqual([
+			{ threadId: thread, requests: 2, tokensIn: 200, tokensOut: 20, costUsd: 2.5, lastAt: clock.now + 1 },
+		])
+		expect(
+			engine.queryUsage({ groupBy: ['day', 'kind'] }).map((row) => [row.bucket, row.kind, row.requests, row.costUsd])
+		).toEqual([
+			['2026-09-30', 'conversation', 1, 0.5],
+			['2026-10-01', 'tool', 1, 2],
+		])
+		expect(engine.queryUsage({ fromDay: '2026-10-01' })[0]).toMatchObject({ requests: 1, cacheWrite: 0, costUsd: 2 })
+		expect(codeOf(() => engine.queryUsage({ fromDay: 'today' }))).toBe('usage:invalid')
+		expect(codeOf(() => engine.recordAudit({ ...base, at: 1, costUsd: 0, day: '2026-13-01' }))).toBe('audit:invalid')
 	})
 })

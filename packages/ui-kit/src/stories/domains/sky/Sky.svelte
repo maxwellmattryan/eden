@@ -46,6 +46,7 @@
 		skyMotif,
 		skyPlaceResults,
 		skySundayBefore,
+		homeLatitude,
 		skyToday,
 		skyWeek,
 		skyWeekDetail,
@@ -360,6 +361,8 @@
 		sunrise: at(skyToday.sunrise),
 		sunset: at(skyToday.sunset),
 		now: at(night ? '21:30' : skyToday.lastGood),
+		latitude: homeLatitude,
+		format: (instant: number) => onClock(new Date(instant).toISOString().slice(11, 16)),
 		labels: { sunrise: onClock(skyToday.sunrise), sunset: onClock(skyToday.sunset) },
 		label: night
 			? `The sun set at ${onClock(skyToday.sunset)}.`

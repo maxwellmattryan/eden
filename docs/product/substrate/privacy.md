@@ -52,7 +52,7 @@ Tiers attach to resources in `substrate/registry.md`:
 | AI provider (your key) | the context pack after tier exclusion and scrub; the files the owner attached to a message (D-82); Capture's sources after its Read (D-86) | T3, undeclared resources, precise location, the audit log |
 | sync backend | opaque encrypted blobs, a manifest of sizes and hashes, an account id | plaintext of any tier, mirrors |
 | an integration | the OAuth scopes granted and the request parameters the connector needs (rounded coordinates for weather, a calendar id for Google) | anything from another domain |
-| a web page the owner gave the address of | one request for that page, made by the crate, with no cookie, credential or referrer (D-88); counted in the egress ledger under `web-page` | anything from the workspace |
+| a web page the owner gave the address of, or confirmed on the Gardener's card that shows it whole (D-126) | one request for that page, made by the crate, with no cookie, credential or referrer (D-88); counted in the egress ledger under `web-page` | anything from the workspace, beyond what the address itself spells out, which is why an address the owner did not write is shown before it is fetched |
 | a picture the owner linked for a stock item | one request for that picture, made by the crate under the same checks (D-91); a grocer's product page is never requested, only the picture its address names; counted under `web-image` | anything from the workspace |
 | the picture of a recipe page the owner linked | one request for the picture that page shows of the dish, made by the crate under the same checks when the draft opens (D-93); counted under `web-image` | anything from the workspace |
 | a picture the owner linked for a recipe | one request for the address, and, when it is a page, one for the page and one for the picture it names, made by the crate under the same checks (D-110); a grocer's product page is never requested; counted under `web-image` and `web-page` | anything from the workspace |
@@ -87,7 +87,7 @@ There is no telemetry. Diagnostics keep the last hundred entries and system info
 | AI provider retention or misuse | declared reads, tier exclusion, scrub, bring-your-own-key so the contract is the owner's, local models on desktop |
 | compromised sync server | end-to-end encrypted blobs; the manifest reveals sizes and hashes only |
 | over-broad OAuth | narrowest scopes, read-only default, ledger, per-calendar write grants (OQ-6) |
-| prompt injection through mirrored or fetched content | untrusted marking in the context pack, `act-external` always confirms, never-automated list |
+| prompt injection through mirrored or fetched content | untrusted marking in the context pack and on a fetched page's text, `act-external` always confirms, never-automated list; a page is fetched only from an address the owner wrote or confirmed, and a conversation that has read one confirms every write (D-126) |
 | malicious plugin (later) | manifest-declared reads, identical grants, sandbox defined in engineering |
 | accidental share of a T3 item | share sheet warns that the copy is unprotected; audit entry |
 | passphrase loss | recovery key shown once (OQ-12); the local workspace remains |

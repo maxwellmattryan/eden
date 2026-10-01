@@ -2,7 +2,7 @@
 // database; this is the same API over one JSON document in the storage it is given, with real ids and real stamps,
 // so a store cannot tell the difference. It follows the crate's rules (`src-tauri/src/substrate/*`), the registry
 // among them, with one exception: it cannot attach a file, because a browser has no path to copy from.
-import { todayIso } from '../dates/index.js'
+import { dateIn, todayIso } from '../dates/index.js'
 import { VAULT_AI, type EgressQuery, type EgressRow } from '../egress/types.js'
 import { checkShape, decide, validateGrant } from '../grants/rules.js'
 import {
@@ -29,15 +29,21 @@ import { signalCutoff, validateSignal } from '../signals/rules.js'
 import type { Delivery, Emitted, InboxEntry, InboxQuery, Signal, SignalInput } from '../signals/types.js'
 import {
 	auditCutoff,
+	isDay,
 	validateAudit,
 	validateMessage,
 	validatePolicy,
 	validateThread,
 	validateThreadPatch,
 } from '../gardener/rules.js'
+import { auditFacetsOf, auditPageOf, threadTotalsOf } from '../gardener/audit-page.js'
+import { addUsage, usageOf } from '../gardener/usage.js'
 import type {
 	AuditEntry,
 	AuditEntryInput,
+	AuditFacets,
+	AuditPage,
+	AuditPageQuery,
 	AuditQuery,
 	Message,
 	MessageInput,
@@ -46,6 +52,10 @@ import type {
 	ThreadInput,
 	ThreadPatch,
 	ThreadQuery,
+	ThreadUsage,
+	UsageDay,
+	UsageQuery,
+	UsageRow,
 } from '../gardener/runtime-types.js'
 import { DataError } from './errors.js'
 import { formatStamp, parseStamp, tick, type Hlc } from './hlc.js'
@@ -122,6 +132,8 @@ interface State {
 	inbox: InboxRow[]
 	/** The audit log (`audit.rs`): this browser's, ninety days. */
 	audit: AuditEntry[]
+	/** What the log's entries came to, a day at a time (`usage.rs`): this browser's, never swept. */
+	usageDays: UsageDay[]
 	/** The Gardener's threads and their messages (`threads.rs`), tombstones included. */
 	threads: Thread[]
 	messages: Message[]
@@ -256,6 +268,7 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 			signals: [],
 			inbox: [],
 			audit: [],
+			usageDays: [],
 			threads: [],
 			messages: [],
 			policy: [],
@@ -287,7 +300,14 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 					state.threads ??= []
 					state.messages ??= []
 					state.policy ??= []
-					// The log is swept when the workspace opens, as in the crate.
+					// An entry from before cache writes were kept wrote none; a document from before the rollup has its
+					// log summed in once, by this browser's own day, as the crate's migration does.
+					for (const entry of state.audit) entry.cacheWrite ??= 0
+					if (!Array.isArray(state.usageDays)) {
+						state.usageDays = []
+						for (const entry of state.audit) addUsage(state.usageDays, entry, dateIn(undefined, entry.at))
+					}
+					// The log is swept when the workspace opens, as in the crate; the rollup stays.
 					const cutoff = auditCutoff(now())
 					state.audit = state.audit.filter((entry) => entry.at >= cutoff)
 					sweepMirrors(state)
@@ -1139,17 +1159,47 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 
 		// The audit log (`audit.rs`; docs/product/substrate/ai.md, "Audit log"): this browser's, never exported.
 
-		/** Keeps one entry, whole. */
+		/** Keeps one entry, whole, and adds it to its day's usage. */
 		recordAudit(input: AuditEntryInput): AuditEntry {
 			const refusal = validateAudit(input)
 			if (refusal) throw new DataError(refusal[0], refusal[1])
 			return write((state) => {
 				const id = input.id ?? newId()
 				if (state.audit.some((entry) => entry.id === id)) throw new DataError('audit:invalid', `the id is taken: ${id}`)
-				const entry: AuditEntry = structuredClone({ ...input, attachments: input.attachments ?? [], id })
+				const { day, ...kept } = input
+				const entry: AuditEntry = structuredClone({
+					...kept,
+					attachments: input.attachments ?? [],
+					cacheWrite: input.cacheWrite ?? 0,
+					id,
+				})
 				state.audit.push(entry)
+				addUsage(state.usageDays, entry, day ?? dateIn(undefined, entry.at))
 				return structuredClone(entry)
 			})
+		},
+
+		/** One page of the log's table: filtered, sorted, with how many entries the filters keep in all. */
+		queryAuditPage(filter: AuditPageQuery = {}): AuditPage {
+			return structuredClone(auditPageOf(load().audit, filter))
+		},
+
+		/** The models and the tools the log holds, for the filters to offer. */
+		auditFacets(): AuditFacets {
+			return auditFacetsOf(load().audit)
+		},
+
+		/** What each conversation's requests came to, over the entries the log still holds. */
+		auditThreadTotals(): ThreadUsage[] {
+			return threadTotalsOf(load().audit)
+		},
+
+		/** The usage rollup's sums over a range of days, grouped as asked (`usage.rs`). */
+		queryUsage(filter: UsageQuery = {}): UsageRow[] {
+			for (const day of [filter.fromDay, filter.toDay]) {
+				if (day !== undefined && !isDay(day)) throw new DataError('usage:invalid', `not a day: ${JSON.stringify(day)}`)
+			}
+			return usageOf(load().usageDays, filter)
 		},
 
 		/** The entries within the filter, the newest first. */

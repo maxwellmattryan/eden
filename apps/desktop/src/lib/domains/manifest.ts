@@ -80,6 +80,12 @@ export interface DomainBindings<D extends BuiltDomainId> {
 	 * itself is more than a request should pay for (D-85); `null` leaves the row out. A type with no entry is sent whole.
 	 */
 	pack?: Partial<Record<string, (row: Entity<object>) => Entity<object> | null>>
+	/**
+	 * What a row of one of the domain's entity types is called where the Gardener lists what it read (the "can see"
+	 * chip, the audit log), by type, for a type whose rows hold no name of their own. A type with no entry is called
+	 * by its `name`, `title` or `label`.
+	 */
+	labels?: Partial<Record<string, (row: Entity<object>) => Promise<string | undefined> | string | undefined>>
 	/** What each quick action writes, by its id; `log-quick` dispatches here and the Quick Log sheet (#27) reuses it. */
 	quickActionHandlers?: Partial<Record<string, QuickActionHandler>>
 	/** The domain's part of committing a draft its tool left; the substrate's parts (tasks, events) are the shell's. */

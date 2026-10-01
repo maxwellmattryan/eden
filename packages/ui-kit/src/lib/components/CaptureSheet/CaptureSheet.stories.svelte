@@ -483,7 +483,7 @@
 		await expect(fridge).toHaveAttribute('aria-checked', 'false')
 		await expect(args.onrowchange).toHaveBeenLastCalledWith('h-02', { location: 'freezer' })
 		await userEvent.keyboard('{End}')
-		await expect(within(group).getByRole('radio', { name: s.locations.counter })).toHaveAttribute(
+		await expect(within(group).getByRole('radio', { name: s.locations.household })).toHaveAttribute(
 			'aria-checked',
 			'true'
 		)

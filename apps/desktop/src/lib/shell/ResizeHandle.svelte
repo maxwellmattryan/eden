@@ -1,16 +1,21 @@
 <script lang="ts">
-	// The drag edge of the Gardener's dock, ported from Crate's `ResizeHandle`: a hairline that widens to a grab area,
-	// dragged with the pointer; the arrow keys move it for the keyboard. The dock owns the width and its bounds; the
-	// handle only reports deltas.
-	import { t } from '@eden/shared/i18n'
-
+	// The drag edge of a panel of the shell (the Gardener's dock, the sidebar), ported from Crate's `ResizeHandle`: a
+	// hairline that widens to a grab area, dragged with the pointer; the arrow keys move it for the keyboard, and
+	// Enter or a double click toggles the panel where it has two states. The panel owns the width and its bounds;
+	// the handle only reports deltas.
 	type Props = {
+		/** The separator's accessible name. */
+		label: string
+		/** Which edge of its panel the handle is on: the line is drawn over that edge's own border. */
+		edge?: 'start' | 'end'
 		/** A move of the edge, in px; negative drags the edge left. */
 		onresize: (delta: number) => void
 		onstart?: () => void
 		onend?: () => void
+		/** Enter or a double click, for a panel that collapses. */
+		ontoggle?: () => void
 	}
-	let { onresize, onstart, onend }: Props = $props()
+	let { label, edge = 'start', onresize, onstart, onend, ontoggle }: Props = $props()
 
 	const STEP = 16
 	let dragging = $state(false)
@@ -36,6 +41,11 @@
 		onstart?.()
 	}
 	function onkeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter' && ontoggle) {
+			e.preventDefault()
+			ontoggle()
+			return
+		}
 		if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
 		e.preventDefault()
 		onresize(e.key === 'ArrowLeft' ? -STEP : STEP)
@@ -46,15 +56,16 @@
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
-	class={['handle', dragging && 'handle-dragging']}
+	class={['handle', edge === 'end' && 'handle-end', dragging && 'handle-dragging']}
 	role="separator"
 	aria-orientation="vertical"
-	aria-label={$t('gardener.resize')}
+	aria-label={label}
 	tabindex="0"
 	onpointerdown={down}
 	onpointermove={move}
 	onpointerup={up}
 	onpointercancel={up}
+	ondblclick={() => ontoggle?.()}
 	{onkeydown}
 >
 	<div class="handle-line"></div>
@@ -83,6 +94,9 @@
 		width: 1px;
 		background: transparent;
 		transition: background-color var(--ed-duration-micro) var(--ed-ease-out);
+	}
+	.handle-end .handle-line {
+		left: -1px;
 	}
 	.handle:hover .handle-line,
 	.handle-dragging .handle-line,

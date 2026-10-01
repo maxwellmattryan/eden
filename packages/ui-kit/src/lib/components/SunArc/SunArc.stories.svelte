@@ -1,8 +1,8 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
 	import { expect } from 'storybook/test'
-	import { canvasOf, hasCanvas } from '../../../storybook/play.js'
-	import { skyToday } from '../../../stories/sample-data.js'
+	import { canvasOf, hasCanvas, pointAcross } from '../../../storybook/play.js'
+	import { homeLatitude, skyToday } from '../../../stories/sample-data.js'
 	import SunArc from './SunArc.svelte'
 
 	/** A sample time (`HH:MM`) on the sample Wednesday, as an instant. */
@@ -16,12 +16,14 @@
 	const up = `The sun is up. It rose at ${skyToday.sunrise} and sets at ${skyToday.sunset}.`
 	const before = `The sun rises at ${skyToday.sunrise} and sets at ${skyToday.sunset}.`
 	const after = `The sun set at ${skyToday.sunset}.`
+	/** An instant on the sample day's clock, `HH:MM`. */
+	const clock = (instant: number) => new Date(instant).toISOString().slice(11, 16)
 
 	const { Story } = defineMeta({
 		title: 'Components/Data/SunArc',
 		component: SunArc,
 		tags: ['autodocs'],
-		args: { sunrise, sunset, now: at(skyToday.lastGood), labels, label: up },
+		args: { sunrise, sunset, now: at(skyToday.lastGood), latitude: homeLatitude, labels, label: up },
 		parameters: { layout: 'padded' },
 	})
 </script>
@@ -47,10 +49,41 @@
 
 <Story name="Before sunrise" args={{ now: at('05:10'), label: before }} />
 
-<!-- The horizon sinks through the wave in summer and rises in winter: the wave itself is the same -->
-<Story name="Long day" args={{ sunrise: at('05:30'), sunset: at('20:36'), now: at('13:03'), labels: undefined }} />
+<!-- The wave is the place's and the season's: a midsummer day at 52° north climbs to 61° and never reaches night -->
+<Story
+	name="Long day"
+	args={{
+		sunrise: Date.UTC(2026, 5, 21, 3, 44),
+		sunset: Date.UTC(2026, 5, 21, 20, 22),
+		now: Date.UTC(2026, 5, 21, 12, 3),
+		latitude: 52,
+		labels: undefined,
+	}}
+/>
 
-<Story name="Short day" args={{ sunrise: at('08:10'), sunset: at('16:20'), now: at('12:15'), labels: undefined }} />
+<!-- and its midwinter day barely clears the horizon, with a long night beneath every twilight -->
+<Story
+	name="Short day"
+	args={{
+		sunrise: Date.UTC(2026, 11, 21, 8, 4),
+		sunset: Date.UTC(2026, 11, 21, 15, 54),
+		now: Date.UTC(2026, 11, 21, 12, 0),
+		latitude: 52,
+		labels: undefined,
+	}}
+/>
+
+<!-- Near the equator the sun goes almost straight up and straight down -->
+<Story
+	name="At the equator"
+	args={{
+		sunrise: Date.UTC(2026, 2, 20, 6, 4),
+		sunset: Date.UTC(2026, 2, 20, 18, 10),
+		now: Date.UTC(2026, 2, 20, 9, 0),
+		latitude: 0,
+		labels: undefined,
+	}}
+/>
 
 <Story name="Without times" args={{ labels: undefined }} />
 
@@ -62,6 +95,29 @@
 </Story>
 
 <Story name="Short" args={{ height: 72 }} />
+
+<!-- The pointer on the wave: the time of day there, the light, and the sun's elevation and bearing -->
+<Story
+	name="Reading the wave"
+	args={{ format: clock }}
+	play={async ({ canvasElement, userEvent }) => {
+		if (!hasCanvas(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		await canvas.findByRole('img', { name: up })
+		const chart = canvasElement.querySelector('.ed-canvas .ed-sun')!
+		await expect(chart.querySelector('.ed-chart-tip')).toBeNull()
+		await pointAcross(userEvent, chart, 0.5)
+		// solar noon at Austin on 30 September: the sun due south, 57° up
+		const tip = () => chart.querySelector('.ed-chart-tip')
+		await expect(tip()).toHaveTextContent(`${clock((sunrise + sunset) / 2)} · Daylight`)
+		await expect(tip()).toHaveTextContent('Elevation 57°')
+		await expect(tip()).toHaveTextContent('Azimuth 180° S')
+		// and the end of the day, deep in the night to the north
+		await pointAcross(userEvent, chart, 0.97)
+		await expect(tip()).toHaveTextContent('Night')
+		await expect(tip()).toHaveTextContent('Elevation −6')
+	}}
+/>
 
 <style>
 	.narrow {

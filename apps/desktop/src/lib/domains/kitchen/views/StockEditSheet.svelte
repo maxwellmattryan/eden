@@ -7,7 +7,7 @@
 	// picture chosen for it as one change with one undo, and a grocer's product link also fills the name, the brand
 	// and the size left empty (D-91, D-104).
 	import { Button, Chip, Field, Menu, Segmented, Sheet, toast, type MenuItem } from '@eden/ui-kit'
-	import { CATEGORIES, productLink } from '@eden/shared/domains/kitchen'
+	import { CATEGORIES, categoriesFor, productLink } from '@eden/shared/domains/kitchen'
 	import { t } from '@eden/shared/i18n'
 	import { undoToast } from '$lib/shell/undo'
 	import { linkedPicture, squarePicture } from '../staging.svelte'
@@ -114,8 +114,15 @@
 		open = false
 	}
 
+	/** Moves the form's item, and drops a category its new place does not have: food's under Household, or the other way (D-122). */
+	function place(location: StockLocation) {
+		form.location = location
+		const known = (CATEGORIES as readonly string[]).includes(form.category)
+		if (known && !(categoriesFor(location) as readonly string[]).includes(form.category)) form.category = ''
+	}
+
 	const categoryItems = $derived<MenuItem[]>([
-		...CATEGORIES.map((category) => ({
+		...categoriesFor(form.location).map((category) => ({
 			id: category,
 			label: $t(`domains.kitchen.categories.${category}`),
 			checked: form.category === category,
@@ -219,7 +226,7 @@
 						items={LOCATIONS.map(locationLabel)}
 						selected={LOCATIONS.indexOf(form.location)}
 						label={$t('domains.kitchen.stock.detail.location')}
-						onchange={(index) => (form.location = LOCATIONS[index]!)}
+						onchange={(index) => place(LOCATIONS[index]!)}
 					/>
 				</div>
 				<div class="pair">

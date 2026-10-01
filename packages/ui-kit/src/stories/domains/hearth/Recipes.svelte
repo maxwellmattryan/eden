@@ -20,13 +20,16 @@
 		PageHeader,
 		Segmented,
 		Sheet,
+		Sketch,
 		domainGlyph,
+		hearthEmbers,
 		type ListRowData,
 		type MenuItem,
 	} from '$lib/index.js'
 	import AppFrame from '../_frame/AppFrame.svelte'
 	import {
 		haul,
+		hearthMotif,
 		recipeDraft,
 		recipes,
 		sidebar,
@@ -296,6 +299,13 @@
 	{#snippet children(_platform)}
 		<div class="page">
 			<PageHeader name={hearth.name} subtitle={hearth.subtitle} icon={domainGlyph('kitchen')} actions={headerActions}>
+				<!-- the page's one live thing (D-123): the stock as sparks off a fire, the same on every tab -->
+				{#snippet motif()}
+					<Sketch sketch={hearthEmbers} params={hearthMotif} />
+				{/snippet}
+				{#snippet legend()}
+					{hearthMotif.items} in stock, {hearthMotif.expiring} expiring soon
+				{/snippet}
 				{#snippet filters()}
 					<Segmented items={TABS} selected={1} label="Hearth sections" />
 				{/snippet}

@@ -352,5 +352,46 @@ pub fn get_migrations() -> Vec<&'static str> {
             ADD COLUMN attachments TEXT NOT NULL DEFAULT '[]'
                 CHECK (json_valid(attachments) AND json_type(attachments) = 'array');
         "#,
+        // Migration 8: the tokens a request wrote to the provider's cache (D-116). The crate always heard of them;
+        // the log now keeps them, since they are billed at a rate of their own. An entry from before reads none.
+        r#"
+        ALTER TABLE audit_entries
+            ADD COLUMN cache_write INTEGER NOT NULL DEFAULT 0 CHECK (cache_write >= 0);
+        "#,
+        // Migration 9: what the Gardener was used for, a day at a time (D-115). The audit log goes at ninety days;
+        // these sums stay, so a month, a year and the whole can still be told. One row per day, model, grade, kind
+        // of request and tool, with '' where an entry had no grade, domain or tool. Like the log it is this
+        // device's: never exported, never cleared by a replace. The entries the log still holds are summed in once,
+        // by the device's own day; a request that never left (declined, or stopped by the budget) is not counted.
+        r#"
+        CREATE TABLE usage_days (
+            day         TEXT NOT NULL CHECK (length(day) = 10),
+            provider    TEXT NOT NULL CHECK (length(provider) > 0),
+            model       TEXT NOT NULL CHECK (length(model) > 0),
+            grade       TEXT NOT NULL DEFAULT '' CHECK (grade IN ('', 'light', 'standard', 'deep')),
+            kind        TEXT NOT NULL CHECK (kind IN ('conversation', 'tool', 'page')),
+            domain      TEXT NOT NULL DEFAULT '',
+            tool        TEXT NOT NULL DEFAULT '',
+            requests    INTEGER NOT NULL DEFAULT 0 CHECK (requests >= 0),
+            tokens_in   INTEGER NOT NULL DEFAULT 0 CHECK (tokens_in >= 0),
+            tokens_out  INTEGER NOT NULL DEFAULT 0 CHECK (tokens_out >= 0),
+            cache_read  INTEGER NOT NULL DEFAULT 0 CHECK (cache_read >= 0),
+            cache_write INTEGER NOT NULL DEFAULT 0 CHECK (cache_write >= 0),
+            cost_usd    REAL NOT NULL DEFAULT 0 CHECK (cost_usd >= 0),
+            PRIMARY KEY (day, provider, model, grade, kind, domain, tool)
+        ) WITHOUT ROWID;
+
+        INSERT INTO usage_days
+            (day, provider, model, grade, kind, domain, tool,
+             requests, tokens_in, tokens_out, cache_read, cache_write, cost_usd)
+        SELECT date(at / 1000, 'unixepoch', 'localtime'), provider, model, COALESCE(grade, ''),
+               CASE WHEN surface <> 'delegated' THEN 'conversation'
+                    WHEN parent_request_id IS NOT NULL THEN 'tool' ELSE 'page' END,
+               COALESCE(domain, ''), COALESCE(tool, ''),
+               COUNT(*), SUM(tokens_in), SUM(tokens_out), SUM(cache_read), SUM(cache_write), SUM(cost_usd)
+        FROM audit_entries
+        WHERE outcome NOT IN ('declined', 'budget')
+        GROUP BY 1, 2, 3, 4, 5, 6, 7;
+        "#,
     ]
 }

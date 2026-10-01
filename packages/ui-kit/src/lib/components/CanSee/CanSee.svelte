@@ -6,7 +6,7 @@
 
 <script lang="ts">
 	// The "can see" button in the composer's foot (product/substrate/ai.md): an eye IconButton, beside the paperclip
-	// and like it, that opens a DetailPopover saying, literally, what the Gardener can see in this request. The
+	// and like it, that opens a DetailPopover saying, literally, what the Gardener can see in the owner's next message. The
 	// popover is green because the Gardener is saying what it reads (D-40); its caption carries the count. Inside: the
 	// ReadList (one row per id with rows to read, each opening to the exact rows or to a sentence; what was trimmed);
 	// then the T2 ids kept out, each with an Allow when the app can ask for the grant; and the audit log one quiet
@@ -30,6 +30,8 @@
 		trimmed?: string[]
 		/** The button's size; sm sits beside the composer's paperclip. */
 		size?: 'xs' | 'sm' | 'md'
+		/** Called as the panel opens, so the app can read afresh what it is about to show. */
+		onopen?: () => void
 		/** Called with the item when its row opens. */
 		onexpand?: (item: CanSeeItem) => void
 		/** Given, each locked row ends in an Allow button asking for the grant; called with the id. */
@@ -44,6 +46,7 @@
 		locked = [],
 		trimmed = [],
 		size = 'sm',
+		onopen,
 		onexpand,
 		onunlock,
 		onaudit,
@@ -84,7 +87,10 @@
 			tooltip
 			aria-haspopup="dialog"
 			aria-expanded={open}
-			onclick={() => (open = !open)}
+			onclick={() => {
+				open = !open
+				if (open) onopen?.()
+			}}
 		/>
 	</span>
 	<DetailPopover

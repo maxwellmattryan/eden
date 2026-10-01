@@ -142,11 +142,11 @@
 
 	function openAudit() {
 		settingsUi.hide()
-		void goto(resolve('/gardener/audit'))
+		void goto(resolve('/gardener/[[tab]]', { tab: 'audit' }))
 	}
 	function openTools() {
 		settingsUi.hide()
-		void goto(resolve('/gardener/tools'))
+		void goto(resolve('/gardener/[[tab]]', { tab: 'tools' }))
 	}
 </script>
 

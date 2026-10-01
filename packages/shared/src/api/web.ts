@@ -1,6 +1,7 @@
 // One web page, or one picture, fetched by the crate (`src-tauri/src/commands/web.rs`): the webview's CSP names the
 // few hosts it may reach and CORS would refuse the rest, so a link the owner gives (a recipe to import, D-88; a
-// picture for a stock item, D-91) is fetched in Rust and its HTML or its bytes handed back to be read here. The crate
+// picture for a stock item, D-91; a page for the Gardener to read, D-126, which may also be one the owner confirmed on
+// its card) is fetched in Rust and its HTML or its bytes handed back to be read here. The crate
 // enters each request in the egress ledger itself, under `web-page` or `web-image`, so nothing is recorded on this
 // side.
 import { invoke } from '@tauri-apps/api/core'

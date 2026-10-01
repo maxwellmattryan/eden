@@ -10,7 +10,19 @@
 		muted?: boolean
 		/** A sentence explaining the column, as a tooltip on an info glyph beside its header. */
 		hint?: string
+		/** What `sort` and `onsort` call the column; its label when left out. */
+		id?: string
+		/** The header is a button that asks for the table to be sorted by this column. */
+		sortable?: boolean
 	}
+
+	/** The column the rows are sorted by, and which way. */
+	export interface DataTableSort {
+		column: string
+		direction: 'asc' | 'desc'
+	}
+
+	const columnId = (column: DataTableColumn) => column.id ?? column.label
 
 	/** A richer cell: text with an optional glyph before it, a tone that colours both, and mono on its own. */
 	export interface DataTableCell {
@@ -57,6 +69,9 @@
 	// units. With `onrow` each body row is a focusable target that opens on click, Enter or Space; its cells name it.
 	// With `detail` a row unfolds instead: a chevron at the row's end (the keyboard's target) or a click on the row
 	// opens the snippet beneath it, one row at a time (`expanded`, bindable), the table growing over the panel duration.
+	// A `sortable` column's header is a button: it asks through `onsort`, and the caller hands the rows back in that
+	// order with `sort` saying which column and which way. The table never reorders rows itself, since a page of a
+	// longer list can only be sorted where the whole list is.
 	import type { Snippet } from 'svelte'
 	import type { HTMLTableAttributes } from 'svelte/elements'
 	import Icon from '../../icons/Icon.svelte'
@@ -80,6 +95,10 @@
 		detail?: Snippet<[number]>
 		/** detail only: the index of the row that is open (bindable); one at a time. */
 		expanded?: number
+		/** The column the rows arrive sorted by, and which way: the header shows it and says it (`aria-sort`). */
+		sort?: DataTableSort
+		/** A sortable header was picked: the same column the other way, or a new one (numbers highest first). */
+		onsort?: (next: DataTableSort) => void
 	}
 	let {
 		columns,
@@ -89,6 +108,8 @@
 		onrow,
 		detail,
 		expanded = $bindable(),
+		sort,
+		onsort,
 		class: className = '',
 		...rest
 	}: Props = $props()
@@ -98,6 +119,20 @@
 
 	// a table wider than its room scrolls sideways, and a region that scrolls is one the keyboard can reach
 	let overflows = $state(false)
+
+	function resort(column: DataTableColumn) {
+		const id = columnId(column)
+		const flipped = sort?.direction === 'asc' ? 'desc' : 'asc'
+		onsort?.({ column: id, direction: sort?.column === id ? flipped : column.numeric ? 'desc' : 'asc' })
+	}
+	const ariaSort = (column: DataTableColumn) =>
+		!column.sortable
+			? undefined
+			: sort?.column !== columnId(column)
+				? 'none'
+				: sort.direction === 'asc'
+					? 'ascending'
+					: 'descending'
 
 	function toggle(index: number) {
 		expanded = expanded === index ? undefined : index
@@ -131,9 +166,25 @@
 		<thead>
 			<tr>
 				{#each columns as column, c (`${column.label}-${c}`)}
-					<th scope="col">
+					{@const sorted = sort?.column === columnId(column)}
+					<th scope="col" aria-sort={ariaSort(column)}>
 						<span class="ed-table-head">
-							{column.label}
+							{#if column.sortable}
+								<button
+									type="button"
+									class={['ed-table-sort', { 'ed-table-sorted': sorted }]}
+									onclick={() => resort(column)}
+								>
+									{column.label}
+									<Icon
+										name={sorted && sort?.direction === 'asc' ? 'arrow-up' : 'arrow-down'}
+										size="sm"
+										class="ed-table-sort-glyph"
+									/>
+								</button>
+							{:else}
+								{column.label}
+							{/if}
 							{#if column.hint}<IconButton
 									icon="info"
 									size="xs"
@@ -245,6 +296,41 @@
 		align-items: center;
 		gap: var(--space-1);
 	}
+	/* a sortable header: the label's own type, an arrow that shows which way once it is the sort, and faintly on
+	   hover before that */
+	.ed-table-sort {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-1);
+		margin: 0;
+		padding: 0;
+		border: 0;
+		border-radius: var(--ed-radius-control);
+		background: none;
+		color: inherit;
+		font: inherit;
+		letter-spacing: inherit;
+		cursor: pointer;
+	}
+	.ed-table-sort:focus-visible {
+		outline: 2px solid transparent;
+		box-shadow: var(--focus-ring);
+	}
+	.ed-table-sort :global(.ed-table-sort-glyph) {
+		opacity: 0;
+		transition: opacity var(--ed-duration-micro) var(--ed-ease-out);
+	}
+	.ed-table-sort:hover :global(.ed-table-sort-glyph),
+	.ed-table-sort:focus-visible :global(.ed-table-sort-glyph) {
+		opacity: 0.5;
+	}
+	.ed-table-sorted {
+		color: var(--text-primary);
+	}
+	.ed-table-sorted :global(.ed-table-sort-glyph),
+	.ed-table-sorted:hover :global(.ed-table-sort-glyph) {
+		opacity: 1;
+	}
 	.ed-table td {
 		height: var(--ed-row);
 		padding: 0 var(--space-3);
@@ -255,7 +341,8 @@
 	.ed-table tr:last-child td {
 		border-bottom: 0;
 	}
-	.ed-table tbody tr:not(.ed-table-detail):hover td {
+	/* only a row that does something answers the pointer: one that opens or unfolds. A table of figures stays still. */
+	.ed-table-rows tbody tr:not(.ed-table-detail):hover td {
 		background: var(--surface-2);
 	}
 	.ed-table td.ed-table-num,

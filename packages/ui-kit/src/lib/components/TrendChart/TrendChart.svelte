@@ -3,10 +3,14 @@
 	// Sparkline is a gesture, this is a chart to read: a tick along the bottom for every point, with as many labels as
 	// have room (they never touch), a few round figures up the side on hairlines, and the highest and lowest points
 	// marked with their values, since those are what a reader looks for. It fills its container's width and keeps its
-	// height, and it needs no legend, since it draws one series and its axes say what that is. Colour is not the only carrier: the
+	// height, and it needs no legend, since it draws one series and its axes say what that is. The point nearest the
+	// pointer is read out above itself (`hover`), on a hairline down to its tick. Colour is not the only carrier: the
 	// SVG carries one accessible sentence.
 	import type { HTMLAttributes } from 'svelte/elements'
 	import { measure } from '../../internal/measure.js'
+	import { pointerAt } from '../../internal/pointer.js'
+	import ChartTip from '../ChartTip/ChartTip.svelte'
+	import { nearestIndex } from '../ChartTip/nearest.js'
 	import { trend } from './trend.js'
 
 	type Props = Omit<HTMLAttributes<HTMLDivElement>, 'aria-label'> & {
@@ -28,6 +32,10 @@
 		extremes?: boolean
 		/** The accessible sentence: what the series is, over what, from where to where. */
 		label: string
+		/** Reads out the point nearest the pointer, above it: its name and its value. On unless set false. */
+		hover?: boolean
+		/** What each point is called in the readout, where `labels` leaves some unnamed: every hour, not the round ones. */
+		titles?: readonly string[]
 	}
 	let {
 		values,
@@ -38,6 +46,8 @@
 		step,
 		extremes = true,
 		label,
+		hover = true,
+		titles,
 		class: className = '',
 		...rest
 	}: Props = $props()
@@ -63,11 +73,26 @@
 	)
 	const marks = $derived(extremes ? [geo.high, geo.low].flatMap((mark) => (mark ? [mark] : [])) : [])
 	const floor = $derived(geo.plot.y + geo.plot.height)
+
+	// the point being read: the one nearest the pointer across the plot
+	let read = $state<number>()
+	const reading = $derived(read === undefined ? undefined : geo.points[read])
+	function point(event: PointerEvent & { currentTarget: EventTarget & HTMLElement }) {
+		const at = nearestIndex(
+			geo.points.map((one) => one.x),
+			pointerAt(event).x
+		)
+		read = at < 0 ? undefined : at
+	}
 </script>
 
 <div
 	class={['ed-trend', className]}
 	style:height="{height}px"
+	onpointermove={hover ? point : undefined}
+	onpointerdown={hover ? point : undefined}
+	onpointerleave={hover ? () => (read = undefined) : undefined}
+	onpointercancel={hover ? () => (read = undefined) : undefined}
 	{@attach measure((rect) => (width = Math.round(rect.width)))}
 	{...rest}
 >
@@ -91,7 +116,9 @@
 				{/if}
 			{/each}
 			{#if geo.area}<path class="ed-trend-area" d={geo.area} />{/if}
+			{#if reading}<line class="ed-trend-guide" x1={reading.x} x2={reading.x} y1={geo.plot.y} y2={floor} />{/if}
 			{#if geo.line}<path class="ed-trend-line" d={geo.line} />{/if}
+			{#if reading}<circle class="ed-trend-dot ed-trend-read" r="4" cx={reading.x} cy={reading.y} />{/if}
 			{#each marks as mark (mark.value)}
 				<circle class="ed-trend-dot" r="3" cx={mark.x} cy={mark.y} />
 				<text
@@ -102,11 +129,21 @@
 				>
 			{/each}
 		</svg>
+		{#if reading && read !== undefined}
+			<ChartTip
+				x={reading.x}
+				y={reading.y}
+				{width}
+				title={titles?.[read] ?? labels[read]}
+				rows={[{ value: format(reading.value), swatch: 'primary' }]}
+			/>
+		{/if}
 	{/if}
 </div>
 
 <style>
 	.ed-trend {
+		position: relative;
 		display: block;
 		width: 100%;
 		min-width: 0;
@@ -146,6 +183,15 @@
 	}
 	.ed-trend-dot {
 		fill: var(--chart-primary);
+	}
+	/* the point being read: a hairline down to its tick, and its dot ringed with the ground */
+	.ed-trend-guide {
+		stroke: var(--chart-axis);
+		stroke-width: 1;
+	}
+	.ed-trend-read {
+		stroke: var(--surface-1);
+		stroke-width: 2;
 	}
 	/* The high and the low, in the text colour with the ground behind them so the line never runs through a figure */
 	.ed-trend-mark {

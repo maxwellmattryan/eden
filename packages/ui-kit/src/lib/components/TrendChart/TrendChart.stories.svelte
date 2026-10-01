@@ -1,7 +1,7 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
 	import { expect } from 'storybook/test'
-	import { canvasOf, hasCanvas } from '../../../storybook/play.js'
+	import { canvasOf, hasCanvas, pointAcross } from '../../../storybook/play.js'
 	import { skyHours, weightSeries } from '../../../stories/sample-data.js'
 	import TrendChart from './TrendChart.svelte'
 
@@ -27,6 +27,23 @@
 		const canvas = canvasOf(canvasElement)
 		await expect(await canvas.findByRole('img', { name: sentence })).toBeVisible()
 		await expect(canvas.getByText(hours[0]!)).toBeVisible()
+	}}
+/>
+
+<!-- The pointer over the last hour: the point is read out above itself, on a hairline down to its tick -->
+<Story
+	name="Reading a point"
+	play={async ({ canvasElement, userEvent }) => {
+		if (!hasCanvas(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		await canvas.findByRole('img', { name: sentence })
+		const chart = canvasElement.querySelector('.ed-canvas .ed-trend')!
+		await expect(chart.querySelector('.ed-chart-tip')).toBeNull()
+		await pointAcross(userEvent, chart, 0.99)
+		const tip = chart.querySelector('.ed-chart-tip')!
+		await expect(tip).toHaveTextContent(hours.at(-1)!)
+		await expect(tip).toHaveTextContent(degrees(temps.at(-1)!))
+		await expect(chart.querySelector('.ed-trend-guide')).not.toBeNull()
 	}}
 />
 

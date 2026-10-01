@@ -74,7 +74,7 @@ describe('persona', () => {
 		const { stable } = persona(base)
 		expect(stable).toContain('nothing is saved until they keep it')
 		expect(stable).toContain('a result saying they declined is their answer')
-		expect(stable).not.toContain('create-task')
+		expect(stable).not.toContain('draft-tasks')
 		expect(persona({ ...base, tools: false }).stable).not.toContain('Every tool call')
 	})
 

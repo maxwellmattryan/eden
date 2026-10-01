@@ -373,6 +373,8 @@
 			'ed-row-selected': selecting && selected,
 			'ed-row-current': current && !selecting,
 			'ed-row-pickable': !!(onpick ?? onopen),
+			// a row that does something answers the pointer; one that only shows its data stays still
+			'ed-row-live': !!(onpick ?? onopen) || selecting || checkable || actions.length > 0 || !!dragGroup,
 			'ed-row-compact': compact,
 		},
 		className,
@@ -432,7 +434,7 @@
 		padding-top: 0;
 		padding-bottom: 0;
 	}
-	.ed-row:hover {
+	.ed-row-live:hover {
 		background: var(--surface-2);
 	}
 	.ed-row-selected,

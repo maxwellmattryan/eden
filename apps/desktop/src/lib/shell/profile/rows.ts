@@ -3,7 +3,7 @@
 import type { ListRowData, MenuItem } from '@eden/ui-kit'
 import { stampToDate } from '@eden/shared/data'
 import { formatDateOf } from '@eden/shared/dates'
-import { formatValue, isExpired, weightOf, type Fact } from '@eden/shared/profile'
+import { formatValue, isExpired, weightOf, type Fact, type FactProposal } from '@eden/shared/profile'
 import { tierOf } from '@eden/shared/registry'
 
 export interface RowContext {
@@ -20,6 +20,19 @@ export interface RowContext {
 /** The row's calendar date, from its stamp; nothing for a row the store has not stamped yet. */
 function dayOf(stamp: string): string | undefined {
 	return stampToDate(stamp)?.toISOString().slice(0, 10)
+}
+
+/** What else accepting a proposal does, for its card: the value it takes the place of, and the day it holds until. */
+export function proposalDetail(proposal: FactProposal, t: RowContext['t'], lang: string): string | undefined {
+	const parts = [
+		proposal.replaces
+			? t('profile.proposal.replaces', {
+					values: { value: formatValue(proposal.type, proposal.replaced, (key) => t(key)) },
+				})
+			: undefined,
+		proposal.until ? t('profile.proposal.until', { values: { day: formatDateOf(proposal.until, lang) } }) : undefined,
+	].filter((part) => part !== undefined)
+	return parts.length ? parts.join(' · ') : undefined
 }
 
 export function provenanceLine(fact: Fact, ctx: RowContext): string {

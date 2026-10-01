@@ -31,6 +31,7 @@ describe("Hearth's amounts", () => {
 		expect(unitOf('tbsp.')).toEqual({ unit: 'tbsp', dim: 'volume' })
 		expect(unitOf('packets')).toEqual({ unit: 'packet', dim: 'count' })
 		expect(unitOf('boxes')).toEqual({ unit: 'box', dim: 'count' })
+		expect(unitOf('rolls')).toEqual({ unit: 'roll', dim: 'count' })
 		expect(unitOf('pcs')).toEqual({ unit: '', dim: 'count' })
 		expect(unitOf(undefined)).toEqual({ unit: '', dim: 'count' })
 	})

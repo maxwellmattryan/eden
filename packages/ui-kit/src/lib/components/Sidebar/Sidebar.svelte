@@ -25,8 +25,9 @@
 	// rule between each (Today; Garden, Gardener and Toolbench; then the domains in the owner's order); then Settings
 	// pinned at the bottom (D-64). Subtitles and shortcuts are off by default, except the pinned list, which always shows
 	// its keys. The whole nav is one tab stop: arrows, Home and End and typing a name move focus through `roving` across
-	// every group; Enter or a click makes an item current, unless the entry is an action. There is no sidebar on
-	// mobile: BottomTabBar instead.
+	// every group; Enter or a click makes an item current, unless the entry is an action. Collapsed, it is a rail of
+	// the mark and the glyphs, each named by its tooltip (D-119); the app owns the dragging and may size the nav
+	// itself through `style`. There is no sidebar on mobile: BottomTabBar instead.
 	import type { HTMLAttributes } from 'svelte/elements'
 	import { useStrings } from '../../i18n/context.js'
 	import { roving } from '../../internal/roving.js'
@@ -45,6 +46,8 @@
 		subtitles?: boolean
 		/** Shows the ⌘ positions. */
 		shortcuts?: boolean
+		/** Collapses the nav to a rail: the mark without the wordmark, and each entry's glyph with its name as the tooltip. */
+		collapsed?: boolean
 		/** The current entry's id. Bindable. */
 		current?: string
 		/** The nav's accessible name; defaults to the strings' "Domains". */
@@ -58,6 +61,7 @@
 		pinned = [],
 		subtitles = false,
 		shortcuts = false,
+		collapsed = false,
 		current = $bindable(),
 		label,
 		onselect,
@@ -80,6 +84,7 @@
 			current={!action && item.id === current}
 			showSubtitle={subtitles}
 			showShortcut={keys}
+			{collapsed}
 			data-sidebar-item
 			onclick={() => pick({ action, ...item })}
 		/>
@@ -87,7 +92,7 @@
 {/snippet}
 
 <nav
-	class={['ed-sidebar', className]}
+	class={['ed-sidebar', collapsed && 'ed-sidebar-collapsed', className]}
 	aria-label={label ?? s.sidebar.label}
 	{@attach roving(() => ({ selector: '[data-sidebar-item]', orientation: 'vertical', typeahead: true }))}
 	{...rest}
@@ -95,7 +100,7 @@
 	{#if brand}
 		<div class="ed-sidebar-brand">
 			<AppMark />
-			<Wordmark name={brand} size="md" />
+			{#if !collapsed}<Wordmark name={brand} size="md" />{/if}
 		</div>
 	{/if}
 	<div class="ed-sidebar-groups">
@@ -126,6 +131,12 @@
 		border-inline-end: 1px solid var(--stroke-subtle);
 		color: var(--text-primary);
 		overflow: hidden auto;
+	}
+	.ed-sidebar-collapsed {
+		width: var(--sidebar-rail);
+	}
+	.ed-sidebar-collapsed .ed-sidebar-brand {
+		padding-inline: 0;
 	}
 	/* the head: centred, with air on every side and more below, so the nav starts a step down from the name */
 	.ed-sidebar-brand {

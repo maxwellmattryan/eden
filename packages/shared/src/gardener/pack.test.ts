@@ -211,6 +211,37 @@ describe('buildPack', () => {
 		])
 	})
 
+	it('carries a conversation the tasks trimmed, and a delegated request all of them', async () => {
+		const tasks = [
+			...TASKS,
+			row(21, 'task', {
+				kind: 'todo',
+				title: 'Clean the gutters',
+				due: '2026-08-01',
+				done: true,
+				completedAt: '2026-08-02T15:00:00.000Z',
+			}),
+			row(22, 'task', {
+				kind: 'todo',
+				title: 'Post the letter',
+				due: '2026-09-29',
+				done: true,
+				completedAt: '2026-09-29T15:00:00.000Z',
+			}),
+		]
+		const fake: PackReaders = { ...readers(), primitives: async (primitive) => (primitive === 'task' ? tasks : []) }
+		const chat = contextOf(await buildPack(request({ reads: ['task'] }), fake))
+		expect(chat).toContain('Restock rice')
+		expect(chat).toContain('Post the letter')
+		expect(chat).not.toContain('Clean the gutters')
+		// a tool's own request works from the tasks it declared, every one
+		const delegated = contextOf(await buildPack(request({ reads: ['task'], mode: 'delegated' }), fake))
+		expect(delegated).toContain('Clean the gutters')
+		// and what the conversation is about is never left out
+		const about = contextOf(await buildPack(request({ reads: ['task'], focus: [tasks[2]!.uri] }), fake))
+		expect(about).toContain('Clean the gutters')
+	})
+
 	it('holds a by-kind primitive to its rows’ kinds: a T2 kind needs a grant', async () => {
 		const locked = await buildPack(request({ reads: ['place'] }), readers([]))
 		expect(locked.reads).toEqual([{ id: 'place', count: 1, rows: [id(13)] }])
@@ -259,7 +290,7 @@ describe('buildPack', () => {
 		})
 		expect(pack.system[0]).toMatchObject({ type: 'text', cache_control: { type: 'ephemeral' } })
 		expect(pack.system[0]!.text).toContain('which they opened from Hearth')
-		expect(pack.system[0]!.text).toContain('- Hearth (kitchen): food at home')
+		expect(pack.system[0]!.text).toContain('- Hearth (kitchen): food and household consumables at home')
 		expect(pack.system[0]!.text).toContain('- Sky (weather): the weather')
 		expect(pack.system[0]!.text).toContain('Every tool call appears in the thread as a card')
 		expect(pack.system[0]!.text).not.toContain('kitchen_suggest-recipes')
@@ -297,7 +328,7 @@ describe('buildPack', () => {
 				{
 					kind: 'tool',
 					state: 'done',
-					call: call('toolu_1', 'create-task', { title: 'Call a@b.io' }, { status: 'drafted' }),
+					call: call('toolu_1', 'draft-tasks', { title: 'Call a@b.io' }, { status: 'drafted' }),
 				},
 				{ kind: 'draft', draft: { kind: 'task', title: 'Call' }, state: 'committed', callId: 'toolu_1' },
 				{ kind: 'tool', state: 'done', call: call('toolu_2', 'weather_forecast', {}, long) },
@@ -309,9 +340,9 @@ describe('buildPack', () => {
 				{
 					kind: 'tool',
 					state: 'cancelled',
-					call: call('toolu_4', 'complete-task', { taskId: 'x' }, { error: 'no', cancelled: true }),
+					call: call('toolu_4', 'update-tasks', { taskId: 'x' }, { error: 'no', cancelled: true }),
 				},
-				{ kind: 'tool', state: 'running', call: call('toolu_5', 'summarize-day', {}) },
+				{ kind: 'tool', state: 'running', call: call('toolu_5', 'agenda', {}) },
 			]),
 		]
 		const pack = await buildPack(request({ thread, message: 'Thanks' }), readers())
@@ -321,7 +352,7 @@ describe('buildPack', () => {
 				role: 'assistant',
 				content: [
 					{ type: 'text', text: 'Drafting it.' },
-					{ type: 'tool_use', id: 'toolu_1', name: 'create-task', input: { title: 'Call [email]' } },
+					{ type: 'tool_use', id: 'toolu_1', name: 'draft-tasks', input: { title: 'Call [email]' } },
 					{ type: 'tool_use', id: 'toolu_2', name: 'weather_forecast', input: {} },
 				],
 			},
@@ -349,8 +380,8 @@ describe('buildPack', () => {
 				role: 'assistant',
 				content: [
 					{ type: 'tool_use', id: 'toolu_3', name: 'weather_forecast', input: {} },
-					{ type: 'tool_use', id: 'toolu_4', name: 'complete-task', input: { taskId: 'x' } },
-					{ type: 'tool_use', id: 'toolu_5', name: 'summarize-day', input: {} },
+					{ type: 'tool_use', id: 'toolu_4', name: 'update-tasks', input: { taskId: 'x' } },
+					{ type: 'tool_use', id: 'toolu_5', name: 'agenda', input: {} },
 				],
 			},
 			{

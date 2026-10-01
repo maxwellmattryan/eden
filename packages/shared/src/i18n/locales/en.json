@@ -15,6 +15,7 @@
 		"today": "Today",
 		"todaySubtitle": "Tasks and routines",
 		"gardener": "Gardener",
+		"resizeSidebar": "Resize the sidebar",
 		"gardenerSubtitle": "Ask, log, run",
 		"settings": "Settings",
 		"settingsSubtitle": "Preferences",
@@ -107,6 +108,7 @@
 			"taskSkipped": "{title} skipped today",
 			"taskTallied": "{title} logged",
 			"taskDeleted": "{title} deleted",
+			"taskEdited": "{title} changed",
 			"haulCaptured": "Captured a haul: {count, plural, one {# item} other {# items}}",
 			"stockAddedMany": "{count, plural, one {# item} other {# items}} added to stock",
 			"groceryAddedMany": "{count, plural, one {# item} other {# items}} added to the list",
@@ -127,7 +129,7 @@
 	"domains": {
 		"kitchen": {
 			"name": "Hearth",
-			"subtitle": "Food, recipes, pantry, groceries",
+			"subtitle": "Food, recipes, groceries, household",
 			"gardener": {
 				"preview": {
 					"add": "Add: {what}",
@@ -182,6 +184,9 @@
 				"drinks": "Drinks",
 				"condiments-and-spices": "Condiments and spices",
 				"supplements-and-mixes": "Supplements and mixes",
+				"cleaning-and-laundry": "Cleaning and laundry",
+				"personal-care": "Personal care",
+				"health": "Health",
 				"other": "Other"
 			},
 			"failure": {
@@ -194,7 +199,7 @@
 				"max-tokens": "The answer was cut short before it finished. Try fewer files at a time.",
 				"cancelled": "Stopped.",
 				"unreadable": "The answer could not be read. Try again.",
-				"empty": "No grocery items could be read from these. Try a clearer photo, or another file.",
+				"empty": "No items could be read from these. Try a clearer photo, or another file.",
 				"no-files": "Add a photo, a receipt or a list first.",
 				"no-recipe": "No recipe could be read from that. Try the recipe's text, or another photo.",
 				"page-blocked": "That page cannot be read: it is not a public web page, or it is too large.",
@@ -244,7 +249,8 @@
 					"fridge": "Fridge",
 					"freezer": "Freezer",
 					"pantry": "Pantry",
-					"counter": "Counter"
+					"counter": "Counter",
+					"household": "Household"
 				},
 				"badge": {
 					"lowStock": "low stock",
@@ -855,6 +861,10 @@
 		}
 	},
 	"profile": {
+		"proposal": {
+			"replaces": "Replaces {value}",
+			"until": "Until {day}"
+		},
 		"add": "Add a fact",
 		"edit": "Edit",
 		"window": "Set a window",
@@ -1392,6 +1402,16 @@
 		"retry": "Retry",
 		"ranTool": "Ran {tool} as its own request.",
 		"confirmTool": "Run {tool}",
+		"confirmRead": "Read this page",
+		"preview": {
+			"change": "Change: {what}",
+			"done": "Done: {what}",
+			"reopen": "Open again: {what}",
+			"skip": "Skip today: {what}",
+			"remove": "Delete: {what}",
+			"forget": "Forget: {what}",
+			"read": "Read {what}"
+		},
 		"toolRun": {
 			"same": "{tool} × {count}",
 			"mixed": "{count, plural, one {# tool} other {# tools}}"
@@ -1408,11 +1428,14 @@
 		},
 		"toast": {
 			"logged": "{value} logged.",
+			"tasks": "{count, plural, one {# task changed} other {# tasks changed}}.",
+			"forgotten": "{name} forgotten.",
 			"deleted": "{title} deleted.",
 			"deletedMany": "{count} conversations deleted."
 		},
 		"draft": {
 			"task": "A task to add",
+			"tasks": "{count, plural, one {# task} other {# tasks}} to add",
 			"grocery": "{count, plural, one {# item} other {# items}} for the list",
 			"code": "A scaffold to copy",
 			"capture": "{count, plural, one {# item} other {# items}} read from your files",
@@ -1464,8 +1487,81 @@
 			"confirmNo": "No",
 			"readsNothing": "Nothing"
 		},
-		"openTools": "Browse the tools",
-		"openAudit": "Open the audit log"
+		"openPage": "Open the Gardener's page"
+	},
+	"gardenerPage": {
+		"tabsLabel": "Gardener pages",
+		"tabs": { "usage": "Usage", "conversations": "Conversations", "audit": "Audit log", "tools": "Tools" },
+		"usage": {
+			"tiles": {
+				"month": "This month",
+				"last30": "Last 30 days",
+				"allTime": "All time",
+				"requests": "Requests this month"
+			},
+			"ofCap": "of ${cap} · {percent}%",
+			"estimate": "Estimates from the prices in Settings, counted on this device. The provider bills what it measured.",
+			"spend": "Spend",
+			"periodsLabel": "Spend by",
+			"periods": { "day": "Day", "week": "Week", "month": "Month", "year": "Year" },
+			"chart": "Spend by {period} from {from} to {to}, in US dollars, stacked by grade",
+			"byModel": "By model",
+			"byGrade": "By grade",
+			"byTool": "By what ran",
+			"noGrade": "No grade",
+			"columns": { "what": "What", "requests": "Requests", "tokensIn": "Tokens in", "tokensOut": "Tokens out" },
+			"hints": {
+				"requests": "Requests sent to a model. One that was declined, or stopped by the budget, never left and is not counted.",
+				"tokensIn": "Everything sent to the model, what its cache held included.",
+				"tokensOut": "Tokens the model wrote back.",
+				"cost": "What the requests came to in US dollars, at the prices in Settings when each one ended.",
+				"what": "A tool the Gardener ran as a request of its own, or its conversations.",
+				"from": "The domain a tool belongs to, or where the conversations were held."
+			},
+			"empty": {
+				"title": "Nothing spent yet",
+				"text": "What the Gardener costs shows here once it has answered something."
+			},
+			"error": "Couldn't read the usage.",
+			"kept": "Usage is kept on this device for good, a day at a time. It is never exported or synced."
+		},
+		"conversations": {
+			"summary": "{requests, plural, one {# request} other {# requests}}, {tokens} tokens",
+			"noRequests": "No requests in the last ninety days",
+			"showAudit": "Show in the audit log",
+			"totalsNote": "A conversation's cost covers the last ninety days, which is as long as the audit log is kept.",
+			"empty": {
+				"title": "No conversations yet",
+				"text": "Ask the Gardener something and the conversation is kept here."
+			},
+			"error": "Couldn't read the conversations."
+		},
+		"audit": {
+			"filtersLabel": "Filters",
+			"filters": { "range": "When", "kind": "Kind" },
+			"filterValue": "{filter}: {value}",
+			"filterCount": "{filter}: {count}",
+			"kinds": {
+				"conversation": "Conversation",
+				"tool": "Tool run in a conversation",
+				"page": "Tool run from a page"
+			},
+			"ranges": {
+				"all": "Any time",
+				"today": "Today",
+				"7d": "Last 7 days",
+				"30d": "Last 30 days",
+				"month": "This month"
+			},
+			"thread": "Conversation: {title}",
+			"threadGone": "One conversation",
+			"fact": "Read one fact",
+			"remove": "Remove the filter {filter}",
+			"clear": "Clear filters",
+			"onlyThread": "Only this conversation",
+			"noMatch": { "title": "No requests match", "text": "Try fewer filters." },
+			"pages": "Audit log pages"
+		}
 	},
 	"audit": {
 		"title": "Audit log",
@@ -1476,7 +1572,8 @@
 			"tool": "Tool",
 			"grade": "Grade",
 			"model": "Model",
-			"tokens": "In / out",
+			"tokensIn": "In",
+			"tokensOut": "Out",
 			"cost": "Cost",
 			"outcome": "Outcome"
 		},
@@ -1485,7 +1582,8 @@
 			"tool": "The tool the request ran, if it ran one.",
 			"grade": "The model grade the request ran at. A dash means it ran no model.",
 			"model": "The model that answered.",
-			"tokens": "Tokens sent to the model, then tokens it wrote back.",
+			"tokensIn": "Tokens sent to the model, not counting what its cache held.",
+			"tokensOut": "Tokens the model wrote back.",
 			"cost": "What the request cost, in US dollars.",
 			"outcome": "How the request ended."
 		},
@@ -1527,7 +1625,8 @@
 			"grade": "Grade",
 			"usage": "Usage",
 			"request": "Request",
-			"cached": "Cached"
+			"cached": "Cached",
+			"cacheWritten": "Cache written"
 		},
 		"openThread": "Open the conversation",
 		"retention": "Entries stay ninety days on this device. They are never exported or synced."

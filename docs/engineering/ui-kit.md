@@ -151,7 +151,7 @@ Generative art is drawn on one canvas, the `Sketch` component (D-62); nothing el
 | when `frame.still` is set, `draw` composes the whole picture in one call | reduced motion gets a still, never an empty box |
 | a sketch has no DOM, no listeners and no timers | one definition serves a header, a tile and a full page |
 
-The kit's own sketches live in `src/lib/sketches` and are exported from the barrel (`skyField`); a domain's private sketch lives with the domain under `apps/*/src/lib/domains/<id>/` and imports the types from the kit. A nannou or p5.js sketch is ported to this shape, not embedded: nannou draws to a native window the WebView cannot host, and p5 brings its own loop, globals and canvas.
+The kit's own sketches live in `src/lib/sketches` and are exported from the barrel (`skyField`, `hearthEmbers`); a domain's private sketch lives with the domain under `apps/*/src/lib/domains/<id>/` and imports the types from the kit. A nannou or p5.js sketch is ported to this shape, not embedded: nannou draws to a native window the WebView cannot host, and p5 brings its own loop, globals and canvas.
 
 ## Files
 

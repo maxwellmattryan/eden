@@ -135,7 +135,7 @@ mod tests {
         assert!(is_kind("event", "shop-day") && !is_kind("task", "shop-day"));
         assert_eq!(
             kinds_of("kitchen", "attachment"),
-            ["haul-photo", "item-photo"]
+            ["haul-photo", "item-photo", "recipe-photo", "store-photo"]
         );
         assert!(entity_types_of("toolbench").contains(&"idea"));
         assert!(is_owner("weather") && !is_owner("finance"));

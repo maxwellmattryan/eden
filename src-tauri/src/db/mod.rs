@@ -136,6 +136,7 @@ mod tests {
             "signals",
             "inbox",
             "audit_entries",
+            "usage_days",
             "threads",
             "messages",
             "policy",
@@ -145,6 +146,135 @@ mod tests {
 
         run_migrations(&conn).unwrap();
         assert_eq!(schema_version(&conn).unwrap(), latest);
+    }
+
+    /// Migration 9 sums the entries the log already held into their days, and leaves out what never left.
+    #[test]
+    fn the_usage_rollup_is_backfilled_from_the_log() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("CREATE TABLE schema_version (version INTEGER PRIMARY KEY)")
+            .unwrap();
+        for (index, sql) in schema::get_migrations().iter().take(8).enumerate() {
+            conn.execute_batch(sql).unwrap();
+            conn.execute(
+                "INSERT INTO schema_version (version) VALUES (?1)",
+                [index as i64 + 1],
+            )
+            .unwrap();
+        }
+        // noon UTC on 2026-09-10, so the device's day is that one in any zone within twelve hours of it
+        let noon = 1_789_041_600_000_i64;
+        let insert = "INSERT INTO audit_entries
+                (id, at, surface, parent_request_id, tool, domain, grade, provider, model, reads, entities, tools,
+                 grants, tokens_in, tokens_out, cache_read, cache_write, cost_usd, outcome)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'anthropic', 'm', '[]', '[]', '[]', '[]', 100, 10, 5, 2, ?8, ?9)";
+        let none = None::<String>;
+        for (id, surface, parent, tool, domain, grade, cost, outcome) in [
+            (
+                "A",
+                "global-chat",
+                none.clone(),
+                none.clone(),
+                none.clone(),
+                Some("light"),
+                0.5,
+                "ok",
+            ),
+            (
+                "B",
+                "global-chat",
+                none.clone(),
+                none.clone(),
+                none.clone(),
+                Some("light"),
+                0.25,
+                "error",
+            ),
+            (
+                "C",
+                "delegated",
+                Some("x".to_string()),
+                Some("plan".to_string()),
+                Some("kitchen".to_string()),
+                None,
+                1.0,
+                "ok",
+            ),
+            (
+                "D",
+                "global-chat",
+                none.clone(),
+                none.clone(),
+                none.clone(),
+                Some("light"),
+                0.0,
+                "budget",
+            ),
+        ] {
+            conn.execute(
+                insert,
+                rusqlite::params![
+                    format!("{id:0>26}"),
+                    noon,
+                    surface,
+                    parent,
+                    tool,
+                    domain,
+                    grade,
+                    cost,
+                    outcome
+                ],
+            )
+            .unwrap();
+        }
+        run_migrations(&conn).unwrap();
+
+        let rows: Vec<(String, String, String, String, i64, i64, i64, f64)> = conn
+            .prepare(
+                "SELECT day, grade, kind, tool, requests, tokens_in, cache_write, cost_usd
+                 FROM usage_days ORDER BY kind",
+            )
+            .unwrap()
+            .query_map([], |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                    row.get(5)?,
+                    row.get(6)?,
+                    row.get(7)?,
+                ))
+            })
+            .unwrap()
+            .collect::<rusqlite::Result<_>>()
+            .unwrap();
+        assert_eq!(
+            rows,
+            vec![
+                (
+                    "2026-09-10".into(),
+                    "light".into(),
+                    "conversation".into(),
+                    "".into(),
+                    2,
+                    200,
+                    4,
+                    0.75
+                ),
+                (
+                    "2026-09-10".into(),
+                    "".into(),
+                    "tool".into(),
+                    "plan".into(),
+                    1,
+                    100,
+                    2,
+                    1.0
+                ),
+            ]
+        );
     }
 
     #[test]

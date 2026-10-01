@@ -35,6 +35,8 @@ export { default as Skeleton } from './components/Skeleton/Skeleton.svelte'
 export { default as Stat } from './components/Stat/Stat.svelte'
 export { default as Sparkline } from './components/Sparkline/Sparkline.svelte'
 export { default as TrendChart } from './components/TrendChart/TrendChart.svelte'
+export { default as BarChart } from './components/BarChart/BarChart.svelte'
+export type { BarSeries } from './components/BarChart/bars.js'
 export { default as SunArc } from './components/SunArc/SunArc.svelte'
 
 // Brand
@@ -51,6 +53,7 @@ export type { SketchDefinition, SketchFrame } from './sketch/types.js'
 export { createRandom, type Random } from './sketch/random.js'
 export { createNoise, type Noise } from './sketch/noise.js'
 export { skyField, type SkyFieldParams } from './sketches/sky-field.js'
+export { hearthEmbers, type HearthEmbersParams } from './sketches/hearth-embers.js'
 
 // Actions and data
 export { default as Button } from './components/Button/Button.svelte'
@@ -97,7 +100,8 @@ export type { BannerPlacement, BannerTone } from './components/Banner/Banner.sve
 export { default as QuickAdd } from './components/QuickAdd/QuickAdd.svelte'
 export { defaultParse, type ParsedChip, type QuickAddParser } from './components/QuickAdd/QuickAdd.svelte'
 export { default as DataTable } from './components/DataTable/DataTable.svelte'
-export type { DataTableCell, DataTableColumn } from './components/DataTable/DataTable.svelte'
+export type { DataTableCell, DataTableColumn, DataTableSort } from './components/DataTable/DataTable.svelte'
+export { default as Pagination } from './components/Pagination/Pagination.svelte'
 export { default as Widget } from './components/Widget/Widget.svelte'
 export type { WidgetAction, WidgetSize } from './components/Widget/Widget.svelte'
 export { default as WidgetGrid } from './components/WidgetGrid/WidgetGrid.svelte'

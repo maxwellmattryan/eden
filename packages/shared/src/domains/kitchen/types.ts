@@ -2,13 +2,16 @@
 // shape without the id, which the row carries itself.
 import type { EntityTypeId } from '../../registry/index.js'
 
-export type StockLocation = 'fridge' | 'freezer' | 'pantry' | 'counter'
-/** The four locations, fixed so capture can place items without a picker (kitchen.md, "Entities"). */
-export const LOCATIONS: readonly StockLocation[] = ['fridge', 'freezer', 'pantry', 'counter']
+export type StockLocation = 'fridge' | 'freezer' | 'pantry' | 'counter' | 'household'
+/**
+ * The five locations, fixed so capture can place items without a picker (kitchen.md, "Entities"). The first four
+ * hold food; `household` holds what is bought on the same trip and never cooked with (D-122).
+ */
+export const LOCATIONS: readonly StockLocation[] = ['fridge', 'freezer', 'pantry', 'counter', 'household']
 export type StockSource = 'manual' | 'capture' | 'sample'
 
-/** What a stock item is a kind of: the ids capture chooses among and the page labels (`domains.kitchen.categories`). */
-export const CATEGORIES = [
+/** What food is a kind of. */
+export const FOOD_CATEGORIES = [
 	'produce',
 	'meat-and-fish',
 	'dairy-and-eggs',
@@ -20,9 +23,33 @@ export const CATEGORIES = [
 	'drinks',
 	'condiments-and-spices',
 	'supplements-and-mixes',
-	'other',
 ] as const
+/** What a household item is a kind of (D-122); paper goods are with cleaning. */
+export const HOUSEHOLD_CATEGORIES = ['cleaning-and-laundry', 'personal-care', 'health'] as const
+/** What a stock item is a kind of: the ids capture chooses among and the page labels (`domains.kitchen.categories`). */
+export const CATEGORIES = [...FOOD_CATEGORIES, ...HOUSEHOLD_CATEGORIES, 'other'] as const
 export type StockCategory = (typeof CATEGORIES)[number]
+
+/** Whether an item is a household one: it is kept under `household`, and nothing else says so (D-122). */
+export const isHousehold = (item: { location: StockLocation }): boolean => item.location === 'household'
+
+/** The categories an item kept at a location can be, `other` last. */
+export function categoriesFor(location: StockLocation): readonly StockCategory[] {
+	return [...(location === 'household' ? HOUSEHOLD_CATEGORIES : FOOD_CATEGORIES), 'other']
+}
+
+/**
+ * Where an item goes and what it is, once the two agree (D-122): a household category puts it under `household`,
+ * and an item under `household` keeps no food category.
+ */
+export function placed(
+	location: StockLocation,
+	category: string | undefined
+): { location: StockLocation; category?: string } {
+	if ((HOUSEHOLD_CATEGORIES as readonly string[]).includes(category ?? '')) return { location: 'household', category }
+	const food = (FOOD_CATEGORIES as readonly string[]).includes(category ?? '')
+	return location === 'household' && food ? { location } : { location, ...(category ? { category } : {}) }
+}
 
 /** The registry id of the Attachment kind an item's picture is kept as (D-90). */
 export const ITEM_PHOTO = 'item-photo'

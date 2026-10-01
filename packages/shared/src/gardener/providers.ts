@@ -21,6 +21,8 @@ const EVERY_FLAG: readonly ModelFlag[] = ['tools', 'vision']
 /**
  * Anthropic's models, from the provider's docs on 2026-09-30: dated ids wherever one exists, and the pricing per
  * million tokens. Fable is listed for the owner to choose and mapped to no grade: it costs two and a half times Opus.
+ * No row prices a cache write: it is the five-minute one, the only kind the pack asks for, at a quarter over the
+ * row's input price, so an input price the owner edits carries it along (D-116).
  */
 export const ANTHROPIC_SEED: ProviderRow = {
 	id: ANTHROPIC,
@@ -95,6 +97,10 @@ function modelProblems(provider: ProviderId, row: ModelEdit): string[] {
 		if (!(typeof value === 'number' && Number.isFinite(value) && value >= 0))
 			problems.push(`${what} costs ${JSON.stringify(value)} per million ${price} tokens; a number, zero or more`)
 	}
+	// a row from before cache writes were priced has none, and reads as a quarter over its input price
+	const write = row.pricing?.cacheWrite
+	if (write !== undefined && !(typeof write === 'number' && Number.isFinite(write) && write >= 0))
+		problems.push(`${what} costs ${JSON.stringify(write)} per million cacheWrite tokens; a number, zero or more`)
 	return problems
 }
 

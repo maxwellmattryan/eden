@@ -18,6 +18,9 @@ const CATEGORY_GLYPHS: Record<string, IconName> = {
 	drinks: 'cup-soda',
 	'condiments-and-spices': 'flask-conical',
 	'supplements-and-mixes': 'pill',
+	'cleaning-and-laundry': 'sparkles',
+	'personal-care': 'droplets',
+	health: 'thermometer',
 	other: 'package',
 }
 

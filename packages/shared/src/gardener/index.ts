@@ -1,6 +1,7 @@
 // The Gardener for the apps (docs/product/substrate/ai.md; docs/engineering/domain-module.md, "Model grades"): the
 // provider registry's seed and the owner's edits over it, the model a request resolves to, the tool registry, the
 // context pack with its scrub and persona, the estimates and the budget, the policy row, and the runtime's client.
+export * from './agenda.js'
 export {
 	budgetState,
 	requestTokenCap,
@@ -21,9 +22,20 @@ export {
 	sentSize,
 } from './attachments.js'
 export * from './client.js'
+export * from './audit-page.js'
+export * from './audit-params.js'
 export { clampForDevelopment, isDevEnvironment } from './dev.js'
 export { greetingKey, GREETINGS, partOfDay, type GreetingPool } from './greeting.js'
-export { estimateBefore, estimateCost, formatCost, formatUsd, type Usage } from './estimate.js'
+export {
+	CACHE_WRITE_RATIO,
+	cacheWritePrice,
+	estimateBefore,
+	estimateCost,
+	formatCost,
+	formatUsd,
+	type Usage,
+} from './estimate.js'
+export { holdsPage, linksOf, normalLink, READ_PAGE, resolveLink, untrusted } from './links.js'
 export { openRequests, OPEN_REQUESTS_KEY, type OpenRequests } from './open-requests.js'
 export {
 	buildPack,
@@ -68,14 +80,17 @@ export {
 	QUICK_ACTION_WORDS,
 	quickActionsFor,
 	SCHEMAS,
+	STANDING_ON_CONFIRM,
 	SUBSTRATE,
 	SUBSTRATE_TOOLS,
 	toApiTool,
 	toolIndex,
 	toolsFor,
+	USAGE_GROUPS,
 	validateTools,
 	wireName,
 	type GardenerTool,
 	type JsonSchema,
 } from './tools.js'
 export * from './types.js'
+export * from './usage.js'

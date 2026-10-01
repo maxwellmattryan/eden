@@ -23,7 +23,9 @@
 		QuickAdd,
 		Segmented,
 		Sheet,
+		Sketch,
 		domainGlyph,
+		hearthEmbers,
 		type IconName,
 		type ListRowData,
 		type MenuItem,
@@ -33,6 +35,7 @@
 	import {
 		haul,
 		haulCategories,
+		hearthMotif,
 		ranOut as ranOutItems,
 		sidebar,
 		stock,
@@ -108,6 +111,7 @@
 		{ id: 'freezer', label: 'Freezer' },
 		{ id: 'pantry', label: 'Pantry' },
 		{ id: 'counter', label: 'Counter' },
+		{ id: 'household', label: 'Household' },
 	]
 	const locationLabel = (id: StockLocation) => LOCATIONS.find((location) => location.id === id)?.label ?? id
 	/** Today is Wednesday 09-30; anything dated on or before Friday counts as expiring. */
@@ -128,6 +132,9 @@
 		drinks: 'cup-soda',
 		'condiments-and-spices': 'flask-conical',
 		'supplements-and-mixes': 'pill',
+		'cleaning-and-laundry': 'sparkles',
+		'personal-care': 'droplets',
+		health: 'thermometer',
 		other: 'package',
 	}
 	const glyphOf = (item: StockItem): IconName => GLYPHS[item.category ?? ''] ?? 'package'
@@ -288,6 +295,7 @@
 		freezer: false,
 		pantry: false,
 		counter: false,
+		household: false,
 	})
 	let bulkMove = $state<{ ids: string[]; from: StockLocation; anchor: HTMLElement }>()
 	let bulkMoveOpen = $state(false)
@@ -320,6 +328,13 @@
 	{#snippet children(platform)}
 		<div class="page">
 			<PageHeader name={hearth.name} subtitle={hearth.subtitle} icon={domainGlyph('kitchen')} actions={headerActions}>
+				<!-- the page's one live thing (D-123): the stock as sparks off a fire, the same on every tab -->
+				{#snippet motif()}
+					<Sketch sketch={hearthEmbers} params={hearthMotif} />
+				{/snippet}
+				{#snippet legend()}
+					{hearthMotif.items} in stock, {hearthMotif.expiring} expiring soon
+				{/snippet}
 				{#snippet filters()}
 					<Segmented items={TABS} selected={0} label="Hearth sections" />
 					<Chip label="Expiring" tone="outline" icon="clock" selectable selected={expiring} />

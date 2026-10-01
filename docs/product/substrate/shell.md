@@ -9,13 +9,13 @@ updated: 2026-10-01
 
 ## Layout regions
 
-**Desktop**: a collapsible left sidebar (not built yet: the sidebar is fixed at `--sidebar`; collapsing it would give a narrow page room back, D-112); the main content area with a subtle back affordance at its top left; an optional right panel for the Gardener; a bottom status bar. Modals (settings, confirm sheets, Capture verification) overlay the whole window.
+**Desktop**: a left sidebar whose edge drags wider and narrower and collapses it to a rail of glyphs (D-119); the main content area with a subtle back affordance at its top left; an optional right panel for the Gardener, which also has a page of its own (D-113); a bottom status bar. Modals (settings, confirm sheets, Capture verification) overlay the whole window.
 
 **Mobile**: a bottom tab bar (Garden, Today, two pinned domains, More); sheets for the Gardener, settings and Quick Log; a floating **+** button; no sidebar.
 
 ## Sidebar (Phase 1)
 
-The app mark and wordmark at the head, then three groups under rules: Today; Garden and Toolbench; the enabled domains in the owner's order. The Gardener and Settings are pinned at the bottom with their keys always shown, and each opens its panel or sheet without becoming the current item (D-55, D-64, D-77). Each domain shows its glyph, themed name and plain subtitle; the subtitle collapses to a tooltip once the owner turns it off (D-2). Domains can be reordered by drag and hidden without being disabled (`substrate/domain-manifest.md`). Badges are rare: unread inbox count on the bell, nothing on domains by default.
+The app mark and wordmark at the head, then three groups under rules: Today; Garden and Toolbench; the enabled domains in the owner's order. The Gardener and Settings are pinned at the bottom with their keys always shown (D-55, D-64, D-77). Settings opens its sheet without becoming the current item. The Gardener's entry goes to its page and is the current item there, while its key, ⌘G, opens its panel (D-113). Each domain shows its glyph, themed name and plain subtitle; the subtitle collapses to a tooltip once the owner turns it off (D-2). Domains can be reordered by drag and hidden without being disabled (`substrate/domain-manifest.md`). Badges are rare: unread inbox count on the bell, nothing on domains by default.
 
 ## The Garden (Phase 1)
 
@@ -55,7 +55,7 @@ Tabs: Garden, Today, and two domains the owner pins (Hearth and Sky by default),
 
 ## Keyboard model (Phase 1 defaults, customisable in Phase 2)
 
-⌘K palette, ⌘1–9 sidebar positions, ⌘, settings, ⌘G Gardener panel, ⌘N create in the current domain, ⌘⇧L Quick Log, ⌘[ and ⌘] back and forward, Esc closes the top-most sheet. Customisation lives in Settings → Shortcuts.
+⌘K palette, ⌘1–9 sidebar positions, ⌘, settings, ⌘G Gardener panel, ⌘B collapse or open the sidebar, ⌘N create in the current domain, ⌘⇧L Quick Log, ⌘[ and ⌘] back and forward, Esc closes the top-most sheet. Customisation lives in Settings → Shortcuts.
 
 ## Global states
 

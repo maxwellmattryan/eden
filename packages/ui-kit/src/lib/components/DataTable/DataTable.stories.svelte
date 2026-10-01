@@ -3,7 +3,7 @@
 	import { expect, fn, waitFor, within } from 'storybook/test'
 	import { canvasOf, hasCanvas } from '../../../storybook/play.js'
 	import DetailSection from '../DetailPopover/DetailSection.svelte'
-	import DataTable, { type DataTableCell, type DataTableColumn } from './DataTable.svelte'
+	import DataTable, { type DataTableCell, type DataTableColumn, type DataTableSort } from './DataTable.svelte'
 	import { audit, haul, integrations, stock } from '../../../stories/sample-data.js'
 
 	// The egress ledger for the audit day: where bytes went, by destination.
@@ -77,11 +77,24 @@
 		[{ label: 'Outcome', value: error.text, icon: error.icon, tone: error.tone }],
 	]
 
+	// The audit log with headers that sort it: every column but the surface.
+	const sortColumns: DataTableColumn[] = auditColumns.map((column, c) => ({ ...column, sortable: c !== 1 }))
+
 	const { Story } = defineMeta({
 		title: 'Components/Data/DataTable',
 		component: DataTable,
 		tags: ['autodocs'],
 		args: { label: egressLabel, columns: egressColumns, rows: egressRows, showCaption: false },
+	})
+</script>
+
+<script lang="ts">
+	// The sorted story holds the sort as a page would, and hands the rows back in that order.
+	let sorted = $state<DataTableSort>({ column: 'Cost', direction: 'desc' })
+	const sortedRows = $derived.by(() => {
+		const at = sortColumns.findIndex((column) => column.label === sorted.column)
+		const sign = sorted.direction === 'asc' ? 1 : -1
+		return [...auditRows].sort((a, b) => sign * a[at]!.localeCompare(b[at]!, undefined, { numeric: true }))
 	})
 </script>
 
@@ -183,5 +196,41 @@
 				<DetailSection label="Request" rows={outcomeDetail[index]} />
 			{/snippet}
 		</DataTable>
+	{/snippet}
+</Story>
+
+<!-- Headers that sort: the table asks, the caller answers. Nothing is sorted yet, so every sortable header says none -->
+<Story
+	name="Sortable"
+	args={{ label: 'Audit log', columns: sortColumns, rows: auditRows, onsort: fn() }}
+	play={async ({ args, canvasElement, userEvent }) => {
+		if (!hasCanvas(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		await expect(canvas.getByRole('columnheader', { name: 'When' })).toHaveAttribute('aria-sort', 'none')
+		await expect(canvas.getByRole('columnheader', { name: 'Surface' })).not.toHaveAttribute('aria-sort')
+		// text sorts from the start of the alphabet first, numbers from the highest
+		await userEvent.click(canvas.getByRole('button', { name: 'Model' }))
+		await expect(args.onsort).toHaveBeenLastCalledWith({ column: 'Model', direction: 'asc' })
+		await userEvent.click(canvas.getByRole('button', { name: 'Cost' }))
+		await expect(args.onsort).toHaveBeenLastCalledWith({ column: 'Cost', direction: 'desc' })
+	}}
+/>
+
+<!-- Sorted by cost, the dearest first: the header shows the arrow and says descending; a second pick turns it round -->
+<Story
+	name="Sorted descending"
+	args={{ label: 'Audit log', columns: sortColumns, rows: auditRows, sort: { column: 'Cost', direction: 'desc' } }}
+	play={async ({ canvasElement, userEvent }) => {
+		if (!hasCanvas(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		const cost = canvas.getByRole('columnheader', { name: 'Cost' })
+		await expect(cost).toHaveAttribute('aria-sort', 'descending')
+		await userEvent.click(canvas.getByRole('button', { name: 'Cost' }))
+		await expect(cost).toHaveAttribute('aria-sort', 'ascending')
+		await expect(canvas.getAllByRole('row')[1]).toHaveTextContent(haul.cost)
+	}}
+>
+	{#snippet template(args)}
+		<DataTable {...args} rows={sortedRows} sort={sorted} onsort={(next) => (sorted = next)} />
 	{/snippet}
 </Story>

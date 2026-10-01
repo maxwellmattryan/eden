@@ -1,6 +1,6 @@
 <script lang="ts">
 	// The desktop shell (product/substrate/shell.md): the sidebar on the left, the content with its back affordance,
-	// the Gardener's panel docked on the right while it is open, the status bar along the bottom, and the overlays
+	// which drags wider and collapses to a rail (D-119), the Gardener's panel docked on the right while it is open, the status bar along the bottom, and the overlays
 	// (toast, settings, crash) on top. It mounts the shared pieces
 	// once: settings, i18n, the global error handler, the hourly update check, signals and the scheduler. The splash
 	// covers it until they are ready, then fades out as the shell fades in.
@@ -17,6 +17,7 @@
 		ToastHost,
 		UiKitProvider,
 		domainGlyph,
+		sizes,
 		type GlyphId,
 		type InboxItem,
 		type SidebarEntry,
@@ -40,6 +41,7 @@
 	import { useGlobalErrorHandler } from '$lib/hooks/useGlobalErrorHandler'
 	import SettingsSheet from '$lib/settings/SettingsSheet.svelte'
 	import { settingsUi } from '$lib/settings/settings-ui.svelte'
+	import ResizeHandle from '$lib/shell/ResizeHandle.svelte'
 	import GardenerDock from '$lib/shell/gardener/GardenerDock.svelte'
 	import { gardenerUi } from '$lib/shell/gardener/panel-ui.svelte'
 	import { gardenerSetup } from '$lib/shell/gardener/setup.svelte'
@@ -60,13 +62,15 @@
 
 	// The groups come from the manifests and from what the shell declares for itself: Today; Garden, Gardener and
 	// Toolbench; then the domains, each group under a rule (D-64). The owner's order and what they hid arrive with
-	// the Domains tab. The ⌘ positions count the places only: the Gardener has its own key.
+	// the Domains tab. The ⌘ positions count the places of the groups only: the Gardener, pinned at the foot, is a
+	// place too (D-113), but its key is ⌘G, which opens its panel, not its page.
 	const composed = sidebarGroups(declarations, shell)
 	const position = shortcutPositions(composed)
 	/** Where the places that are the shell's own lead. */
 	const places: Partial<Record<string, ReturnType<typeof resolve>>> = {
 		today: resolve('/today'),
 		garden: resolve('/garden'),
+		gardener: resolve('/gardener/[[tab]]', {}),
 	}
 
 	function entry(item: SidebarItem): SidebarEntry {
@@ -93,7 +97,9 @@
 			subtitle: $t(item.subtitle),
 			icon: domainGlyph(item.id as GlyphId),
 			shortcut: item.key ? keys(item.key) : undefined,
-			action: true,
+			// the Gardener has a page and becomes the current item on it; Settings is an action
+			href: places[item.id],
+			action: !places[item.id],
 		}))
 	)
 	const current = $derived(tabOf(page.route))
@@ -166,6 +172,57 @@
 	let innerWidth = $state(0)
 	let navWidth = $state(0)
 	const room = $derived(Math.max(0, innerWidth - navWidth))
+
+	// The sidebar's edge drags as the Gardener's dock does (D-119): from three quarters of the kit's width to twice
+	// it, less whatever the page's floor needs in a small window, and narrower than that it collapses to the rail.
+	// The width and whether it is collapsed are kept per device; dragging turns the transition off so the edge
+	// follows the pointer.
+	const SIDEBAR_DEFAULT = Number.parseInt(sizes.sidebar, 10)
+	const SIDEBAR_MIN = Math.round(SIDEBAR_DEFAULT * 0.75)
+	const SIDEBAR_MAX = SIDEBAR_DEFAULT * 2
+	const SIDEBAR_RAIL = Number.parseInt(sizes['sidebar-rail'], 10)
+	// the least the page beside the sidebar keeps, in px
+	const PAGE_FLOOR = 420
+	const sidebarMax = $derived(
+		innerWidth ? Math.max(SIDEBAR_MIN, Math.min(SIDEBAR_MAX, innerWidth - PAGE_FLOOR)) : SIDEBAR_MAX
+	)
+	const clampSidebar = (value: number) => Math.min(sidebarMax, Math.max(SIDEBAR_MIN, value))
+	const sidebarWidth = $derived(clampSidebar(settings.sidebarWidth ?? SIDEBAR_DEFAULT))
+	let sidebarResizing = $state(false)
+	// where the pointer has taken the edge during a drag, past either bound, and the width the drag began at
+	let dragged: number | undefined
+	let widthBefore: number | null = null
+	function startSidebarResize() {
+		sidebarResizing = true
+		dragged = settings.sidebarCollapsed ? SIDEBAR_RAIL : sidebarWidth
+		widthBefore = settings.sidebarWidth
+	}
+	function endSidebarResize() {
+		sidebarResizing = false
+		dragged = undefined
+	}
+	function resizeSidebar(delta: number) {
+		if (dragged === undefined) {
+			// the arrow keys: a step wider opens the rail, a step narrower than the least collapses to it
+			if (settings.sidebarCollapsed) {
+				if (delta > 0) settings.setSidebarCollapsed(false)
+			} else if (sidebarWidth + delta < SIDEBAR_MIN) settings.setSidebarCollapsed(true)
+			else settings.setSidebarWidth(clampSidebar(sidebarWidth + delta))
+			return
+		}
+		dragged += delta
+		if (dragged < SIDEBAR_MIN) {
+			// collapsed by the drag, it opens again at the width it had before
+			if (!settings.sidebarCollapsed) {
+				settings.setSidebarCollapsed(true)
+				settings.setSidebarWidth(widthBefore)
+			}
+			return
+		}
+		if (settings.sidebarCollapsed) settings.setSidebarCollapsed(false)
+		settings.setSidebarWidth(clampSidebar(dragged))
+	}
+	const toggleSidebar = () => settings.setSidebarCollapsed(!settings.sidebarCollapsed)
 	beforeNavigate((navigation) => {
 		if (main && navigation.to) rememberScroll(tabOf(navigation.from?.route), main.scrollTop)
 	})
@@ -185,9 +242,9 @@
 	})
 	const onback = $derived(depth > 0 ? () => history.back() : undefined)
 
+	// The Gardener's entry is a link to its page (D-113); its panel opens by ⌘G and from the status bar's chip.
 	function onselect(id: string) {
 		if (id === 'settings') settingsUi.show()
-		else if (id === 'gardener') gardenerUi.toggle()
 	}
 
 	const GRADE_ICONS = { light: 'seed', standard: 'sprout', deep: 'tree-deciduous' } as const
@@ -226,7 +283,7 @@
 			: undefined
 	)
 
-	// ⌘, opens Settings; ⌘G the Gardener; ⌘1 to ⌘9 go to the sidebar positions (shell.md, keyboard model).
+	// ⌘, opens Settings; ⌘G the Gardener; ⌘B collapses the sidebar; ⌘1 to ⌘9 go to the sidebar positions (shell.md, keyboard model).
 	function onkeydown(e: KeyboardEvent) {
 		if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return
 		if (e.key === ',') {
@@ -237,6 +294,11 @@
 		if (e.key === 'g' || e.key === 'G') {
 			e.preventDefault()
 			gardenerUi.toggle()
+			return
+		}
+		if (e.key === 'b' || e.key === 'B') {
+			e.preventDefault()
+			toggleSidebar()
 			return
 		}
 		if (/^[1-9]$/.test(e.key)) {
@@ -295,8 +357,29 @@
 
 <UiKitProvider strings={uiKitStrings($locale)}>
 	<div class={['shell', $splashVisible && 'shell-waiting']}>
-		<div class="nav" bind:clientWidth={navWidth}>
-			<Sidebar {groups} {pinned} brand={$t('app.name')} subtitles={settings.subtitles} {current} {onselect} />
+		<div
+			class={['nav', !sidebarResizing && 'nav-sliding']}
+			style:width="{settings.sidebarCollapsed ? SIDEBAR_RAIL : sidebarWidth}px"
+			bind:clientWidth={navWidth}
+		>
+			<Sidebar
+				{groups}
+				{pinned}
+				brand={$t('app.name')}
+				subtitles={settings.subtitles}
+				collapsed={settings.sidebarCollapsed}
+				{current}
+				{onselect}
+				style="width: 100%"
+			/>
+			<ResizeHandle
+				label={$t('shell.resizeSidebar')}
+				edge="end"
+				onresize={resizeSidebar}
+				onstart={startSidebarResize}
+				onend={endSidebarResize}
+				ontoggle={toggleSidebar}
+			/>
 		</div>
 		<main class="content" bind:this={main}>
 			<div class="content-back"><BackButton {onback} /></div>
@@ -349,6 +432,14 @@
 		grid-column: 1;
 		min-height: 0;
 		display: flex;
+	}
+	.nav-sliding {
+		transition: width var(--ed-duration-panel) var(--ed-ease-out);
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.nav-sliding {
+			transition: none;
+		}
 	}
 	.content {
 		grid-row: 1;

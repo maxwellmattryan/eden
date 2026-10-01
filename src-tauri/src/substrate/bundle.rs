@@ -2393,7 +2393,7 @@ mod tests {
         cleanup(&scratch, &[&first, &second]);
     }
 
-    /// The audit log is this device's: it is in no bundle, and a replace leaves it as it is.
+    /// The audit log and the usage summed from it are this device's: in no bundle, and a replace leaves them be.
     #[test]
     fn the_audit_never_leaves() {
         let scratch = temp_dir("bundle-audit");
@@ -2408,12 +2408,16 @@ mod tests {
             .unwrap();
         export_to(&workspace, &scratch.join("a.zip"), Scope::Full);
         let files = unzip(&scratch.join("a.zip"));
-        assert!(files.keys().all(|name| !name.contains("audit")));
+        assert!(files
+            .keys()
+            .all(|name| !name.contains("audit") && !name.contains("usage")));
         let everything: Vec<u8> = files.values().flatten().copied().collect();
         assert!(!String::from_utf8_lossy(&everything).contains("claude-haiku-4-5-20251001"));
 
         import(&workspace, &scratch.join("a.zip"), Mode::Replace).unwrap();
         assert_eq!(count(&workspace, "audit_entries"), 1);
+        // and so is the rollup of what it came to (D-115)
+        assert_eq!(count(&workspace, "usage_days"), 1);
         cleanup(&scratch, &[&workspace]);
     }
 

@@ -20,14 +20,23 @@
 		PageHeader,
 		Segmented,
 		Sheet,
+		Sketch,
 		Thumbnail,
 		domainGlyph,
+		hearthEmbers,
 		type ListRowData,
 		type MenuItem,
 	} from '$lib/index.js'
 	import AppFrame from '../_frame/AppFrame.svelte'
 	import SwipeList from '../_frame/SwipeList.svelte'
-	import { grocery, ranOut, sidebar, type SampleGroceryItem, type SampleGroceryStore } from '../../sample-data.js'
+	import {
+		grocery,
+		hearthMotif,
+		ranOut,
+		sidebar,
+		type SampleGroceryItem,
+		type SampleGroceryStore,
+	} from '../../sample-data.js'
 
 	type Item = SampleGroceryItem
 	type Store = SampleGroceryStore
@@ -295,6 +304,13 @@
 	{#snippet children(platform)}
 		<div class="page">
 			<PageHeader name={hearth.name} subtitle={hearth.subtitle} icon={domainGlyph('kitchen')} actions={headerActions}>
+				<!-- the page's one live thing (D-123): the stock as sparks off a fire, the same on every tab -->
+				{#snippet motif()}
+					<Sketch sketch={hearthEmbers} params={hearthMotif} />
+				{/snippet}
+				{#snippet legend()}
+					{hearthMotif.items} in stock, {hearthMotif.expiring} expiring soon
+				{/snippet}
 				{#snippet filters()}
 					<Segmented items={TABS} selected={2} label="Hearth sections" />
 				{/snippet}

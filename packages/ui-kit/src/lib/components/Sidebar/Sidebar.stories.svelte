@@ -70,6 +70,19 @@
 
 <Story name="Shortcuts on" args={{ shortcuts: true }} {template} />
 
+<!-- the rail: the mark alone at the head and each entry's glyph, which keeps its name for assistive technology and as its tooltip -->
+<Story
+	name="Collapsed"
+	args={{ collapsed: true }}
+	{template}
+	play={async ({ canvasElement }) => {
+		if (!canvasElement.querySelector('.ed-canvas')) return
+		const canvas = canvasOf(canvasElement)
+		await expect(canvas.getByRole('button', { name: 'Hearth' })).toHaveAttribute('aria-current', 'page')
+		await expect(canvas.getByRole('button', { name: 'Settings' })).toBeVisible()
+	}}
+/>
+
 <!-- without a name there is no head: the groups start at the top -->
 <Story name="Without brand" args={{ brand: undefined }} {template} />
 

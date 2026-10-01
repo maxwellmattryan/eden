@@ -177,7 +177,7 @@ export interface ShellEntryDeclaration {
 	subtitle: string
 	group: SidebarGroupId
 	order: number
-	/** A place has a route and takes a ⌘ position; the Gardener is a panel with a key of its own. */
+	/** A place has a route and takes a ⌘ position. */
 	place: boolean
 	key: string | null
 }
@@ -198,7 +198,10 @@ export interface ShellDeclaration {
 	sidebar: {
 		groups: readonly SidebarGroupId[]
 		entries: readonly ShellEntryDeclaration[]
-		/** Pinned at the foot: actions, never the current item (D-64). */
+		/**
+		 * Pinned at the foot, each with a key of its own (D-77). Settings is an action and never the current item; the
+		 * Gardener is a place on the desktop, where the app gives it its route (D-113), and its key opens its panel.
+		 */
 		pinned: readonly { id: string; name: string; subtitle: string; key: string | null }[]
 	}
 	/** The phone's tab bar (product/substrate/shell.md, "Mobile"). */

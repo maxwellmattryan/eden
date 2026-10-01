@@ -12,7 +12,10 @@
 		Menu,
 		PageHeader,
 		Segmented,
+		Sketch,
 		domainGlyph,
+		hearthEmbers,
+		type HearthEmbersParams,
 		type IconName,
 		type MenuItem,
 		type PageHeaderAction,
@@ -44,6 +47,13 @@
 	function selectTab(index: number) {
 		void goto(resolve('/kitchen/[[tab]]', { tab: KITCHEN_TABS[index] }), { replaceState: true, noScroll: true })
 	}
+
+	// The header's motif (D-123): what is in stock and how much of it is expiring, the same on every tab.
+	const embers = $derived.by<HearthEmbersParams | undefined>(() => {
+		if (!kitchen.ready) return undefined
+		const held = kitchen.stock.filter((item) => !kitchen.out(item))
+		return { items: held.length, expiring: held.filter((item) => kitchen.soon(item)).length }
+	})
 
 	// The Stock filters (kitchen.md: sort by expiry, low-stock filter), and how each location is ordered.
 	let expiring = $state(false)
@@ -103,6 +113,10 @@
 		icon={domainGlyph('kitchen')}
 		{actions}
 	>
+		<!-- the page's one live thing: the stock as sparks off a fire -->
+		{#snippet motif()}
+			{#if embers}<Sketch sketch={hearthEmbers} params={embers} />{/if}
+		{/snippet}
 		{#snippet filters()}
 			<Segmented
 				items={tabItems}

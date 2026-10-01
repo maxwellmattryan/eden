@@ -3,7 +3,7 @@
 // the stock that covers it. Both read a name the way a shopper would: case, plurals and the words that only describe
 // ("fresh", "large", "(low sodium)") do not make two things of one.
 import { compatible, isOut, parseAmount } from './quantity.js'
-import type { StockItem, StockLocation } from './types.js'
+import { isHousehold, type StockItem, type StockLocation } from './types.js'
 
 /** Words that describe a food without making it another food. */
 const DESCRIPTORS = new Set([
@@ -146,11 +146,11 @@ function closes(short: string[], long: string[]): boolean {
 /**
  * The stock that covers an ingredient, the soonest to expire first. The names match when they are the same once
  * the cut is left off, or when one is the other with words in front ("baby spinach" covers "spinach"). An item
- * that ran out covers nothing (D-92).
+ * that ran out covers nothing (D-92), and neither does a household item, which is never cooked with (D-122).
  */
 export function stockFor(ingredient: string, stock: readonly StockItem[]): StockItem[] {
 	return stock
-		.filter((item) => !isOut(item) && nameCovers(ingredient, item.name))
+		.filter((item) => !isOut(item) && !isHousehold(item) && nameCovers(ingredient, item.name))
 		.sort((a, b) => (a.expiry ?? UNDATED).localeCompare(b.expiry ?? UNDATED))
 }
 

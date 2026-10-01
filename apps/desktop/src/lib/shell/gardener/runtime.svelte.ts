@@ -29,6 +29,7 @@ import {
 	type GardenerTool,
 	type Message,
 	type MessageBlock,
+	type ModelGrade,
 	type ModelRow,
 	type Pack,
 	type PackReaders,
@@ -40,8 +41,13 @@ import {
 	attachmentKind,
 	attachmentsOf,
 	hasVisual,
+	holdsPage,
+	linksOf,
+	READ_PAGE,
 	recordAudit,
 	scrubValue,
+	STANDING_ON_CONFIRM,
+	SUBSTRATE,
 	type AttachmentBlock,
 } from '@eden/shared/gardener'
 import { locale, t } from '@eden/shared/i18n'
@@ -101,7 +107,15 @@ interface Usage {
 	tokensIn: number
 	tokensOut: number
 	cacheRead: number
+	/** What the provider wrote to its cache, billed at a rate of its own (D-116). */
+	cacheWrite?: number
 }
+
+/** An entry with the owner's day it was made on, which the usage rollup files it under (D-115). */
+const dated = (entry: AuditEntryInput): AuditEntryInput => ({
+	...entry,
+	day: entry.day ?? dateIn(Intl.DateTimeFormat().resolvedOptions().timeZone, entry.at),
+})
 
 interface StreamOutcome {
 	text: string
@@ -117,6 +131,7 @@ const sum = (a: Usage, b: Usage): Usage => ({
 	tokensIn: a.tokensIn + b.tokensIn,
 	tokensOut: a.tokensOut + b.tokensOut,
 	cacheRead: a.cacheRead + b.cacheRead,
+	cacheWrite: (a.cacheWrite ?? 0) + (b.cacheWrite ?? 0),
 })
 
 export class GardenerRuntime {
@@ -139,6 +154,12 @@ export class GardenerRuntime {
 	/** The confirms owed on tool cards, by call id; not state, nothing renders from it. */
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- a plain map: nothing reads it reactively
 	#confirms = new Map<string, (ok: boolean) => void>()
+	/**
+	 * The conversations that hold a page read from the web: each write in one is confirmed, whatever grant its tool
+	 * has. It is read again from the stored thread before each request (`holdsPage`), so it outlasts a restart.
+	 */
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- a plain set: nothing reads it reactively
+	#pageRead = new Set<string>()
 
 	/** The latest can-see block of the current thread: what the chip shows. */
 	readonly canSee = $derived.by(() => {
@@ -161,6 +182,7 @@ export class GardenerRuntime {
 			today: dateIn(zone, Date.now()),
 			undo: undoToast,
 			focus: thread ? gardenerUi.focus : [],
+			links: [],
 		}
 	}
 
@@ -171,7 +193,7 @@ export class GardenerRuntime {
 	settleOpen(): Promise<void> {
 		return (this.#settled ??= (async () => {
 			const entries = unsettled.take()
-			for (const entry of entries) await recordAudit(entry).catch(() => null)
+			for (const entry of entries) await recordAudit(dated(entry)).catch(() => null)
 			if (entries.length) void gardenerSetup.refreshSpend()
 		})())
 	}
@@ -254,29 +276,19 @@ export class GardenerRuntime {
 		}
 	}
 
-	/** Answers the owner's message, the thread's last: one request, one reply, one audit entry. */
-	async #answer(thread: Thread, message: string, attachments: AttachmentBlock[] = []): Promise<void> {
-		this.preparing = thread.id
-		// read now, while the thread is the open one: the owner may open another before the pack is built
-		const prior = threads.messages.slice(0, -1)
-		const requestId = newId()
-		const ctx = this.#context(requestId, thread)
-		// a tool that reads files is given the message's, else the ones the owner last sent
-		const given = attachments.length ? attachments : latestFiles(prior)
-		if (given.length) ctx.files = { blocks: given }
-		const surface = gardenerUi.domain ? `${gardenerUi.domain}-chat` : 'global-chat'
-		// an image or a PDF, the message's or an earlier turn's, needs a model that sees
-		const needs = hasVisual(prior, attachments) ? (['tools', 'vision'] as const) : (['tools'] as const)
-		const resolution = resolveGrade(gardenerSetup.grade, needs, gardenerSetup.map, gardenerSetup.models)
-		if (resolution.kind !== 'model') {
-			this.#unavailable(resolution, requestId, thread)
-			return
-		}
-		const model = gardenerSetup.models({ provider: resolution.provider, model: resolution.model })
-		if (!model) return this.#unavailable(resolution, requestId, thread)
+	/** The pack of a message in the conversation: every tool in reach and what each declared it reads. */
+	#chatPack(
+		prior: Message[],
+		message: string,
+		attachments: AttachmentBlock[],
+		model: ModelRow,
+		maxTokens: number,
+		grade: ModelGrade,
+		ctx: ToolContext,
+		from: PackReaders
+	): Promise<Pack> {
 		const reach = toolsFor(everyTool, gardenerUi.domain)
-		const maxTokens = OUTPUT_RESERVE + (model.thinks ? THINKING_ROOM.chat : 0)
-		const pack = await buildPack(
+		return buildPack(
 			{
 				reads: reach.flatMap((tool) => tool.declaration.reads).filter((id, i, all) => all.indexOf(id) === i),
 				focus: gardenerUi.focus,
@@ -293,31 +305,65 @@ export class GardenerRuntime {
 				lang: ctx.lang,
 				domainName: gardenerUi.domain ? get(t)(`domains.${gardenerUi.domain}.name`) : undefined,
 				domains: enabledDomains(),
-				grade: resolution.grade,
+				grade,
 				markdown: true,
 			},
-			readers
+			from
 		)
+	}
+
+	/**
+	 * What the next message would carry, read now: the "can see" chip opens on this, so it shows the workspace as it
+	 * stands and not as the last request found it (the audit log keeps what each request read). Nothing is sent and
+	 * no file's bytes are read; nothing when no model can answer.
+	 */
+	async canSeeNext(): Promise<CanSeeBlock | undefined> {
+		const prior = [...threads.messages]
+		const needs = hasVisual(prior, []) ? (['tools', 'vision'] as const) : (['tools'] as const)
+		const resolution = resolveGrade(gardenerSetup.grade, needs, gardenerSetup.map, gardenerSetup.models)
+		if (resolution.kind !== 'model') return undefined
+		const model = gardenerSetup.models({ provider: resolution.provider, model: resolution.model })
+		if (!model) return undefined
+		const maxTokens = OUTPUT_RESERVE + (model.thinks ? THINKING_ROOM.chat : 0)
+		const ctx = this.#context('', threads.current)
+		// an earlier file still in reach is counted by name alone
+		const counted: PackReaders = { ...readers, attachment: async () => ({ kind: 'text', text: '' }) }
+		const pack = await this.#chatPack(prior, '', [], model, maxTokens, resolution.grade, ctx, counted)
+		return canSeeOf(pack)
+	}
+
+	/** Answers the owner's message, the thread's last: one request, one reply, one audit entry. */
+	async #answer(thread: Thread, message: string, attachments: AttachmentBlock[] = []): Promise<void> {
+		this.preparing = thread.id
+		// read now, while the thread is the open one: the owner may open another before the pack is built
+		const prior = threads.messages.slice(0, -1)
+		const requestId = newId()
+		const ctx = this.#context(requestId, thread)
+		// a tool that reads files is given the message's, else the ones the owner last sent
+		const given = attachments.length ? attachments : latestFiles(prior)
+		if (given.length) ctx.files = { blocks: given }
+		// the addresses the owner wrote are theirs to have read; a thread that already read a page is guarded
+		ctx.links = linksOf(prior, message)
+		if (holdsPage(prior)) this.#pageRead.add(thread.id)
+		const surface = gardenerUi.domain ? `${gardenerUi.domain}-chat` : 'global-chat'
+		// an image or a PDF, the message's or an earlier turn's, needs a model that sees
+		const needs = hasVisual(prior, attachments) ? (['tools', 'vision'] as const) : (['tools'] as const)
+		const resolution = resolveGrade(gardenerSetup.grade, needs, gardenerSetup.map, gardenerSetup.models)
+		if (resolution.kind !== 'model') {
+			this.#unavailable(resolution, requestId, thread)
+			return
+		}
+		const model = gardenerSetup.models({ provider: resolution.provider, model: resolution.model })
+		if (!model) return this.#unavailable(resolution, requestId, thread)
+		const maxTokens = OUTPUT_RESERVE + (model.thinks ? THINKING_ROOM.chat : 0)
+		const pack = await this.#chatPack(prior, message, attachments, model, maxTokens, resolution.grade, ctx, readers)
 		const estimate = estimateBefore(pack.estimatedInputTokens, maxTokens, model.pricing)
 		if (!(await this.#budgetAllows(estimate, requestId, resolution, thread))) return
 		if (resolution.confirm && !(await this.#confirmCost(resolution.model, get(t)('gardener.conversation'), estimate))) {
 			this.#declined(requestId, resolution, thread)
 			return
 		}
-		const reply = this.#begin(
-			thread,
-			[
-				{
-					kind: 'can-see',
-					items: pack.canSee,
-					locked: pack.locked,
-					trimmed: pack.trimmed,
-					rows: rowsOf(pack),
-					...(pack.attached.length ? { attachments: pack.attached } : {}),
-				},
-			],
-			requestId
-		)
+		const reply = this.#begin(thread, [canSeeOf(pack)], requestId)
 		threads.raiseTier(thread.id, pack.tier)
 		const audit: AuditEntryInput = {
 			id: requestId,
@@ -415,6 +461,7 @@ export class GardenerRuntime {
 			audit.tokensIn = usage.tokensIn
 			audit.tokensOut = usage.tokensOut
 			audit.cacheRead = usage.cacheRead
+			audit.cacheWrite = usage.cacheWrite ?? 0
 			audit.costUsd = estimateCost(usage, model.pricing)
 		} finally {
 			this.#settle(reply.id)
@@ -462,6 +509,7 @@ export class GardenerRuntime {
 			access: tool.declaration.access,
 			input: pending.input,
 		}
+		if (holdsPage(threads.messages)) this.#pageRead.add(thread.id)
 		try {
 			const { result } = await this.#runCall(call, reply.id, this.#context(requestId, thread))
 			const reply2 =
@@ -549,7 +597,12 @@ export class GardenerRuntime {
 					textIndex = -1
 					outcome.blocks.push(event.block)
 				} else if (event.type === 'usage') {
-					outcome.usage = { tokensIn: event.input, tokensOut: event.output, cacheRead: event.cacheRead }
+					outcome.usage = {
+						tokensIn: event.input,
+						tokensOut: event.output,
+						cacheRead: event.cacheRead,
+						cacheWrite: event.cacheWrite,
+					}
 					counted?.(outcome.usage)
 				} else if (event.type === 'stop') {
 					outcome.stop = event.reason
@@ -580,11 +633,17 @@ export class GardenerRuntime {
 		const tool = toolByWireName(call.name)
 		const handler = tool && handlerOf(tool)
 		const record: AuditTool & { grantId?: string } = { id: call.tool, access: call.access, confirm: null }
-		// a write needs a grant or a confirm; act-external always confirms (grants.md)
+		// a write needs a grant or a confirm; act-external always confirms (grants.md). A handler may ask for this one
+		// call whatever the grant (a delete, an address the owner did not give), and a conversation that has read a
+		// page confirms every write: what a page says is never enough to change something on its own.
+		const asked = !!handler && 'run' in handler && !!handler.asks?.(call.input, ctx)
+		const guarded = call.access === 'write' && this.#pageRead.has(ctx.threadId)
 		const needsConfirm =
 			!!tool &&
 			!!handler &&
-			(call.access === 'act-external' ||
+			(asked ||
+				guarded ||
+				call.access === 'act-external' ||
 				(call.access === 'write' &&
 					!(await grants.allows({ subject: GRANT_SUBJECT, resource: call.tool, resourceType: 'tool', access: 'write' }))
 						.allowed))
@@ -611,20 +670,29 @@ export class GardenerRuntime {
 				return { result: { output: { error: DECLINED, cancelled: true } }, record }
 			}
 			settle('running')
-			try {
-				const granted = await grants.grant({
-					subject: GRANT_SUBJECT,
-					resource: call.tool,
-					resourceType: 'tool',
-					access: call.access,
-					lifetime:
-						call.access === 'act-external' ? 'per-request' : call.tool === 'log-quick' ? 'standing' : 'per-request',
-					origin: 'confirm',
-				})
-				record.grantId = granted.id
-			} catch {
-				// the confirm stands on its own; the grant record is what failed
-			}
+			// the first confirm of a quick write stands (`STANDING_ON_CONFIRM`); one that was asked for this call alone,
+			// or owed to a page having been read, allows this call and no later one. A read that asked was confirmed
+			// for its address, which is no grant on the tool.
+			const stands =
+				!asked &&
+				!guarded &&
+				call.access === 'write' &&
+				tool.domain === SUBSTRATE &&
+				STANDING_ON_CONFIRM.includes(call.tool)
+			if (call.access !== 'read')
+				try {
+					const granted = await grants.grant({
+						subject: GRANT_SUBJECT,
+						resource: call.tool,
+						resourceType: 'tool',
+						access: call.access,
+						lifetime: stands ? 'standing' : 'per-request',
+						origin: 'confirm',
+					})
+					record.grantId = granted.id
+				} catch {
+					// the confirm stands on its own; the grant record is what failed
+				}
 		}
 		try {
 			const result = 'run' in handler ? await handler.run(call.input, ctx) : await this.#delegate(tool, call.input, ctx)
@@ -633,6 +701,9 @@ export class GardenerRuntime {
 			if (stoodDown(result.output)) settle('cancelled', { output: result.output })
 			else if (failure === undefined) settle('done', { output: result.output })
 			else settle('failed', { output: result.output, error: failure })
+			// from here on this conversation holds text written outside Eden
+			if (failure === undefined && tool.domain === SUBSTRATE && call.tool === READ_PAGE && ctx.threadId)
+				this.#pageRead.add(ctx.threadId)
 			if (result.card)
 				this.#addBlock(replyId, {
 					kind: 'draft',
@@ -642,10 +713,10 @@ export class GardenerRuntime {
 					callId: call.id,
 				})
 			if (result.proposal) {
-				profile.propose(result.proposal as Parameters<typeof profile.propose>[0])
+				profile.propose(result.proposal)
 				this.#addBlock(replyId, {
 					kind: 'proposal',
-					proposal: result.proposal as Parameters<typeof profile.propose>[0],
+					proposal: result.proposal,
 					state: 'pending',
 					callId: call.id,
 				})
@@ -900,6 +971,7 @@ export class GardenerRuntime {
 		audit.tokensIn = outcome.usage.tokensIn
 		audit.tokensOut = outcome.usage.tokensOut
 		audit.cacheRead = outcome.usage.cacheRead
+		audit.cacheWrite = outcome.usage.cacheWrite ?? 0
 		audit.costUsd = estimateCost(outcome.usage, model.pricing)
 		if (outcome.error) audit.outcome = 'error'
 		else if (outcome.stop === 'refusal') audit.outcome = 'refusal'
@@ -930,7 +1002,7 @@ export class GardenerRuntime {
 
 	async #record(entry: AuditEntryInput): Promise<void> {
 		try {
-			await recordAudit(entry)
+			await recordAudit(dated(entry))
 		} catch {
 			// the entry is the log's; a failure to write it is logged by the queue, never shown twice
 		}
@@ -1124,6 +1196,20 @@ function textOf(message: Message | undefined): string {
 
 function rowsOf(pack: Pack): Record<string, string[]> {
 	return Object.fromEntries(pack.reads.map((read) => [read.id, read.rows]))
+}
+
+export type CanSeeBlock = Extract<MessageBlock, { kind: 'can-see' }>
+
+/** The can-see block of a pack: the ids read with their counts and rows, what was kept out and what was cut. */
+function canSeeOf(pack: Pack): CanSeeBlock {
+	return {
+		kind: 'can-see',
+		items: pack.canSee,
+		locked: pack.locked,
+		trimmed: pack.trimmed,
+		rows: rowsOf(pack),
+		...(pack.attached.length ? { attachments: pack.attached } : {}),
+	}
 }
 
 export type { DraftCard, Pack }

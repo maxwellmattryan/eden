@@ -5,7 +5,7 @@
 import { addDays } from '../../dates/days.js'
 import { mergeTarget } from './match.js'
 import { add, formatAmount, isOut, parseAmount } from './quantity.js'
-import { CATEGORIES, LOCATIONS, type CaptureMode, type StockItem, type StockLocation } from './types.js'
+import { CATEGORIES, LOCATIONS, placed, type CaptureMode, type StockItem, type StockLocation } from './types.js'
 
 /** Where an item is in a photo, as fractions of the photo's width and height from its top left corner. */
 export interface PhotoBox {
@@ -117,14 +117,16 @@ export function haulRows(
 	return rows.flatMap((raw: Record<string, unknown> | null) => {
 		const name = text(raw?.name)
 		if (!raw || !name) return []
-		const location = (LOCATIONS as readonly string[]).includes(text(raw.location))
-			? (text(raw.location) as StockLocation)
-			: 'pantry'
-		const category = (CATEGORIES as readonly string[]).includes(text(raw.category)) ? text(raw.category) : undefined
+		// a household category puts the row under `household`, whatever location the answer gave (D-122)
+		const { location, category } = placed(
+			(LOCATIONS as readonly string[]).includes(text(raw.location)) ? (text(raw.location) as StockLocation) : 'pantry',
+			(CATEGORIES as readonly string[]).includes(text(raw.category)) ? text(raw.category) : undefined
+		)
 		const printed = text(raw.expiryDate)
 		const days = typeof raw.daysUntilExpiry === 'number' ? Math.round(raw.daysUntilExpiry) : 0
-		// what is already on the shelf was not bought today: only a date read from a label is kept for it (D-89)
-		const estimate = ctx.mode === 'stock' ? 0 : days
+		// what is already on the shelf was not bought today: only a date read from a label is kept for it (D-89),
+		// as for a household item, which no guess is made for
+		const estimate = ctx.mode === 'stock' || location === 'household' ? 0 : days
 		const expiry = ISO_DAY.test(printed) ? printed : estimate > 0 ? addDays(ctx.today, estimate) : undefined
 		const file = typeof raw.photo === 'number' ? Math.round(raw.photo) : 0
 		const box = file > 0 ? photoBox(raw.box) : undefined

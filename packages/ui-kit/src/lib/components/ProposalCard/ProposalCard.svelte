@@ -19,6 +19,8 @@
 		value: string
 		/** The Gardener's sentence, when it has one ("I noticed you avoid cilantro. Save as a dislike?"). */
 		text?: string
+		/** What else accepting does, in a quiet line under the fact: what it replaces, the day it holds until. */
+		detail?: string
 		/** Called when the owner accepts; the app stores the fact as user-confirmed. */
 		onaccept?: () => void
 		/** Called when the owner dismisses; nothing is stored. */
@@ -30,6 +32,7 @@
 		fact,
 		value,
 		text,
+		detail,
 		onaccept,
 		ondismiss,
 		state = $bindable('pending'),
@@ -69,6 +72,7 @@
 	<p class="ed-proposal-fact">
 		<code class="ed-proposal-id">{fact}</code> <span class="ed-proposal-value">{value}</span>
 	</p>
+	{#if detail}<p class="ed-proposal-detail">{detail}</p>{/if}
 </ToolChrome>
 
 <style>
@@ -86,6 +90,12 @@
 		flex-wrap: wrap;
 		align-items: baseline;
 		gap: var(--space-1) var(--space-2);
+	}
+	.ed-proposal-detail {
+		margin: 0;
+		font: var(--ed-t-body-sm);
+		color: var(--text-secondary);
+		text-wrap: pretty;
 	}
 	.ed-proposal-id {
 		font: var(--ed-t-code);

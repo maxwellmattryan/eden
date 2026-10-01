@@ -4,7 +4,7 @@ status: draft
 summary: One permission model for integrations, the Gardener's reads and actions, plugins and device capabilities; defaults, confirmation patterns by access level, the never-automated list, per-device exceptions and the ledger.
 read-this-if: You are designing anything that reads personal data on behalf of a model or a service, or anything that acts on the world.
 depends-on: [privacy, registry]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## Purpose
@@ -29,7 +29,7 @@ Grants are workspace policy and **sync** (D-37), with the exceptions listed belo
 
 - Integrations connect **read-only** with the narrowest scope the connector offers. Widening is a separate grant.
 - The Gardener may read **T0 and T1** resources that a tool or surface declares. **T2** needs a standing or per-request grant on that registry id. **T3** is `never` and cannot be granted.
-- The Gardener's tools default to `read`. `write-draft` needs no grant because nothing is stored until the owner commits. `write` needs a per-tool standing grant or a per-request confirm. `act-external` always confirms per request.
+- The Gardener's tools default to `read`. `write-draft` needs no grant because nothing is stored until the owner commits. `write` needs a per-tool standing grant or a per-request confirm; the first confirm of `log-quick` and of `update-tasks` records the standing one (D-124), and every other write is confirmed per request. `act-external` always confirms per request. A tool may also ask for one call whatever its grant: a delete among a batch of edits, a web address the owner did not write (D-124, D-126).
 - Device capabilities are off until asked for, in context, the first time a feature needs them.
 - **Onboarding asks for the T2 grants the Phase 1 flows need**: `allergy` and `medical-dietary-restriction` for Hearth's Gardener tools. The prompt explains what the grant enables and what happens without it (D-25).
 
@@ -41,9 +41,9 @@ Allergy and medical-restriction checks are deterministic and local. Recipe and g
 
 | access | what the owner sees |
 |---|---|
-| `read` | nothing at the moment; the "can see" chip on the Gardener panel and the audit log afterwards |
+| `read` | nothing at the moment; the "can see" chip on the Gardener panel and the audit log afterwards. A read that reaches outside Eden for an address the owner did not write shows a confirm with the whole address (D-126) |
 | `write-draft` | the draft itself, in a verification sheet or an editable card; commit is the owner's click |
-| `write` | a confirm sheet naming the entities that will change, with undo after; Quick Log writes skip the sheet and rely on undo (D-12) |
+| `write` | a confirm sheet naming the entities that will change, with undo after; Quick Log writes skip the sheet and rely on undo (D-12), as a task write does once its first confirm stands. In a conversation that has read a web page, every write is confirmed, standing grant or not (D-126) |
 | `act-external` | a confirm sheet naming the destination and showing the exact payload; never batched, never remembered as standing |
 | `never` | the action is not offered; the tool is not registered |
 

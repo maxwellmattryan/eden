@@ -213,11 +213,22 @@
 	const clock = $derived(weather.clock)
 	/** The sun on its day: the two times as they are written, and the sentence that says where it stands. */
 	const sun = $derived.by(() => {
-		if (!weather.sun) return undefined
+		const latitude = weather.data?.place.latitude
+		if (!weather.sun || latitude === undefined) return undefined
 		const { sunrise, sunset } = weather.sun
 		const values = { sunrise: formatTime(sunrise, format), sunset: formatTime(sunset, format) }
 		const state = clock < sunrise ? 'before' : clock < sunset ? 'up' : 'after'
-		return { sunrise, sunset, now: clock, labels: values, label: $t(`domains.weather.sunArc.${state}`, { values }) }
+		return {
+			sunrise,
+			sunset,
+			now: clock,
+			// the wave is the place's own: its latitude says how high the sun climbs and how deep it sinks
+			latitude,
+			labels: values,
+			label: $t(`domains.weather.sunArc.${state}`, { values }),
+			// the wave read under the pointer says its time on the owner's clock
+			format: (instant: number) => formatTime(instant, format),
+		}
 	})
 	const lastGood = $derived(weather.lastGood ? formatTime(weather.lastGood, format) : undefined)
 	/** How old the reading is, on the minute; it closes the sources at the foot of the page. */
@@ -648,6 +659,7 @@
 												height={144}
 												values={trend.map((hour) => hour.temp)}
 												labels={trend.map((hour) => hour.tick)}
+												titles={trend.map((hour) => hour.label)}
 												format={(value) => $t('domains.weather.value.degrees', { values: { value } })}
 												label={$t('domains.weather.trend.label', {
 													values: {

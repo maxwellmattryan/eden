@@ -3,6 +3,7 @@
 // A plain or a write tool runs here and answers the model; a model-backed one hands the runtime a prompt and reads
 // the answer back, since the request itself is the runtime's (D-74: its own single request, its own audit entry).
 import type { AttachmentBlock, DraftCard, JsonSchema, ModelGrade, PackAttachment } from '@eden/shared/gardener'
+import type { FactProposal } from '@eden/shared/profile'
 
 /**
  * The files a tool is given: the ones on the owner's message in a conversation, or the ones a page staged for a
@@ -52,6 +53,8 @@ export interface ToolContext {
 	focus: string[]
 	/** The files the tool may read: the owner's message's, else the latest earlier message's that had any. */
 	files?: ToolFiles
+	/** The `https` addresses the owner wrote in this conversation: the ones `read-page` fetches without asking. */
+	links: string[]
 }
 
 /** What a tool answers: what the model reads, the card the panel shows, the rows it touched (for the audit). */
@@ -60,7 +63,7 @@ export interface ToolResult {
 	card?: DraftCard
 	touched?: string[]
 	/** A proposal the tool made: the panel shows the card and the profile page too. */
-	proposal?: { id: string; type: string; value: unknown; confidence: number; text?: string; source?: string }
+	proposal?: FactProposal
 	/** Why nothing was answered, when nothing was. */
 	failure?: ToolFailure
 }
@@ -99,6 +102,11 @@ export type ToolHandler =
 			 * change, naming each row by its name where the input names it by id. Left out, the card shows the input.
 			 */
 			preview?: (input: unknown) => string | undefined
+			/**
+			 * Whether this call waits on the owner's confirm whatever grant the tool has: a delete among a batch of
+			 * edits. A confirm it asked for records no standing grant.
+			 */
+			asks?: (input: unknown, ctx: ToolContext) => boolean
 	  }
 	| { delegate: Delegate }
 

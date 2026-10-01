@@ -62,7 +62,7 @@
 	import { GRANT_SUBJECT } from './types'
 	import MessageBlocks from './MessageBlocks.svelte'
 	import { gardenerUi } from './panel-ui.svelte'
-	import { runtime } from './runtime.svelte'
+	import { runtime, type CanSeeBlock } from './runtime.svelte'
 	import { gardenerSetup } from './setup.svelte'
 	import ThreadList from './ThreadList.svelte'
 	import { threads } from './threads.svelte'
@@ -82,7 +82,17 @@
 		threads.current?.title ??
 			(domainName ? $t('gardener.askInDomain', { values: { domain: domainName } }) : $t('shell.gardener'))
 	)
-	const canSee = $derived(runtime.canSee as Extract<MessageBlock, { kind: 'can-see' }> | undefined)
+	// The chip shows what the next message would carry, read afresh each time it opens (`runtime.canSeeNext`); until
+	// that answers, and where no model can, it shows what the conversation's last request read.
+	let live = $state<{ thread: string | undefined; block: CanSeeBlock }>()
+	const canSee = $derived(
+		live && live.thread === threads.current?.id ? live.block : (runtime.canSee as CanSeeBlock | undefined)
+	)
+	async function refreshCanSee() {
+		const thread = threads.current?.id
+		const block = await runtime.canSeeNext().catch(() => undefined)
+		if (block && thread === threads.current?.id) live = { thread, block }
+	}
 	// the chip names each id as the owner knows it (a fact's name), the id itself beside it; the owner's files the
 	// request carried are one more line, opening to their names (D-82)
 	const FILES_ITEM = 'attachment'
@@ -329,7 +339,7 @@
 	{/each}
 {/snippet}
 
-<!-- the composer's foot: the paperclip, then the "can see" eye once a request has been made -->
+<!-- the composer's foot: the paperclip, then the "can see" eye once something can be asked -->
 {#snippet composerTools()}
 	<FileButton
 		label={$t('gardener.attach')}
@@ -343,11 +353,12 @@
 {/snippet}
 
 {#snippet canSeeChip()}
-	{#if canSee}
+	{#if canSee || canAsk}
 		<CanSee
 			items={chipItems}
 			locked={chipLocked}
-			trimmed={canSee.trimmed}
+			trimmed={canSee?.trimmed ?? []}
+			onopen={() => void refreshCanSee()}
 			onexpand={(item) => void expand(item)}
 			onunlock={(id) => (unlocking = id)}
 		>
@@ -385,18 +396,11 @@
 				onclick={() => (listOpen = !listOpen)}
 			/>
 			<IconButton
-				icon="clipboard-list"
+				icon="external-link"
 				size="sm"
-				label={$t('gardener.openAudit')}
+				label={$t('gardener.openPage')}
 				tooltip
-				onclick={() => void goto(resolve('/gardener/audit'))}
-			/>
-			<IconButton
-				icon="wrench"
-				size="sm"
-				label={$t('gardener.openTools')}
-				tooltip
-				onclick={() => void goto(resolve('/gardener/tools'))}
+				onclick={() => void goto(resolve('/gardener/[[tab]]', {}))}
 			/>
 			<IconButton icon="plus" size="sm" label={$t('gardener.newThread')} tooltip onclick={() => void newThread()} />
 			<IconButton icon="x" size="sm" label={$t('common.close')} tooltip onclick={() => gardenerUi.hide()} />

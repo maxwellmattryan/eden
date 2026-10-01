@@ -26,6 +26,7 @@ import { settings } from '@eden/shared/settings'
 import {
 	addedToday,
 	completion,
+	edited,
 	emitTaskCompleted,
 	emitTaskCreated,
 	inverseOf,
@@ -42,6 +43,7 @@ import {
 	type SnoozeTargets,
 	type Task,
 	type TaskChange,
+	type TaskEdit,
 	type TodayView,
 } from '@eden/shared/tasks'
 import { feed } from '../feed.svelte.js'
@@ -225,9 +227,14 @@ export class TasksStore {
 		)
 	}
 
-	/** A routine done today, open again. */
+	/** Open again: a routine done or skipped today, a todo or a checklist that was done. */
 	reopen(id: string): { task: Task | undefined; undo: Undo } {
 		return this.#change(id, (task) => reopened(task, this.#today()), 'garden.feed.taskReopened')
+	}
+
+	/** Rewrites what the edit names of a task: its title, its day and time, its priority, its notes. */
+	edit(id: string, edit: TaskEdit): { task: Task | undefined; undo: Undo } {
+		return this.#change(id, (task) => edited(task, edit, this.#today(), this.zone), 'garden.feed.taskEdited')
 	}
 
 	/** Moves the due (D-75): later today, tomorrow or next week; the undo writes the old due back. */

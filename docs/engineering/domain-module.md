@@ -4,7 +4,7 @@ status: draft
 summary: The domain manifest and the resource registry as code: the manifest.json a domain declares itself in, the builder that checks it and generates the registry for TypeScript and Rust, the bindings an app adds, the functions the shell composes itself with, model grades and the resolution of a tool to a model, where a domain's code lives, and how isolation is enforced.
 read-this-if: You are adding or changing a domain, a registry row, a widget, a quick action, an intent, a palette entry or a tool's grade, or anything in the shell that lists domains, or sending a request to a model.
 depends-on: [product/substrate/domain-manifest, product/substrate/registry, product/substrate/shell, engineering/app-scaffold, engineering/data-layer]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## What this covers
@@ -113,6 +113,8 @@ An entity URI resolves to its owner through `ownerOf`, so a link survives a chan
 Each app has `src/lib/domains/manifest.ts` with `defineDomain(id, bindings)`, which joins a declaration to what the app binds. On desktop the widget bindings are typed over the declaration's built widget ids: a widget without a binding does not compile, and neither does a binding for a widget nobody declared. The phone binds a route and a live glyph, and its widgets when its Garden is built.
 
 `pack` is what the Gardener's context pack carries of a row, by entity type, for a type whose row is more than a request should pay for (D-85): the shell's pack readers apply it after the query, a type without an entry is sent whole, and `null` leaves a row out. Sky binds one for `forecast`.
+
+`labels` is what a row is called where the Gardener lists what it read (the "can see" chip, the audit log), by entity type, for a type whose rows hold no `name`, `title` or `label` of their own: `labelRows` (`apps/desktop/src/lib/shell/gardener/labels.ts`) asks it first and falls back to the row's name, then its id. Hearth binds one for `grocery-list`, which is called by its store, or "Miscellaneous" for the list of what is not filed.
 
 `subscribe` is where a domain hears its schedules and its signals and registers its mirrors with the refresh coordinator (`engineering/signals.md`). The shell calls it once when it starts, before any store is loaded, so what it binds reads rows and not the domain's store; its answer unbinds.
 

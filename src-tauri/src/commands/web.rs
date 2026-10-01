@@ -1,9 +1,10 @@
 //! One web page, or one picture, fetched for the owner (Hearth's recipe import takes a link, D-88; a stock item's
-//! picture can come from one, D-91). The webview cannot reach an arbitrary host (its CSP names the few it may, and
+//! picture can come from one, D-91; the Gardener's `read-page` reads one the owner wrote or confirmed, D-126). The webview cannot reach an arbitrary host (its CSP names the few it may, and
 //! CORS would refuse the rest), so the crate fetches it and hands the HTML, or the picture's bytes, back for the
 //! webview to read locally. `@eden/shared/api` wraps them as `fetchPage` and `fetchImage`.
 //!
-//! This is egress to a host the owner chose, so it is narrow and it is counted:
+//! This is egress to a host the owner chose, or agreed to on a card that showed the whole address, so it is narrow
+//! and it is counted:
 //!
 //! - `https` on its own port only, no credentials in the address, a plain `GET` with an honest `User-Agent`; no
 //!   cookies, no `Referer`, no proxy.

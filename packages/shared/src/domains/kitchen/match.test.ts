@@ -115,4 +115,11 @@ describe("Hearth's name matching", () => {
 		expect(stockFor('rice', stock)).toEqual([])
 		expect(stockFor('', stock)).toEqual([])
 	})
+
+	it('never takes a household item for an ingredient', () => {
+		const soap = item('Dish soap', '1', 'bottle', 'household')
+		const baking = item('Baking soda', '1', 'box', 'pantry')
+		expect(stockFor('soap', [soap])).toEqual([])
+		expect(stockFor('baking soda', [item('Baking soda', '1', 'box', 'household'), baking])).toEqual([baking])
+	})
 })

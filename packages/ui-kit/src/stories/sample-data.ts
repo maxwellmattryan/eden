@@ -12,7 +12,7 @@ export const owner = {
 
 export const today = new Date(2026, 8, 30, 7, 40)
 
-export type StockLocation = 'fridge' | 'freezer' | 'pantry' | 'counter'
+export type StockLocation = 'fridge' | 'freezer' | 'pantry' | 'counter' | 'household'
 export interface StockItem {
 	id: string
 	name: string
@@ -149,6 +149,19 @@ export const stock: StockItem[] = [
 		estimated: true,
 		category: 'produce',
 	},
+	// what is bought on the same trip and never cooked with (D-122)
+	{
+		id: 'st-30',
+		name: 'Paper towels',
+		brand: 'Bounty',
+		size: '6 ct',
+		qty: '4',
+		unit: 'rolls',
+		location: 'household',
+		category: 'cleaning-and-laundry',
+	},
+	{ id: 'st-31', name: 'Dish soap', qty: '1', unit: 'bottle', location: 'household', category: 'cleaning-and-laundry' },
+	{ id: 'st-32', name: 'Toothpaste', qty: '2', location: 'household', category: 'personal-care' },
 ]
 
 /** What ran out lately (D-92): kept at nothing, each with the day it ran out, to be bought again. */
@@ -193,7 +206,8 @@ export interface HaulRow {
 	/** The stock item the row would merge into, and whether it will. */
 	merge?: { name: string; on: boolean }
 }
-/** The categories a stock item or a haul row may be filed under: the app's twelve, id and English name. */
+/** The categories a stock item or a haul row may be filed under: the app's fifteen, id and English name;
+ * the three before Other are a household item's (D-122). */
 export const haulCategories = [
 	{ id: 'produce', label: 'Produce' },
 	{ id: 'meat-and-fish', label: 'Meat and fish' },
@@ -206,6 +220,9 @@ export const haulCategories = [
 	{ id: 'drinks', label: 'Drinks' },
 	{ id: 'condiments-and-spices', label: 'Condiments and spices' },
 	{ id: 'supplements-and-mixes', label: 'Supplements and mixes' },
+	{ id: 'cleaning-and-laundry', label: 'Cleaning and laundry' },
+	{ id: 'personal-care', label: 'Personal care' },
+	{ id: 'health', label: 'Health' },
 	{ id: 'other', label: 'Other' },
 ]
 /**
@@ -654,6 +671,9 @@ export const skyPlaceResults = [
 	{ id: 'austin-mn', name: 'Austin', region: 'Minnesota, United States' },
 	{ id: 'austin-nv', name: 'Austin', region: 'Nevada, United States' },
 ]
+/** Home's latitude: Hyde Park, Austin (design/sample-data.md, "The owner"). */
+export const homeLatitude = 30.31
+
 export const skyToday = {
 	sunrise: '07:22',
 	sunset: '19:14',
@@ -675,6 +695,12 @@ export const skyMotif = {
 	windGust: skyDetails.gust,
 	cloudCover: skyDetails.cloudCover,
 	precipitation: 0,
+}
+
+/** What the Hearth motif draws, on the same Wednesday: the stock, and what of it is dated on or before Friday. */
+export const hearthMotif = {
+	items: stock.length,
+	expiring: stock.filter((item) => item.expiry !== undefined && item.expiry <= '10-02').length,
 }
 
 /** Daily weight in kg, 09-17 to 09-30; seven-day average 82.7; goal 80.0 by 12-31. */
@@ -776,6 +802,44 @@ export const audit = {
 	cost: '1.1 ¢',
 	outcome: 'ok',
 }
+
+/**
+ * What the Gardener came to (design/sample-data.md, "Usage"): the fourteen days to 09-30 in USD by grade, the month
+ * by model, and the totals. The month's spend is the budget's 2.84.
+ */
+export const usageDays = [
+	'09-17',
+	'09-18',
+	'09-19',
+	'09-20',
+	'09-21',
+	'09-22',
+	'09-23',
+	'09-24',
+	'09-25',
+	'09-26',
+	'09-27',
+	'09-28',
+	'09-29',
+	'09-30',
+]
+export const usageByGrade = {
+	light: [0.01, 0.02, 0.01, 0, 0.02, 0.01, 0.03, 0.01, 0.02, 0.01, 0, 0.02, 0.01, 0.02],
+	standard: [0.12, 0.08, 0.21, 0, 0.15, 0.09, 0.3, 0.11, 0.18, 0.07, 0, 0.24, 0.13, 0.16],
+	deep: [0, 0, 0.2, 0, 0, 0, 0.25, 0, 0, 0, 0, 0.12, 0, 0],
+}
+export const usageTotals = { month: '2.84', last30: '2.84', allTime: '11.46', requests: 148, cap: '10.00', percent: 28 }
+export const usageByModel = [
+	{ model: 'claude-sonnet', requests: 79, tokensIn: '212,400', tokensOut: '31,900', cost: '$2.02' },
+	{ model: 'claude-opus', requests: 8, tokensIn: '61,200', tokensOut: '9,400', cost: '61 ¢' },
+	{ model: 'claude-haiku', requests: 61, tokensIn: '98,700', tokensOut: '14,300', cost: '21 ¢' },
+]
+export const usageByTool = [
+	{ tool: 'Conversations', requests: 96, cost: '$1.74' },
+	{ tool: 'capture-haul', requests: 14, cost: '52 ¢' },
+	{ tool: 'suggest-recipes', requests: 21, cost: '37 ¢' },
+	{ tool: 'brainstorm', requests: 17, cost: '21 ¢' },
+]
 
 /** The egress ledger for the audit day (design/sample-data.md, "Audit and grants"): where bytes went, by destination. */
 export const egress = [

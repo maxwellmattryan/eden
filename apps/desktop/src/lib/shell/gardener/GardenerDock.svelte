@@ -6,10 +6,11 @@
 	// page's floor needs in a small window. The width the owner settles on
 	// is kept per device (`settings.gardenerPanelWidth`); dragging turns the transition off so the edge follows the
 	// pointer.
+	import { t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import GardenerPanel from './GardenerPanel.svelte'
 	import { gardenerUi } from './panel-ui.svelte'
-	import ResizeHandle from './ResizeHandle.svelte'
+	import ResizeHandle from '../ResizeHandle.svelte'
 
 	type Props = {
 		/** The room beside the nav sidebar, in px: what the quarter and the half are of. */
@@ -52,7 +53,12 @@
 
 <div class={['dock', !resizing && 'dock-sliding']} style:width="{gardenerUi.open ? width : 0}px" {ontransitionend}>
 	{#if mounted}
-		<ResizeHandle onresize={resize} onstart={() => (resizing = true)} onend={() => (resizing = false)} />
+		<ResizeHandle
+			label={$t('gardener.resize')}
+			onresize={resize}
+			onstart={() => (resizing = true)}
+			onend={() => (resizing = false)}
+		/>
 		<div class="dock-inner" style:width="{width}px">
 			<GardenerPanel />
 		</div>

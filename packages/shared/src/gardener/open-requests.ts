@@ -8,7 +8,7 @@ import type { AuditEntryInput } from './runtime-types.js'
 export const OPEN_REQUESTS_KEY = 'eden:gardener-open'
 
 type Stored = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
-type Counted = Pick<AuditEntryInput, 'tokensIn' | 'tokensOut' | 'cacheRead' | 'costUsd'>
+type Counted = Pick<AuditEntryInput, 'tokensIn' | 'tokensOut' | 'cacheRead' | 'cacheWrite' | 'costUsd'>
 
 export interface OpenRequests {
 	/** Keeps a request's entry from the moment it is sent, as interrupted until it settles. */

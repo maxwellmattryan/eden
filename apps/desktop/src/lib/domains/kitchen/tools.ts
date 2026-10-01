@@ -20,6 +20,7 @@ import {
 	pageImage,
 	pageSiteName,
 	pageText,
+	placed,
 	productLink,
 	recipeDraft,
 	recipeFromJsonLd,
@@ -31,6 +32,17 @@ import {
 } from '@eden/shared/domains/kitchen'
 import { t } from '@eden/shared/i18n'
 import { settings } from '@eden/shared/settings'
+import {
+	entries,
+	given,
+	ids,
+	preview,
+	stated,
+	together,
+	unknown,
+	withFields,
+	type Fields,
+} from '$lib/shell/gardener/batch'
 import {
 	DRAFTED,
 	int,
@@ -76,49 +88,6 @@ function location(value: unknown): StockLocation {
 		: 'pantry'
 }
 
-type Fields = Record<string, unknown>
-
-/** What the model sent without the fields it sent as `null`: the batch tools are not strict, and a `null` is a field left out. */
-function stated(row: Fields): Fields {
-	return Object.fromEntries(Object.entries(row).filter(([, value]) => value !== null && value !== undefined))
-}
-
-/** The entries of a list the model sent, each an object; nothing for anything else. */
-function entries(input: unknown, key: string): Fields[] {
-	const value = (input as Fields | null)?.[key]
-	return Array.isArray(value)
-		? value
-				.filter((entry): entry is Fields => !!entry && typeof entry === 'object' && !Array.isArray(entry))
-				.map(stated)
-		: []
-}
-
-/** The ids of a list the model sent. */
-function ids(input: unknown, key: string): string[] {
-	const value = (input as Fields | null)?.[key]
-	return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string' && !!entry) : []
-}
-
-/** A text field the model sent, kept when it is empty: an empty string is how a field is cleared. A number is read as its text. */
-function given(row: Fields, key: string): string | undefined {
-	const value = row[key]
-	if (typeof value === 'number' && Number.isFinite(value)) return String(value)
-	return typeof value === 'string' ? value.trim() : undefined
-}
-
-/** One undo for several writes, taken back in the reverse of their order. */
-const together =
-	(undos: Undo[]): Undo =>
-	() =>
-		[...undos].reverse().forEach((undo) => undo())
-
-/** The error for ids the model passed that name nothing, saying where the real ones are. */
-const unknown = (what: string, under: string, missing: string[]) => ({
-	output: {
-		error: `No ${what} has the id ${missing.map((id) => JSON.stringify(id)).join(', ')}. Pass the \`id\` of a row under \`${under}\` in the context. Nothing was changed.`,
-	},
-})
-
 /** What a `storeId` says for the list of what is not filed under a store. */
 const NONE = 'none'
 
@@ -127,21 +96,6 @@ function storeNamed(id: string) {
 	return id === NONE ? null : kitchen.storeById(id)
 }
 
-/** What a card says of a call before it runs, kept so it still reads after the rows it names are gone. */
-const said = new Map<string, string>()
-function preview(tool: string, lines: (input: unknown) => (string | undefined)[]) {
-	return (input: unknown): string | undefined => {
-		const key = `${tool}:${JSON.stringify(input)}`
-		const kept = said.get(key)
-		if (kept) return kept
-		const written = lines(input)
-		// a row that cannot be named leaves the card to show the input as it was sent
-		if (!written.length || written.some((line) => line === undefined)) return undefined
-		const words = written.join('\n')
-		said.set(key, words)
-		return words
-	}
-}
 const say = (key: 'add' | 'change' | 'remove' | 'complete' | 'cooked', what: string) =>
 	get(t)(`domains.kitchen.gardener.preview.${key}`, { values: { what } })
 const labelled = (name: string | undefined, brand?: string) => (name ? (brand ? `${brand} ${name}` : name) : undefined)
@@ -154,21 +108,6 @@ const storeName = (id: unknown) =>
 	id === NONE
 		? get(t)('domains.kitchen.gardener.preview.unfiled')
 		: kitchen.storeById(typeof id === 'string' ? id : undefined)?.name
-/** A row with the fields it sets beside its name, as the card lists them: "Bread (qty 0, location freezer)". */
-function withFields(
-	name: string | undefined,
-	row: Fields,
-	skip: string[] = ['id'],
-	names: Record<string, (value: unknown) => string | undefined> = {}
-): string | undefined {
-	if (!name) return undefined
-	const fields = Object.entries(row)
-		.filter(([key]) => !skip.includes(key))
-		.map(([key, value]) => `${key} ${names[key]?.(value) ?? (value === '' ? '-' : String(value))}`)
-		.join(', ')
-	return fields ? `${name} (${fields})` : name
-}
-
 /** A shop day as a list keeps it, from a day or a day and a time; `null` for what is neither. */
 function shopDayOf(value: string): string | null {
 	const match = /^(\d{4}-\d{2}-\d{2})(?:T(\d{2}:\d{2}))?/.exec(value)
@@ -254,6 +193,7 @@ export const kitchenTools: Record<string, ToolHandler> = {
 				return [
 					`Suggest ${count} things the owner could cook, from the stock, the saved recipes and their food preferences in the context.`,
 					'Favour what uses the stock that expires soonest, so less is wasted, and what needs little that is not in stock.',
+					'Stock kept under `household` is not food: never cook with it or count it.',
 					'Leave out anything with an ingredient the context lists as an allergy, a restriction or a dislike. Eden filters for these again afterwards, and a suggestion it removes is one the owner never sees.',
 					constraints ? `The owner asked for: ${constraints}` : '',
 				]
@@ -276,8 +216,8 @@ export const kitchenTools: Record<string, ToolHandler> = {
 			check: (input) => {
 				const id = str(input, 'stockItemId')
 				if (id && !kitchen.stockById(id))
-					return `No stock item has the id ${JSON.stringify(id)}. Pass the \`id\` of a row under \`stock-item\`, or the food's \`name\`.`
-				return id || str(input, 'name') ? undefined : 'Pass `stockItemId` or `name`: which food the tip is for.'
+					return `No stock item has the id ${JSON.stringify(id)}. Pass the \`id\` of a row under \`stock-item\`, or the item's \`name\`.`
+				return id || str(input, 'name') ? undefined : 'Pass `stockItemId` or `name`: which item the tip is for.'
 			},
 			schema: answer.object({
 				tip: answer.text('Where and how to keep it, two sentences at most.'),
@@ -328,13 +268,16 @@ export const kitchenTools: Record<string, ToolHandler> = {
 						unit: answer.text(
 							'The unit of the amount: g, kg, ml, l, oz, lb, bunch, can, packets; an empty string for a plain count.'
 						),
-						location: answer.oneOf(LOCATIONS, 'Where this kind of food is normally kept at home.'),
+						location: answer.oneOf(
+							LOCATIONS,
+							'Where this kind of food is normally kept at home; `household` for what is not food or drink: cleaning and laundry, paper goods, personal care, health.'
+						),
 						category: answer.oneOf(CATEGORIES, 'What kind of thing it is.'),
 						expiryDate: answer.text(
 							'The use-by or best-before date printed on it, as YYYY-MM-DD, when one can be read; an empty string otherwise.'
 						),
 						daysUntilExpiry: answer.integer(
-							'How many days this kind of food typically keeps from today, stored where `location` says; 0 when it keeps for months or cannot be estimated.'
+							'How many days this kind of food typically keeps from today, stored where `location` says; 0 when it keeps for months or cannot be estimated, and for everything under `household`.'
 						),
 						tip: answer.text(
 							'One short sentence on storing or handling it that is worth knowing and not obvious; an empty string when there is nothing of the kind. Most rows have none.'
@@ -362,8 +305,8 @@ export const kitchenTools: Record<string, ToolHandler> = {
 			prompt: (input, ctx) =>
 				(captureMode(input) === 'stock'
 					? [
-							'These files are photos of the owner’s kitchen as it stands: the inside of the fridge or the freezer, pantry shelves, the counter. List every food, drink, supplement and other kitchen consumable you can see, one row each. The owner checks the rows before they become their stock.',
-							'An item that shows in two photos is one row. Put each item where its photo shows it: what is in the fridge is `fridge`, what is on a pantry shelf is `pantry`, and so on, wherever that kind of food is usually kept.',
+							'These files are photos of the owner’s home as it stands: the inside of the fridge or the freezer, pantry shelves, the counter, a cupboard or a bathroom shelf. List every food, drink, supplement and household consumable (cleaning and laundry, paper goods, personal care, health) you can see, one row each. The owner checks the rows before they become their stock.',
+							'An item that shows in two photos is one row. Put each item where its photo shows it: what is in the fridge is `fridge`, what is on a pantry shelf is `pantry`, and so on, wherever that kind of food is usually kept. What is not food or drink is `household`, wherever it is seen.',
 							'Count what you can count and estimate what you cannot: a carton that looks half full is half its size.',
 							'These things were not bought today, so do not guess how long they keep: `daysUntilExpiry` is 0 for every row, and `expiryDate` is filled only where a date can be read on the item. Nothing here has a price or a shop: `priceCents` is 0 and `count` is 1 for every row, and `store` and `boughtOn` are empty.',
 							'Leave out what is not a consumable: containers, appliances, dishes, magnets.',
@@ -372,7 +315,7 @@ export const kitchenTools: Record<string, ToolHandler> = {
 					: [
 							'These files are one grocery haul: photos of the groceries, receipts, an order confirmation or a list, in any mix. List every item that was bought, one row each. The owner checks the rows before they are added to their stock.',
 							'An item that shows in two of the files, on the receipt and in a photo, is one row. A receipt’s or an order’s quantity and weight win over what a photo suggests; a photo says what an abbreviated receipt line is.',
-							'Leave out what is not food, drink, a supplement or another kitchen consumable, and every line that is not an item: totals, tax, discounts, bags, fees, an item that was refunded or not delivered.',
+							'Keep the household consumables bought with the food (cleaning and laundry, paper goods, personal care, health), each under `household`. Leave out what is not a consumable, such as clothes, dishes, tools and gift cards, and every line that is not an item: totals, tax, discounts, bags, fees, an item that was refunded or not delivered.',
 							'Where a receipt or an order prices an item, give that line’s price as printed and how many packages it is for; do not divide it yourself. An item only seen in a photo has no price. Give the shop’s name and the day when a receipt or an order shows them.',
 							...captureRules(ctx.today),
 						]
@@ -384,7 +327,7 @@ export const kitchenTools: Record<string, ToolHandler> = {
 				const rows = haulRows(parsed, { today: ctx.today, stock: kitchen.data().stock, newId, mode })
 				if (!rows.length)
 					return {
-						output: { error: 'No grocery items could be read from the files. Tell the owner; they can try others.' },
+						output: { error: 'No items could be read from the files. Tell the owner; they can try others.' },
 						failure: 'empty',
 					}
 				const sources = (ctx.files?.blocks ?? []).map(({ id, name, mime }) => ({ id, name, mime }))
@@ -430,6 +373,7 @@ export const kitchenTools: Record<string, ToolHandler> = {
 					`Draft a grocery list that covers the next ${days} days.`,
 					recipes?.length ? `The owner wants to cook: ${recipes.join(', ')}.` : '',
 					'List what those days need that is not already covered: leave out what the stock in the context holds enough of (an item at a quantity of 0 ran out and is not there), and what is already on a grocery list.',
+					'Include the household items, kept under `household`, that ran out or are at or under their `threshold`.',
 					notes ? `The owner added: ${notes}` : '',
 				]
 					.filter(Boolean)
@@ -484,9 +428,12 @@ export const kitchenTools: Record<string, ToolHandler> = {
 						size: str(row, 'size') ?? product?.size,
 						qty: given(row, 'qty') || '1',
 						unit: str(row, 'unit'),
-						location: location(row.location),
+						// a household category puts it under `household`, whatever location was sent (D-122)
+						...placed(
+							location(row.location),
+							(CATEGORIES as readonly string[]).includes(category ?? '') ? category : undefined
+						),
 						expiry: str(row, 'expiry'),
-						category: (CATEGORIES as readonly string[]).includes(category ?? '') ? category : undefined,
 						tip: str(row, 'tip'),
 						link,
 					},
@@ -572,7 +519,12 @@ export const kitchenTools: Record<string, ToolHandler> = {
 					if (typeof row.threshold === 'number') patch.threshold = row.threshold >= 0 ? row.threshold : undefined
 					if ('location' in row) patch.location = row.location as StockLocation
 					const category = given(row, 'category')
-					if (category && (CATEGORIES as readonly string[]).includes(category)) patch.category = category
+					if (category && (CATEGORIES as readonly string[]).includes(category)) {
+						patch.category = category
+						// a household category moves the item under `household` (D-122)
+						const where = placed(patch.location ?? kitchen.stockById(row.id as string)!.location, category)
+						if (where.location === 'household') patch.location = where.location
+					}
 					undos.push(kitchen.updateStock(row.id as string, patch).undo)
 				}
 			}
@@ -955,7 +907,7 @@ export const kitchenTools: Record<string, ToolHandler> = {
 				const notes = str(input, 'notes')
 				return [
 					`Plan the owner's meals for ${days} days from ${from}, from the stock, the saved recipes, the events and the tasks in the context.`,
-					'Use what expires soonest first, so less is wasted. On an evening with an event, keep the meal quick and light. Put one shop day where the stock runs out, with what to buy that day. Add a task only for a step that has to happen ahead of a meal, such as defrosting or marinating.',
+					'Use what expires soonest first, so less is wasted. On an evening with an event, keep the meal quick and light. Stock kept under `household` is not food and is never cooked with. Put one shop day where the stock runs out, with what to buy that day. Add a task only for a step that has to happen ahead of a meal, such as defrosting or marinating.',
 					notes ? `The owner added: ${notes}` : '',
 				]
 					.filter(Boolean)

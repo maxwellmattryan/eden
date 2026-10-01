@@ -85,6 +85,7 @@ export const UNIT_WORDS: readonly string[] = [
 	'bottle',
 	'box',
 	'bag',
+	'roll',
 	'bunch',
 	'head',
 	'clove',

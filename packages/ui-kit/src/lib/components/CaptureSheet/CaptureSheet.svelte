@@ -2,7 +2,7 @@
 	import type { IconName } from '../../icons/icons.js'
 	import { groupOf } from '../../files/check-files.js'
 
-	export type CaptureLocation = 'fridge' | 'freezer' | 'pantry' | 'counter'
+	export type CaptureLocation = 'fridge' | 'freezer' | 'pantry' | 'counter' | 'household'
 
 	/** collect: the sources are staged. reading: the provider has them. rows: what it read is checked. failed: nothing came back. */
 	export type CapturePhase = 'collect' | 'reading' | 'rows' | 'failed'
@@ -67,8 +67,8 @@
 		return text.trim() && Number.isFinite(amount) && amount >= 0 ? amount : undefined
 	}
 
-	/** The four locations, in the order the chips show them. */
-	export const LOCATIONS: readonly CaptureLocation[] = ['fridge', 'freezer', 'pantry', 'counter']
+	/** The five locations, in the order the chips show them; `household` holds what is not food. */
+	export const LOCATIONS: readonly CaptureLocation[] = ['fridge', 'freezer', 'pantry', 'counter', 'household']
 
 	/** The glyph for a source without a picture of itself, by its name: a photo, or anything written. */
 	const glyphOf = (file: CaptureFile): IconName =>

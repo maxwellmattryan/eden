@@ -25,6 +25,8 @@ export interface SparklineGeometry {
 	referenceY: number | null
 	/** The latest point, or null. */
 	last: { x: number; y: number } | null
+	/** A point for every drawn value, oldest first: where a pointer reads it. */
+	points: { x: number; y: number; value: number }[]
 	/** The axis along the bottom. */
 	axis: { x1: number; x2: number; y: number }
 }
@@ -55,7 +57,7 @@ export function sparkline(input: readonly number[], options: SparklineOptions): 
 	const x = (i: number) => pad + (i * inner) / Math.max(1, values.length - 1)
 	const referenceY = ref == null ? null : round(y(ref))
 
-	if (values.length === 0) return { values, latest: null, line: '', area: '', referenceY, last: null, axis }
+	if (values.length === 0) return { values, latest: null, line: '', area: '', referenceY, last: null, points: [], axis }
 
 	const points: [number, number][] =
 		values.length === 1
@@ -76,6 +78,8 @@ export function sparkline(input: readonly number[], options: SparklineOptions): 
 		area,
 		referenceY,
 		last: { x: round(lastX), y: round(lastY) },
+		// a lone value is drawn as a flat line across the width and read at its end, where its dot is
+		points: values.map((value, i) => ({ x: round(values.length === 1 ? lastX : x(i)), y: round(y(value)), value })),
 		axis,
 	}
 }

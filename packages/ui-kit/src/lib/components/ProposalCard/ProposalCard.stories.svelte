@@ -44,6 +44,21 @@
 
 <Story name="Accepted" args={{ state: 'accepted' }} {template} />
 
+<!-- a correction: the quiet line says what accepting takes the place of, and the day the fact holds until -->
+<Story
+	name="Replaces"
+	args={{
+		fact: 'dietary-preference',
+		value: 'pescatarian',
+		text: 'You said you eat fish again until the trip. Change your diet?',
+		detail: 'Replaces vegetarian · Until 2026-11-15',
+	}}
+	{template}
+	play={async ({ canvasElement }) => {
+		await expect(canvasOf(canvasElement).getAllByText('Replaces vegetarian · Until 2026-11-15')[0]).toBeInTheDocument()
+	}}
+/>
+
 <!-- Dismissed leaves no trace: the tint stays, and the card says nothing was stored -->
 <Story
 	name="Dismissed"

@@ -146,7 +146,10 @@
 	function pick(item: MenuItem) {
 		if (item.children?.length) {
 			if (mode === 'sheet') sub = item
-			else flyShow(item, anchorOf(item))
+			else {
+				const el = anchorOf(item)
+				if (el) flyShow(item, el)
+			}
 			return
 		}
 		if (mode === 'sheet') picked = item

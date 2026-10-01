@@ -201,6 +201,27 @@ describe('a captured haul', () => {
 		).toMatchObject({ qty: '0.5', unit: 'kg' })
 	})
 
+	it('keeps a household item under household, with no food category and no guessed expiry', () => {
+		const [towels, soap, pills, butter] = haulRows(
+			{
+				rows: [
+					{ name: 'Paper towels', qty: 6, unit: 'rolls', location: 'pantry', category: 'cleaning-and-laundry' },
+					{ name: 'Dish soap', qty: 1, location: 'household', category: 'condiments-and-spices', daysUntilExpiry: 30 },
+					{ name: 'Ibuprofen', qty: 1, location: 'household', category: 'health', expiryDate: '2028-01-31' },
+					{ name: 'Butter', qty: 1, location: 'fridge', category: 'dairy-and-eggs', daysUntilExpiry: 30 },
+				],
+			},
+			{ today: TODAY, stock, newId: ids() }
+		)
+		expect(towels).toMatchObject({ location: 'household', category: 'cleaning-and-laundry' })
+		expect(soap).toMatchObject({ location: 'household' })
+		expect(soap).not.toHaveProperty('category')
+		expect(soap).not.toHaveProperty('expiry')
+		expect(pills).toMatchObject({ location: 'household', category: 'health', expiry: '2028-01-31' })
+		expect(pills).not.toHaveProperty('estimated')
+		expect(butter).toMatchObject({ location: 'fridge', category: 'dairy-and-eggs', estimated: true })
+	})
+
 	it('reads where an item is in a photo, and drops a box that shows nothing or everything', () => {
 		const [seen, tiny, whole, unseen] = haulRows(
 			{

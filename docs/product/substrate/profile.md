@@ -4,7 +4,7 @@ status: draft
 summary: The facts store that makes Eden a digital twin: the fact model, provenance, who may write and read each type, the "What Eden knows about me" surface, and the fact lifecycle.
 read-this-if: A domain needs to know something another domain learned, or you are designing anything that shows or edits facts about the owner.
 depends-on: [privacy, registry]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## Purpose
@@ -52,7 +52,8 @@ Fact types owned by Phase 2 and Phase 3 domains (`gym-preference`, `training-lim
 - **The owner may assert any registered fact type** from "What Eden knows about me", even when the owning domain is not installed. A `medical-dietary-restriction` can be entered in Phase 1 although Wellspring arrives later; Hearth reads it immediately.
 - The substrate writes `system-derived` facts (`home-area` from the `home` Place; from the home the owner chose in Sky until the Place picker exists, D-72).
 - Integrations write with provenance `integration` and a source, only for types their grant names.
-- **AI-inferred facts pass a confirm gate.** The Gardener proposes; nothing is stored until the owner accepts, at which point provenance stays `ai-inferred` with confidence.
+- **AI-inferred facts pass a confirm gate.** The Gardener proposes; nothing is stored until the owner accepts, at which point provenance stays `ai-inferred` with confidence. A proposal may name the fact it takes the place of and the last day it holds; accepting then removes the old row and stores the new one under one undo (D-127).
+- **The Gardener forgets a fact only on the owner's confirm**, each time, with an undo, and never a fact the substrate derives (D-127).
 - Conflicts: a user-asserted row always wins. Otherwise, the latest stamp per type and value wins. A row outside its validity window is ignored by readers and shown greyed in the profile.
 
 ## Read rules (Phase 1)
@@ -65,7 +66,7 @@ Fact types owned by Phase 2 and Phase 3 domains (`gym-preference`, `training-lim
 
 - **What Eden knows about me** (Garden → profile; mocked as `Domains/Garden/Profile`, built in `apps/desktop`, `shell/profile/`): every fact grouped by domain, with value, provenance, source, dates, and "used by N Gardener requests" linking into the audit log (the count waits on the audit log). Edit, delete, add, set a validity window, renew what expired. T2 rows show a lock glyph; the Vault is not listed here because it holds no facts.
 - **Why am I seeing this**: any suggestion that used a fact shows the fact by name on hover or long press and links to it.
-- **Gardener proposals**: an inline card "I noticed you avoid cilantro. Save as a dislike?" with accept and dismiss.
+- **Gardener proposals**: an inline card "I noticed you avoid cilantro. Save as a dislike?" with accept and dismiss, and a quiet line when it replaces a fact or holds until a day.
 
 ## Lifecycle
 

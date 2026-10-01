@@ -2,53 +2,10 @@
 // `.eml` file (product/domains/kitchen.md, "Integrations": the seam the Gmail connector hands its emails to), and
 // a web page a recipe is on. Both keep the words and drop the markup; neither reaches out to anything.
 
-const ENTITIES: Record<string, string> = {
-	amp: '&',
-	lt: '<',
-	gt: '>',
-	quot: '"',
-	apos: "'",
-	nbsp: ' ',
-	ndash: '–',
-	mdash: '—',
-	frac12: '½',
-	frac14: '¼',
-	frac34: '¾',
-	deg: '°',
-	times: '×',
-}
+import { decodeEntities, htmlToText } from '../../api/html.js'
 
-/** The characters HTML wrote as entities. */
-export function decodeEntities(text: string): string {
-	return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z][a-z0-9]*);/gi, (whole, name: string) => {
-		if (name[0] !== '#') return ENTITIES[name.toLowerCase()] ?? whole
-		const code = name[1] === 'x' || name[1] === 'X' ? parseInt(name.slice(2), 16) : parseInt(name.slice(1), 10)
-		return Number.isFinite(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : whole
-	})
-}
-
-/**
- * A page's text: what is not shown (scripts, styles, the head) is dropped, a block ends a line, a table cell is
- * set off from the next, and the rest of the tags go. Cut to `cap` characters.
- */
-export function htmlToText(html: string, cap = 60_000): string {
-	const text = decodeEntities(
-		html
-			.replace(/<!--[\s\S]*?-->/g, ' ')
-			.replace(/<(script|style|head|noscript|svg|template)\b[\s\S]*?<\/\1\s*>/gi, ' ')
-			.replace(/<br\s*\/?>/gi, '\n')
-			.replace(/<\/(p|div|tr|li|h[1-6]|table|section|article|ul|ol|blockquote)\s*>/gi, '\n')
-			.replace(/<\/(td|th)\s*>/gi, '\t')
-			.replace(/<[^>]*>/g, ' ')
-	)
-	return text
-		.split('\n')
-		.map((line) => line.replace(/[ \t\u00a0]+/g, ' ').trim())
-		.filter((line, index, lines) => line || (index > 0 && lines[index - 1]))
-		.join('\n')
-		.trim()
-		.slice(0, cap)
-}
+// a page's words are read the same way wherever a page is read: the helpers are the shared ones
+export { decodeEntities, htmlToText }
 
 interface Part {
 	headers: Map<string, string>

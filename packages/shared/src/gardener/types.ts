@@ -24,6 +24,8 @@ export interface Pricing {
 	input: number
 	output: number
 	cacheRead: number
+	/** What writing the input to the provider's cache costs; a quarter over the input price when a row has none (D-116). */
+	cacheWrite?: number
 }
 
 export interface ModelRow {

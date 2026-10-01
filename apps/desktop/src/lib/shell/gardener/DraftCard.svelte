@@ -8,11 +8,14 @@
 	// message in the thread: the Gardener's bubble in honey, since this is the Gardener acting (D-40).
 	import { Button, GardenerMessage } from '@eden/ui-kit'
 	import { createEvent, deleteRows, type TaskInput } from '@eden/shared/data'
-	import { dateIn, instantAt } from '@eden/shared/dates'
+	import { addDays, dateIn } from '@eden/shared/dates'
 	import type { DraftCard as Draft, DraftState } from '@eden/shared/gardener'
-	import { t } from '@eden/shared/i18n'
+	import { locale, t } from '@eden/shared/i18n'
+	import { settings } from '@eden/shared/settings'
+	import { describeRecurrence, taskFromDraft, type DraftTask } from '@eden/shared/tasks'
 	import { copyText } from '$lib/clipboard'
 	import { manifestFor } from '$lib/domains'
+	import { formatDayWord, formatRepeat, formatWallTime, type Words } from '../today/chips'
 	import { tasks } from '../today/store.svelte'
 	import { undoToast } from '../undo'
 
@@ -38,28 +41,28 @@
 	})
 	const settled = $derived(status !== 'pending')
 
-	const DAY = /^\d{4}-\d{2}-\d{2}$/
-	const TIME = /^\d{2}:\d{2}$/
-	/**
-	 * The todo a drafted task becomes. As a line added on Today is, it is due today when the draft names no day: a todo
-	 * with no due is on no list. A time of day is part of a todo's due, so the two are joined into the instant.
-	 */
-	const toTask = (task: {
-		title: string
-		due?: string
-		notes?: string
-		timeOfDay?: string
-		priority?: 'low' | 'high'
-	}): TaskInput => {
-		const day = task.due && DAY.test(task.due) ? task.due : dateIn(tasks.zone, Date.now())
-		const time = task.timeOfDay && TIME.test(task.timeOfDay) ? task.timeOfDay : undefined
-		return {
-			kind: 'todo',
-			title: task.title,
-			due: time ? new Date(instantAt(day, time, tasks.zone)).toISOString() : day,
-			priority: task.priority ?? 'none',
-			notes: task.notes,
-		}
+	/** The row a drafted task becomes when it is kept: a todo, a routine or a habit, by what the draft holds. */
+	const toTask = (task: DraftTask): TaskInput => taskFromDraft(task, dateIn(tasks.zone, Date.now()), tasks.zone)
+
+	const words = $derived<Words>({
+		t: $t,
+		format: { lang: $locale ?? 'en', clock: settings.clock },
+		today: tasks.view.day,
+		tomorrow: addDays(tasks.view.day, 1),
+	})
+	/** A drafted task as one line: its title, then its day and time, or how it repeats, or what it counts toward. */
+	function taskLine(task: DraftTask): string {
+		const time = task.timeOfDay ? formatWallTime(task.timeOfDay, words.format) : undefined
+		const parts = task.target
+			? [
+					$t(`today.target.${task.target.per === 'day' ? 'perDay' : 'perWeek'}`, {
+						values: { count: task.target.count },
+					}),
+				]
+			: task.recurrence
+				? [formatRepeat(describeRecurrence(task.recurrence), words), time]
+				: [task.due ? formatDayWord(task.due, words) : undefined, time]
+		return [task.title, parts.filter(Boolean).join(' ')].filter(Boolean).join(' · ')
 	}
 
 	/** The domain's part of a commit, when it has one. */
@@ -132,9 +135,7 @@
 				: 'sparkles'}
 >
 	{#if draft.kind === 'task'}
-		<p class="draft-line">
-			{draft.title}{draft.due ? ` · ${draft.due}` : ''}{draft.timeOfDay ? ` ${draft.timeOfDay}` : ''}
-		</p>
+		<p class="draft-line">{taskLine(draft)}</p>
 		{#if draft.notes}<p class="draft-quiet">{draft.notes}</p>{/if}
 	{:else if draft.kind === 'plan'}
 		{#if draft.meals?.length}
@@ -147,7 +148,7 @@
 		{#if draft.tasks.length}
 			<ul class="draft-list">
 				{#each draft.tasks as task, i (i)}
-					<li>{task.title}{task.due ? ` · ${task.due}` : ''}</li>
+					<li>{taskLine(task)}</li>
 				{/each}
 			</ul>
 		{/if}

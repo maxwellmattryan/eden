@@ -68,6 +68,7 @@
 		freezer: 'snowflake',
 		pantry: 'package',
 		counter: 'carrot',
+		household: 'house',
 	}
 	const moveItems = (current?: StockLocation): MenuItem[] =>
 		LOCATIONS.filter((location) => location !== current).map((location) => ({
@@ -134,10 +135,13 @@
 	/** The group the rows are dragged in, between the locations and Ran out (D-111). */
 	const DRAG_GROUP = 'stock-item'
 	let dragging = $state(false)
-	/** The lists on the page; while a row is held every location is among them, even an empty one, to be dropped on. */
+	/**
+	 * The lists on the page: every location, even an empty one, so each has its place and can be dropped on. Under a
+	 * filter only what matches shows, until a row is held.
+	 */
 	const sections = $derived.by(() => {
 		const held = kitchen.sections((item) => (!expiring || kitchen.soon(item)) && (!lowStock || kitchen.low(item)), sort)
-		if (!dragging) return held
+		if (!dragging && (expiring || lowStock)) return held
 		return LOCATIONS.map((location) => held.find((section) => section.location === location) ?? { location, items: [] })
 	})
 	/** What ran out lately; the Expiring filter hides it, the Low stock filter keeps what has a threshold. */
@@ -238,9 +242,16 @@
 		freezer: false,
 		pantry: false,
 		counter: false,
+		household: false,
 	})
 	/** What each location's list has selected, as the list reports it: the heading's actions act on these. */
-	let chosen = $state<Record<StockLocation, string[]>>({ fridge: [], freezer: [], pantry: [], counter: [] })
+	let chosen = $state<Record<StockLocation, string[]>>({
+		fridge: [],
+		freezer: [],
+		pantry: [],
+		counter: [],
+		household: [],
+	})
 	let bulkMove = $state<{ ids: string[]; from: StockLocation; anchor: HTMLElement }>()
 	let bulkMoveOpen = $state(false)
 	function moveMany(ids: string[], from: StockLocation, location: StockLocation) {
@@ -585,11 +596,16 @@
 		flex: none;
 		padding-bottom: var(--space-4);
 	}
+	/* The locations in two columns of about the same height, read down the first and then the second; one column
+	   where two would be too narrow */
 	.lists {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-4);
+		columns: 2 18rem;
+		column-gap: var(--space-6);
 		min-width: 0;
+	}
+	.lists > :global(*) {
+		break-inside: avoid;
+		margin-bottom: var(--space-4);
 	}
 	/* One list per location: its glyph, plain, and its name in the display face as Grocery's stores are, with the
 	   count at the end of the same line */

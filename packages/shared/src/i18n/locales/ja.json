@@ -15,6 +15,7 @@
 		"today": "今日",
 		"todaySubtitle": "タスクと習慣",
 		"gardener": "庭師",
+		"resizeSidebar": "サイドバーの幅を変える",
 		"gardenerSubtitle": "相談、記録、実行",
 		"settings": "設定",
 		"settingsSubtitle": "環境設定",
@@ -107,6 +108,7 @@
 			"taskSkipped": "{title}を今日はスキップ",
 			"taskTallied": "{title}を記録",
 			"taskDeleted": "{title}を削除",
+			"taskEdited": "{title}を変更",
 			"haulCaptured": "買い物を取り込み: {count}品",
 			"stockAddedMany": "{count}品を在庫に追加",
 			"groceryAddedMany": "{count}品をリストに追加",
@@ -127,7 +129,7 @@
 	"domains": {
 		"kitchen": {
 			"name": "台所",
-			"subtitle": "食材、レシピ、買い物",
+			"subtitle": "食材、レシピ、買い物、日用品",
 			"gardener": {
 				"preview": {
 					"add": "追加: {what}",
@@ -182,6 +184,9 @@
 				"drinks": "飲み物",
 				"condiments-and-spices": "調味料・香辛料",
 				"supplements-and-mixes": "サプリ・粉末飲料",
+				"cleaning-and-laundry": "掃除・洗濯",
+				"personal-care": "パーソナルケア",
+				"health": "ヘルスケア",
 				"other": "その他"
 			},
 			"failure": {
@@ -194,7 +199,7 @@
 				"max-tokens": "回答が途中で切れました。ファイルを減らしてお試しください。",
 				"cancelled": "中止しました。",
 				"unreadable": "回答を読み取れませんでした。もう一度お試しください。",
-				"empty": "食料品を読み取れませんでした。より鮮明な写真か、別のファイルでお試しください。",
+				"empty": "品目を読み取れませんでした。より鮮明な写真か、別のファイルでお試しください。",
 				"no-files": "まず写真、レシート、またはリストを追加してください。",
 				"no-recipe": "レシピを読み取れませんでした。レシピの本文か、別の写真でお試しください。",
 				"page-blocked": "このページは読み取れません。公開されたウェブページではないか、大きすぎます。",
@@ -244,7 +249,8 @@
 					"fridge": "冷蔵庫",
 					"freezer": "冷凍庫",
 					"pantry": "食品庫",
-					"counter": "カウンター"
+					"counter": "カウンター",
+					"household": "日用品"
 				},
 				"badge": {
 					"lowStock": "残りわずか",
@@ -855,6 +861,10 @@
 		}
 	},
 	"profile": {
+		"proposal": {
+			"replaces": "{value}を置き換え",
+			"until": "{day}まで"
+		},
 		"add": "事実を追加",
 		"edit": "編集",
 		"window": "期間を設定",
@@ -1323,6 +1333,28 @@
 	},
 	"uiKit": {
 		"about": "{0}について",
+		"sunArc": {
+			"elevation": "高度",
+			"azimuth": "方位",
+			"phases": {
+				"day": "日中",
+				"golden": "ゴールデンアワー",
+				"civil": "市民薄明",
+				"nautical": "航海薄明",
+				"astronomical": "天文薄明",
+				"night": "夜"
+			},
+			"bearings": { "n": "北", "ne": "北東", "e": "東", "se": "南東", "s": "南", "sw": "南西", "w": "西", "nw": "北西" }
+		},
+		"chart": { "total": "合計" },
+		"pagination": {
+			"label": "ページ",
+			"range": "{2}件中 {0}–{1}",
+			"first": "最初のページ",
+			"previous": "前のページ",
+			"next": "次のページ",
+			"last": "最後のページ"
+		},
 		"checkOff": "{0}をチェック",
 		"compass": {
 			"north": "北"
@@ -1422,7 +1454,7 @@
 			"notSharedChip": "{0}: 庭師と未共有です。許可が必要です。共有する。",
 			"locked": "{0}、未共有: 許可が必要です",
 			"canSeeTitle": "庭師に見えているもの",
-			"inThisRequest": "このリクエストで",
+			"inThisRequest": "次のメッセージで",
 			"notSharedExplain": "ツールが求めましたが、T2の項目はあなたが共有するまでどのリクエストにも含まれません。「許可」で庭師に常時の読み取りを与え、いつでも取り消せます。",
 			"allow": "許可"
 		},
@@ -1481,7 +1513,8 @@
 				"fridge": "冷蔵庫",
 				"freezer": "冷凍庫",
 				"pantry": "食品庫",
-				"counter": "カウンター"
+				"counter": "カウンター",
+				"household": "日用品"
 			},
 			"rowName": "名前",
 			"rowQty": "数量",
@@ -1598,6 +1631,16 @@
 		"retry": "再試行",
 		"ranTool": "{tool} を単独のリクエストとして実行しました。",
 		"confirmTool": "{tool} を実行",
+		"confirmRead": "このページを読む",
+		"preview": {
+			"change": "変更: {what}",
+			"done": "完了: {what}",
+			"reopen": "未完了に戻す: {what}",
+			"skip": "今日はスキップ: {what}",
+			"remove": "削除: {what}",
+			"forget": "忘れる: {what}",
+			"read": "{what} を読む"
+		},
 		"toolRun": {
 			"same": "{tool} × {count}",
 			"mixed": "ツール {count} 件"
@@ -1614,11 +1657,14 @@
 		},
 		"toast": {
 			"logged": "{value} を記録しました。",
+			"tasks": "{count}件のタスクを変更しました。",
+			"forgotten": "{name}を忘れました。",
 			"deleted": "{title} を削除しました。",
 			"deletedMany": "{count} 件の会話を削除しました。"
 		},
 		"draft": {
 			"task": "追加するタスク",
+			"tasks": "追加するタスク {count}件",
 			"grocery": "リストに入れる{count}品",
 			"code": "コピーする雛形",
 			"capture": "ファイルから{count}件を読み取りました",
@@ -1670,8 +1716,81 @@
 			"confirmNo": "いいえ",
 			"readsNothing": "なし"
 		},
-		"openTools": "ツールを見る",
-		"openAudit": "監査ログを開く"
+		"openPage": "庭師のページを開く"
+	},
+	"gardenerPage": {
+		"tabsLabel": "庭師のページ",
+		"tabs": { "usage": "利用状況", "conversations": "会話", "audit": "監査ログ", "tools": "ツール" },
+		"usage": {
+			"tiles": {
+				"month": "今月",
+				"last30": "過去30日",
+				"allTime": "全期間",
+				"requests": "今月のリクエスト"
+			},
+			"ofCap": "上限 ${cap} の {percent}%",
+			"estimate": "設定の価格から見積もった、この端末での集計です。請求額はプロバイダーの計測によります。",
+			"spend": "利用額",
+			"periodsLabel": "集計の単位",
+			"periods": { "day": "日", "week": "週", "month": "月", "year": "年" },
+			"chart": "{from} から {to} までの{period}ごとの利用額(米ドル、グレード別の積み上げ)",
+			"byModel": "モデル別",
+			"byGrade": "グレード別",
+			"byTool": "実行内容別",
+			"noGrade": "グレードなし",
+			"columns": { "what": "内容", "requests": "リクエスト", "tokensIn": "入力トークン", "tokensOut": "出力トークン" },
+			"hints": {
+				"requests": "モデルに送ったリクエストの数。拒否したものや予算で止まったものは送られていないため、数えません。",
+				"tokensIn": "モデルに送ったすべてのトークン。キャッシュにあった分も含みます。",
+				"tokensOut": "モデルが返したトークン数。",
+				"cost": "リクエストの費用(米ドル)。それぞれが終わった時点の設定の価格で計算します。",
+				"what": "庭師が独立したリクエストとして実行したツール、または会話。",
+				"from": "ツールが属するドメイン、または会話が行われた場所。"
+			},
+			"empty": {
+				"title": "まだ利用がありません",
+				"text": "庭師が応答すると、その費用がここに表示されます。"
+			},
+			"error": "利用状況を読み込めませんでした。",
+			"kept": "利用状況は日ごとにこの端末へ保存され、消えません。書き出しも同期もされません。"
+		},
+		"conversations": {
+			"summary": "リクエスト {requests} 件、{tokens} トークン",
+			"noRequests": "過去90日間のリクエストなし",
+			"showAudit": "監査ログで表示",
+			"totalsNote": "会話の費用は、監査ログの保存期間である過去90日分です。",
+			"empty": {
+				"title": "まだ会話がありません",
+				"text": "庭師に質問すると、会話がここに残ります。"
+			},
+			"error": "会話を読み込めませんでした。"
+		},
+		"audit": {
+			"filtersLabel": "フィルター",
+			"filters": { "range": "期間", "kind": "種類" },
+			"filterValue": "{filter}: {value}",
+			"filterCount": "{filter}: {count}",
+			"kinds": {
+				"conversation": "会話",
+				"tool": "会話の中でのツール実行",
+				"page": "ページからのツール実行"
+			},
+			"ranges": {
+				"all": "すべての期間",
+				"today": "今日",
+				"7d": "過去7日",
+				"30d": "過去30日",
+				"month": "今月"
+			},
+			"thread": "会話: {title}",
+			"threadGone": "1件の会話",
+			"fact": "1件の事実を読んだもの",
+			"remove": "フィルター「{filter}」を解除",
+			"clear": "フィルターをクリア",
+			"onlyThread": "この会話のみ",
+			"noMatch": { "title": "一致するリクエストがありません", "text": "フィルターを減らしてみてください。" },
+			"pages": "監査ログのページ"
+		}
 	},
 	"audit": {
 		"title": "監査ログ",
@@ -1682,7 +1801,8 @@
 			"tool": "ツール",
 			"grade": "グレード",
 			"model": "モデル",
-			"tokens": "入力 / 出力",
+			"tokensIn": "入力",
+			"tokensOut": "出力",
 			"cost": "費用",
 			"outcome": "結果"
 		},
@@ -1691,7 +1811,8 @@
 			"tool": "リクエストが実行したツール(実行した場合)。",
 			"grade": "リクエストが動いたモデルのグレード。「—」はモデルを使っていません。",
 			"model": "応答したモデル。",
-			"tokens": "モデルに送ったトークン数と、返ってきたトークン数。",
+			"tokensIn": "モデルに送ったトークン数。キャッシュにあった分は含みません。",
+			"tokensOut": "モデルが返したトークン数。",
 			"cost": "リクエストの費用(米ドル)。",
 			"outcome": "リクエストの終わり方。"
 		},
@@ -1733,7 +1854,8 @@
 			"grade": "グレード",
 			"usage": "使用量",
 			"request": "リクエスト",
-			"cached": "キャッシュ"
+			"cached": "キャッシュ",
+			"cacheWritten": "キャッシュ書き込み"
 		},
 		"openThread": "会話を開く",
 		"retention": "項目はこの端末に90日間残ります。書き出しや同期はされません。"

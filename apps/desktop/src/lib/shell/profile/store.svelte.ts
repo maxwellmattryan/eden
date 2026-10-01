@@ -209,21 +209,33 @@ export class ProfileStore {
 		this.proposals = [...this.proposals, proposal]
 	}
 
-	/** The owner accepts: the fact is stored as the Gardener inferred it, with its confidence. */
-	accept(id: string, feedName?: string): { fact: Fact; undo: Undo } | undefined {
-		const proposal = this.proposals.find((entry) => entry.id === id)
-		if (!proposal) return undefined
-		this.proposals = this.proposals.filter((entry) => entry.id !== id)
-		return this.assert(
+	/**
+	 * The owner accepts: the fact is stored as the Gardener inferred it, with its confidence and the day it holds
+	 * until, and the fact it takes the place of goes in the same step, so one undo brings both back as they were.
+	 * The proposal is the caller's own (the card's block in the thread, or one listed here), so a card accepted after
+	 * a relaunch still stores its fact. Read the facts first (`load`): a fact that is not here cannot be replaced.
+	 */
+	accept(proposal: FactProposal, feedName?: string): { fact: Fact; undo: Undo } {
+		this.proposals = this.proposals.filter((entry) => entry.id !== proposal.id)
+		const restore = proposal.replaces ? this.remove(proposal.replaces) : undefined
+		const { fact, undo } = this.assert(
 			{
 				type: proposal.type,
 				value: proposal.value,
 				provenance: 'ai-inferred',
 				confidence: proposal.confidence,
 				source: proposal.source ?? null,
+				...(proposal.until ? { validUntil: proposal.until } : {}),
 			},
 			feedName
 		)
+		return {
+			fact,
+			undo: () => {
+				undo()
+				restore?.()
+			},
+		}
 	}
 
 	/** The owner dismisses: nothing is stored, and the proposal is gone. */
