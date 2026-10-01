@@ -9,8 +9,19 @@ export {
 	type BudgetInput,
 	type BudgetState,
 } from './budget.js'
+export * from './attachment-limits.js'
+export {
+	attachmentKind,
+	attachmentsOf,
+	attachmentTokens,
+	auditOf,
+	hasVisual,
+	imageTokens,
+	sentBytes,
+	sentSize,
+} from './attachments.js'
 export * from './client.js'
-export { clampToLight, isDevEnvironment } from './dev.js'
+export { clampForDevelopment, isDevEnvironment } from './dev.js'
 export { greetingKey, GREETINGS, partOfDay, type GreetingPool } from './greeting.js'
 export { estimateBefore, estimateCost, formatCost, formatUsd, type Usage } from './estimate.js'
 export { openRequests, OPEN_REQUESTS_KEY, type OpenRequests } from './open-requests.js'
@@ -18,6 +29,7 @@ export {
 	buildPack,
 	WINDOW,
 	type Pack,
+	type PackAttachment,
 	type PackPrimitive,
 	type PackReaders,
 	type PackRequest,
@@ -30,7 +42,7 @@ export {
 	rememberGardenerPanel,
 	type GardenerPanelState,
 } from './panel-state.js'
-export { persona, type Persona, type PersonaInput } from './persona.js'
+export { persona, type Persona, type PersonaDomain, type PersonaInput } from './persona.js'
 export { DEFAULT_POLICY, effectiveSetup, readPolicy, type EffectiveSetup } from './policy.js'
 export {
 	ANTHROPIC,
@@ -48,7 +60,13 @@ export * from './runtime-types.js'
 export { awaitsWords, segmentsOf, type Segment, type ToolBlock } from './segments.js'
 export { scrub, scrubValue, type ScrubHits, type Scrubbed } from './scrub.js'
 export {
+	answer,
+	DOMAIN_BLURBS,
+	factShapeWords,
 	parseWireName,
+	PROPOSABLE_FACTS,
+	QUICK_ACTION_WORDS,
+	quickActionsFor,
 	SCHEMAS,
 	SUBSTRATE,
 	SUBSTRATE_TOOLS,

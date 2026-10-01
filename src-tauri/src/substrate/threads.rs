@@ -20,6 +20,7 @@ use crate::error::{EdenError, Result};
 
 const THREAD_TYPE: &str = "thread";
 const MESSAGE_TYPE: &str = "message";
+const ATTACHMENT_TYPE: &str = "attachment";
 /// The fields a thread patch may name.
 const PATCHABLE: &[&str] = &["title", "tier", "domain"];
 
@@ -275,8 +276,29 @@ pub fn update_thread(ctx: &mut WriteCtx, id: &str, patch: &ThreadPatch) -> Resul
     Ok(thread)
 }
 
-/// Deletes a thread and its live messages at one stamp: readers stop seeing them at once, and the rows stay as
-/// tombstones so an undo can bring them back together. Deleting a deleted thread changes nothing.
+/// The ids of the attachments that are `part-of` a thread (the files the owner attached to its messages, D-83) and
+/// whose tombstone is as given: live ones for `None`, the ones deleted at a stamp for `Some`.
+fn thread_attachments(
+    conn: &Connection,
+    uri: &str,
+    deleted_at: Option<&str>,
+) -> Result<Vec<String>> {
+    let ids = conn
+        .prepare(
+            "SELECT a.id FROM attachments a
+             JOIN links l ON l.owner_id = a.id AND l.owner_type = 'attachment'
+             WHERE l.target_uri = ?1 AND l.relation = 'part-of' AND l.deleted_at IS NULL
+               AND a.deleted_at IS ?2
+             ORDER BY a.id",
+        )?
+        .query_map(rusqlite::params![uri, deleted_at], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(ids)
+}
+
+/// Deletes a thread, its live messages and the files attached to them at one stamp: readers stop seeing them at
+/// once, and the rows stay as tombstones so an undo can bring them back together. The files themselves stay where
+/// they are. Deleting a deleted thread changes nothing.
 pub fn delete_thread(ctx: &mut WriteCtx, id: &str) -> Result<Thread> {
     let conn = ctx.conn;
     let thread = require_thread(conn, id)?;
@@ -296,9 +318,22 @@ pub fn delete_thread(ctx: &mut WriteCtx, id: &str) -> Result<Thread> {
         "UPDATE threads SET updated_at = ?1, deleted_at = ?1 WHERE id = ?2",
         [&stamp, id],
     )?;
+    let attachments = thread_attachments(conn, &thread.uri, None)?;
+    for attachment_id in &attachments {
+        conn.execute(
+            "UPDATE attachments SET updated_at = ?1, deleted_at = ?1 WHERE id = ?2",
+            [&stamp, attachment_id],
+        )?;
+    }
     for message_id in &messages {
         ctx.record(
             &ids::Uri::new(MESSAGE_TYPE, message_id).to_string(),
+            ChangeOp::Deleted,
+        );
+    }
+    for attachment_id in &attachments {
+        ctx.record(
+            &ids::Uri::new(ATTACHMENT_TYPE, attachment_id).to_string(),
             ChangeOp::Deleted,
         );
     }
@@ -310,7 +345,8 @@ pub fn delete_thread(ctx: &mut WriteCtx, id: &str) -> Result<Thread> {
     })
 }
 
-/// Lifts a thread's tombstone, and those of the messages deleted with it: what an undo of a delete calls.
+/// Lifts a thread's tombstone, and those of the messages and attachments deleted with it: what an undo of a delete
+/// calls.
 /// Restoring a live thread changes nothing.
 pub fn restore_thread(ctx: &mut WriteCtx, id: &str) -> Result<Thread> {
     let conn = ctx.conn;
@@ -331,9 +367,22 @@ pub fn restore_thread(ctx: &mut WriteCtx, id: &str) -> Result<Thread> {
         "UPDATE threads SET updated_at = ?1, deleted_at = NULL WHERE id = ?2",
         [&stamp, id],
     )?;
+    let attachments = thread_attachments(conn, &thread.uri, Some(&deleted_at))?;
+    for attachment_id in &attachments {
+        conn.execute(
+            "UPDATE attachments SET updated_at = ?1, deleted_at = NULL WHERE id = ?2",
+            [&stamp, attachment_id],
+        )?;
+    }
     for message_id in &messages {
         ctx.record(
             &ids::Uri::new(MESSAGE_TYPE, message_id).to_string(),
+            ChangeOp::Restored,
+        );
+    }
+    for attachment_id in &attachments {
+        ctx.record(
+            &ids::Uri::new(ATTACHMENT_TYPE, attachment_id).to_string(),
             ChangeOp::Restored,
         );
     }
@@ -829,6 +878,57 @@ mod tests {
             ws.write(|ctx| delete_thread(ctx, &ids::new_id())),
             Err(EdenError::NotFound(_))
         ));
+    }
+
+    #[test]
+    fn a_deleted_thread_takes_its_attachments_and_a_restore_brings_them_back() {
+        use crate::substrate::primitives::{self, ATTACHMENT};
+        let ws = Workspace::in_memory();
+        let opened = ws
+            .write(|ctx| create_thread(ctx, thread("Dinner", None)))
+            .unwrap();
+        let other = ws
+            .write(|ctx| create_thread(ctx, thread("Lunch", None)))
+            .unwrap();
+        let attach = |name: &str, target: &str| {
+            ws.write(|ctx| {
+                primitives::create(
+                    ctx,
+                    &ATTACHMENT,
+                    json!({
+                        "kind": "photo", "fileName": name, "mime": "image/png", "size": 3, "hash": "h",
+                        "store": "workspace",
+                        "links": [{ "uri": target, "relation": "part-of" }],
+                    }),
+                )
+            })
+            .unwrap()["id"]
+                .as_str()
+                .unwrap()
+                .to_string()
+        };
+        let kept = attach("a.png", &opened.uri);
+        let gone = attach("b.png", &opened.uri);
+        let elsewhere = attach("c.png", &other.uri);
+        ws.write(|ctx| {
+            crate::substrate::rows::delete(ctx, &ids::Uri::new(ATTACHMENT_TYPE, &gone).to_string())
+        })
+        .unwrap();
+        let deleted_at = |id: &str| {
+            ws.read(|conn| primitives::get(conn, &ATTACHMENT, id))
+                .unwrap()
+                .unwrap()["deletedAt"]
+                .clone()
+        };
+
+        let deleted = ws.write(|ctx| delete_thread(ctx, &opened.id)).unwrap();
+        assert_eq!(deleted_at(&kept), json!(deleted.updated_at));
+        assert!(deleted_at(&elsewhere).is_null());
+
+        ws.write(|ctx| restore_thread(ctx, &opened.id)).unwrap();
+        // The file deleted with the thread is back; the one deleted before stays gone.
+        assert!(deleted_at(&kept).is_null());
+        assert!(!deleted_at(&gone).is_null());
     }
 
     #[test]

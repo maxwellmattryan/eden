@@ -7,6 +7,7 @@
 	import {
 		DetailPopover,
 		DetailSection,
+		FileChip,
 		GardenerMessage,
 		Markdown,
 		Notice,
@@ -19,6 +20,8 @@
 	import { stampToDate } from '@eden/shared/data'
 	import { formatMoment } from '@eden/shared/dates'
 	import {
+		attachmentForm,
+		attachmentsOf,
 		awaitsWords,
 		segmentsOf,
 		type Message,
@@ -32,7 +35,9 @@
 	import { formatValue } from '@eden/shared/profile'
 	import { profile } from '../profile/store.svelte'
 	import { undoToast } from '../undo'
+	import { threadAttachments } from './attachments.svelte'
 	import DraftCard from './DraftCard.svelte'
+	import { sizeLabel } from './files'
 	import ToolAbout from './ToolAbout.svelte'
 	import { toolByWireName } from './handlers'
 	import { runtime } from './runtime.svelte'
@@ -46,6 +51,9 @@
 			.filter((block) => block.kind === 'text' && block.text.trim())
 			.map((block) => (block as { text: string }).text)
 	)
+	// the files the owner attached: each block names its Attachment row, which has the thumbnail (D-83)
+	const files = $derived(message.role === 'owner' ? attachmentsOf(blocks) : [])
+	const FILE_ICONS = { image: 'image', pdf: 'file-text', text: 'file-text' } as const
 	const drafts = $derived(
 		blocks.map((block, index) => ({ block, index })).filter(({ block }) => block.kind === 'draft')
 	)
@@ -156,8 +164,22 @@
 {/snippet}
 
 {#if message.role === 'owner'}
-	{#if text.length}
-		<GardenerMessage {text} owner {time} oncopy={copy} />
+	{#if text.length || files.length}
+		<GardenerMessage {text} owner {time} oncopy={text.length ? copy : undefined}>
+			{#if files.length}
+				<div class="files">
+					{#each files as file (file.id)}
+						<FileChip
+							name={file.name}
+							detail={sizeLabel(file.size)}
+							icon={FILE_ICONS[attachmentForm(file.mime)]}
+							thumbnail={threadAttachments.thumbnail(file.id)}
+							state={threadAttachments.missing(file.id, `eden://thread/${message.threadId}`) ? 'missing' : 'ready'}
+						/>
+					{/each}
+				</div>
+			{/if}
+		</GardenerMessage>
 	{/if}
 {:else if segments.length || interrupted}
 	<GardenerMessage {time} oncopy={copy} class={leaving ? 'reply-leaving' : undefined}>
@@ -245,6 +267,13 @@
 {/if}
 
 <style>
+	/* the message's files: a wrapping row of chips under its words */
+	.files {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-1);
+		min-width: 0;
+	}
 	:global(.reply-leaving) {
 		opacity: 0;
 		transition: opacity var(--ed-duration-settle) var(--ed-ease-out);

@@ -20,12 +20,16 @@ export interface GardenerRequest {
 	system: unknown
 	messages: unknown[]
 	tools: unknown[]
+	/** A JSON schema the reply is held to (the API's structured output), for a delegated request a handler parses. */
+	outputFormat?: unknown
 }
 
 export type GardenerEvent =
 	| { type: 'start'; messageId: string; model: string }
 	| { type: 'text_delta'; text: string }
 	| { type: 'tool_use'; id: string; name: string; input: unknown }
+	/** One whole reasoning block as the API sent it, to be sent back unchanged while its request continues. */
+	| { type: 'thinking'; block: unknown }
 	| { type: 'usage'; input: number; output: number; cacheRead: number; cacheWrite: number }
 	| { type: 'stop'; reason: string; refusal: string | null }
 	| { type: 'error'; status: number | null; message: string }
@@ -116,6 +120,15 @@ export interface AuditImage {
 	height: number
 }
 
+/** A file attached to the owner's message is logged as its hash, type, size and dimensions, never its bytes (D-83). */
+export interface AuditAttachment {
+	hash: string
+	mime: string
+	size: number
+	width?: number
+	height?: number
+}
+
 export interface AuditEntry {
 	id: string
 	/** Milliseconds since the epoch. */
@@ -141,9 +154,11 @@ export interface AuditEntry {
 	outcome: AuditOutcome
 	grants: string[]
 	image: AuditImage | null
+	/** What the owner attached, as this request sent it: the message's files and the earlier ones still in the pack. */
+	attachments: AuditAttachment[]
 }
 
-export type AuditEntryInput = Omit<AuditEntry, 'id'> & { id?: string }
+export type AuditEntryInput = Omit<AuditEntry, 'id' | 'attachments'> & { id?: string; attachments?: AuditAttachment[] }
 
 export interface AuditQuery {
 	threadId?: string
@@ -192,8 +207,28 @@ export type DraftCard =
 			path?: string
 	  }
 
+/**
+ * A file the owner attached to their message (D-82, D-83): the Attachment row by id, with what the panel and the pack
+ * need of it without reading the row or the bytes. Never a path; the bytes stay in the workspace's attachments.
+ */
+export interface AttachmentBlock {
+	kind: 'attachment'
+	/** The Attachment row's id. */
+	id: string
+	name: string
+	mime: string
+	/** Bytes, as stored. */
+	size: number
+	/** The SHA-256 of the bytes, as hex. */
+	hash: string
+	/** An image's pixels, as stored. */
+	width?: number
+	height?: number
+}
+
 export type MessageBlock =
 	| { kind: 'text'; text: string }
+	| AttachmentBlock
 	| {
 			kind: 'tool'
 			call: {
@@ -217,6 +252,8 @@ export type MessageBlock =
 			locked: string[]
 			trimmed: string[]
 			rows: Record<string, string[]>
+			/** The owner's files this request carried, by name (D-82). */
+			attachments?: string[]
 	  }
 	| { kind: 'error'; code: string; message: string }
 	/** On a reply while its request runs, and taken off when it settles: one left behind was interrupted. */

@@ -2,7 +2,7 @@
 // tool in its manifest, the substrate keeps its own in `substrate-tools.ts`, and the loop calls them by wire name.
 // A plain or a write tool runs here and answers the model; a model-backed one hands the runtime a prompt and reads
 // the answer back, since the request itself is the runtime's (D-74: its own single request, its own audit entry).
-import type { DraftCard, ModelGrade } from '@eden/shared/gardener'
+import type { DraftCard, JsonSchema, ModelGrade } from '@eden/shared/gardener'
 
 /** What a handler knows of the request it serves. */
 export interface ToolContext {
@@ -36,12 +36,19 @@ export interface ToolResult {
 
 /** A model-backed tool: what it asks the model, and what it makes of the answer. */
 export interface Delegate {
+	/** Why the input cannot be worked on, in words the model can act on; no request is made when it answers. */
+	check?: (input: unknown, ctx: ToolContext) => string | undefined
 	/** The message the delegated request carries, built from the input and the rows the handler reads itself. */
 	prompt: (input: unknown, ctx: ToolContext) => Promise<string> | string
 	/** The URIs the request is about, pinned first in its pack and never trimmed. */
 	focus?: (input: unknown, ctx: ToolContext) => Promise<string[]> | string[]
 	/** The answer as the model reads it back and as a card, from the model's text. */
 	parse: (text: string, input: unknown, ctx: ToolContext) => Promise<ToolResult> | ToolResult
+	/**
+	 * The shape the answer is held to (the API's structured output), built with `answer` from `@eden/shared/gardener`;
+	 * `parse` then reads JSON it can rely on. Left out, the answer is prose.
+	 */
+	schema?: JsonSchema
 	/** An image to send with the prompt (`capture-haul`); the request needs `vision`. */
 	image?: (input: unknown, ctx: ToolContext) => Promise<ToolImage | undefined>
 	/** How many tokens the answer may take; the runtime's default otherwise. */
@@ -88,6 +95,15 @@ export function str(input: unknown, key: string): string | undefined {
 	const value = (input as Record<string, unknown> | null)?.[key]
 	return typeof value === 'string' && value.trim() ? value.trim() : undefined
 }
+
+/** A number field of an input, or nothing. */
+export function num(input: unknown, key: string): number | undefined {
+	const value = (input as Record<string, unknown> | null)?.[key]
+	return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+}
+
+/** What a drafting tool's result tells the model of its card. */
+export const DRAFTED = 'Shown as a card. Not saved until the owner keeps it.'
 
 /** A whole number field of an input, within bounds, or the default. */
 export function int(input: unknown, key: string, fallback: number, min: number, max: number): number {

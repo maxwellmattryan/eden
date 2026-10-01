@@ -153,6 +153,10 @@ Generative art is drawn on one canvas, the `Sketch` component (D-62); nothing el
 
 The kit's own sketches live in `src/lib/sketches` and are exported from the barrel (`skyField`); a domain's private sketch lives with the domain under `apps/*/src/lib/domains/<id>/` and imports the types from the kit. A nannou or p5.js sketch is ported to this shape, not embedded: nannou draws to a native window the WebView cannot host, and p5 brings its own loop, globals and canvas.
 
+## Files
+
+`src/lib/files/check-files.ts` holds the rules a set of files is held to, and is exported from the barrel: `checkFiles(files, rules)` returns the files taken and the ones refused, each with the first rule it broke (`type`, `size`, `count`, `total`). A pattern is `image/*`, an exact MIME type or an extension, because an engine leaves `type` empty for a file it does not know (`.md`); `exclude` wins over `accept`. `Dropzone` runs it at the drop; an app runs the same function over what `FileButton` and a paste hand it, so every way in refuses the same files for the same reason. `groupOf`, `summarize` and `formatBytes` name a file's kind and size for a caption.
+
 ## Strings
 
 `src/lib/i18n/strings.ts` holds every string the kit produces on its own, in English, typed as `UiStrings`. Components call `useStrings()`; an app wraps its root in `UiKitProvider` and passes translations (functions where a number or a name is interpolated), a new object on each locale change. Domain names, glyphs and content always arrive as props, and the app name is never in the kit (D-20).

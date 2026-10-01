@@ -151,7 +151,12 @@
 </script>
 
 {#if gardenerSetup.clamped}
-	<Notice tone="info" title={$t('gardener.devClamp', { values: { model: gardenerSetup.map.light.model } })} />
+	<Notice
+		tone="info"
+		title={$t('gardener.devClamp', {
+			values: { model: gardenerSetup.map.light.model, deep: gardenerSetup.map.deep.model },
+		})}
+	/>
 {/if}
 
 <SettingsRow label={$t('settings.gardener.key.label')} help={$t('settings.gardener.key.help')}>

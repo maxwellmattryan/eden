@@ -4,12 +4,10 @@
 // are plain: they answer from rows Eden has.
 import { get } from 'svelte/store'
 import { newId, queryEntities } from '@eden/shared/data'
-import type { DraftCard } from '@eden/shared/gardener'
+import { answer, type DraftCard } from '@eden/shared/gardener'
 import { t } from '@eden/shared/i18n'
-import { int, parseJson, str, type ToolHandler } from '$lib/shell/gardener/types'
+import { DRAFTED, int, parseJson, str, type ToolHandler } from '$lib/shell/gardener/types'
 import { toolbench } from './store.svelte.js'
-
-const JSON_ONLY = 'Answer with JSON only, no prose around it.'
 
 const ideaUri = (id: string) => `eden://idea/${id}`
 const projectUri = (id: string) => `eden://project/${id}`
@@ -56,9 +54,28 @@ function projectLines(id: string | undefined): string {
 	].join('\n')
 }
 
+/** Why an idea id cannot be worked on, or nothing. */
+function ideaProblem(input: unknown, required: boolean): string | undefined {
+	const id = str(input, 'ideaId')
+	if (!id) return required ? 'Pass `ideaId`: the `id` of a row under `idea` in the context.' : undefined
+	return toolbench.ideaById(id)
+		? undefined
+		: `No idea has the id ${JSON.stringify(id)}. An idea's id is the \`id\` of its row under \`idea\` in the context.`
+}
+
+/** Why a project id cannot be worked on, or nothing. */
+function projectProblem(input: unknown, required: boolean): string | undefined {
+	const id = str(input, 'projectId')
+	if (!id) return required ? 'Pass `projectId`: the `id` of a row under `project` in the context.' : undefined
+	return toolbench.projectById(id)
+		? undefined
+		: `No project has the id ${JSON.stringify(id)}. A project's id is the \`id\` of its row under \`project\` in the context.`
+}
+
 export const toolbenchTools: Record<string, ToolHandler> = {
 	brainstorm: {
 		delegate: {
+			check: (input) => ideaProblem(input, true),
 			focus: (input) => {
 				const id = str(input, 'ideaId')
 				return id ? [ideaUri(id)] : []
@@ -67,9 +84,9 @@ export const toolbenchTools: Record<string, ToolHandler> = {
 				const ask = str(input, 'prompt')
 				return [
 					ideaLines(str(input, 'ideaId')),
-					'Brainstorm with the owner about this idea, drawing on their skills, tools and hardware in the context.',
+					'Think this idea through with the owner. Draw on the skills, tools and hardware the context lists for them, so the directions are ones they could take.',
 					ask ? `They ask: ${ask}` : 'Open with the two or three directions most worth exploring, briefly.',
-					'Answer in plain prose, a paragraph or two.',
+					'Reply in prose, a paragraph or two, in the first person, calm and plain. Your reply is shown to the owner as it stands and kept with the idea.',
 				]
 					.filter(Boolean)
 					.join('\n')
@@ -92,17 +109,27 @@ export const toolbenchTools: Record<string, ToolHandler> = {
 	},
 	critique: {
 		delegate: {
+			check: (input) =>
+				str(input, 'ideaId') || str(input, 'projectId')
+					? (ideaProblem(input, false) ?? projectProblem(input, false))
+					: 'Pass `ideaId` or `projectId`: what is to be critiqued.',
 			focus: (input) => [
 				...(str(input, 'ideaId') ? [ideaUri(str(input, 'ideaId')!)] : []),
 				...(str(input, 'projectId') ? [projectUri(str(input, 'projectId')!)] : []),
 			],
+			schema: answer.object({
+				strengths: answer.list(answer.text(), 'What is strong about it: three to five, one sentence each.'),
+				risks: answer.list(answer.text(), 'What could sink it: three to five, one sentence each, the worst first.'),
+				questions: answer.list(
+					answer.text(),
+					'What the owner has not answered yet and should before going further: three to five, one sentence each.'
+				),
+			}),
 			prompt: (input) =>
 				[
 					ideaLines(str(input, 'ideaId')),
 					projectLines(str(input, 'projectId')),
-					'Critique it honestly: what is strong, what could sink it, what the owner has not answered yet.',
-					'Answer as {"strengths":["..."],"risks":["..."],"questions":["..."]}, three to five of each, one sentence each.',
-					JSON_ONLY,
+					'Critique this honestly. The owner wants to know what could sink it before they spend time on it, so do not soften what you find.',
 				]
 					.filter(Boolean)
 					.join('\n'),
@@ -115,18 +142,29 @@ export const toolbenchTools: Record<string, ToolHandler> = {
 	},
 	'expand-to-plan': {
 		delegate: {
+			check: (input) => ideaProblem(input, true) ?? projectProblem(input, false),
 			focus: (input) => {
 				const id = str(input, 'ideaId')
 				const project = str(input, 'projectId')
 				return [...(id ? [ideaUri(id)] : []), ...(project ? [projectUri(project)] : [])]
 			},
+			schema: answer.object({
+				steps: answer.list(
+					answer.object({
+						title: answer.text('The step, as a task the owner can tick off.'),
+						due: answer.text(
+							'The day to do it by, as YYYY-MM-DD, only when the order or a deadline calls for one; an empty string otherwise.'
+						),
+						notes: answer.text('What the step needs that its title does not say; an empty string otherwise.'),
+					}),
+					'Four to eight steps, in the order to do them.'
+				),
+			}),
 			prompt: (input) =>
 				[
 					ideaLines(str(input, 'ideaId')),
 					projectLines(str(input, 'projectId')),
-					'Expand this into a plan of concrete next steps the owner can do one at a time, in order, considering the tasks already in the context.',
-					'Answer as {"steps":[{"title":"","due":"YYYY-MM-DD or omit","notes":""}]}, four to eight steps.',
-					JSON_ONLY,
+					'Turn this into concrete next steps, each small enough to finish in one sitting. The tasks already in the context are what the owner has taken on: do not repeat one of them, and do not crowd a day that is already full.',
 				]
 					.filter(Boolean)
 					.join('\n'),
@@ -138,8 +176,10 @@ export const toolbenchTools: Record<string, ToolHandler> = {
 				const projectId = str(input, 'projectId')
 				const idea = str(input, 'ideaId')
 				const name = (projectId && toolbench.projectById(projectId)?.name) || (idea && toolbench.ideaById(idea)?.title)
+				if (!steps.length)
+					return { output: { error: 'The plan came back empty. Tell the owner it could not be drafted.' } }
 				return {
-					output: { steps },
+					output: { status: 'drafted', steps, note: DRAFTED },
 					card: {
 						kind: 'plan',
 						title: name
@@ -181,7 +221,9 @@ export const toolbenchTools: Record<string, ToolHandler> = {
 			]
 			const matches = candidates
 				.map((candidate) => ({
-					uri: candidate.uri,
+					// `eden://<type>/<id>`: the type and the id the other tools take
+					type: candidate.uri.split('/')[2] ?? '',
+					id: candidate.uri.split('/')[3] ?? '',
 					title: candidate.title,
 					score: overlap(query, words(candidate.text)),
 				}))
@@ -196,7 +238,7 @@ export const toolbenchTools: Record<string, ToolHandler> = {
 		run: async (input) => {
 			await toolbench.load()
 			const project = toolbench.projectById(str(input, 'projectId') ?? '')
-			if (!project) return { output: { error: 'no such project' } }
+			if (!project) return { output: { error: projectProblem(input, true) ?? 'No such project.' } }
 			const parts = project.parts ?? []
 			const total = Math.round(parts.reduce((sum, part) => sum + part.price, 0) * 100) / 100
 			return { output: { total, currency: 'USD', parts }, touched: [projectUri(project.id)] }
@@ -204,16 +246,21 @@ export const toolbenchTools: Record<string, ToolHandler> = {
 	},
 	'summarize-project': {
 		delegate: {
+			check: (input) => projectProblem(input, true),
 			focus: (input) => {
 				const id = str(input, 'projectId')
 				return id ? [projectUri(id)] : []
 			},
+			schema: answer.object({
+				summary: answer.text(
+					'Where the project stands, in two or three sentences: what is done, what is under way, what is stuck.'
+				),
+				nextSteps: answer.list(answer.text(), 'What comes next, the nearest first, a short line each.'),
+			}),
 			prompt: (input) =>
 				[
 					projectLines(str(input, 'projectId')),
-					'Summarize where this project stands from its rows and the tasks in the context, and what comes next.',
-					'Answer as {"summary":"two or three sentences","nextSteps":["..."]}.',
-					JSON_ONLY,
+					'Say where this project stands, for an owner picking it back up: work from its row and from the tasks in the context that belong to it.',
 				]
 					.filter(Boolean)
 					.join('\n'),
@@ -224,25 +271,33 @@ export const toolbenchTools: Record<string, ToolHandler> = {
 	},
 	'draft-sketch-scaffold': {
 		delegate: {
+			schema: answer.object({
+				language: answer.text(
+					'The language of the code, lowercase, as a code block would name it: rust, javascript, glsl.'
+				),
+				title: answer.text('A short name for the sketch.'),
+				code: answer.text('The whole scaffold, as one file.'),
+			}),
 			focus: (input) => {
 				const id = str(input, 'sketchId')
 				return id ? [`eden://sketch/${id}`] : []
 			},
 			prompt: (input) => {
-				const tool = str(input, 'tool') ?? 'nannou'
+				const tool = str(input, 'tool')
 				return [
-					`Draft a scaffold for a generative sketch in ${tool}: ${str(input, 'description') ?? 'as described in the context'}.`,
-					'Use the tools the owner prefers where the context lists them. Seeded randomness, parameters at the top, comments where a choice matters.',
-					'Answer as {"language":"rust","title":"","code":"..."}.',
-					JSON_ONLY,
+					`Draft a scaffold for a creative-coding sketch: ${str(input, 'description') ?? 'as described in the context'}.`,
+					tool
+						? `Write it in ${tool}.`
+						: 'Write it in the tool the owner prefers: their preferred-tool facts are in the context. When none is listed, choose a common one for the job and name it in the title.',
+					'A starting point the owner can run and change: seeded randomness, parameters at the top, comments where a choice matters.',
 				].join('\n')
 			},
 			parse: (text) => {
 				const parsed = parseJson<{ language?: string; title?: string; code?: string }>(text)
 				const code = parsed?.code ?? text.trim()
-				const language = parsed?.language ?? 'rust'
+				const language = parsed?.language ?? 'text'
 				return {
-					output: { language, lines: code.split('\n').length },
+					output: { status: 'drafted', language, lines: code.split('\n').length, note: DRAFTED },
 					card: { kind: 'code', language, code, title: parsed?.title },
 				}
 			},

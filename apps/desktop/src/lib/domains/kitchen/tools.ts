@@ -8,12 +8,13 @@ import { readFile } from '@tauri-apps/plugin-fs'
 import { get } from 'svelte/store'
 import type { CaptureRow } from '@eden/ui-kit'
 import { attach, newId } from '@eden/shared/data'
-import type { DraftCard } from '@eden/shared/gardener'
+import { answer, type DraftCard } from '@eden/shared/gardener'
 import { addDays } from '@eden/shared/dates'
 import { LOCATIONS, type StockLocation } from '@eden/shared/domains/kitchen'
 import { t } from '@eden/shared/i18n'
 import { queryFacts } from '@eden/shared/profile'
 import {
+	DRAFTED,
 	int,
 	parseJson,
 	str,
@@ -101,37 +102,68 @@ async function pickImage(): Promise<ToolImage | undefined> {
 	return { data: btoa(binary), mediaType, hash, width, height, path }
 }
 
-const JSON_ONLY = 'Answer with JSON only, no prose around it.'
-
 export const kitchenTools: Record<string, ToolHandler> = {
 	'suggest-recipes': {
 		delegate: {
+			schema: answer.object({
+				suggestions: answer.list(
+					answer.object({
+						name: answer.text('The dish.'),
+						minutes: answer.integer('Roughly how long it takes to make, in minutes.'),
+						why: answer.text('One sentence on why this one now: what it uses up, how it fits what was asked.'),
+						uses: answer.list(answer.text(), 'The `id` of each stock item it uses, from rows under `stock-item`.'),
+						recipeId: answer.text(
+							'The `id` of the saved recipe when it is one, from rows under `recipe`; an empty string otherwise.'
+						),
+					})
+				),
+			}),
 			prompt: (input) => {
 				const count = int(input, 'count', 3, 1, 5)
 				const constraints = str(input, 'constraints')
 				return [
-					`From the stock, the recipes and the owner's preferences in the context, suggest ${count} things to cook.`,
-					'Prefer what uses stock that expires soon. Never suggest anything with a listed allergy, restriction or disliked ingredient.',
-					constraints ? `Constraints: ${constraints}` : '',
-					'Answer as {"suggestions":[{"recipeId":"<id of a listed recipe, or omit>","name":"","minutes":0,"why":"one sentence","uses":["<stock item ids>"]}]}.',
-					JSON_ONLY,
+					`Suggest ${count} things the owner could cook, from the stock, the saved recipes and their food preferences in the context.`,
+					'Favour what uses the stock that expires soonest, so less is wasted, and what needs little that is not in stock.',
+					'Leave out anything with an ingredient the context lists as an allergy, a restriction or a dislike. Eden filters for these again afterwards, and a suggestion it removes is one the owner never sees.',
+					constraints ? `The owner asked for: ${constraints}` : '',
 				]
 					.filter(Boolean)
 					.join('\n')
 			},
 			parse: async (text) => {
 				const parsed = parseJson<{ suggestions?: Suggestion[] }>(text)
-				const suggestions = safe(parsed?.suggestions ?? [], await forbidden())
-				return { output: { suggestions } }
+				const all = parsed?.suggestions ?? []
+				const suggestions = safe(all, await forbidden()).map(({ recipeId, ...rest }) =>
+					recipeId ? { ...rest, recipeId } : rest
+				)
+				// how many the local filter dropped (D-25), so the reply can say some were left out and never which
+				return { output: { suggestions, withheld: all.length - suggestions.length } }
 			},
 		},
 	},
 	'storage-tip': {
 		delegate: {
+			check: (input) => {
+				const id = str(input, 'stockItemId')
+				if (id && !kitchen.stockById(id))
+					return `No stock item has the id ${JSON.stringify(id)}. Pass the \`id\` of a row under \`stock-item\`, or the food's \`name\`.`
+				return id || str(input, 'name') ? undefined : 'Pass `stockItemId` or `name`: which food the tip is for.'
+			},
+			schema: answer.object({
+				tip: answer.text('Where and how to keep it, two sentences at most.'),
+				shelfLifeDays: answer.integer('How many days it typically keeps when stored that way.'),
+			}),
 			prompt: (input) => {
 				const id = str(input, 'stockItemId')
 				const name = (id && kitchen.stockById(id)?.name) || str(input, 'name') || 'the item'
-				return `How is ${name} best stored, and how long does it typically keep? Answer as {"tip":"two sentences at most","shelfLifeDays":0}. ${JSON_ONLY}`
+				return [
+					`How is ${name} best stored at home, and how long does it typically keep that way?`,
+					id
+						? 'Its row in the context says where the owner keeps it now; say so if somewhere else would keep it longer.'
+						: '',
+				]
+					.filter(Boolean)
+					.join('\n')
 			},
 			focus: (input) => {
 				const id = str(input, 'stockItemId')
@@ -144,12 +176,23 @@ export const kitchenTools: Record<string, ToolHandler> = {
 	'capture-haul': {
 		delegate: {
 			image: () => pickImage(),
+			schema: answer.object({
+				rows: answer.list(
+					answer.object({
+						name: answer.text('The item, named as a shopper would name it.'),
+						qty: answer.text('The amount alone: 2, 500, 1.'),
+						unit: answer.text('The unit of the amount: g, ml, bunch, tin; an empty string for a plain count.'),
+						location: answer.oneOf(LOCATIONS, 'Where this kind of food is normally kept.'),
+						daysUntilExpiry: answer.integer(
+							'How many days this kind of food typically keeps from today; 0 when that cannot be estimated.'
+						),
+					})
+				),
+			}),
 			prompt: () =>
 				[
-					'List every grocery item in this photo as stock rows.',
-					'Answer as {"rows":[{"name":"","qty":"1","unit":"","location":"fridge|freezer|pantry|counter","daysUntilExpiry":0}]}.',
-					'Give daysUntilExpiry only where you can estimate it from the kind of food.',
-					JSON_ONLY,
+					'List every grocery item you can see in this photo, one row each. The owner checks the rows before they are added to their stock.',
+					'When you cannot tell what something is, leave it out: a wrong row costs the owner more than a missing one.',
 				].join('\n'),
 			parse: (text, _input, ctx) => {
 				const parsed = parseJson<{ rows?: Record<string, unknown>[] }>(text)
@@ -169,13 +212,26 @@ export const kitchenTools: Record<string, ToolHandler> = {
 						},
 					]
 				})
-				return { output: { rows: rows.length }, card: { kind: 'capture', rows } }
+				if (!rows.length)
+					return {
+						output: { error: 'No grocery items could be read from the photo. Tell the owner; they can try another.' },
+					}
+				return { output: { status: 'drafted', rows: rows.length, note: DRAFTED }, card: { kind: 'capture', rows } }
 			},
 			maxTokens: 2000,
 		},
 	},
 	'draft-grocery-list': {
 		delegate: {
+			schema: answer.object({
+				items: answer.list(
+					answer.object({
+						name: answer.text('The thing to buy.'),
+						qty: answer.text('How much, with its unit: 2, 500 g, 1 bunch.'),
+						note: answer.text('What it is for, in a few words, when that is not obvious; an empty string otherwise.'),
+					})
+				),
+			}),
 			prompt: (input) => {
 				const recipes = ((input as { forRecipeIds?: unknown })?.forRecipeIds as string[] | undefined)
 					?.map((id) => kitchen.recipeById(id)?.name)
@@ -183,12 +239,10 @@ export const kitchenTools: Record<string, ToolHandler> = {
 				const days = int(input, 'days', 7, 1, 14)
 				const notes = str(input, 'notes')
 				return [
-					`Draft a grocery list for the next ${days} days from the stock, the recipes and the list in the context.`,
-					recipes?.length ? `Cook: ${recipes.join(', ')}.` : '',
-					'Leave out what is in stock and what is already on the list.',
-					notes ? `Notes: ${notes}` : '',
-					'Answer as {"items":[{"name":"","qty":"","note":""}]}.',
-					JSON_ONLY,
+					`Draft a grocery list that covers the next ${days} days.`,
+					recipes?.length ? `The owner wants to cook: ${recipes.join(', ')}.` : '',
+					'List what those days need that is not already covered: leave out what the stock in the context holds enough of, and what is already on the grocery list.',
+					notes ? `The owner added: ${notes}` : '',
 				]
 					.filter(Boolean)
 					.join('\n')
@@ -198,7 +252,9 @@ export const kitchenTools: Record<string, ToolHandler> = {
 				const items = (parsed?.items ?? []).flatMap((item) =>
 					item.name ? [{ name: item.name, qty: item.qty ?? '', note: item.note || undefined }] : []
 				)
-				return { output: { items }, card: { kind: 'grocery', items } }
+				if (!items.length)
+					return { output: { error: 'The list came back empty. Tell the owner it could not be drafted.' } }
+				return { output: { status: 'drafted', items, note: DRAFTED }, card: { kind: 'grocery', items } }
 			},
 		},
 	},
@@ -219,27 +275,56 @@ export const kitchenTools: Record<string, ToolHandler> = {
 					]
 				}
 			)
+			if (!rows.length) return { output: { error: 'Nothing to add: pass `items`, each with a `name`.' } }
 			const { items, undo } = kitchen.addStockRows(rows)
 			if (items.length)
 				ctx.undo(get(t)('domains.kitchen.stock.toast.addedMany', { values: { count: items.length } }), undo)
 			return {
-				output: { ids: items.map((item) => item.id) },
+				output: { added: items.map((item) => ({ id: item.id, name: item.name })) },
 				touched: items.map((item) => `eden://stock-item/${item.id}`),
 			}
 		},
 	},
 	'plan-week': {
 		delegate: {
+			schema: answer.object({
+				days: answer.list(
+					answer.object({
+						day: answer.text('The day, as YYYY-MM-DD.'),
+						meals: answer.list(
+							answer.object({
+								name: answer.text('The meal.'),
+								recipeId: answer.text(
+									'The `id` of the saved recipe when it is one, from rows under `recipe`; an empty string otherwise.'
+								),
+							})
+						),
+					})
+				),
+				shopDay: answer.object({
+					day: answer.text('The day to shop, as YYYY-MM-DD; an empty string when nothing needs buying.'),
+					items: answer.list(
+						answer.object({
+							name: answer.text('The thing to buy.'),
+							qty: answer.text('How much, with its unit.'),
+						})
+					),
+				}),
+				tasks: answer.list(
+					answer.object({
+						title: answer.text('The step to do ahead of a meal.'),
+						due: answer.text('The day to do it, as YYYY-MM-DD.'),
+					})
+				),
+			}),
 			prompt: (input, ctx) => {
 				const from = str(input, 'from') ?? ctx.today
 				const days = int(input, 'days', 7, 1, 14)
 				const notes = str(input, 'notes')
 				return [
-					`Plan meals from ${from} for ${days} days from the stock, the recipes, the events and the tasks in the context.`,
-					'Use what expires soon first, keep evenings with events light, and put one shop day where the stock runs out.',
-					notes ? `Notes: ${notes}` : '',
-					'Answer as {"days":[{"day":"YYYY-MM-DD","meals":[{"name":"","recipeId":"<listed id or omit>"}]}],"shopDay":{"day":"YYYY-MM-DD","items":[{"name":"","qty":""}]},"tasks":[{"title":"","due":"YYYY-MM-DD"}]}.',
-					JSON_ONLY,
+					`Plan the owner's meals for ${days} days from ${from}, from the stock, the saved recipes, the events and the tasks in the context.`,
+					'Use what expires soonest first, so less is wasted. On an evening with an event, keep the meal quick and light. Put one shop day where the stock runs out, with what to buy that day. Add a task only for a step that has to happen ahead of a meal, such as defrosting or marinating.',
+					notes ? `The owner added: ${notes}` : '',
 				]
 					.filter(Boolean)
 					.join('\n')
@@ -250,11 +335,21 @@ export const kitchenTools: Record<string, ToolHandler> = {
 					shopDay?: { day: string; items: { name: string; qty?: string }[] }
 					tasks?: { title: string; due?: string }[]
 				}>(text)
-				const meals = (parsed?.days ?? []).filter((day) => day.day && Array.isArray(day.meals))
-				const tasks = (parsed?.tasks ?? []).filter((task) => task.title)
+				// a field with nothing to say arrives as an empty string: it is left off the card
+				const meals = (parsed?.days ?? [])
+					.filter((day) => day.day && Array.isArray(day.meals))
+					.map((day) => ({
+						day: day.day,
+						meals: day.meals.map((meal) => (meal.recipeId ? meal : { name: meal.name })),
+					}))
+				const tasks = (parsed?.tasks ?? [])
+					.filter((task) => task.title)
+					.map((task) => (task.due ? task : { title: task.title }))
 				const shop = parsed?.shopDay
+				if (!parsed || !meals.length)
+					return { output: { error: 'The plan came back empty. Tell the owner it could not be drafted.' } }
 				return {
-					output: parsed ?? { error: 'no plan' },
+					output: { status: 'drafted', days: meals, shopDay: shop?.day ? shop : undefined, tasks, note: DRAFTED },
 					card: {
 						kind: 'plan',
 						title: get(t)('domains.kitchen.plan.title'),

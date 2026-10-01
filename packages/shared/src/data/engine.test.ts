@@ -591,6 +591,76 @@ describe('engine', () => {
 		expect(codeOf(() => engine.attach())).toBe('unavailable')
 	})
 
+	it('attaches a file given as bytes, and keeps the bytes for the session only', () => {
+		const { engine, storage, clock } = setup()
+		const bytes = new Uint8Array([1, 2, 3])
+		const thread = `eden://thread/${newId()}`
+		const row = engine.attachBytes(
+			{
+				kind: 'photo',
+				fileName: 'basket.png',
+				mime: 'image/png',
+				thumbnail: 'data:image/jpeg;base64,AAAA',
+				captured: { width: 4, height: 3 },
+				links: [{ uri: thread, relation: 'part-of' }],
+			},
+			bytes,
+			'abc'
+		)
+		expect(row).toMatchObject({
+			type: 'attachment',
+			kind: 'photo',
+			fileName: 'basket.png',
+			mime: 'image/png',
+			size: 3,
+			hash: 'abc',
+			store: 'workspace',
+			thumbnail: 'data:image/jpeg;base64,AAAA',
+		})
+		expect(engine.query('attachment', { linkedTo: thread, relation: 'part-of' }).map((entry) => entry.id)).toEqual([
+			row.id,
+		])
+		// a copy: what the caller does to its bytes afterwards changes nothing here
+		bytes[0] = 9
+		expect(engine.readAttachment(row.id)).toEqual(new Uint8Array([1, 2, 3]))
+
+		expect(codeOf(() => engine.attachBytes({ kind: 'photo', fileName: 'a.png' }, new Uint8Array(), 'h'))).toBe(
+			'invalid'
+		)
+		expect(codeOf(() => engine.attachBytes({ kind: 'spaceship' as 'photo', fileName: 'a.png' }, bytes, 'h'))).toBe(
+			'invalid'
+		)
+		expect(codeOf(() => engine.readAttachment(newId()))).toBe('not-found')
+
+		// the next load has the row and not the bytes
+		const again = createEngine(storage, { now: () => clock.now })
+		expect(again.query('attachment', {}).map((entry) => entry.id)).toEqual([row.id])
+		expect(again.readAttachment(row.id)).toBeNull()
+		engine.deleteRows([row.uri])
+		expect(codeOf(() => engine.readAttachment(row.id))).toBe('not-found')
+	})
+
+	it('deletes a thread’s attachments with it and restores them with it', () => {
+		const { engine } = setup()
+		const thread = engine.createThread({ domain: null, title: 'Dinner', tier: 'T0' })
+		const file = (name: string) =>
+			engine.attachBytes(
+				{ kind: 'photo', fileName: name, links: [{ uri: thread.uri, relation: 'part-of' }] },
+				new Uint8Array([1]),
+				'h'
+			)
+		const kept = file('a.png')
+		const gone = file('b.png')
+		engine.deleteRows([gone.uri])
+		const live = () => engine.query('attachment', {}).map((row) => row.id)
+
+		engine.deleteThread(thread.id)
+		expect(live()).toEqual([])
+		engine.restoreThread(thread.id)
+		// the one deleted before the thread stays gone
+		expect(live()).toEqual([kept.id])
+	})
+
 	it('seeds the local calendar source, which an event belongs to', () => {
 		const { engine } = setup()
 		const source = engine.getRow(`eden://calendar-source/${LOCAL_CALENDAR_SOURCE}`)

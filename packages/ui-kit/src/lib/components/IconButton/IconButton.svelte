@@ -1,9 +1,9 @@
 <script lang="ts">
 	// A bare icon control with a required accessible name. `count` adds the bell's badge, a circle on the icon's
 	// top-right corner that widens into a pill only when the number needs it, and folds the number into the name.
-	// `fill` makes it a filled circle at its size, on the accent or on the Gardener's green: the composer's send button.
+	// `fill` makes it a filled rounded square at its size, on the accent or on the Gardener's green: the composer's send button.
 	// `fab` is the floating + on mobile: a brand fill --fab wide. A fill hovers by the ink wash like any fill and
-	// presses like one under the raised relief. Hover and pressed grounds are circles, never rounded boxes. `tooltip`
+	// presses like one under the raised relief. Hover and pressed grounds are rounded squares, never circles. `tooltip`
 	// shows the label (or another string) on hover and keyboard focus, for a glyph that may not explain itself; with no
 	// `onclick` of its own (an info glyph) a click or tap toggles it too, so the pointer cursor never promises nothing.
 	import type { HTMLButtonAttributes } from 'svelte/elements'
@@ -19,7 +19,7 @@
 		label: string
 		/** The bell's unread count: a badge on the icon's corner, read as part of the name. */
 		count?: number
-		/** A filled circle at its size: brand is the accent, ai the Gardener's green (D-40). */
+		/** A filled rounded square at its size: brand is the accent, ai the Gardener's green (D-40). */
 		fill?: 'brand' | 'ai'
 		/** The floating + on mobile: a brand fill, --fab wide. */
 		fab?: boolean
@@ -74,7 +74,7 @@
 	{@attach attachTooltip(() => tip, { toggle: !rest.onclick && type === 'button' })}
 	{...rest}
 >
-	<!-- a fill's glyph is the small one: on a ground of its own the full-size glyph crowds the circle -->
+	<!-- a fill's glyph is the small one: on a ground of its own the full-size glyph crowds the square -->
 	<Icon name={icon} size={fab ? 'lg' : size === 'xs' || filled ? 'sm' : 'md'} />
 	{#if count}<span class="ed-icon-btn-count" aria-hidden="true">{count}</span>{/if}
 </button>
@@ -86,7 +86,7 @@
 		margin: 0;
 		padding: 0;
 		border: 0;
-		border-radius: var(--radius-full);
+		border-radius: var(--ed-radius-control);
 		background: transparent;
 		color: var(--text-secondary);
 		cursor: pointer;
@@ -107,12 +107,14 @@
 	.ed-icon-btn-sm {
 		width: calc(var(--control-height) - var(--space-1));
 		height: calc(var(--control-height) - var(--space-1));
+		border-radius: calc(var(--ed-radius-control) - 2px);
 	}
 	/* xs sits in a line of small text, a hint beside a label: no taller than the line, its glyph a little under the
 	   small icon so it reads as a mark on the label and not a control of its own weight */
 	.ed-icon-btn-xs {
 		width: calc(var(--icon-sm) + var(--space-1));
 		height: calc(var(--icon-sm) + var(--space-1));
+		border-radius: calc(var(--ed-radius-control) / 2);
 	}
 	.ed-icon-btn-xs :global(svg) {
 		width: calc(var(--icon-sm) - 2px);
@@ -172,6 +174,7 @@
 	.ed-icon-btn-fab {
 		width: var(--fab);
 		height: var(--fab);
+		border-radius: var(--ed-radius-card);
 		box-shadow: var(--shadow-sheet);
 	}
 	.ed-icon-btn-fill::after {

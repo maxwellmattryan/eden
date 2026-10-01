@@ -79,6 +79,20 @@ pub struct AuditImage {
     pub height: u32,
 }
 
+/// A file the owner attached to their message, as the request sent it: its hash, type and size, and an image's
+/// dimensions, never its bytes (D-83).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AuditAttachment {
+    pub hash: String,
+    pub mime: String,
+    pub size: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub width: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub height: Option<u32>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct AuditEntry {
@@ -106,6 +120,7 @@ pub struct AuditEntry {
     pub outcome: Outcome,
     pub grants: Vec<String>,
     pub image: Option<AuditImage>,
+    pub attachments: Vec<AuditAttachment>,
 }
 
 /// An entry as the frontend records it: the same fields, the id optional.
@@ -154,6 +169,8 @@ pub struct AuditEntryInput {
     pub grants: Vec<String>,
     #[serde(default)]
     pub image: Option<AuditImage>,
+    #[serde(default)]
+    pub attachments: Vec<AuditAttachment>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -169,7 +186,7 @@ pub struct AuditQuery {
 
 const COLUMNS: &str = "id, at, surface, thread_id, parent_request_id, tool, domain, declared_grade, grade, source, \
                        provider, model, reads, entities, tools, confirm_outcome, tokens_in, tokens_out, cache_read, \
-                       cost_usd, outcome, grants, image";
+                       cost_usd, outcome, grants, image, attachments";
 
 fn refused(detail: impl std::fmt::Display) -> EdenError {
     EdenError::Refused(format!("audit:invalid: {detail}"))
@@ -225,6 +242,7 @@ fn from_row(row: &Row<'_>) -> rusqlite::Result<AuditEntry> {
         image: image.map(serde_json::from_value).transpose().map_err(|e| {
             rusqlite::Error::FromSqlConversionFailure(22, rusqlite::types::Type::Text, Box::new(e))
         })?,
+        attachments: json_list(row, 23)?,
     })
 }
 
@@ -275,7 +293,7 @@ pub fn record(conn: &Connection, input: AuditEntryInput) -> Result<AuditEntry> {
         &format!(
             "INSERT INTO audit_entries ({COLUMNS})
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20,
-                     ?21, ?22, ?23)"
+                     ?21, ?22, ?23, ?24)"
         ),
         rusqlite::params![
             id,
@@ -305,6 +323,7 @@ pub fn record(conn: &Connection, input: AuditEntryInput) -> Result<AuditEntry> {
                 .as_ref()
                 .map(serde_json::to_string)
                 .transpose()?,
+            serde_json::to_string(&input.attachments)?,
         ],
     )?;
     get(conn, &id)?.ok_or_else(|| EdenError::NotFound(format!("audit entry {id}")))
@@ -419,12 +438,56 @@ pub(crate) mod tests {
             outcome: Outcome::Ok,
             grants: vec!["allergy".into()],
             image: None,
+            attachments: Vec::new(),
         }
     }
 
     fn code(result: Result<AuditEntry>) -> String {
         let message = result.expect_err("refused").to_string();
         message.split(": ").next().unwrap().to_string()
+    }
+
+    #[test]
+    fn attachments_round_trip_and_an_entry_without_them_reads_none() {
+        let ws = Workspace::in_memory();
+        let with = AuditEntryInput {
+            attachments: vec![
+                AuditAttachment {
+                    hash: "abc".into(),
+                    mime: "image/png".into(),
+                    size: 840,
+                    width: Some(4),
+                    height: Some(3),
+                },
+                AuditAttachment {
+                    hash: "def".into(),
+                    mime: "application/pdf".into(),
+                    size: 1200,
+                    width: None,
+                    height: None,
+                },
+            ],
+            ..input(1_000, None, &[])
+        };
+        let sent = with.attachments.clone();
+        let recorded = ws.write(|ctx| record(ctx.conn, with)).unwrap();
+        assert_eq!(recorded.attachments, sent);
+        assert_eq!(
+            ws.read(|conn| get(conn, &recorded.id))
+                .unwrap()
+                .unwrap()
+                .attachments,
+            sent
+        );
+
+        // what the frontend sent before it knew of attachments still records, and reads as none
+        let mut bare = serde_json::to_value(&recorded).unwrap();
+        let fields = bare.as_object_mut().unwrap();
+        fields.remove("attachments");
+        fields.remove("id");
+        let bare: AuditEntryInput = serde_json::from_value(bare).unwrap();
+        let recorded = ws.write(|ctx| record(ctx.conn, bare)).unwrap();
+        assert!(recorded.attachments.is_empty());
     }
 
     #[test]

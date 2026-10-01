@@ -4,8 +4,8 @@
 use serde_json::Value;
 use tauri::State;
 
-use crate::error::Result;
-use crate::substrate::attachments::{self, AttachInput};
+use crate::error::{EdenError, Result};
+use crate::substrate::attachments::{self, AttachBytesInput, AttachInput};
 use crate::substrate::batch::{self, BatchOp, BatchResult};
 use crate::substrate::bundle::{self, ExportRequest, ExportResult, ImportSummary, Manifest, Mode};
 use crate::substrate::entities::{self, Entity, EntityInput, EntityQuery};
@@ -133,6 +133,66 @@ pub async fn attach(app: tauri::AppHandle, input: AttachInput) -> Result<Value> 
         attachments::attach(&app.state::<Workspace>(), input)
     })
     .await?
+}
+
+/// The header that carries what `attach_bytes` is told of the file: the JSON of an `AttachBytesInput`,
+/// percent-encoded, because a header is ASCII and a file name is not.
+const ATTACH_HEADER: &str = "x-eden-attach";
+
+/// Writes a file given as bytes into the workspace with its row. The bytes are the request's raw body, so megabytes
+/// never cross as a JSON array of numbers; what describes them rides in a header.
+#[tauri::command]
+pub async fn attach_bytes(
+    app: tauri::AppHandle,
+    request: tauri::ipc::Request<'_>,
+) -> Result<Value> {
+    use tauri::Manager;
+    let invalid = |detail: &str| EdenError::InvalidOperation(format!("attach_bytes: {detail}"));
+    let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else {
+        return Err(invalid("the body is the file's bytes"));
+    };
+    let header = request
+        .headers()
+        .get(ATTACH_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .ok_or_else(|| invalid("the header that describes the file is missing"))?;
+    let described =
+        percent_decode(header).ok_or_else(|| invalid("the header is not percent-encoded UTF-8"))?;
+    let input: AttachBytesInput = serde_json::from_str(&described)?;
+    let bytes = bytes.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        attachments::attach_bytes(&app.state::<Workspace>(), input, &bytes)
+    })
+    .await?
+}
+
+/// The bytes of a live attachment, as a raw response. `not-found` when the row or its file is not on this device.
+#[tauri::command]
+pub async fn read_attachment(app: tauri::AppHandle, id: String) -> Result<tauri::ipc::Response> {
+    use tauri::Manager;
+    let bytes = tauri::async_runtime::spawn_blocking(move || {
+        attachments::read_bytes(&app.state::<Workspace>(), &id)
+    })
+    .await??;
+    Ok(tauri::ipc::Response::new(bytes))
+}
+
+/// What `encodeURIComponent` made, turned back; `None` for a broken escape or bytes that are not UTF-8.
+fn percent_decode(text: &str) -> Option<String> {
+    let bytes = text.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut at = 0;
+    while at < bytes.len() {
+        if bytes[at] == b'%' {
+            let pair = text.get(at + 1..at + 3)?;
+            out.push(u8::from_str_radix(pair, 16).ok()?);
+            at += 3;
+        } else {
+            out.push(bytes[at]);
+            at += 1;
+        }
+    }
+    String::from_utf8(out).ok()
 }
 
 #[tauri::command]

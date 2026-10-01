@@ -1067,6 +1067,7 @@
 			"discard": "破棄",
 			"committed": "追加しました",
 			"discarded": "破棄しました",
+			"pastedText": "貼り付けたテキスト.txt",
 			"canSee": "見えているもの",
 			"openAuditLog": "監査ログを開く",
 			"budgets": "予算",
@@ -1135,7 +1136,23 @@
 			"tornado": "竜巻"
 		},
 		"show": "表示",
-		"hide": "隠す"
+		"hide": "隠す",
+		"dropzone": {
+			"drop": "ファイルをドロップ",
+			"groups": {
+				"image": "画像 {0} 件",
+				"pdf": "PDF {0} 件",
+				"text": "テキスト {0} 件",
+				"other": "その他 {0} 件"
+			},
+			"tooMany": "一度に {0} 件まで",
+			"notAccepted": "このファイルは追加できません"
+		},
+		"file": {
+			"open": "{0}を開く",
+			"missing": "このデバイスにはもうありません",
+			"failed": "追加できませんでした"
+		}
 	},
 	"gardener": {
 		"conversation": "会話",
@@ -1179,11 +1196,23 @@
 			"title": "この端末にキーがありません",
 			"text": "Anthropic のAPIキーを貼り付けてください。キーはこの端末のキーチェーンに保管され、リクエストの署名以外で外に出ることはありません。"
 		},
-		"devClamp": "開発ビルド: すべてのグレードが {model} で動きます。",
+		"devClamp": "開発ビルド: ライトとスタンダードは {model}、ディープは {deep} で動きます。",
 		"budgetReached": "今月の予算に達しました。続けるには「設定 → 庭師」で上限を上げてください。",
 		"budgetWarning": "庭師は今月の予算の {percent}% を使いました。",
 		"openBudgets": "予算を開く",
 		"saveFailed": "会話を保存できませんでした。",
+		"attach": "ファイルを添付",
+		"attachments": {
+			"canSee": "添付ファイル",
+			"failed": "ファイルを添付できませんでした。何も送信していません。",
+			"refused": {
+				"type": "添付できるのは画像、PDF、テキストファイルだけです。",
+				"size": "{name} は大きすぎて添付できません。",
+				"count": "1 件のメッセージに {max} 件まで添付できます。",
+				"total": "これらのファイルは合わせると大きすぎて送信できません。",
+				"empty": "{name} は空です。"
+			}
+		},
 		"lockedThread": "この会話はT2のデータを読んだため、今後の文脈には含まれません。",
 		"noRows": "この種類の項目はこのリクエストにありません。",
 		"trimmed": "収めるために省いたもの: {ids}",
@@ -1322,6 +1351,7 @@
 			"tools": "ツール",
 			"grants": "許可",
 			"image": "画像",
+			"attachment": "添付",
 			"parent": "呼び出し元",
 			"parentOpen": "呼び出し元のリクエストを開く",
 			"provider": "プロバイダー",

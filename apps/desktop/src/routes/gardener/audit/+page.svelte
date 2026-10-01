@@ -14,6 +14,7 @@
 		InlineError,
 		PageHeader,
 		ReadList,
+		formatBytes,
 		type DataTableCell,
 		type DataTableColumn,
 		type DetailRow,
@@ -163,6 +164,17 @@
 					},
 				]
 			: []),
+		// the owner's files: type, size, an image's pixels and the start of the hash, never a name (D-83)
+		...(entry.attachments ?? []).map((file) => ({
+			label: $t('audit.detail.attachment'),
+			value: [
+				file.mime,
+				formatBytes(file.size),
+				...(file.width && file.height ? [`${file.width}×${file.height}`] : []),
+				`${file.hash.slice(0, 12)}…`,
+			].join(' · '),
+			mono: true,
+		})),
 	]
 </script>
 

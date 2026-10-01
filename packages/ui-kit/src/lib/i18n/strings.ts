@@ -53,9 +53,9 @@ export interface UiStrings {
 		dismissedNotStored: string
 		cancelledNothingChanged: string
 		confirmed: (verb: string) => string
-		/** The chip above the composer. */
+		/** The eye button at the composer's foot. */
 		canSee: string
-		/** The title of the panel the chip opens. */
+		/** The title of the panel the button opens. */
 		canSeeTitle: string
 		/** The panel's first section: the ids with rows to read. */
 		inThisRequest: string
@@ -129,6 +129,8 @@ export interface UiStrings {
 		discard: string
 		committed: string
 		discarded: string
+		/** The name of the file a long paste into the composer becomes. */
+		pastedText: string
 	}
 	access: {
 		read: string
@@ -227,6 +229,29 @@ export interface UiStrings {
 	widget: {
 		/** The drag handle's name in the Garden's edit mode. */
 		move: (title: string) => string
+	}
+	dropzone: {
+		/** The overlay's headline while files are dragged over; 0 when the count is not known. */
+		drop: (count: number) => string
+		/** How many of each kind are being dragged. */
+		groups: {
+			image: (count: number) => string
+			pdf: (count: number) => string
+			text: (count: number) => string
+			other: (count: number) => string
+		}
+		/** The drag holds more files than there is room for. */
+		tooMany: (max: number) => string
+		/** Nothing in the drag is of a type taken here. */
+		notAccepted: string
+	}
+	file: {
+		/** A file chip's body as a button. */
+		open: (name: string) => string
+		/** The file is no longer on this device. */
+		missing: string
+		/** The file could not be read or stored. */
+		failed: string
 	}
 }
 
@@ -337,6 +362,7 @@ export const defaultStrings: UiStrings = {
 		discard: 'Discard',
 		committed: 'Added',
 		discarded: 'Discarded',
+		pastedText: 'Pasted text.txt',
 	},
 	access: {
 		read: 'read',
@@ -417,6 +443,22 @@ export const defaultStrings: UiStrings = {
 	},
 	widget: {
 		move: (title) => `Move ${title}`,
+	},
+	dropzone: {
+		drop: (count) => (count === 1 ? 'Drop 1 file' : count > 1 ? `Drop ${count} files` : 'Drop files'),
+		groups: {
+			image: (count) => (count === 1 ? '1 image' : `${count} images`),
+			pdf: (count) => (count === 1 ? '1 PDF' : `${count} PDFs`),
+			text: (count) => (count === 1 ? '1 text file' : `${count} text files`),
+			other: (count) => (count === 1 ? '1 other file' : `${count} other files`),
+		},
+		tooMany: (max) => (max === 1 ? 'One file at a time' : `Up to ${max} files at a time`),
+		notAccepted: 'These files cannot be added here',
+	},
+	file: {
+		open: (name) => `Open ${name}`,
+		missing: 'No longer on this device',
+		failed: 'Could not be added',
 	},
 }
 

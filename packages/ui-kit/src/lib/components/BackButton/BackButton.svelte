@@ -43,7 +43,7 @@
 		height: var(--ed-control);
 		padding: 0;
 		border: 0;
-		border-radius: var(--radius-full);
+		border-radius: var(--ed-radius-control);
 		background: transparent;
 		color: var(--text-secondary);
 		cursor: pointer;

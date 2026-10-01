@@ -5,6 +5,8 @@
 	import { defaultStrings } from '$lib/i18n/strings.js'
 	import { canSee } from '../../../stories/sample-data.js'
 	import CanSee from '../CanSee/CanSee.svelte'
+	import FileButton from '../FileButton/FileButton.svelte'
+	import FileChip from '../FileChip/FileChip.svelte'
 	import Composer from './Composer.svelte'
 
 	const s = defaultStrings.gardener
@@ -23,6 +25,16 @@
 		},
 		args: { label: s.askPlaceholder, placeholder: s.askPlaceholder, onsend: fn(), onstop: fn() },
 	})
+
+	/** A paste as the engine would send it: text, files, or both. */
+	function paste(target: HTMLElement, content: { text?: string; files?: File[] }) {
+		const data = new DataTransfer()
+		if (content.text !== undefined) data.setData('text/plain', content.text)
+		for (const file of content.files ?? []) data.items.add(file)
+		const event = new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true })
+		target.dispatchEvent(event)
+		return event
+	}
 </script>
 
 <!-- Nothing sends while the field is blank; Enter sends the trimmed text and clears the field; Shift+Enter breaks -->
@@ -83,7 +95,7 @@
 	}}
 />
 
-<!-- The "can see" chip at the foot's start, a caption before the button -->
+<!-- The "can see" button at the foot's start, a caption before the button -->
 <Story
 	name="With tools and meta"
 	play={async ({ canvasElement }) => {
@@ -110,5 +122,64 @@
 	args={{
 		value:
 			'Plan the week from what is in the fridge.\nKeep Tuesday light.\nNo peanuts anywhere.\nUse the salmon before Thursday.\nOne soup.\nOne thing from the freezer.\nLeftovers for Friday lunch.\nAnd a grocery list for Saturday.\nThat is all.',
+	}}
+/>
+
+<!-- Files attached to the message sit above it, the paperclip beside the eye; with something attached a blank
+     message may be sent -->
+<Story
+	name="With attachments"
+	args={{ allowEmpty: true }}
+	play={async ({ canvasElement, args }) => {
+		const canvas = canvasOf(canvasElement)
+		await expect(canvas.getByText('basket.png')).toBeVisible()
+		const send = canvas.getByRole('button', { name: s.send })
+		await expect(send).toBeEnabled()
+		await userEvent.click(send)
+		await expect(args.onsend).toHaveBeenCalledWith('')
+	}}
+>
+	{#snippet template(args)}
+		<Composer {...args}>
+			{#snippet attachments()}
+				<FileChip name="basket.png" detail="840 KB" icon="image" onremove={() => {}} />
+				<FileChip name="manual.pdf" detail="1.2 MB" icon="file-text" onremove={() => {}} />
+			{/snippet}
+			{#snippet tools()}
+				<FileButton label="Attach files" size="sm" tooltip onfiles={() => {}} />
+				<CanSee items={canSee} />
+			{/snippet}
+		</Composer>
+	{/snippet}
+</Story>
+
+<!-- Pasted files go to `onfiles`, and so does a paste longer than `longPaste`, as a text file; a short paste, and
+     text that carries a picture of itself, stay text -->
+<Story
+	name="Paste"
+	args={{ onfiles: fn(), longPaste: 20 }}
+	play={async ({ canvasElement, args }) => {
+		const canvas = canvasOf(canvasElement)
+		const field = canvas.getByRole('textbox', { name: s.askPlaceholder })
+		const image = new File(['1234'], 'screenshot.png', { type: 'image/png' })
+
+		const files = paste(field, { files: [image] })
+		await expect(files.defaultPrevented).toBe(true)
+		await expect(args.onfiles).toHaveBeenLastCalledWith([image])
+
+		const short = paste(field, { text: 'two eggs' })
+		await expect(short.defaultPrevented).toBe(false)
+		const table = paste(field, { text: 'eggs\t2', files: [image] })
+		await expect(table.defaultPrevented).toBe(false)
+		await expect(args.onfiles).toHaveBeenCalledTimes(1)
+
+		const long = paste(field, { text: 'a log of many lines, longer than the limit' })
+		await expect(long.defaultPrevented).toBe(true)
+		await expect(args.onfiles).toHaveBeenCalledTimes(2)
+		const pasted = ((args.onfiles as ReturnType<typeof fn>).mock.calls[1]?.[0] as File[])[0]!
+		await expect(pasted.name).toBe(s.pastedText)
+		await expect(pasted.type).toBe('text/plain')
+		await expect(await pasted.text()).toBe('a log of many lines, longer than the limit')
+		await expect(field).toHaveValue('')
 	}}
 />

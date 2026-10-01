@@ -135,6 +135,10 @@ function request(over: Partial<PackRequest> = {}): PackRequest {
 		zone: 'America/Chicago',
 		lang: 'en',
 		domainName: 'Hearth',
+		domains: [
+			{ id: 'kitchen', name: 'Hearth' },
+			{ id: 'weather', name: 'Sky' },
+		],
 		grade: 'standard',
 		...over,
 	}
@@ -228,6 +232,22 @@ describe('buildPack', () => {
 		expect(context).not.toContain('"links"')
 	})
 
+	it('scrubs the message and the thread as it scrubs the rows', async () => {
+		const pack = await buildPack(
+			request({
+				thread: [message(15, 'owner', 'Mail the list to a@b.io'), message(17, 'gardener', 'I cannot send mail.')],
+				message: 'Then text it to 512-555-0134',
+			}),
+			readers()
+		)
+		expect(pack.messages[0]).toEqual({ role: 'user', content: 'Mail the list to [email]' })
+		expect(pack.messages.at(-1)).toMatchObject({
+			content: [{ type: 'text' }, { type: 'text', text: 'Then text it to [phone]' }],
+		})
+		const bare = await buildPack(request({ reads: ['grocery-list'], message: 'Text 512-555-0134' }), readers())
+		expect(bare.messages.at(-1)).toEqual({ role: 'user', content: 'Text [phone]' })
+	})
+
 	it('turns the thread into user and assistant turns and puts the context before the message', async () => {
 		const pack = await buildPack(request(), readers())
 		expect(pack.messages).toHaveLength(3)
@@ -238,15 +258,160 @@ describe('buildPack', () => {
 			content: [{ type: 'text' }, { type: 'text', text: 'And tomorrow?' }],
 		})
 		expect(pack.system[0]).toMatchObject({ type: 'text', cache_control: { type: 'ephemeral' } })
-		expect(pack.system[0]!.text).toContain('I am open inside Hearth.')
-		expect(pack.system[1]!.text).toContain('I can see: dietary-preference (3), allergy (1), recipe (3)')
-		expect(pack.system[1]!.text).toContain('Locked without a grant: medical-dietary-restriction.')
+		expect(pack.system[0]!.text).toContain('which they opened from Hearth')
+		expect(pack.system[0]!.text).toContain('- Hearth (kitchen): food at home')
+		expect(pack.system[0]!.text).toContain('- Sky (weather): the weather')
+		expect(pack.system[0]!.text).toContain('Every tool call appears in the thread as a card')
+		expect(pack.system[0]!.text).not.toContain('kitchen_suggest-recipes')
+		expect(pack.system[1]!.text).toContain('Now: Wednesday 2026-09-30, 04:40 (America/Chicago).')
+		expect(pack.system[1]!.text).toContain('You can see: dietary-preference (3), allergy (1), recipe (3)')
+		expect(pack.system[1]!.text).toContain('Locked: medical-dietary-restriction.')
+		const context = contextOf(pack)
+		expect(context.startsWith('<context>\n## dietary-preference (3 rows)\n')).toBe(true)
+		expect(context.endsWith('\n</context>')).toBe(true)
 		expect(pack.tools).toHaveLength(index.length)
 		expect((pack.tools[0] as { name: string }).name).toBe('kitchen_suggest-recipes')
 		// A read with no rows is still on the chip, at zero.
 		const empty = await buildPack(request({ reads: ['grocery-list'] }), readers())
 		expect(empty.canSee).toEqual([{ id: 'grocery-list', count: 0 }])
 		expect(empty.messages.at(-1)).toEqual({ role: 'user', content: 'And tomorrow?' })
+	})
+
+	it('replays a reply as it happened: its words, the tools it called and what each answered', async () => {
+		const reply = (n: number, blocks: unknown[]): Message => ({ ...message(n, 'gardener', ''), blocks })
+		const call = (callId: string, name: string, input: unknown, output?: unknown) => ({
+			id: callId,
+			name,
+			domain: 'substrate',
+			tool: name,
+			access: 'read',
+			input,
+			...(output === undefined ? {} : { output }),
+		})
+		const long = { days: 'x'.repeat(3_000) }
+		const thread = [
+			message(15, 'owner', 'Remind me to call a@b.io on Friday'),
+			reply(16, [
+				{ kind: 'can-see', items: [], locked: [], trimmed: [], rows: {} },
+				{ kind: 'text', text: 'Drafting it.' },
+				{
+					kind: 'tool',
+					state: 'done',
+					call: call('toolu_1', 'create-task', { title: 'Call a@b.io' }, { status: 'drafted' }),
+				},
+				{ kind: 'draft', draft: { kind: 'task', title: 'Call' }, state: 'committed', callId: 'toolu_1' },
+				{ kind: 'tool', state: 'done', call: call('toolu_2', 'weather_forecast', {}, long) },
+				{ kind: 'text', text: 'It is drafted.' },
+			]),
+			message(17, 'owner', 'And the weather?'),
+			reply(18, [
+				{ kind: 'tool', state: 'done', call: call('toolu_3', 'weather_forecast', {}, long) },
+				{
+					kind: 'tool',
+					state: 'cancelled',
+					call: call('toolu_4', 'complete-task', { taskId: 'x' }, { error: 'no', cancelled: true }),
+				},
+				{ kind: 'tool', state: 'running', call: call('toolu_5', 'summarize-day', {}) },
+			]),
+		]
+		const pack = await buildPack(request({ thread, message: 'Thanks' }), readers())
+		expect(pack.messages.slice(0, -1)).toEqual([
+			{ role: 'user', content: 'Remind me to call [email] on Friday' },
+			{
+				role: 'assistant',
+				content: [
+					{ type: 'text', text: 'Drafting it.' },
+					{ type: 'tool_use', id: 'toolu_1', name: 'create-task', input: { title: 'Call [email]' } },
+					{ type: 'tool_use', id: 'toolu_2', name: 'weather_forecast', input: {} },
+				],
+			},
+			{
+				role: 'user',
+				content: [
+					{
+						type: 'tool_result',
+						tool_use_id: 'toolu_1',
+						content: JSON.stringify({ status: 'drafted', card: 'kept by the owner' }),
+						is_error: false,
+					},
+					// an earlier reply's long result is left out, and says to call again
+					{
+						type: 'tool_result',
+						tool_use_id: 'toolu_2',
+						content: expect.stringContaining('Call the tool again'),
+						is_error: false,
+					},
+				],
+			},
+			{ role: 'assistant', content: 'It is drafted.' },
+			{ role: 'user', content: 'And the weather?' },
+			{
+				role: 'assistant',
+				content: [
+					{ type: 'tool_use', id: 'toolu_3', name: 'weather_forecast', input: {} },
+					{ type: 'tool_use', id: 'toolu_4', name: 'complete-task', input: { taskId: 'x' } },
+					{ type: 'tool_use', id: 'toolu_5', name: 'summarize-day', input: {} },
+				],
+			},
+			{
+				role: 'user',
+				content: [
+					// the last reply keeps its results whole
+					{ type: 'tool_result', tool_use_id: 'toolu_3', content: JSON.stringify(long), is_error: false },
+					{
+						type: 'tool_result',
+						tool_use_id: 'toolu_4',
+						content: JSON.stringify({ error: 'no', cancelled: true }),
+						is_error: true,
+					},
+					// a call the app closed on never answered
+					{
+						type: 'tool_result',
+						tool_use_id: 'toolu_5',
+						content: expect.stringContaining('interrupted'),
+						is_error: true,
+					},
+				],
+			},
+		])
+	})
+
+	it('trims the thread an exchange at a time, and opens on the owner', async () => {
+		const reply: Message = {
+			...message(16, 'gardener', ''),
+			blocks: [
+				{
+					kind: 'tool',
+					state: 'done',
+					call: {
+						id: 'toolu_1',
+						name: 'toolbench_brainstorm',
+						domain: 'toolbench',
+						tool: 'brainstorm',
+						access: 'read',
+						input: {},
+						output: { reply: 'Start small.' },
+					},
+				},
+				{ kind: 'text', text: 'Start small.' },
+			],
+		}
+		// a thread that opens on a reply (a tool run from a button) is given the owner's turn it lacks
+		const opened = await buildPack(request({ thread: [reply], message: 'Go on' }), readers())
+		expect(opened.messages[0]).toMatchObject({ role: 'user', content: expect.stringContaining('from a button') })
+		expect(opened.messages[1]).toMatchObject({ role: 'assistant', content: [{ type: 'tool_use', id: 'toolu_1' }] })
+		expect(opened.messages[2]).toMatchObject({
+			role: 'user',
+			content: [{ type: 'tool_result', tool_use_id: 'toolu_1' }],
+		})
+		expect(opened.messages[3]).toEqual({ role: 'assistant', content: 'Start small.' })
+		// a call and its answer leave together
+		const bare = await buildPack(
+			request({ thread: [reply], message: 'Go on', tokenCap: 1, outputReserve: 0 }),
+			readers()
+		)
+		expect(bare.messages).toHaveLength(1)
+		expect(bare.trimmed).toContain('thread')
 	})
 
 	it('estimates the input as a quarter of its characters', async () => {
@@ -289,7 +454,7 @@ describe('buildPack', () => {
 		])
 		expect(bare.canSee).toContainEqual({ id: 'task', count: 0 })
 		expect(bare.messages).toHaveLength(1)
-		expect(bare.system[1]!.text).toContain('Trimmed to fit: recipe, stock-item, local-event, task, thread.')
+		expect(bare.system[1]!.text).toContain('Trimmed: recipe, stock-item, local-event, task, thread.')
 		expect(bare.estimatedInputTokens).toBeGreaterThan(1)
 	})
 })

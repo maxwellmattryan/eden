@@ -29,6 +29,9 @@ pub struct GardenerRequest {
     pub messages: Vec<Value>,
     #[serde(default)]
     pub tools: Vec<Value>,
+    /// A JSON schema the reply is held to: the API's structured output, for a request whose answer a handler parses.
+    #[serde(default)]
+    pub output_format: Option<Value>,
 }
 
 /// What the stream is made of, as the frontend receives it.
@@ -45,6 +48,10 @@ pub enum GardenerEvent {
         name: String,
         input: Value,
     },
+    /// One whole reasoning block (`thinking` or `redacted_thinking`) as the provider sent it, signature and all: the
+    /// frontend sends it back unchanged while the request continues through its tool rounds.
+    #[serde(rename_all = "camelCase")]
+    Thinking { block: Value },
     /// Sent once at the start with the input side, and once at the end with the output side.
     #[serde(rename_all = "camelCase")]
     Usage {

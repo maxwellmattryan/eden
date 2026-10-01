@@ -20,6 +20,8 @@ const HOUR_MS = 60 * 60 * 1000
 const DAY_MS = 24 * HOUR_MS
 const SEVERITIES: readonly AlertSeverity[] = ['extreme', 'severe', 'moderate', 'minor', 'unknown']
 const MOMENTS: readonly MoonMoment[] = ['new', 'first-quarter', 'full', 'last-quarter']
+/** The chance of rain, in percent, from which an hour counts as rain. */
+const RAIN_LIKELY = 40
 
 function place(): string {
 	const area = settings.home.area
@@ -63,13 +65,25 @@ function alerts() {
 		.sort((a, b) => SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity))
 }
 
-/** The day a request names: today, tomorrow, or a date. */
-function resolveDay(input: unknown, zone: string | undefined): string {
+/** The day a request names: today when it names none, today, tomorrow, or a date; nothing for anything else. */
+function resolveDay(input: unknown, zone: string | undefined): string | undefined {
 	const asked = str(input, 'day')
 	const today = dateIn(zone, Date.now())
 	if (!asked || asked === 'today') return today
 	if (asked === 'tomorrow') return addDays(today, 1)
-	return /^\d{4}-\d{2}-\d{2}$/.test(asked) ? asked : today
+	return /^\d{4}-\d{2}-\d{2}$/.test(asked) && Number.isFinite(Date.parse(asked)) ? asked : undefined
+}
+
+const notADay = (input: unknown) => ({
+	output: {
+		error: `${JSON.stringify(str(input, 'day'))} is not a day. Pass \`day\` as YYYY-MM-DD, or leave it out for today.`,
+	},
+})
+
+/** A window's edge as an instant: a local date and time read in the forecast's zone, anything else as it parses. */
+function instantOf(value: string, zone: string | undefined): number {
+	const local = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(?::\d{2})?$/.exec(value)
+	return local ? instantAt(local[1]!, local[2]!, zone) : new Date(value).getTime()
 }
 
 export const weatherTools: Record<string, ToolHandler> = {
@@ -79,10 +93,17 @@ export const weatherTools: Record<string, ToolHandler> = {
 			const forecast = weather.forecast
 			if (!forecast) return { output: { error: 'no forecast on this device yet' } }
 			const day = resolveDay(input, forecast.timeZone)
+			if (!day) return notADay(input)
 			const days = forecast.days
 				.filter((reading) => reading.date >= day)
 				.slice(0, 7)
 				.map(dayOf)
+			if (!days.length)
+				return {
+					output: {
+						error: `The forecast does not reach ${day}. It holds ${forecast.days[0]?.date} to ${forecast.days.at(-1)?.date}.`,
+					},
+				}
 			const now = weather.now
 			return {
 				output: {
@@ -109,25 +130,47 @@ export const weatherTools: Record<string, ToolHandler> = {
 			const taskId = str(input, 'taskId')
 			const eventId = str(input, 'eventId')
 			let about: string | undefined
+			const zone = forecast.timeZone
 			if (taskId) {
 				const task = (await queryTasks()).find((row) => row.id === taskId)
-				const at = task?.at ?? task?.due
-				if (at) {
-					from = at
-					to = new Date(new Date(at).getTime() + HOUR_MS).toISOString()
-					about = task?.title
-				}
+				if (!task)
+					return {
+						output: {
+							error: `No task has the id ${JSON.stringify(taskId)}. A task's id is the \`id\` of its row under \`task\` in the context.`,
+						},
+					}
+				const at = task.at ?? task.due
+				// a day with no time of day is not a window: the hours are the owner's to name
+				if (!at || !at.includes('T'))
+					return {
+						output: {
+							error: `The task ${JSON.stringify(task.title)} has no time of day. Pass \`from\` and \`to\` for the hours meant.`,
+						},
+					}
+				from = at
+				to = new Date(instantOf(at, zone) + HOUR_MS).toISOString()
+				about = task.title
 			} else if (eventId) {
 				const event = (await queryEvents()).find((row) => row.id === eventId)
-				if (event) {
-					from = event.startAt
-					to = event.endAt ?? new Date(new Date(event.startAt).getTime() + HOUR_MS).toISOString()
-					about = event.title
-				}
+				if (!event)
+					return {
+						output: {
+							error: `No event has the id ${JSON.stringify(eventId)}. An event's id is the \`id\` of its row in the context.`,
+						},
+					}
+				from = event.startAt
+				to = event.endAt ?? new Date(instantOf(event.startAt, zone) + HOUR_MS).toISOString()
+				about = event.title
 			}
-			const start = from ? new Date(from).getTime() : Date.now()
-			const end = to ? new Date(to).getTime() : start + 2 * HOUR_MS
-			if (!Number.isFinite(start) || !Number.isFinite(end)) return { output: { error: 'the window is not a time' } }
+			if (!from) return { output: { error: 'Pass `taskId`, `eventId`, or `from` and `to`: the window to check.' } }
+			const start = instantOf(from, zone)
+			const end = to ? instantOf(to, zone) : start + 2 * HOUR_MS
+			if (!Number.isFinite(start) || !Number.isFinite(end))
+				return {
+					output: {
+						error: 'The window is not a time. Pass `from` and `to` as a local date and time, YYYY-MM-DDTHH:MM.',
+					},
+				}
 			const hours = forecast.hours
 				.filter((hour) => hour.time >= start - HOUR_MS && hour.time < end + HOUR_MS)
 				.map((hour) => ({
@@ -135,9 +178,16 @@ export const weatherTools: Record<string, ToolHandler> = {
 					precipChance: hour.precipChance,
 					condition: hour.condition,
 				}))
-			const rain = hours.some((hour) => hour.precipChance >= 40)
+			const maxPrecipChance = hours.reduce((highest, hour) => Math.max(highest, hour.precipChance), 0)
 			return {
-				output: { about, place: place(), rain, hours, covered: hours.length > 0 },
+				output: {
+					about,
+					place: place(),
+					rain: maxPrecipChance >= RAIN_LIKELY,
+					maxPrecipChance,
+					hours,
+					covered: hours.length > 0,
+				},
 				touched: [...(taskId ? [`eden://task/${taskId}`] : []), ...(eventId ? [`eden://event/${eventId}`] : [])],
 			}
 		},
@@ -148,6 +198,7 @@ export const weatherTools: Record<string, ToolHandler> = {
 			const forecast = weather.forecast
 			const zone = forecast?.timeZone
 			const first = resolveDay(input, zone)
+			if (!first) return notADay(input)
 			const at = (instant: number | null) => (instant ? timeIn(instant, zone) : null)
 			const days = Array.from({ length: int(input, 'days', 1, 1, 31) }, (_, i) => {
 				const day = addDays(first, i)

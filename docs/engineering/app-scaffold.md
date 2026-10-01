@@ -34,6 +34,8 @@ The apps and the shared package depend on the kit by exact version and consume e
 | dev port | 1420 (HMR 1421 when `TAURI_DEV_HOST` is set) | 1421 (HMR 1430) |
 | shell | `Sidebar`, `BackButton`, `StatusBar`, the settings `Sheet` with a tab rail | `BottomTabBar` pinned to the bottom, More, an Appearance-only settings sheet |
 
+**File drops (D-84).** The window sets `dragDropEnabled: false`, in `tauri.conf.json` and again in the dev, staging and prod overlays, because an overlay's `windows` array replaces the base one. Tauri's native handler is therefore off and a dropped file reaches the webview as an HTML5 drop. Each app's root layout puts `fileDropGuard` (`@eden/shared/api`) on `<svelte:window>`: a file drag that no kit `Dropzone` claimed is refused, so a file dropped on a page never opens in place of the app.
+
 The five Phase 1 routes exist on both: `garden`, `today`, `kitchen`, `toolbench`, `weather` (mobile has `more` instead of `toolbench`, which lives behind it). A route renders its `PageHeader` and `EmptyState` from the locale until its approved mockup is implemented (D-54); on desktop the Garden, Hearth (Stock and Grocery), Sky and Toolbench (Ideas) are built from their approved mockups, and each story stays its reference; the tabs without a mockup yet (Recipes, Tips, Projects, Lab, Studio, Notes) render an `EmptyState`, and Today its placeholder.
 
 ## Commands

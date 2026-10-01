@@ -36,18 +36,21 @@ export const ANTHROPIC_SEED: ProviderRow = {
 			flags: EVERY_FLAG,
 			contextTokens: 1_000_000,
 			pricing: { input: 2, output: 10, cacheRead: 0.2 },
+			thinks: true,
 		},
 		{
 			id: 'claude-opus-5-5',
 			flags: EVERY_FLAG,
 			contextTokens: 1_000_000,
 			pricing: { input: 4, output: 20, cacheRead: 0.2 },
+			thinks: true,
 		},
 		{
 			id: 'claude-fable-5-1',
 			flags: EVERY_FLAG,
 			contextTokens: 1_000_000,
 			pricing: { input: 10, output: 50, cacheRead: 0.25 },
+			thinks: true,
 		},
 	],
 	grades: { light: 'claude-haiku-4-5-20251001', standard: 'claude-sonnet-5-5', deep: 'claude-opus-5-5' },
@@ -137,6 +140,7 @@ export function effectiveProvider(
 					flags: edit.flags ?? listed.flags,
 					contextTokens: edit.contextTokens ?? listed.contextTokens,
 					pricing: { ...listed.pricing, ...edit.pricing },
+					...(listed.thinks ? { thinks: true } : {}),
 				}
 			: edit
 		const problems = modelProblems(seed.id, row)

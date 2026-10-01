@@ -171,6 +171,8 @@ Every command is one read or one write of the workspace; a write is one transact
 | `query_entities` | `filter`: `{ type, ids?, linkedTo?, includeDeleted? }` | the rows of the type, by id |
 | `create_task`, `create_event`, `create_place` | `input`: the fields, and any of `id`, `mirror`, `source`, `externalId`, `snapshot`, `links` | the row |
 | `attach` | `input`: `{ id?, kind, path, fileName?, mime?, captured?, links? }` | the row; the file at `path` is copied in and hashed |
+| `attach_bytes` | the raw body: the file's bytes; the header `x-eden-attach`: `encodeURIComponent` of the JSON `{ id?, kind, fileName, mime?, thumbnail?, captured?, links? }` (a header is ASCII, a file name is not) | the row; the bytes are written and hashed. Refused for no bytes, a blank name, or more than 32 MiB (D-84) |
+| `read_attachment` | `id` | the file's bytes, as a raw response; `not-found` when the row is deleted or absent, or its file is not on this device |
 | `update_task`, `update_event`, `update_place`, `update_attachment` | `id`, `patch` | the row; a value sets a field, `null` clears it, an absent field is left |
 | `query_tasks`, `query_events`, `query_places`, `query_attachments` | `filter`: `{ kinds?, from?, to?, place?, linkedTo?, relation?, includeDeleted? }` | the rows, by id |
 | `get_row` | `uri` | the row, deleted or not, or `null` |
@@ -206,6 +208,7 @@ These are the substrate API of `product/substrate/primitives.md` (D-33). Notes o
 - **A time range** matches a Task by `due`, or by `at` when it has no `due`, and an Event while any of it falls inside. A row with no time is outside every range.
 - **`place`** is the URI of a Place, and matches rows linked `at` it.
 - **A batch** is a list of operations (`createEntity`, `updateEntity`, `createPrimitive`, `updatePrimitive`, `delete`, `restore`, `link`) applied whole or not at all. With a `marker` it is applied once: the marker is written with the batch, and a batch whose marker is there answers `applied: false`. An attachment has a file and is not written in a batch.
+- **A thread takes its files.** `delete_thread` tombstones the attachments that are `part-of` it at the thread's stamp, and `restore_thread` lifts the ones deleted at that stamp (D-83). The files stay in `attachments/`; nothing sweeps them yet (`engineering/gardener.md`, "Attachments", Handoffs).
 - **There is no optimistic concurrency.** A workspace has one owner and one writer; the row's latest stamp stands.
 - **An error crosses as its message.** The ones the interface tells apart start with a stable code: `not-found`; under `bundle:` the codes `unreadable`, `version`, `hash-mismatch` and `backup`; under `grant:` the codes `never` and `invalid`; under `egress:` and `fact:` the same two; under `schedule:`, `signal:`, `secret:`, `audit:`, `thread:` and `policy:` the code `invalid`; under `gardener:` the codes `no-key` and `network`. `dataErrorCode(error)` reads it.
 
@@ -228,6 +231,8 @@ Every write records what it changed (`substrate/changes.rs`: the URI and one of 
 | `errors.ts` | `DataError`, `dataErrorCode` |
 | `legacy.ts` | the one-time import of an old document |
 | `text.ts` | CSV and Markdown for the formats made for reading |
+
+**Files as bytes.** `attachBytes(input, bytes)` and `readAttachment(id)` are the two calls that do not go through `call`: under Tauri the bytes cross as the raw body of the invoke and come back as a raw response, never as a JSON array of numbers; `readAttachment` answers `null` for `not-found`. In the browser the engine keeps the row like any other (hashed with `crypto.subtle`) and the bytes in memory only, so after a reload the row is there and `readAttachment` is `null`; `attach` by path still rejects `unavailable`.
 
 **The browser fallback.** `yarn dev:web` serves the app without the crate. There each call goes to the engine, which keeps one JSON document in localStorage under `eden:data:v1` and follows the crate's rules with real ids and stamps, so a store cannot tell the difference. It reads the same registry (`@eden/shared/registry`), so it refuses the types and the kinds the crate refuses, and the same grant rules (`@eden/shared/grants`), so it grants and checks as the crate does, and the same profile rules (`@eden/shared/profile`), so it asserts, edits and keeps history as the crate does. It differs in two ways: it cannot attach a file, and it cannot write or read a bundle (both reject with `unavailable`). It is a second implementation of the API, so a rule added to the crate is added to the engine and to both test suites.
 

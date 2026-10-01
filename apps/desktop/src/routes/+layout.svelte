@@ -44,7 +44,7 @@
 	import { gardenerUi } from '$lib/shell/gardener/panel-ui.svelte'
 	import { gardenerSetup } from '$lib/shell/gardener/setup.svelte'
 	import { missingHandlers } from '$lib/shell/gardener/handlers'
-	import { logError } from '@eden/shared/api'
+	import { fileDropGuard, logError } from '@eden/shared/api'
 	import { formatUsd, GRADES } from '@eden/shared/gardener'
 
 	let { children } = $props()
@@ -267,7 +267,8 @@
 	})
 </script>
 
-<svelte:window {onkeydown} bind:innerWidth />
+<!-- a file dropped anywhere no drop zone takes it does nothing, instead of opening in place of the app (D-84) -->
+<svelte:window {onkeydown} bind:innerWidth ondragover={fileDropGuard.over} ondrop={fileDropGuard.drop} />
 
 <SplashScreen show={$splashVisible} version={env.PUBLIC_APP_VERSION ?? ''} />
 

@@ -53,6 +53,8 @@ import { createIdGenerator, isUlid } from './ulid.js'
 import { isResourceId, parseUri, toUri } from './uri.js'
 import {
 	RELATIONS,
+	type AttachBytesInput,
+	type AttachmentRow,
 	type BatchOp,
 	type BatchResult,
 	type Entity,
@@ -232,6 +234,8 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 	const now = options.now ?? Date.now
 	const newId = options.newId ?? createIdGenerator()
 	const today = options.today ?? todayIso
+	/** The bytes of the files attached in this session, by attachment id: memory only, gone at the next load. */
+	const files = new Map<string, Uint8Array>()
 
 	function fresh(): State {
 		const node = options.node ?? ((crypto.getRandomValues(new Uint32Array(1))[0] ?? 0) | 1) >>> 0
@@ -540,6 +544,15 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 		return structuredClone(made)
 	}
 
+	/** The attachments that are `part-of` a thread and whose tombstone is as given: live ones for `null`. */
+	const threadFiles = (state: State, threadUri: string, deletedAt: string | null) =>
+		Object.values(state.rows).filter(
+			(row) =>
+				row.type === 'attachment' &&
+				row.deletedAt === deletedAt &&
+				state.links.some((entry) => sameLink(entry, row.uri, threadUri, 'part-of') && !entry.deletedAt)
+		)
+
 	const linked = (state: State, row: StoredRow, target: string, relation?: string) =>
 		state.links.some(
 			(entry) =>
@@ -604,6 +617,33 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 		/** A browser has no path to copy a file from. */
 		attach(): never {
 			throw new DataError('unavailable', 'a file can only be attached in the app')
+		},
+
+		/**
+		 * The row of a file given as bytes, with the hash the caller made of them. The row is kept like any other; the
+		 * bytes are kept in memory only, so they are gone at the next load and the file then reads as missing.
+		 */
+		attachBytes(input: AttachBytesInput, bytes: Uint8Array, hash: string): AttachmentRow {
+			if (!bytes.length) throw invalid('an attachment has bytes')
+			const { mime, ...rest } = input
+			const row = write((state) =>
+				createPrimitive(state, 'attachment', {
+					...rest,
+					mime: mime ?? 'application/octet-stream',
+					size: bytes.length,
+					hash,
+					store: 'workspace',
+				})
+			)
+			files.set(row.id, bytes.slice())
+			return row
+		},
+
+		/** The bytes of a live attachment, or `null` when this browser no longer holds them. */
+		readAttachment(id: string): Uint8Array | null {
+			const row = load().rows[id]
+			if (!row || row.type !== 'attachment' || row.deletedAt) throw notFound(toUri('attachment', id))
+			return files.get(id)?.slice() ?? null
 		},
 
 		/** Sets what the patch names, clears with `null` and leaves the rest. */
@@ -1065,7 +1105,7 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 			return write((state) => {
 				const id = input.id ?? newId()
 				if (state.audit.some((entry) => entry.id === id)) throw new DataError('audit:invalid', `the id is taken: ${id}`)
-				const entry: AuditEntry = structuredClone({ ...input, id })
+				const entry: AuditEntry = structuredClone({ ...input, attachments: input.attachments ?? [], id })
 				state.audit.push(entry)
 				return structuredClone(entry)
 			})
@@ -1154,6 +1194,11 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 							message.deletedAt = at
 						}
 					}
+					// the files attached to its messages go with it, as in the crate
+					for (const file of threadFiles(state, row.uri, null)) {
+						file.updatedAt = at
+						file.deletedAt = at
+					}
 				}
 				return structuredClone(row)
 			})
@@ -1174,6 +1219,10 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 							message.updatedAt = at
 							message.deletedAt = null
 						}
+					}
+					for (const file of threadFiles(state, row.uri, deletedAt)) {
+						file.updatedAt = at
+						file.deletedAt = null
 					}
 				}
 				return structuredClone(row)

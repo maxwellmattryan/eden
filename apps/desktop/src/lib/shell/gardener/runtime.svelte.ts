@@ -7,7 +7,7 @@
 // settles: a request the app closed on leaves a reply that reads as interrupted and an entry recorded as such.
 import { get } from 'svelte/store'
 import { toast } from '@eden/ui-kit'
-import { isTauri } from '@eden/shared/api'
+import { isTauri, logError } from '@eden/shared/api'
 import { dateIn, todayIso } from '@eden/shared/dates'
 import {
 	buildPack,
@@ -34,19 +34,30 @@ import {
 	type Thread,
 	type ToolState,
 } from '@eden/shared/gardener'
-import { recordAudit } from '@eden/shared/gardener'
+import {
+	attachmentKind,
+	attachmentsOf,
+	hasVisual,
+	imageTokens,
+	recordAudit,
+	scrubValue,
+	type AttachmentBlock,
+} from '@eden/shared/gardener'
 import { locale, t } from '@eden/shared/i18n'
 import { newId } from '@eden/shared/data'
+import { declarations } from '$lib/domains'
 import { grants } from '../grants.svelte.js'
 import { profile } from '../profile/store.svelte.js'
 import { undoToast } from '../undo.js'
+import { threadAttachments } from './attachments.svelte.js'
+import { storeFiles, type StagedFile } from './files.js'
 import { handlerOf, toolByWireName, tools as everyTool } from './handlers.js'
 import { gardenerUi } from './panel-ui.svelte.js'
 import { readers } from './readers.js'
 import { gardenerSetup } from './setup.svelte.js'
 import { threads } from './threads.svelte.js'
 import { transport } from './transport.js'
-import { GRANT_SUBJECT, type ToolContext, type ToolImage, type ToolResult } from './types.js'
+import { GRANT_SUBJECT, parseJson, type ToolContext, type ToolImage, type ToolResult } from './types.js'
 
 /** A confirm the owner owes before a request is sent (D-74): the sheet's words and what answers it. */
 export interface ConfirmRequest {
@@ -63,6 +74,10 @@ type ToolCall = Extract<MessageBlock, { kind: 'tool' }>['call']
 const MAX_ROUNDS = 6
 const OUTPUT_RESERVE = 4096
 const DELEGATED_OUTPUT = 2048
+/** The room a model that reasons before it answers is given on top, since its reasoning counts toward the limit. */
+const THINKING_ROOM = { chat: 4096, delegated: 2048 } as const
+/** What the model is told with the results of its last allowed round of tools. */
+const LAST_ROUND = 'That was the last tool call this message allows. Answer the owner now with what you have.'
 const WARNED_KEY = 'eden:gardener-warned'
 /** The errors a second try may clear: the network, a rate limit, an overloaded provider. */
 const RETRYABLE: readonly string[] = ['network', '429', '529']
@@ -157,16 +172,36 @@ export class GardenerRuntime {
 		return true
 	}
 
-	/** The owner asks; the reply streams into the thread. */
-	async ask(text: string): Promise<void> {
+	/**
+	 * The owner asks, with the files staged on the message if any; the reply streams into the thread. The files are
+	 * written into the workspace first, as part of the thread (D-83), and the message names them. False when nothing
+	 * was sent (not ready, already asking, a file that could not be stored), so the composer can give it all back.
+	 */
+	async ask(text: string, staged: readonly StagedFile[] = []): Promise<boolean> {
 		const message = text.trim()
-		if (!message || this.streaming || this.#asking) return
+		if ((!message && !staged.length) || this.streaming || this.#asking) return false
 		this.#asking = true
 		try {
-			if (!(await this.#ready())) return
-			const thread = threads.current ?? threads.newThread(gardenerUi.domain, message)
-			threads.append('owner', [{ kind: 'text', text: message }], undefined, thread)
-			await this.#answer(thread, message)
+			if (!(await this.#ready())) return false
+			const thread = threads.current ?? threads.newThread(gardenerUi.domain, message || staged[0]!.name)
+			let files: AttachmentBlock[] = []
+			if (staged.length) {
+				try {
+					files = await storeFiles(staged, thread.uri)
+				} catch (error) {
+					void logError('gardener', 'The attached files could not be stored', String(error)).catch(() => null)
+					return false
+				}
+				void threadAttachments.load(thread.uri)
+			}
+			threads.append(
+				'owner',
+				[...files, ...(message ? [{ kind: 'text' as const, text: message }] : [])],
+				undefined,
+				thread
+			)
+			await this.#answer(thread, message, files)
+			return true
 		} finally {
 			this.#asking = false
 			this.preparing = undefined
@@ -191,10 +226,12 @@ export class GardenerRuntime {
 		try {
 			const thread = threads.current
 			if (!thread || !(await this.#ready()) || threads.current?.id !== thread.id || !this.canRetry(messageId)) return
-			const message = textOf(threads.messages.at(-2))
-			if (!message) return
+			const asked = threads.messages.at(-2)
+			const message = textOf(asked)
+			const files = attachmentsOf(asked?.blocks)
+			if (!message && !files.length) return
 			threads.removeMessages([messageId])
-			await this.#answer(thread, message)
+			await this.#answer(thread, message, files)
 		} finally {
 			this.#asking = false
 			this.preparing = undefined
@@ -202,14 +239,16 @@ export class GardenerRuntime {
 	}
 
 	/** Answers the owner's message, the thread's last: one request, one reply, one audit entry. */
-	async #answer(thread: Thread, message: string): Promise<void> {
+	async #answer(thread: Thread, message: string, attachments: AttachmentBlock[] = []): Promise<void> {
 		this.preparing = thread.id
 		// read now, while the thread is the open one: the owner may open another before the pack is built
 		const prior = threads.messages.slice(0, -1)
 		const requestId = newId()
 		const ctx = this.#context(requestId, thread)
 		const surface = gardenerUi.domain ? `${gardenerUi.domain}-chat` : 'global-chat'
-		const resolution = resolveGrade(gardenerSetup.grade, ['tools'], gardenerSetup.map, gardenerSetup.models)
+		// an image or a PDF, the message's or an earlier turn's, needs a model that sees
+		const needs = hasVisual(prior, attachments) ? (['tools', 'vision'] as const) : (['tools'] as const)
+		const resolution = resolveGrade(gardenerSetup.grade, needs, gardenerSetup.map, gardenerSetup.models)
 		if (resolution.kind !== 'model') {
 			this.#unavailable(resolution, requestId, thread)
 			return
@@ -217,27 +256,30 @@ export class GardenerRuntime {
 		const model = gardenerSetup.models({ provider: resolution.provider, model: resolution.model })
 		if (!model) return this.#unavailable(resolution, requestId, thread)
 		const reach = toolsFor(everyTool, gardenerUi.domain)
+		const maxTokens = OUTPUT_RESERVE + (model.thinks ? THINKING_ROOM.chat : 0)
 		const pack = await buildPack(
 			{
 				reads: reach.flatMap((tool) => tool.declaration.reads).filter((id, i, all) => all.indexOf(id) === i),
 				focus: gardenerUi.focus,
 				thread: prior,
 				message,
+				attachments,
 				tools: reach,
 				model,
-				outputReserve: OUTPUT_RESERVE,
+				outputReserve: maxTokens,
 				tokenCap: requestTokenCap(gardenerSetup.policy, model),
 				subject: GRANT_SUBJECT,
 				now: Date.now(),
 				zone: ctx.zone ?? 'UTC',
 				lang: ctx.lang,
 				domainName: gardenerUi.domain ? get(t)(`domains.${gardenerUi.domain}.name`) : undefined,
+				domains: enabledDomains(),
 				grade: resolution.grade,
 				markdown: true,
 			},
 			readers
 		)
-		const estimate = estimateBefore(pack.estimatedInputTokens, OUTPUT_RESERVE, model.pricing)
+		const estimate = estimateBefore(pack.estimatedInputTokens, maxTokens, model.pricing)
 		if (!(await this.#budgetAllows(estimate, requestId, resolution, thread))) return
 		if (resolution.confirm && !(await this.#confirmCost(resolution.model, get(t)('gardener.conversation'), estimate))) {
 			this.#declined(requestId, resolution, thread)
@@ -245,7 +287,16 @@ export class GardenerRuntime {
 		}
 		const reply = this.#begin(
 			thread,
-			[{ kind: 'can-see', items: pack.canSee, locked: pack.locked, trimmed: pack.trimmed, rows: rowsOf(pack) }],
+			[
+				{
+					kind: 'can-see',
+					items: pack.canSee,
+					locked: pack.locked,
+					trimmed: pack.trimmed,
+					rows: rowsOf(pack),
+					...(pack.attached.length ? { attachments: pack.attached } : {}),
+				},
+			],
 			requestId
 		)
 		threads.raiseTier(thread.id, pack.tier)
@@ -273,6 +324,24 @@ export class GardenerRuntime {
 			outcome: 'ok',
 			grants: [...pack.grants],
 			image: null,
+			attachments: pack.attachments,
+		}
+		// A document is T2: attaching it and sending is the owner's consent for this request (D-82), kept as a
+		// per-request grant so the ledger shows what the Gardener was let read, and never a standing one.
+		if (pack.attachments.some((file) => attachmentKind(file.mime) === 'document')) {
+			try {
+				const granted = await grants.grant({
+					subject: GRANT_SUBJECT,
+					resource: 'document',
+					resourceType: 'registry',
+					access: 'read',
+					lifetime: 'per-request',
+					origin: 'confirm',
+				})
+				audit.grants.push(granted.id)
+			} catch {
+				// the consent stands on its own; the grant record is what failed
+			}
 		}
 		// kept as open, at what the pack is estimated to cost going in, until the provider says what it took
 		const estimated: Usage = { tokensIn: pack.estimatedInputTokens, tokensOut: 0, cacheRead: 0 }
@@ -284,11 +353,12 @@ export class GardenerRuntime {
 				const so = sum(usage, round)
 				unsettled.count(requestId, { ...so, costUsd: estimateCost(so, model.pricing) })
 			}
-			for (let round = 0; round < MAX_ROUNDS; round += 1) {
+			// six rounds of tools, and one more request for the words that close the reply
+			for (let round = 0; round <= MAX_ROUNDS; round += 1) {
 				const request: GardenerRequest = {
 					id: requestId,
 					model: resolution.model,
-					maxTokens: OUTPUT_RESERVE,
+					maxTokens,
 					system: pack.system,
 					messages,
 					tools: pack.tools,
@@ -319,6 +389,8 @@ export class GardenerRuntime {
 					break
 				}
 				if (outcome.stop !== 'tool_use' || !outcome.calls.length) break
+				// told it was out of rounds, it asked again: nothing more is run
+				if (round === MAX_ROUNDS) break
 				const results: unknown[] = []
 				for (const call of outcome.calls) {
 					const { result, record } = await this.#runCall(call, reply.id, ctx)
@@ -328,10 +400,13 @@ export class GardenerRuntime {
 					results.push({
 						type: 'tool_result',
 						tool_use_id: call.id,
-						content: JSON.stringify(result.output),
+						// what a tool answers leaves the device as the rows do: scrubbed (D-26)
+						content: JSON.stringify(scrubValue(result.output)),
 						is_error: typeof result.output === 'object' && result.output !== null && 'error' in result.output,
 					})
 				}
+				// after the last round's results the model is told to answer, so a reply never ends on a tool card
+				if (round === MAX_ROUNDS - 1) results.push({ type: 'text', text: LAST_ROUND })
 				messages = [...messages, { role: 'assistant', content: outcome.blocks }, { role: 'user', content: results }]
 			}
 			audit.tokensIn = usage.tokensIn
@@ -464,6 +539,12 @@ export class GardenerRuntime {
 						access: tool?.declaration.access ?? 'read',
 						input: event.input,
 					})
+				} else if (event.type === 'thinking') {
+					// the model's reasoning goes back as it came while its request continues, and is kept nowhere else
+					if (outcome.text.trim()) outcome.blocks.push({ type: 'text', text: outcome.text })
+					outcome.text = ''
+					textIndex = -1
+					outcome.blocks.push(event.block)
 				} else if (event.type === 'usage') {
 					outcome.usage = { tokensIn: event.input, tokensOut: event.output, cacheRead: event.cacheRead }
 					counted?.(outcome.usage)
@@ -507,7 +588,7 @@ export class GardenerRuntime {
 		// the card waits on the confirm when one is owed, and runs at once when none is
 		const index = this.#addBlock(replyId, {
 			kind: 'tool',
-			call: tool && handler ? call : { ...call, error: `no such tool: ${call.name}` },
+			call: tool && handler ? call : { ...call, error: noSuchTool(call.name) },
 			state: !tool || !handler ? 'failed' : needsConfirm ? 'pending' : 'running',
 		})
 		const settle = (state: ToolState, patch: Partial<ToolCall> = {}) =>
@@ -517,14 +598,14 @@ export class GardenerRuntime {
 				)
 			)
 		if (!tool || !handler) {
-			return { result: { output: { error: `no such tool: ${call.name}` } }, record }
+			return { result: { output: { error: noSuchTool(call.name) } }, record }
 		}
 		if (needsConfirm) {
 			const ok = await new Promise<boolean>((resolve) => this.#confirms.set(call.id, resolve))
 			record.confirm = ok ? 'confirmed' : 'cancelled'
 			if (!ok) {
 				settle('cancelled')
-				return { result: { output: { error: 'cancelled by the owner' } }, record }
+				return { result: { output: { error: DECLINED, cancelled: true } }, record }
 			}
 			settle('running')
 			try {
@@ -577,8 +658,10 @@ export class GardenerRuntime {
 	/** A model-backed tool as its own request: its own resolution, pack, confirm and audit entry (D-74). */
 	async #delegate(tool: GardenerTool, input: unknown, ctx: ToolContext): Promise<ToolResult> {
 		const handler = handlerOf(tool)
-		if (!handler || !('delegate' in handler)) return { output: { error: 'not a model-backed tool' } }
+		if (!handler || !('delegate' in handler)) return { output: { error: 'This tool cannot run here.' } }
 		const delegate = handler.delegate
+		const refusal = delegate.check?.(input, ctx)
+		if (refusal) return { output: { error: refusal } }
 		const resolution = resolveTool({
 			tool: tool.declaration,
 			domain: tool.domain,
@@ -588,22 +671,18 @@ export class GardenerRuntime {
 		})
 		if (resolution.kind !== 'model') {
 			const missing = resolution.kind === 'unavailable' ? resolution.missing.join(', ') : ''
-			return {
-				output: {
-					error: resolution.kind === 'unavailable' ? `unavailable: ${resolution.reason} ${missing}`.trim() : 'plain',
-				},
-			}
+			return { output: { error: `${UNAVAILABLE}${missing ? ` It needs a model with: ${missing}.` : ''}` } }
 		}
 		const model = gardenerSetup.models({ provider: resolution.provider, model: resolution.model })
-		if (!model) return { output: { error: 'unavailable: no-provider' } }
+		if (!model) return { output: { error: UNAVAILABLE } }
 		let image: ToolImage | undefined
 		if (delegate.image) {
 			image = await delegate.image(input, ctx)
-			if (!image) return { output: { cancelled: true } }
+			if (!image) return { output: { cancelled: true, note: 'The owner closed the picker without choosing a photo.' } }
 		}
 		const prompt = await delegate.prompt(input, ctx)
 		const focus = [...ctx.focus, ...((await delegate.focus?.(input, ctx)) ?? [])]
-		const maxTokens = delegate.maxTokens ?? DELEGATED_OUTPUT
+		const maxTokens = (delegate.maxTokens ?? DELEGATED_OUTPUT) + (model.thinks ? THINKING_ROOM.delegated : 0)
 		const pack = await buildPack(
 			{
 				reads: [...tool.declaration.reads],
@@ -619,11 +698,16 @@ export class GardenerRuntime {
 				zone: ctx.zone ?? 'UTC',
 				lang: ctx.lang,
 				domainName: tool.domain !== 'substrate' ? get(t)(`domains.${tool.domain}.name`) : undefined,
+				domains: enabledDomains(),
 				grade: resolution.grade,
+				mode: 'delegated',
+				json: !!delegate.schema,
 			},
 			readers
 		)
-		const estimate = estimateBefore(pack.estimatedInputTokens, maxTokens, model.pricing)
+		// the image is sent with the prompt and counts with it
+		const inputTokens = pack.estimatedInputTokens + (image ? imageTokens(image.width, image.height) : 0)
+		const estimate = estimateBefore(inputTokens, maxTokens, model.pricing)
 		const requestId = newId()
 		const audit: AuditEntryInput = {
 			id: requestId,
@@ -651,14 +735,19 @@ export class GardenerRuntime {
 			image: image ? { hash: image.hash, width: image.width, height: image.height } : null,
 		}
 		if (!(await this.#budgetAllows(estimate, requestId, resolution, audit)))
-			return { output: { error: 'budget reached' } }
+			return {
+				output: {
+					error:
+						"This tool was not run: it would pass the owner's monthly spending cap. They can raise the cap in Settings, under Gardener.",
+				},
+			}
 		if (resolution.confirm) {
 			const ok = await this.#confirmCost(resolution.model, tool.declaration.id, estimate)
 			audit.confirmOutcome = ok ? 'confirmed' : 'cancelled'
 			if (!ok) {
 				audit.outcome = 'declined'
 				await this.#record(audit)
-				return { output: { error: 'declined by the owner', cancelled: true } }
+				return { output: { error: DECLINED, cancelled: true } }
 			}
 		}
 		const messages = withImage(pack.messages, image)
@@ -669,8 +758,9 @@ export class GardenerRuntime {
 			system: pack.system,
 			messages,
 			tools: [],
+			...(delegate.schema ? { outputFormat: delegate.schema } : {}),
 		}
-		const estimated: Usage = { tokensIn: pack.estimatedInputTokens, tokensOut: 0, cacheRead: 0 }
+		const estimated: Usage = { tokensIn: inputTokens, tokensOut: 0, cacheRead: 0 }
 		unsettled.open({ ...audit, ...estimated, costUsd: estimateCost(estimated, model.pricing) })
 		// the delegated reply is read by the handler and never shown: the tool's own card is its place in the thread
 		const outcome = await this.#stream(request, undefined, (usage) =>
@@ -686,7 +776,16 @@ export class GardenerRuntime {
 		else if (outcome.stop === 'cancelled') audit.outcome = 'cancelled'
 		await this.#record(audit)
 		if (outcome.error) return { output: { error: outcome.error.message } }
-		if (outcome.stop === 'refusal') return { output: { error: `refused: ${outcome.refusal ?? ''}` } }
+		if (outcome.stop === 'refusal')
+			return { output: { error: 'The model declined this request. Tell the owner; do not retry it.' } }
+		// an answer cut short, or one that is not the JSON asked for, is no answer: no card is made of half of one
+		if (outcome.stop === 'max_tokens')
+			return {
+				output: { error: 'The answer was cut short before it finished, so nothing was drafted. Tell the owner.' },
+			}
+		if (outcome.stop === 'cancelled') return { output: { error: 'The owner stopped this.', cancelled: true } }
+		if (delegate.schema && parseJson(outcome.text) === undefined)
+			return { output: { error: 'The answer could not be read, so nothing was drafted. Tell the owner.' } }
 		const parsed = await delegate.parse(outcome.text, input, ctx)
 		// a capture keeps where its photo is, for the attachment the commit makes
 		if (parsed.card?.kind === 'capture' && image?.path) parsed.card = { ...parsed.card, path: image.path }
@@ -848,6 +947,16 @@ export class GardenerRuntime {
 function errorOf(output: unknown): string | undefined {
 	if (typeof output !== 'object' || output === null || !('error' in output)) return undefined
 	return String((output as { error: unknown }).error)
+}
+
+const noSuchTool = (name: string) => `There is no tool named ${name}. Use only the tools this request offers.`
+const DECLINED = 'The owner declined this. Do not retry it unless they ask.'
+const UNAVAILABLE =
+	'This tool is unavailable: no model the owner has set up can run it. Tell them; they can change models in Settings, under Gardener.'
+
+/** The enabled domains as the system prompt names them: the id, and the name the owner knows. */
+function enabledDomains(): { id: string; name: string }[] {
+	return declarations.map((domain) => ({ id: domain.id, name: get(t)(`domains.${domain.id}.name`) }))
 }
 
 /** The owner stood the tool down part-way (no photo chosen, the cost declined): a cancel, not a failure. */

@@ -5,19 +5,20 @@
 </script>
 
 <script lang="ts">
-	// The "can see" chip in the composer's foot (product/substrate/ai.md): one green chip with the row total that opens
-	// a DetailPopover saying, literally, what the Gardener can see in this request. Green because the Gardener is
-	// saying what it reads (D-40). Inside: the ReadList (one row per id with rows to read, each opening to the exact
-	// rows or to a sentence; what was trimmed); then the T2 ids kept out, each with an Allow when the app can ask for
-	// the grant; and the audit log one quiet button away.
+	// The "can see" button in the composer's foot (product/substrate/ai.md): an eye IconButton, beside the paperclip
+	// and like it, that opens a DetailPopover saying, literally, what the Gardener can see in this request. The
+	// popover is green because the Gardener is saying what it reads (D-40); its caption carries the count. Inside: the
+	// ReadList (one row per id with rows to read, each opening to the exact rows or to a sentence; what was trimmed);
+	// then the T2 ids kept out, each with an Allow when the app can ask for the grant; and the audit log one quiet
+	// button away.
 	import type { Snippet } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
 	import Icon from '../../icons/Icon.svelte'
 	import { useStrings } from '../../i18n/context.js'
 	import Button from '../Button/Button.svelte'
-	import Chip from '../Chip/Chip.svelte'
 	import DetailPopover from '../DetailPopover/DetailPopover.svelte'
 	import DetailSection from '../DetailPopover/DetailSection.svelte'
+	import IconButton from '../IconButton/IconButton.svelte'
 	import ReadList from '../ReadList/ReadList.svelte'
 
 	type Props = HTMLAttributes<HTMLElement> & {
@@ -27,6 +28,8 @@
 		locked?: CanSeeItem[]
 		/** The ids whose rows were cut to fit the pack. */
 		trimmed?: string[]
+		/** The button's size; sm sits beside the composer's paperclip. */
+		size?: 'xs' | 'sm' | 'md'
 		/** Called with the item when its row opens. */
 		onexpand?: (item: CanSeeItem) => void
 		/** Given, each locked row ends in an Allow button asking for the grant; called with the id. */
@@ -40,6 +43,7 @@
 		items,
 		locked = [],
 		trimmed = [],
+		size = 'sm',
 		onexpand,
 		onunlock,
 		onaudit,
@@ -57,7 +61,7 @@
 	// bumped as the popover closes, so the list opens folded next time
 	let generation = $state(0)
 
-	// The chip's count: a count the app rendered as a string counts as no rows.
+	// The caption's count: a count the app rendered as a string counts as no rows.
 	const rowTotal = $derived(items.reduce((sum, item) => sum + (typeof item.count === 'number' ? item.count : 0), 0))
 	// the types counted are the ones the list shows: an id with nothing to read is not in the request
 	const types = $derived(items.filter((item) => item.count !== 0).length)
@@ -72,11 +76,12 @@
 
 <div class={['ed-cansee', className]} {...rest}>
 	<span class="ed-cansee-anchor" bind:this={anchor}>
-		<Chip
-			tone="ai"
+		<IconButton
 			icon="eye"
+			{size}
 			label={s.gardener.canSee}
-			count={rowTotal}
+			active={open}
+			tooltip
 			aria-haspopup="dialog"
 			aria-expanded={open}
 			onclick={() => (open = !open)}

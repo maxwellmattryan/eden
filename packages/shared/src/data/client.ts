@@ -1,7 +1,11 @@
 // The data layer as the apps call it (docs/engineering/data-layer.md, "The IPC boundary"): under Tauri each function
 // is one command of the crate, and in a plain browser the same call goes to the engine over localStorage.
-import { call } from './call.js'
+import { invoke } from '@tauri-apps/api/core'
+import { isTauri } from '../api/tauri.js'
+import { call, fallback } from './call.js'
+import { dataErrorCode } from './errors.js'
 import type {
+	AttachBytesInput,
 	AttachInput,
 	AttachmentPatch,
 	AttachmentRow,
@@ -88,6 +92,37 @@ export function createPlace(input: PlaceInput): Promise<PlaceRow> {
 /** Copies the file at `path` into the workspace and writes its row. Only in the app: a browser has no paths. */
 export function attach(input: AttachInput): Promise<AttachmentRow> {
 	return call('attach', { input }, (engine) => engine.attach())
+}
+
+async function sha256(bytes: Uint8Array): Promise<string> {
+	const digest = await crypto.subtle.digest('SHA-256', bytes as Uint8Array<ArrayBuffer>)
+	return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
+/**
+ * Writes a file given as bytes into the workspace with its row. Under Tauri the bytes cross as the raw body of the
+ * call and what describes them in a header, percent-encoded because a header is ASCII; in a browser the row is kept
+ * and the bytes live in memory until the page is reloaded.
+ */
+export async function attachBytes(input: AttachBytesInput, bytes: Uint8Array): Promise<AttachmentRow> {
+	if (isTauri()) {
+		return invoke<AttachmentRow>('attach_bytes', bytes, {
+			headers: { 'x-eden-attach': encodeURIComponent(JSON.stringify(input)) },
+		})
+	}
+	const hash = await sha256(bytes)
+	return fallback().attachBytes(input, bytes, hash)
+}
+
+/** The bytes of a live attachment, or `null` when the row or its file is not on this device. */
+export async function readAttachment(id: string): Promise<Uint8Array | null> {
+	try {
+		if (isTauri()) return new Uint8Array(await invoke<ArrayBuffer>('read_attachment', { id }))
+		return fallback().readAttachment(id)
+	} catch (error) {
+		if (dataErrorCode(error) === 'not-found') return null
+		throw error
+	}
 }
 
 export function updateTask(id: string, patch: TaskPatch): Promise<TaskRow> {

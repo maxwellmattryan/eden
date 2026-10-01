@@ -1045,11 +1045,23 @@
 			"title": "No key on this device",
 			"text": "Paste your Anthropic API key. It stays in this device's keychain and never leaves it except to sign your requests."
 		},
-		"devClamp": "Development build: every grade runs on {model}.",
+		"devClamp": "Development build: light and standard run on {model}, deep on {deep}.",
 		"budgetReached": "The monthly budget is reached. Raise it in Settings → Gardener to keep asking.",
 		"budgetWarning": "The Gardener has used {percent}% of this month's budget.",
 		"openBudgets": "Open budgets",
 		"saveFailed": "Couldn't save the conversation.",
+		"attach": "Attach files",
+		"attachments": {
+			"canSee": "Attached files",
+			"failed": "The files could not be attached. Nothing was sent.",
+			"refused": {
+				"type": "Only images, PDFs and text files can be attached.",
+				"size": "{name} is too large to attach.",
+				"count": "Up to {max} files per message.",
+				"total": "These files are too large to send together.",
+				"empty": "{name} is empty."
+			}
+		},
 		"lockedThread": "This conversation read T2 data and stays out of future context.",
 		"noRows": "No facts of this type in this request.",
 		"trimmed": "Trimmed to fit: {ids}",
@@ -1188,6 +1200,7 @@
 			"tools": "Tools",
 			"grants": "Allowed by",
 			"image": "Image",
+			"attachment": "Attached",
 			"parent": "Called from",
 			"parentOpen": "Open the calling request",
 			"provider": "Provider",

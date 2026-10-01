@@ -131,6 +131,8 @@ pub fn run() {
             commands::data::create_event,
             commands::data::create_place,
             commands::data::attach,
+            commands::data::attach_bytes,
+            commands::data::read_attachment,
             commands::data::update_task,
             commands::data::update_event,
             commands::data::update_place,

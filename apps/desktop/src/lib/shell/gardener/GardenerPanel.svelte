@@ -3,6 +3,8 @@
 	// docked column on the right with the thread list behind a toggle, the conversation, the composer with the literal
 	// "can see" chip at its foot, and the states in which it cannot answer: no key on this device, the browser, the
 	// budget.
+	// The whole panel is a drop zone while the composer is up (never over the thread list): files dropped on it, picked
+	// with the paperclip or pasted into the field wait above the message as chips until it is sent (D-82 to D-84).
 	// Opened from the sidebar, ⌘G, the status bar's chip or a domain page; a domain opens it on its own threads.
 	import { onMount, tick } from 'svelte'
 	import { goto } from '$app/navigation'
@@ -12,7 +14,10 @@
 		CanSee,
 		Composer,
 		ConfirmSheet,
+		Dropzone,
 		Field,
+		FileButton,
+		FileChip,
 		GardenerMessage,
 		Greeting,
 		IconButton,
@@ -20,16 +25,39 @@
 		Notice,
 		Sprouting,
 		Thread,
+		toast,
+		type FileCheck,
 	} from '@eden/ui-kit'
 	import { isTauri } from '@eden/shared/api'
 	import { hourOfDay } from '@eden/shared/dates'
-	import { gardenerPanelState, greetingKey, segmentsOf, type MessageBlock } from '@eden/shared/gardener'
+	import {
+		ACCEPT,
+		attachmentForm,
+		gardenerPanelState,
+		greetingKey,
+		LONG_PASTE_CHARS,
+		MAX_FILES,
+		segmentsOf,
+		type MessageBlock,
+	} from '@eden/shared/gardener'
 	import { t } from '@eden/shared/i18n'
 	import { manifestFor } from '$lib/domains'
 	import { settingsUi } from '$lib/settings/settings-ui.svelte'
 	import { grants } from '../grants.svelte'
 	import { profile } from '../profile/store.svelte'
 	import { undoToast } from '../undo'
+	import { threadAttachments } from './attachments.svelte'
+	import {
+		capByType,
+		checkStaged,
+		measure,
+		measuring,
+		sizeLabel,
+		stagedOf,
+		stagedRules,
+		type StageCheck,
+		type StagedFile,
+	} from './files'
 	import { labelRows, registryLabel, type RowLabel } from './labels'
 	import { GRANT_SUBJECT } from './types'
 	import MessageBlocks from './MessageBlocks.svelte'
@@ -55,8 +83,16 @@
 			(domainName ? $t('gardener.askInDomain', { values: { domain: domainName } }) : $t('shell.gardener'))
 	)
 	const canSee = $derived(runtime.canSee as Extract<MessageBlock, { kind: 'can-see' }> | undefined)
-	// the chip names each id as the owner knows it (a fact's name), the id itself beside it
-	const chipItems = $derived((canSee?.items ?? []).map((item) => ({ ...item, label: registryLabel(item.id) })))
+	// the chip names each id as the owner knows it (a fact's name), the id itself beside it; the owner's files the
+	// request carried are one more line, opening to their names (D-82)
+	const FILES_ITEM = 'attachment'
+	const chipFiles = $derived(canSee?.attachments ?? [])
+	const chipItems = $derived([
+		...(canSee?.items ?? []).map((item) => ({ ...item, label: registryLabel(item.id) })),
+		...(chipFiles.length
+			? [{ id: FILES_ITEM, count: chipFiles.length, label: $t('gardener.attachments.canSee') }]
+			: []),
+	])
 	// a locked id the owner has since shared leaves the list: the block is that request's snapshot, the grant is live
 	const chipLocked = $derived(
 		(canSee?.locked ?? [])
@@ -80,7 +116,7 @@
 		labels = {}
 	})
 	async function expand(item: { id: string }) {
-		if (labels[item.id]) return
+		if (labels[item.id] || item.id === FILES_ITEM) return
 		labels = { ...labels, [item.id]: await labelRows(item.id, chipRows[item.id] ?? []) }
 	}
 	/** A standing read grant on the T2 id the tools in reach declared; the next request includes it (grants.md). */
@@ -188,12 +224,68 @@
 		if (gardenerUi.open) void gardenerSetup.load()
 	})
 
-	function send(text: string) {
-		toFoot = true
-		void runtime.ask(text)
+	// The files waiting on the message. Each is measured (an image's size and thumbnail) while it waits, and the
+	// send waits for that, so what is stored is whole. They belong to the conversation they were added in.
+	let draft = $state('')
+	let staged = $state<StagedFile[]>([])
+	const dropRules = $derived(stagedRules(staged))
+	const ICONS = { image: 'image', pdf: 'file-text', text: 'file-text' } as const
+
+	/** Says why files were left out: one toast, for the first reason, in the app's words. */
+	function refuse(rejected: StageCheck['rejected']) {
+		const first = rejected[0]
+		if (!first) return
+		toast({
+			message: $t(`gardener.attachments.refused.${first.reason}`, {
+				values: { name: first.file.name, max: MAX_FILES },
+			}),
+			error: true,
+		})
 	}
+	function stage(check: StageCheck) {
+		refuse(check.rejected)
+		for (const file of check.accepted) {
+			const entry = stagedOf(file)
+			staged.push(entry)
+			measuring.track(
+				entry.key,
+				measure(file, entry.mime).then((meta) => {
+					const at = staged.find((other) => other.key === entry.key)
+					if (at) Object.assign(at, meta, { busy: false })
+				})
+			)
+		}
+		if (check.accepted.length) foot?.querySelector('textarea')?.focus()
+	}
+	/** A drop came through the zone's own rules; each type's cap is still to be held. */
+	function dropped(accepted: File[], rejected: FileCheck['rejected']) {
+		const capped = capByType(accepted)
+		stage({ accepted: capped.accepted, rejected: [...rejected, ...capped.rejected] })
+	}
+	const picked = (files: File[]) => stage(checkStaged(files, staged))
+	function unstage(key: string) {
+		staged = staged.filter((entry) => entry.key !== key)
+	}
+
+	async function send(text: string) {
+		toFoot = true
+		const files = [...staged]
+		staged = []
+		await measuring.settled(files.map((entry) => entry.key))
+		// the measured entries, not the copies taken before they were
+		if (await runtime.ask(text, files)) return
+		// nothing was sent: the message and its files go back where they were
+		if (files.length) toast({ message: $t('gardener.attachments.failed'), error: true })
+		staged = [...files, ...staged]
+		if (!draft) draft = text
+	}
+	// the files of the open conversation: their thumbnails, and which are gone
+	$effect(() => {
+		void threadAttachments.load(threads.current?.uri)
+	})
 	async function newThread() {
 		threads.close()
+		staged = []
 		roll = Math.random()
 		listOpen = false
 		// the composer mounts again when the list was open, so focus once it is in the DOM
@@ -201,6 +293,7 @@
 		foot?.querySelector('textarea')?.focus()
 	}
 	async function openThread(id: string) {
+		if (id !== threads.current?.id) staged = []
 		await threads.open(id)
 		listOpen = false
 	}
@@ -227,9 +320,38 @@
 	<IconButton
 		icon="info"
 		size="xs"
-		label={$t('gardener.devClamp', { values: { model: gardenerSetup.map.light.model } })}
+		label={$t('gardener.devClamp', {
+			values: { model: gardenerSetup.map.light.model, deep: gardenerSetup.map.deep.model },
+		})}
 		tooltip
 	/>
+{/snippet}
+
+<!-- what waits on the message: a chip per file, each removable until it is sent -->
+{#snippet stagedChips()}
+	{#each staged as entry (entry.key)}
+		<FileChip
+			name={entry.name}
+			detail={sizeLabel(entry.size)}
+			icon={ICONS[attachmentForm(entry.mime)]}
+			thumbnail={entry.thumbnail}
+			state={entry.busy ? 'busy' : 'ready'}
+			onremove={() => unstage(entry.key)}
+		/>
+	{/each}
+{/snippet}
+
+<!-- the composer's foot: the paperclip, then the "can see" eye once a request has been made -->
+{#snippet composerTools()}
+	<FileButton
+		label={$t('gardener.attach')}
+		size="sm"
+		accept={ACCEPT}
+		disabled={!canAsk || blocked}
+		tooltip
+		onfiles={picked}
+	/>
+	{@render canSeeChip()}
 {/snippet}
 
 {#snippet canSeeChip()}
@@ -243,7 +365,11 @@
 		>
 			{#snippet expanded(item)}
 				{@const rows = labels[item.id]}
-				{#if !(chipRows[item.id] ?? []).length}
+				{#if item.id === FILES_ITEM}
+					<ul class="rows">
+						{#each chipFiles as name, i (i)}<li>{name}</li>{/each}
+					</ul>
+				{:else if !(chipRows[item.id] ?? []).length}
 					<p class="rows-none">{$t('gardener.noRows')}</p>
 				{:else if !rows}
 					<p class="rows-none">…</p>
@@ -257,98 +383,109 @@
 	{/if}
 {/snippet}
 
-<aside class="panel" aria-labelledby="{uid}-title">
-	<header class="panel-head">
-		<h2 id="{uid}-title" class="panel-title">{title}</h2>
-		<IconButton
-			icon="list"
-			size="sm"
-			label={$t('gardener.threads')}
-			pressed={listOpen}
-			disabled={!listOpen && !threads.of(gardenerUi.domain).length}
-			tooltip
-			onclick={() => (listOpen = !listOpen)}
-		/>
-		<IconButton
-			icon="clipboard-list"
-			size="sm"
-			label={$t('gardener.openAudit')}
-			tooltip
-			onclick={() => void goto(resolve('/gardener/audit'))}
-		/>
-		<IconButton
-			icon="wrench"
-			size="sm"
-			label={$t('gardener.openTools')}
-			tooltip
-			onclick={() => void goto(resolve('/gardener/tools'))}
-		/>
-		<IconButton icon="plus" size="sm" label={$t('gardener.newThread')} tooltip onclick={() => void newThread()} />
-		<IconButton icon="x" size="sm" label={$t('common.close')} tooltip onclick={() => gardenerUi.hide()} />
-	</header>
-
-	{#if listOpen}
-		<div class="panel-list">
-			<ThreadList domain={gardenerUi.domain} onopen={(id) => void openThread(id)} onempty={() => (listOpen = false)} />
-		</div>
-	{:else}
-		<div class={['panel-log', greets && 'panel-log-empty']} bind:this={log}>
-			{#if !inApp}
-				<Notice tone="info" title={$t('gardener.runsInApp')} />
-			{:else if gardenerSetup.ready && !gardenerSetup.hasKey}
-				<Notice tone="info" title={$t('gardener.noKey.title')} detail={$t('gardener.noKey.text')} />
-				<form class="key" onsubmit={(e) => (e.preventDefault(), void saveKey())}>
-					<Field
-						bind:value={key}
-						type="password"
-						mono
-						label={$t('settings.gardener.key.label')}
-						placeholder="sk-ant-…"
-					/>
-					<Button
-						type="submit"
-						variant="primary"
-						icon="key-round"
-						label={$t('settings.gardener.key.save')}
-						disabled={keyBusy || !key.trim()}
-					/>
-				</form>
-			{/if}
-			{#if blocked}
-				<Notice
-					tone="warning"
-					title={$t('gardener.budgetReached')}
-					action={{ label: $t('gardener.openBudgets'), onclick: openBudgets }}
-				/>
-			{/if}
-			{#if threads.saveFailed}
-				<InlineError message={$t('gardener.saveFailed')} onretry={() => threads.flushWrites()} live />
-			{/if}
-			{#if threads.current?.tier === 'T2'}
-				<Notice tone="info" icon="lock" title={$t('gardener.lockedThread')} />
-			{/if}
-			{#if greets}<Greeting text={greeting} name={ownerName} />{/if}
-			<Thread label={$t('gardener.conversation')}>
-				{#each threads.messages as message (message.id)}
-					<MessageBlocks {message} />
-				{/each}
-				{#if waiting}<GardenerMessage><Sprouting size="md" /></GardenerMessage>{/if}
-			</Thread>
-		</div>
-		<div class="panel-foot" bind:this={foot}>
-			<Composer
-				{placeholder}
-				label={placeholder}
-				disabled={!canAsk || blocked}
-				busy={runtime.streaming}
-				tools={canSee ? canSeeChip : undefined}
-				meta={gardenerSetup.clamped && inApp ? clampNote : undefined}
-				onsend={send}
-				onstop={() => void runtime.cancel()}
+<Dropzone class="panel-drop" {...dropRules} disabled={listOpen || !canAsk || blocked} ondrop={dropped}>
+	<aside class="panel" aria-labelledby="{uid}-title">
+		<header class="panel-head">
+			<h2 id="{uid}-title" class="panel-title">{title}</h2>
+			<IconButton
+				icon="list"
+				size="sm"
+				label={$t('gardener.threads')}
+				pressed={listOpen}
+				disabled={!listOpen && !threads.of(gardenerUi.domain).length}
+				tooltip
+				onclick={() => (listOpen = !listOpen)}
 			/>
-		</div>
-	{/if}
-</aside>
+			<IconButton
+				icon="clipboard-list"
+				size="sm"
+				label={$t('gardener.openAudit')}
+				tooltip
+				onclick={() => void goto(resolve('/gardener/audit'))}
+			/>
+			<IconButton
+				icon="wrench"
+				size="sm"
+				label={$t('gardener.openTools')}
+				tooltip
+				onclick={() => void goto(resolve('/gardener/tools'))}
+			/>
+			<IconButton icon="plus" size="sm" label={$t('gardener.newThread')} tooltip onclick={() => void newThread()} />
+			<IconButton icon="x" size="sm" label={$t('common.close')} tooltip onclick={() => gardenerUi.hide()} />
+		</header>
+
+		{#if listOpen}
+			<div class="panel-list">
+				<ThreadList
+					domain={gardenerUi.domain}
+					onopen={(id) => void openThread(id)}
+					onempty={() => (listOpen = false)}
+				/>
+			</div>
+		{:else}
+			<div class={['panel-log', greets && 'panel-log-empty']} bind:this={log}>
+				{#if !inApp}
+					<Notice tone="info" title={$t('gardener.runsInApp')} />
+				{:else if gardenerSetup.ready && !gardenerSetup.hasKey}
+					<Notice tone="info" title={$t('gardener.noKey.title')} detail={$t('gardener.noKey.text')} />
+					<form class="key" onsubmit={(e) => (e.preventDefault(), void saveKey())}>
+						<Field
+							bind:value={key}
+							type="password"
+							mono
+							label={$t('settings.gardener.key.label')}
+							placeholder="sk-ant-…"
+						/>
+						<Button
+							type="submit"
+							variant="primary"
+							icon="key-round"
+							label={$t('settings.gardener.key.save')}
+							disabled={keyBusy || !key.trim()}
+						/>
+					</form>
+				{/if}
+				{#if blocked}
+					<Notice
+						tone="warning"
+						title={$t('gardener.budgetReached')}
+						action={{ label: $t('gardener.openBudgets'), onclick: openBudgets }}
+					/>
+				{/if}
+				{#if threads.saveFailed}
+					<InlineError message={$t('gardener.saveFailed')} onretry={() => threads.flushWrites()} live />
+				{/if}
+				{#if threads.current?.tier === 'T2'}
+					<Notice tone="info" icon="lock" title={$t('gardener.lockedThread')} />
+				{/if}
+				{#if greets}<Greeting text={greeting} name={ownerName} />{/if}
+				<Thread label={$t('gardener.conversation')}>
+					{#each threads.messages as message (message.id)}
+						<MessageBlocks {message} />
+					{/each}
+					{#if waiting}<GardenerMessage><Sprouting size="md" /></GardenerMessage>{/if}
+				</Thread>
+			</div>
+			<div class="panel-foot" bind:this={foot}>
+				<Composer
+					bind:value={draft}
+					{placeholder}
+					label={placeholder}
+					disabled={!canAsk || blocked}
+					busy={runtime.streaming}
+					attachments={staged.length ? stagedChips : undefined}
+					allowEmpty={staged.length > 0}
+					longPaste={LONG_PASTE_CHARS}
+					tools={composerTools}
+					meta={gardenerSetup.clamped && inApp ? clampNote : undefined}
+					onsend={(text) => void send(text)}
+					onfiles={picked}
+					onstop={() => void runtime.cancel()}
+				/>
+			</div>
+		{/if}
+	</aside>
+</Dropzone>
 
 {#if unlocking}
 	<ConfirmSheet
@@ -377,6 +514,11 @@
 {/if}
 
 <style>
+	/* the drop zone is the panel's own box: it fills the dock and adds nothing to the layout */
+	:global(.panel-drop) {
+		width: 100%;
+		height: 100%;
+	}
 	.panel {
 		display: grid;
 		/* one column that never grows past the panel: a grid track's default minimum is its content's */

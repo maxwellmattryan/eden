@@ -67,6 +67,21 @@ export { default as Stepper } from './components/Stepper/Stepper.svelte'
 export { default as Tooltip } from './components/Tooltip/Tooltip.svelte'
 export { tooltip } from './components/Tooltip/tooltip.js'
 
+// Files
+export { default as Dropzone } from './components/Dropzone/Dropzone.svelte'
+export {
+	checkFiles,
+	formatBytes,
+	groupOf,
+	matchesType,
+	summarize,
+	type FileCheck,
+	type FileGroup,
+	type FileLike,
+	type FileRefusal,
+	type FileRules,
+} from './files/check-files.js'
+
 // Feedback
 export { default as Toast } from './toast/Toast.svelte'
 export { default as ToastHost } from './toast/ToastHost.svelte'
@@ -102,6 +117,8 @@ export type { CanSeeItem } from './components/CanSee/CanSee.svelte'
 export { default as ReadList } from './components/ReadList/ReadList.svelte'
 export type { ReadItem } from './components/ReadList/ReadList.svelte'
 export { default as Composer } from './components/Composer/Composer.svelte'
+export { default as FileChip } from './components/FileChip/FileChip.svelte'
+export { default as FileButton } from './components/FileButton/FileButton.svelte'
 export { default as ToolCard } from './components/ToolCard/ToolCard.svelte'
 export type { ToolAccess, ToolState } from './components/ToolCard/ToolCard.svelte'
 export { default as ToolRun } from './components/ToolCard/ToolRun.svelte'

@@ -345,5 +345,12 @@ pub fn get_migrations() -> Vec<&'static str> {
             deleted_at TEXT
         ) WITHOUT ROWID;
         "#,
+        // Migration 7: what the owner attached to a message, in the audit log (D-83): each file's hash, type, size
+        // and dimensions, never its bytes. `image` stays what a delegated request sent with its prompt.
+        r#"
+        ALTER TABLE audit_entries
+            ADD COLUMN attachments TEXT NOT NULL DEFAULT '[]'
+                CHECK (json_valid(attachments) AND json_type(attachments) = 'array');
+        "#,
     ]
 }

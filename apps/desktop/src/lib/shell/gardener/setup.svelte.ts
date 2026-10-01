@@ -6,7 +6,7 @@ import { getAppInfo } from '@eden/shared/api'
 import {
 	ANTHROPIC_SEED,
 	auditSpend,
-	clampToLight,
+	clampForDevelopment,
 	deleteSecret,
 	effectiveSetup,
 	getPolicy,
@@ -41,11 +41,13 @@ export class GardenerSetup {
 	readonly clamped = $derived(isDevEnvironment(this.environment))
 	readonly provider = $derived<ProviderRow>(effectiveSetup(this.policy).provider)
 	readonly models = $derived<ModelLookup>(effectiveSetup(this.policy).models)
-	/** The map the resolver runs on: the seed's light model everywhere in development. */
+	/** The map the resolver runs on: in development the seed's light model, and its standard one for deep. */
 	readonly map = $derived<GradeMap>(
-		this.clamped ? clampToLight(effectiveSetup(this.policy).map, ANTHROPIC_SEED) : effectiveSetup(this.policy).map
+		this.clamped
+			? clampForDevelopment(effectiveSetup(this.policy).map, ANTHROPIC_SEED)
+			: effectiveSetup(this.policy).map
 	)
-	/** The overrides the resolver sees: none in development, since everything runs light. */
+	/** The overrides the resolver sees: none in development, since one could name a dearer model. */
 	readonly overrides = $derived<ModelOverrides | undefined>(this.clamped ? undefined : this.policy.overrides)
 	readonly grade = $derived<ModelGrade>(settings.gardenerGrade)
 	/** The model the conversation runs on at its grade. */

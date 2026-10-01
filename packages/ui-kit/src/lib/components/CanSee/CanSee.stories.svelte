@@ -28,7 +28,7 @@
 		items.reduce((sum, item) => sum + (typeof item.count === 'number' ? item.count : 0), 0)
 	const chipName = new RegExp(`^${s.canSee}`)
 
-	/** Presses the chip and waits for the panel. */
+	/** Presses the button and waits for the panel. */
 	async function openPanel(canvasElement: HTMLElement) {
 		const canvas = canvasOf(canvasElement)
 		const chip = canvas.getByRole('button', { name: chipName })
@@ -47,7 +47,7 @@
 			docs: {
 				description: {
 					component:
-						'The “can see” chip above the composer: one green chip with the row total that opens a `DetailPopover` saying, literally, what the Gardener can see in this request. One row per id with rows to read, each opening to the rows themselves or to a sentence saying how many there are; the ids with nothing to read behind a quiet toggle; what was trimmed; the T2 ids kept out, each with an Allow when the app can ask for the grant; the audit log one quiet button away.',
+						'The “can see” button at the composer’s foot: an eye `IconButton`, like the paperclip beside it, that opens a `DetailPopover` saying, literally, what the Gardener can see in this request. One row per id with rows to read, each opening to the rows themselves or to a sentence saying how many there are; the ids with nothing to read behind a quiet toggle; what was trimmed; the T2 ids kept out, each with an Allow when the app can ask for the grant; the audit log one quiet button away.',
 				},
 			},
 		},
@@ -55,13 +55,12 @@
 	})
 </script>
 
-<!-- The chip counts the rows; it opens the panel; a row opens to its sentence and back -->
+<!-- The button opens the panel, whose caption counts the rows; a row opens to its sentence and back -->
 <Story
 	name="Default"
 	play={async ({ canvasElement, args }) => {
 		const canvas = canvasOf(canvasElement)
 		const chip = canvas.getByRole('button', { name: chipName })
-		await expect(chip).toHaveTextContent(String(total(canSee)))
 		await expect(chip).toHaveAttribute('aria-expanded', 'false')
 		const { panel, dialog } = await openPanel(canvasElement)
 		await expect(chip).toHaveAttribute('aria-expanded', 'true')

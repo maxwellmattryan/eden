@@ -1,11 +1,12 @@
 // The readers the context pack is built over (docs/engineering/gardener.md, "The context pack"): the facts, the
 // entities and the primitives from `@eden/shared/data` and `@eden/shared/profile`, and the grant check from the
-// shell's store. The pack itself is pure and tested in Node; this is the one place it touches the workspace.
+// shell's store, and what is sent of an attached file from its bytes. The pack itself is pure and tested in Node; this is the one place it touches the workspace.
 import { queryEntities, queryEvents, queryPlaces, queryTasks } from '@eden/shared/data'
 import type { PackReaders } from '@eden/shared/gardener'
 import { queryFacts } from '@eden/shared/profile'
 import type { FactId } from '@eden/shared/registry'
 import { grants } from '../grants.svelte.js'
+import { readForPack } from './files.js'
 
 export const readers: PackReaders = {
 	facts: (types) => queryFacts({ types: types as FactId[] }),
@@ -16,4 +17,5 @@ export const readers: PackReaders = {
 		return queryPlaces(query)
 	},
 	check: (check) => grants.allows(check),
+	attachment: (block) => readForPack(block),
 }

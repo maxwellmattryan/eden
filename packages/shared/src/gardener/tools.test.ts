@@ -4,7 +4,12 @@ import { RESOURCES } from '../registry/index.js'
 import { ANTHROPIC, ANTHROPIC_SEED, gradeMapOf, modelLookup, PROVIDERS } from './providers.js'
 import { resolveTool } from './resolve.js'
 import {
+	DOMAIN_BLURBS,
+	factShapeWords,
 	parseWireName,
+	PROPOSABLE_FACTS,
+	QUICK_ACTION_WORDS,
+	quickActionsFor,
 	SCHEMAS,
 	SUBSTRATE,
 	SUBSTRATE_TOOLS,
@@ -28,6 +33,54 @@ describe('the tool index', () => {
 		expect(Object.keys(SCHEMAS)).toHaveLength(22)
 	})
 
+	it('has a line for every declared domain, and none for another', () => {
+		expect(Object.keys(DOMAIN_BLURBS).sort()).toEqual(declarations.map((domain) => domain.id).sort())
+		for (const blurb of Object.values(DOMAIN_BLURBS)) expect(blurb.trim().length).toBeGreaterThan(20)
+	})
+
+	it('offers log-quick the quick actions it has words for, of the domains given', () => {
+		const tool = parseWireName('log-quick', index)!
+		expect(quickActionsFor(declarations)).toEqual(['kitchen.add-to-grocery', 'toolbench.capture-idea'])
+		expect(tool.schema.properties?.action?.enum).toEqual(['kitchen.add-to-grocery', 'toolbench.capture-idea'])
+		expect(tool.schema.required).toEqual(['action', 'value'])
+		expect(tool.description).toContain('- kitchen.add-to-grocery: adds one item to the grocery list')
+		// every line is a declared quick action, so none can name one that is gone
+		const declared = declarations.flatMap((domain) => domain.quickActions.map((action) => `${domain.id}.${action.id}`))
+		for (const action of Object.keys(QUICK_ACTION_WORDS)) expect(declared).toContain(action)
+		// a workspace with one domain is offered that domain's alone, and one with none has no such tool
+		const kitchen = declarations.filter((domain) => domain.id === 'kitchen')
+		expect(parseWireName('log-quick', toolIndex(kitchen))?.schema.properties?.action?.enum).toEqual([
+			'kitchen.add-to-grocery',
+		])
+		const weather = toolIndex(declarations.filter((domain) => domain.id === 'weather'))
+		expect(parseWireName('log-quick', weather)).toBeUndefined()
+		expect(validateTools(weather).filter((problem) => problem.startsWith('log-quick'))).toEqual([])
+	})
+
+	it('tells propose-fact the types it may propose and the shape of each value', () => {
+		const tool = parseWireName('propose-fact', index)!
+		expect(tool.schema.properties?.type?.enum).toEqual(PROPOSABLE_FACTS)
+		expect(PROPOSABLE_FACTS).toContain('allergy')
+		// the substrate derives the home area; a model never proposes it
+		expect(PROPOSABLE_FACTS).not.toContain('home-area')
+		expect(tool.description).toContain(
+			'- allergy: {"substance": a word or a short phrase, "kind": one of food, drug, environmental, "severity": one of mild, moderate, severe}'
+		)
+		expect(tool.description).toContain('- household-size: a whole number from 1 to 20')
+		expect(tool.description).toContain('- cuisine-preference: {"name": a word, "weight": how much it counts, 0 to 1}')
+		expect(factShapeWords('dietary-preference')).toContain('or another word when none fits')
+		expect(factShapeWords('nothing')).toBeUndefined()
+	})
+
+	it('says of every tool what it does and what comes back', () => {
+		for (const tool of index) {
+			expect(tool.description.length, tool.wireName).toBeGreaterThan(150)
+			for (const [name, property] of Object.entries(tool.schema.properties ?? {})) {
+				expect(property.description ?? property.enum, `${tool.wireName}.${name}`).toBeTruthy()
+			}
+		}
+	})
+
 	it('names each tool for the wire and reads the name back', () => {
 		expect(wireName(SUBSTRATE, 'create-task')).toBe('create-task')
 		expect(wireName('kitchen', 'plan-week')).toBe('kitchen_plan-week')
@@ -42,7 +95,7 @@ describe('the tool index', () => {
 		expect(Object.fromEntries(SUBSTRATE_TOOLS.map((tool) => [tool.id, tool.grade]))).toEqual({
 			'create-task': null,
 			'complete-task': null,
-			'summarize-day': 'standard',
+			'summarize-day': 'light',
 			'what-you-know-about-me': null,
 			'log-quick': null,
 			'propose-fact': null,

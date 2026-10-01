@@ -212,6 +212,18 @@ export interface AttachInput {
 	captured?: unknown
 	links?: LinkInput[]
 }
+/** A file given as its bytes, as the webview holds one that was dropped, picked or pasted (D-84). */
+export interface AttachBytesInput {
+	id?: string
+	kind: AttachmentKind
+	fileName: string
+	/** The media type; guessed from the extension when it is left out. */
+	mime?: string
+	/** A small picture of the file, as a data URL. */
+	thumbnail?: string
+	captured?: unknown
+	links?: LinkInput[]
+}
 /** What describes the file's bytes is fixed when it is attached. */
 export interface AttachmentPatch {
 	kind?: AttachmentKind

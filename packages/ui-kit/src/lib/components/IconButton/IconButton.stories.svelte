@@ -41,7 +41,7 @@
 
 <Story name="Fab" args={{ icon: 'plus', label: 'Quick Log', fab: true }} parameters={{ platforms: ['mobile'] }} />
 
-<!-- A filled circle at its size: the composer's send button on the Gardener's green, or an accent fill -->
+<!-- A filled rounded square at its size: the composer's send button on the Gardener's green, or an accent fill -->
 <Story name="Filled">
 	{#snippet template(args)}
 		<div class="row">

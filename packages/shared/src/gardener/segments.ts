@@ -9,7 +9,11 @@ export type ToolBlock = Extract<MessageBlock, { kind: 'tool' }>
 /** `index` is the block's place in the message, which is what settles and keys it. */
 export type Segment =
 	| { kind: 'text'; text: string; index: number }
-	| { kind: 'card'; block: Exclude<MessageBlock, { kind: 'text' | 'can-see' | 'draft' | 'writing' }>; index: number }
+	| {
+			kind: 'card'
+			block: Exclude<MessageBlock, { kind: 'text' | 'can-see' | 'draft' | 'writing' | 'attachment' }>
+			index: number
+	  }
 	| { kind: 'run'; items: { block: ToolBlock; index: number }[]; index: number }
 
 const FOLDS: readonly ToolState[] = ['running', 'done', 'cancelled']
@@ -32,7 +36,9 @@ export function segmentsOf(
 		run = []
 	}
 	blocks.forEach((block, index) => {
-		if (block.kind === 'can-see' || block.kind === 'draft' || block.kind === 'writing') return
+		// an attachment is on the owner's message, drawn as a file chip, never a card
+		if (block.kind === 'can-see' || block.kind === 'draft' || block.kind === 'writing' || block.kind === 'attachment')
+			return
 		if (block.kind === 'tool' && block.call.access === 'read' && FOLDS.includes(stateOf(block.state))) {
 			run.push({ block, index })
 			return

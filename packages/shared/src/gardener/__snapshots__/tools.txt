@@ -1,0 +1,524 @@
+[
+	{
+		"name": "create-task",
+		"description": "Drafts one task as a card in the thread, which the owner keeps or discards; nothing is saved until they keep it. Use it when they ask to be reminded of something or to add something to do, once per task. Work out a relative day (\"Friday\", \"tomorrow\") from today’s date in the system prompt and pass it as `due`; with no `due` the task lands on today when kept. Returns the draft’s title and due day. It cannot change or delete a task that exists.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"title": {
+					"type": "string",
+					"description": "What is to be done, in the owner’s words."
+				},
+				"due": {
+					"type": "string",
+					"description": "The day it is due, when the owner named one. A day as YYYY-MM-DD."
+				},
+				"timeOfDay": {
+					"type": "string",
+					"description": "A time of day as HH:MM, 24-hour, when the owner gave one."
+				},
+				"priority": {
+					"type": "string",
+					"enum": [
+						"low",
+						"high"
+					],
+					"description": "Only when the owner said so."
+				},
+				"notes": {
+					"type": "string",
+					"description": "Anything the owner said beyond the title."
+				}
+			},
+			"required": [
+				"title"
+			],
+			"additionalProperties": false
+		},
+		"strict": true
+	},
+	{
+		"name": "complete-task",
+		"description": "Marks one existing task done, after the owner confirms on the card; they can undo it. Returns the task’s title, or an error when no task has that id or the owner declined.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"taskId": {
+					"type": "string",
+					"description": "The `id` of the task’s row under `task` in the context."
+				}
+			},
+			"required": [
+				"taskId"
+			],
+			"additionalProperties": false
+		},
+		"strict": true
+	},
+	{
+		"name": "summarize-day",
+		"description": "Runs a separate model request at the light grade that writes a short briefing of one day from everything Eden holds for it: the calendar’s events, the tasks due, overdue and done, and, when Sky is on, the day’s forecast and the weather alerts in force. Returns `briefing`, a few lines of Markdown; give it to the owner as it stands. Use it when the owner asks what a day holds (\"what is on today\", \"how does tomorrow look\"). For one fact, such as when an event starts, answer from the context.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"day": {
+					"type": "string",
+					"description": "The day; today when left out. A day as YYYY-MM-DD."
+				}
+			},
+			"required": [],
+			"additionalProperties": false
+		}
+	},
+	{
+		"name": "what-you-know-about-me",
+		"description": "Lists the profile facts about the owner that are shared with you: each with its type, its value written out as their profile page shows it, where it came from (`provenance`) and the day it lapses, plus `locked`, the fact types that exist and are not shared. The same facts are in the context as raw rows; use this when the owner asks what you know or remember about them, so the answer matches their profile page.",
+		"input_schema": {
+			"type": "object",
+			"properties": {},
+			"required": [],
+			"additionalProperties": false
+		}
+	},
+	{
+		"name": "log-quick",
+		"description": "Runs one of Eden’s quick actions with a value. The owner confirms on the card the first time, and can undo it. The actions:\n- kitchen.add-to-grocery: adds one item to the grocery list; `value` is the item, with its amount when one was given (\"oat milk\", \"2 lemons\")\n- toolbench.capture-idea: saves a new idea in Toolbench; `value` is the idea in a sentence, which becomes its title\nReturns `logged: true`. It does only these; anything else needs its own tool.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"action": {
+					"type": "string",
+					"enum": [
+						"kitchen.add-to-grocery",
+						"toolbench.capture-idea"
+					],
+					"description": "The quick action, from the list above."
+				},
+				"value": {
+					"type": "string",
+					"description": "What is logged, as the action’s line describes."
+				}
+			},
+			"required": [
+				"action",
+				"value"
+			],
+			"additionalProperties": false
+		},
+		"strict": true
+	},
+	{
+		"name": "propose-fact",
+		"description": "Offers one fact about the owner for their profile, as a card they accept or dismiss; nothing is saved until they accept. Use it when the owner states something lasting about themselves that fits a type below and is not already among the facts in the context. Passing remarks and one-off choices are not facts (\"pasta tonight\" is not a preference). The types, and how to write `value` for each:\n- preferred-name: a word or a short phrase\n- allergy: {\"substance\": a word or a short phrase, \"kind\": one of food, drug, environmental, \"severity\": one of mild, moderate, severe}\n- dietary-preference: one of vegetarian, vegan, pescatarian, halal, kosher, low-sodium, low-sugar, gluten-free, alcohol-free, or another word when none fits\n- disliked-ingredient: a word or a short phrase\n- cuisine-preference: {\"name\": a word, \"weight\": how much it counts, 0 to 1}\n- household-size: a whole number from 1 to 20\n- skill: {\"name\": a word or a short phrase, \"level\": one of beginner, intermediate, advanced, expert}\n- owned-hardware: a word or a short phrase\n- preferred-tool: a word or a short phrase\n- medical-dietary-restriction: a word or a short phrase\nReturns the proposal’s id, or an error that names the shape it expected.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"type": {
+					"type": "string",
+					"enum": [
+						"preferred-name",
+						"allergy",
+						"dietary-preference",
+						"disliked-ingredient",
+						"cuisine-preference",
+						"household-size",
+						"skill",
+						"owned-hardware",
+						"preferred-tool",
+						"medical-dietary-restriction"
+					],
+					"description": "The fact type, from the list above."
+				},
+				"value": {
+					"type": "string",
+					"description": "The value in the shape listed for the type: a bare word or number for the simple ones, JSON for the ones written with braces."
+				},
+				"confidence": {
+					"type": "number",
+					"description": "How sure you are, from 0 to 1."
+				},
+				"text": {
+					"type": "string",
+					"description": "What the owner said that the fact rests on, in one sentence; shown on the card."
+				}
+			},
+			"required": [
+				"type",
+				"value",
+				"confidence",
+				"text"
+			],
+			"additionalProperties": false
+		},
+		"strict": true
+	},
+	{
+		"name": "kitchen_suggest-recipes",
+		"description": "Runs a separate model request that suggests things to cook from the stock, the saved recipes and the owner’s food preferences, favouring stock that expires soon. Returns `suggestions`, each with a name, the minutes it takes, a one-sentence reason, the stock item ids it uses and a `recipeId` when it is one of the saved recipes. Anything that names one of the owner’s allergens, restrictions or disliked ingredients is removed before you see it, and `withheld` counts those. No card is shown, so present the suggestions yourself. Use it when the owner asks what to cook or eat.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"count": {
+					"type": "integer",
+					"description": "How many to suggest, 1 to 5; 3 when unsaid."
+				},
+				"constraints": {
+					"type": "string",
+					"description": "Anything they asked for: quick, vegetarian, uses the leeks."
+				}
+			},
+			"required": [],
+			"additionalProperties": false
+		}
+	},
+	{
+		"name": "kitchen_storage-tip",
+		"description": "Runs a separate model request for how to store one food and how long it keeps. Pass `stockItemId` for an item in the stock, or `name` for anything else; one of the two is needed. Returns `tip`, two sentences at most, and `shelfLifeDays`. It is general guidance: an item’s own expiry date is on its row in the context.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"stockItemId": {
+					"type": "string",
+					"description": "The `id` of the item’s row under `stock-item` in the context."
+				},
+				"name": {
+					"type": "string",
+					"description": "The food’s name, when it is not in the stock."
+				}
+			},
+			"required": [],
+			"additionalProperties": false
+		}
+	},
+	{
+		"name": "kitchen_capture-haul",
+		"description": "Opens a file picker for the owner to choose a photo of their groceries, reads the items from it with a separate model request, and drafts them as stock rows on a card the owner checks and keeps. It takes no input: you can neither pass the photo nor see it. Returns how many rows were drafted, or `cancelled` when the owner closed the picker. Use it when the owner wants to add stock from a photo; for items they tell you in words, use `kitchen_add-stock`.",
+		"input_schema": {
+			"type": "object",
+			"properties": {},
+			"required": [],
+			"additionalProperties": false
+		},
+		"strict": true
+	},
+	{
+		"name": "kitchen_draft-grocery-list",
+		"description": "Runs a separate model request that drafts a grocery list as a card the owner edits and keeps: what the chosen recipes and the coming days need, less what is in stock and what is already on the list. Returns the drafted `items`. Use it when the owner asks what to buy or for a shopping list; to put one named item on the list, use `log-quick`.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"forRecipeIds": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"description": "The `id` of each recipe they want to cook, from rows under `recipe`. Left out, the list follows the stock."
+				},
+				"days": {
+					"type": "integer",
+					"description": "How many days the list should cover, 1 to 14; 7 when unsaid."
+				},
+				"notes": {
+					"type": "string",
+					"description": "Anything to mind: a guest, a budget, a shop."
+				}
+			},
+			"required": [],
+			"additionalProperties": false
+		},
+		"strict": true
+	},
+	{
+		"name": "kitchen_add-stock",
+		"description": "Adds items to the kitchen stock, after the owner confirms on the card; they can undo it. Put every item in one call. Returns the id and name of each row added. Use it when the owner tells you what they bought or have at home. It cannot change or remove stock that is already there.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"items": {
+					"type": "array",
+					"description": "Every item to add, one entry each.",
+					"items": {
+						"type": "object",
+						"properties": {
+							"name": {
+								"type": "string",
+								"description": "The item, as the owner named it."
+							},
+							"qty": {
+								"type": "string",
+								"description": "The amount alone, as a number or a word: 2, 500, half. 1 when unsaid."
+							},
+							"unit": {
+								"type": "string",
+								"description": "The unit of the amount: g, ml, bunch, tin. Left out for a plain count."
+							},
+							"location": {
+								"type": "string",
+								"enum": [
+									"fridge",
+									"freezer",
+									"pantry",
+									"counter"
+								],
+								"description": "Where it is kept. When the owner did not say, choose by the kind of food."
+							},
+							"expiry": {
+								"type": "string",
+								"description": "The day it expires, when the owner gave one. A day as YYYY-MM-DD."
+							}
+						},
+						"required": [
+							"name",
+							"qty",
+							"location"
+						],
+						"additionalProperties": false
+					}
+				}
+			},
+			"required": [
+				"items"
+			],
+			"additionalProperties": false
+		},
+		"strict": true
+	},
+	{
+		"name": "kitchen_plan-week",
+		"description": "Runs a separate model request at the deep grade that plans meals for a run of days around the stock, the saved recipes and the events and tasks in the calendar, with one shop day, its list and the tasks the plan needs, as one plan card the owner keeps or discards; the owner is shown its cost and confirms before it runs. Returns the drafted plan. Use it when the owner asks to plan a week of meals; for one meal use `kitchen_suggest-recipes`.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"from": {
+					"type": "string",
+					"description": "The first day; today when unsaid. A day as YYYY-MM-DD."
+				},
+				"days": {
+					"type": "integer",
+					"description": "How many days, 1 to 14; 7 when unsaid."
+				},
+				"notes": {
+					"type": "string",
+					"description": "What to mind: guests, a busy evening, a budget."
+				}
+			},
+			"required": [],
+			"additionalProperties": false
+		},
+		"strict": true
+	},
+	{
+		"name": "toolbench_brainstorm",
+		"description": "Runs a separate model request at the deep grade that thinks one idea through with the owner, drawing on their skills, tools and hardware; the owner is shown its cost and confirms before it runs. The exchange is saved with the idea, so the idea has to exist already: a new one is captured first with `log-quick` and can be brainstormed from the owner’s next message. Returns `reply`, a paragraph or two of prose; give it to the owner as it stands. Use it when they want to explore an idea rather than plan it.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"ideaId": {
+					"type": "string",
+					"description": "The `id` of the idea’s row under `idea` in the context."
+				},
+				"prompt": {
+					"type": "string",
+					"description": "Where the owner wants to take it, in their words, when they said."
+				}
+			},
+			"required": [
+				"ideaId"
+			],
+			"additionalProperties": false
+		}
+	},
+	{
+		"name": "toolbench_critique",
+		"description": "Runs a separate model request at the deep grade that critiques one idea or one project; the owner is shown its cost and confirms before it runs. Pass `ideaId` or `projectId`; one of the two is needed. Returns `strengths`, `risks` and `questions`, three to five of each. Use it when the owner asks what you think of it or what could go wrong.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"ideaId": {
+					"type": "string",
+					"description": "The `id` of a row under `idea` in the context."
+				},
+				"projectId": {
+					"type": "string",
+					"description": "The `id` of a row under `project` in the context."
+				}
+			},
+			"required": [],
+			"additionalProperties": false
+		}
+	},
+	{
+		"name": "toolbench_expand-to-plan",
+		"description": "Runs a separate model request at the deep grade that turns one idea into four to eight concrete steps, in order, drafted as tasks on a plan card the owner keeps or discards; the owner is shown its cost and confirms before it runs. With `projectId`, keeping the plan also sets the steps as that project’s next steps. Returns the drafted `steps`. Use it when the owner is ready to start on an idea.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"ideaId": {
+					"type": "string",
+					"description": "The `id` of the idea’s row under `idea` in the context."
+				},
+				"projectId": {
+					"type": "string",
+					"description": "The `id` of the project to plan under, from rows under `project`, when there is one."
+				}
+			},
+			"required": [
+				"ideaId"
+			],
+			"additionalProperties": false
+		},
+		"strict": true
+	},
+	{
+		"name": "toolbench_find-similar",
+		"description": "Finds the owner’s ideas, projects and notes that share words with a piece of text. It compares words and not meaning, so pass the distinctive keywords and not a sentence. Returns `matches`, the closest first, each with its `type`, `id`, `title` and a `score` from 0 to 1; an empty list means nothing shares a word. No model request is made. Use it to see what the owner already has before brainstorming or capturing an idea.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"text": {
+					"type": "string",
+					"description": "The keywords to look for."
+				},
+				"limit": {
+					"type": "integer",
+					"description": "How many matches to return, 1 to 10; 5 when unsaid."
+				}
+			},
+			"required": [
+				"text"
+			],
+			"additionalProperties": false
+		}
+	},
+	{
+		"name": "toolbench_estimate-parts-cost",
+		"description": "Adds up one project’s parts list at the prices stored on it. Returns `total`, `currency` and the `parts` with their prices. The prices are the ones the owner entered, not current ones. Use it when the owner asks what a build costs.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"projectId": {
+					"type": "string",
+					"description": "The `id` of the project’s row under `project` in the context."
+				}
+			},
+			"required": [
+				"projectId"
+			],
+			"additionalProperties": false
+		}
+	},
+	{
+		"name": "toolbench_summarize-project",
+		"description": "Runs a separate model request that reads one project and its tasks and says where it stands. Returns `summary`, two or three sentences, and `nextSteps`. Use it when the owner asks for the status of a project.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"projectId": {
+					"type": "string",
+					"description": "The `id` of the project’s row under `project` in the context."
+				}
+			},
+			"required": [
+				"projectId"
+			],
+			"additionalProperties": false
+		}
+	},
+	{
+		"name": "toolbench_draft-sketch-scaffold",
+		"description": "Runs a separate model request at the deep grade that drafts starting code for a creative-coding sketch, shown as a code card the owner copies; nothing is written to a file, and the owner is shown its cost and confirms before it runs. Returns the language and the line count; the code is on the card, so do not write it out again. Use it when the owner asks for a scaffold or a starting point, not for a finished program.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"description": {
+					"type": "string",
+					"description": "What the sketch should do."
+				},
+				"tool": {
+					"type": "string",
+					"description": "The framework or language to write it in, when the owner named one. Left out, it follows the owner’s preferred tools."
+				},
+				"sketchId": {
+					"type": "string",
+					"description": "The `id` of an existing sketch to build on, from rows under `sketch`."
+				}
+			},
+			"required": [
+				"description"
+			],
+			"additionalProperties": false
+		},
+		"strict": true
+	},
+	{
+		"name": "weather_forecast",
+		"description": "Returns the forecast Eden holds for the owner’s home area: the `current` conditions, up to seven `days` from `day` on (each with its condition, the high and low in `unit`, the chance of rain in percent, the rainfall in mm and the UV), and the weather `alerts` in force now, the most severe first. An alert marked `dismissed` was put away by the owner in Sky and is still in force. `alertsCovered: false` means no alert service covers the place, which is not the same as no alerts. Use it for any question about the weather or about alerts, warnings and watches. It covers the home area only, and a day the forecast does not reach is an error that names the days it holds.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"day": {
+					"type": "string",
+					"description": "The first day wanted; today when left out. A day as YYYY-MM-DD."
+				}
+			},
+			"required": [],
+			"additionalProperties": false
+		}
+	},
+	{
+		"name": "weather_rain-during-plan",
+		"description": "Says whether rain is likely during a stretch of time at the owner’s home area. Pass `taskId` or `eventId` for something in the context that has a time, or `from` and `to` for any other window. Returns `rain` (true when any hour of the window has a 40 % chance or more), `maxPrecipChance` and the `hours` with their chances. Hourly readings reach only a few days ahead: `covered: false` means the window is beyond them, and for a day further out `weather_forecast` has the daily chance. Use it when the owner asks about the weather for something planned.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"from": {
+					"type": "string",
+					"description": "The start of the window as a local date and time, YYYY-MM-DDTHH:MM."
+				},
+				"to": {
+					"type": "string",
+					"description": "The end of the window, in the same form; two hours after the start when left out."
+				},
+				"taskId": {
+					"type": "string",
+					"description": "The `id` of a row under `task` that has a time."
+				},
+				"eventId": {
+					"type": "string",
+					"description": "The `id` of an event’s row in the context."
+				}
+			},
+			"required": [],
+			"additionalProperties": false
+		}
+	},
+	{
+		"name": "weather_sun-and-moon",
+		"description": "Returns sunrise, sunset, golden hour and the moon’s phase for a day or a run of days at the owner’s home area; today when no day is given. Sunrise and sunset come from the forecast and are null for a day it does not reach; the moon is computed and has no such limit. To find when the moon is next new, full or at a quarter, pass `next`: the date is right to about half a day, so say \"around\". For a span pass `days`; one call answers the whole span, so do not call it once per day.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"day": {
+					"type": "string",
+					"description": "The first day; today when left out. A day as YYYY-MM-DD."
+				},
+				"days": {
+					"type": "integer",
+					"description": "How many days from that day, 1 to 31; 1 when unsaid."
+				},
+				"next": {
+					"type": "string",
+					"enum": [
+						"new",
+						"first-quarter",
+						"full",
+						"last-quarter"
+					],
+					"description": "Find the next time the moon reaches this phase, from that day on."
+				}
+			},
+			"required": [],
+			"additionalProperties": false
+		}
+	}
+]

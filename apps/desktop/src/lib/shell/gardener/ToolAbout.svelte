@@ -48,5 +48,7 @@
 		font-variation-settings: var(--ed-t-voice-opsz);
 		color: var(--text-primary);
 		text-wrap: pretty;
+		/* a description may list what it takes, one to a line */
+		white-space: pre-line;
 	}
 </style>

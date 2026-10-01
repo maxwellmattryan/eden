@@ -1,6 +1,7 @@
 //! The Anthropic adapter (docs/engineering/gardener.md, "The provider call"; D-76): one streaming Messages request
 //! and the translation of its server-sent events into the Gardener's own. The request crosses as the frontend built
-//! it, with the API's names; nothing is added but `stream`, and neither `thinking` nor `tool_choice` is ever sent.
+//! it, with the API's names; nothing is added but `stream`, and `output_config` around a schema the reply is held to,
+//! and neither `thinking` nor `tool_choice` is ever sent.
 //!
 //! The key is a header and nothing else: no message this module produces, whether from the provider, from a broken
 //! stream or from a failure to connect, carries it. A request that never reached the provider is refused
@@ -34,6 +35,9 @@ pub fn body(request: &GardenerRequest) -> Value {
     });
     if !request.tools.is_empty() {
         body["tools"] = Value::Array(request.tools.clone());
+    }
+    if let Some(schema) = &request.output_format {
+        body["output_config"] = json!({ "format": { "type": "json_schema", "schema": schema } });
     }
     body
 }
@@ -213,7 +217,14 @@ enum Block {
         name: String,
         json: String,
     },
-    /// A block kind this build does not read (thinking, and whatever comes next).
+    /// The model's reasoning: its text (empty when the provider omits it) and the signature that lets it be sent back.
+    Thinking {
+        thinking: String,
+        signature: String,
+    },
+    /// Reasoning the provider encrypted; it goes back as it came.
+    Redacted(Value),
+    /// A block kind this build does not read (whatever comes next).
     Other,
 }
 
@@ -284,6 +295,11 @@ pub fn translate(sse: &Sse, state: &mut StreamState) -> Vec<GardenerEvent> {
                     name: text(block, "name"),
                     json: String::new(),
                 },
+                Some("thinking") => Block::Thinking {
+                    thinking: text(block, "thinking"),
+                    signature: text(block, "signature"),
+                },
+                Some("redacted_thinking") => Block::Redacted(block.clone()),
                 _ => Block::Other,
             };
             state.blocks.insert(index, opened);
@@ -299,6 +315,18 @@ pub fn translate(sse: &Sse, state: &mut StreamState) -> Vec<GardenerEvent> {
                 Some("input_json_delta") => {
                     if let Some(Block::Tool { json, .. }) = state.blocks.get_mut(&index) {
                         json.push_str(delta["partial_json"].as_str().unwrap_or_default());
+                    }
+                    Vec::new()
+                }
+                Some("thinking_delta") => {
+                    if let Some(Block::Thinking { thinking, .. }) = state.blocks.get_mut(&index) {
+                        thinking.push_str(delta["thinking"].as_str().unwrap_or_default());
+                    }
+                    Vec::new()
+                }
+                Some("signature_delta") => {
+                    if let Some(Block::Thinking { signature, .. }) = state.blocks.get_mut(&index) {
+                        signature.push_str(delta["signature"].as_str().unwrap_or_default());
                     }
                     Vec::new()
                 }
@@ -318,6 +346,13 @@ pub fn translate(sse: &Sse, state: &mut StreamState) -> Vec<GardenerEvent> {
                         }],
                     }
                 }
+                Some(Block::Thinking {
+                    thinking,
+                    signature,
+                }) => vec![GardenerEvent::Thinking {
+                    block: json!({ "type": "thinking", "thinking": thinking, "signature": signature }),
+                }],
+                Some(Block::Redacted(block)) => vec![GardenerEvent::Thinking { block }],
                 _ => Vec::new(),
             }
         }
@@ -378,6 +413,7 @@ mod tests {
             system: json!("Be brief."),
             messages: vec![json!({ "role": "user", "content": "Dinner?" })],
             tools: Vec::new(),
+            output_format: None,
         }
     }
 
@@ -519,6 +555,59 @@ mod tests {
         );
     }
 
+    /// Reasoning comes back as one whole block, text and signature, in its place among the others; an encrypted
+    /// one comes back as it was sent.
+    #[test]
+    fn a_thinking_block_is_handed_over_whole() {
+        let mut state = StreamState::default();
+        let mut events = Vec::new();
+        for data in [
+            json!({ "type": "content_block_start", "index": 0,
+                    "content_block": { "type": "thinking", "thinking": "", "signature": "" } }),
+            json!({ "type": "content_block_delta", "index": 0,
+                    "delta": { "type": "thinking_delta", "thinking": "Leeks expire " } }),
+            json!({ "type": "content_block_delta", "index": 0,
+                    "delta": { "type": "thinking_delta", "thinking": "first." } }),
+            json!({ "type": "content_block_delta", "index": 0,
+                    "delta": { "type": "signature_delta", "signature": "sig" } }),
+            json!({ "type": "content_block_delta", "index": 0,
+                    "delta": { "type": "signature_delta", "signature": "nature" } }),
+            json!({ "type": "content_block_stop", "index": 0 }),
+            json!({ "type": "content_block_start", "index": 1,
+                    "content_block": { "type": "redacted_thinking", "data": "opaque" } }),
+            json!({ "type": "content_block_stop", "index": 1 }),
+            json!({ "type": "content_block_start", "index": 2,
+                    "content_block": { "type": "tool_use", "id": "toolu_1", "name": "kitchen_plan", "input": {} } }),
+            json!({ "type": "content_block_stop", "index": 2 }),
+        ] {
+            let sse = Sse {
+                event: data["type"].as_str().unwrap().into(),
+                data: data.to_string(),
+            };
+            events.extend(translate(&sse, &mut state));
+        }
+        assert_eq!(
+            events,
+            vec![
+                GardenerEvent::Thinking {
+                    block: json!({ "type": "thinking", "thinking": "Leeks expire first.", "signature": "signature" }),
+                },
+                GardenerEvent::Thinking {
+                    block: json!({ "type": "redacted_thinking", "data": "opaque" }),
+                },
+                GardenerEvent::ToolUse {
+                    id: "toolu_1".into(),
+                    name: "kitchen_plan".into(),
+                    input: json!({}),
+                },
+            ]
+        );
+        assert_eq!(
+            serde_json::to_value(&events[1]).unwrap(),
+            json!({ "type": "thinking", "block": { "type": "redacted_thinking", "data": "opaque" } })
+        );
+    }
+
     #[test]
     fn a_tool_input_that_is_not_json_is_an_error() {
         let mut state = StreamState::default();
@@ -583,6 +672,12 @@ mod tests {
         assert_eq!(sent["system"], "Be brief.");
         assert!(sent.get("tools").is_none());
         assert!(sent.get("thinking").is_none() && sent.get("tool_choice").is_none());
+        assert!(sent.get("output_config").is_none());
+        request.output_format = Some(json!({ "type": "object" }));
+        assert_eq!(
+            body(&request)["output_config"],
+            json!({ "format": { "type": "json_schema", "schema": { "type": "object" } } })
+        );
         request.tools = vec![json!({ "name": "kitchen_plan" })];
         assert_eq!(body(&request)["tools"][0]["name"], "kitchen_plan");
         assert_eq!(
