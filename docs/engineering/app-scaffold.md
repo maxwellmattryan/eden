@@ -4,7 +4,7 @@ status: draft
 summary: The two apps and the crate they share: the workspace layout, what each package owns, the platform features, the commands, the domain module on each side, where its data lives, the pre-paint mechanism, and the placeholder identifier.
 read-this-if: You are building anything under apps/*, packages/shared or src-tauri, or wiring a domain into the shell.
 depends-on: [engineering/ui-kit, product/substrate/shell, product/substrate/settings-utilities]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## Layout
@@ -34,7 +34,7 @@ The apps and the shared package depend on the kit by exact version and consume e
 | dev port | 1420 (HMR 1421 when `TAURI_DEV_HOST` is set) | 1421 (HMR 1430) |
 | shell | `Sidebar`, `BackButton`, `StatusBar`, the settings `Sheet` with a tab rail | `BottomTabBar` pinned to the bottom, More, an Appearance-only settings sheet |
 
-**File drops (D-84).** The window sets `dragDropEnabled: false`, in `tauri.conf.json` and again in the dev, staging and prod overlays, because an overlay's `windows` array replaces the base one. Tauri's native handler is therefore off and a dropped file reaches the webview as an HTML5 drop. Each app's root layout puts `fileDropGuard` (`@eden/shared/api`) on `<svelte:window>`: a file drag that no kit `Dropzone` claimed is refused, so a file dropped on a page never opens in place of the app.
+**File drops (D-84).** The window sets `dragDropEnabled: false`, in `tauri.conf.json` and again in the dev, staging and prod overlays, because an overlay's `windows` array replaces the base one. For the same reason each overlay repeats the window's `width`, `height`, `minWidth`, `minHeight` and `resizable` (D-112). Tauri's native handler is therefore off and a dropped file reaches the webview as an HTML5 drop. Each app's root layout puts `fileDropGuard` (`@eden/shared/api`) on `<svelte:window>`: a file drag that no kit `Dropzone` claimed is refused, so a file dropped on a page never opens in place of the app.
 
 The five Phase 1 routes exist on both: `garden`, `today`, `kitchen`, `toolbench`, `weather` (mobile has `more` instead of `toolbench`, which lives behind it). A route renders its `PageHeader` and `EmptyState` from the locale until its approved mockup is implemented (D-54); on desktop the Garden, Hearth (Stock, Recipes and Grocery), Sky and Toolbench (Ideas) are built from their approved mockups, and each story stays its reference; the tabs without a mockup yet (Projects, Lab, Studio, Notes) render an `EmptyState`, and Today its placeholder. Hearth has no Tips tab (D-87), and on the phone it is still the placeholder page.
 
@@ -82,6 +82,8 @@ A desktop domain module is laid out as:
 | `widgets/` | the Garden tile bodies, on `src/lib/shell/WidgetRows.svelte` |
 
 The Garden and the activity feed are the shell's, in `src/lib/shell/garden/` and `src/lib/shell/feed.svelte.ts`: every folder under `domains/` is a domain, and a domain never imports another.
+
+**Narrow pages (D-112).** The desktop shell's `<main>` is a size container named `page`; a view lays itself out for a narrow column inside `@container page (max-width: 48rem)`, each use marked `/* narrow page */` since a container condition cannot read a custom property. The shell tightens `--ed-gutter` there for every page at once. A pushed view is CSS: the view puts `body-open` on its body while a thing is picked, the narrow rule hides the list or the detail accordingly, and a `BackButton` that only a narrow page renders clears the pick; `showPushed` (`apps/desktop/src/lib/shell/pushed.ts`) brings that arrow into view after a pick. A sheet opened from a page is still inside the container in the DOM, so a narrow rule must not reach a sheet's own layout. Handoff: the mobile shell's `<main>` is not yet a `page` container; when the mobile domain views are built from these, make it one so they get the narrow layouts.
 
 The route under `src/routes/<id>/` renders the view and loads the store on mount. Both shells keep two records of where the owner is, through `@eden/shared/navigation`: each tab's scroll position for the session (on desktop the `<main>` scrolls, not the window, so the router's own restoration never reaches it; a tab never visited starts at the top, and a move within a tab keeps its position) and the last route under `eden:last-place`, which the root `+page.ts` redirects to on launch while it is still a known place, the Garden otherwise. Neither is a setting, so neither is in the export bundle. The desktop shell keeps how the Gardener's panel was left the same way, under `eden:gardener-panel` (`engineering/gardener.md`).
 

@@ -67,7 +67,7 @@ Rules the generator enforces: every type size is on the scale 12, 13, 14, 15, 16
 
 **The relief dial** (`data-relief`, D-49) sits after the brand dial: `raised` keeps a toned-down sheen and inner highlight; `flat` zeroes them. Neither gives a filled control an outer shadow (D-99). Both set `--ed-press-scale`: every button-family control presses with `transform: scale(1, var(--ed-press-scale))` from its bottom edge, so it compresses from the top as if it sank into its hole. Reduced motion zeroes the compression.
 
-**The platform block** sets `--ed-control`, `--ed-row`, `--ed-t-text`, `--ed-t-text-sm`, `--ed-sheet-pad`, `--ed-gutter`, `--ed-tab-bar` and the four `--ed-safe-*` insets. Behavioural differences (a sheet's placement, a menu as an action sheet, the sidebar against the tab bar) are explicit props with an `auto` default that reads the nearest `data-platform` through `platformOf()`. The kit never uses `matchMedia` or a media query.
+**The platform block** sets `--ed-control`, `--ed-row`, `--ed-t-text`, `--ed-t-text-sm`, `--ed-sheet-pad`, `--ed-gutter`, `--ed-tab-bar` and the four `--ed-safe-*` insets. Behavioural differences (a sheet's placement, a menu as an action sheet, the sidebar against the tab bar) are explicit props with an `auto` default that reads the nearest `data-platform` through `platformOf()`. The kit never uses `matchMedia` or a media query. Where a component must give way to a narrow room on either platform it measures itself with `measure` (`Stepper`, `PageHeader`, `WidgetGrid`, `DataTable`; D-112), never a container query, since it may stand outside the app's `page` container.
 
 ## Fonts
 

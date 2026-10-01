@@ -851,6 +851,18 @@
 		max-height: calc(100vh - var(--space-8) * 3);
 		overflow-y: auto;
 	}
+	/* narrow page */
+	@container page (max-width: 48rem) {
+		/* one column: the lists, then Buy it again and the stores under them */
+		.body {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.side {
+			position: static;
+			max-height: none;
+			overflow-y: visible;
+		}
+	}
 	.form {
 		display: flex;
 		flex-direction: column;

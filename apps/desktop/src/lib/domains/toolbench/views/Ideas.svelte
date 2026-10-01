@@ -4,6 +4,7 @@
 	// a detail pane with its fields, its log and its brainstorm thread. The thread shows stored messages; the button
 	// opens the Gardener on the idea and runs its brainstorm, which appends to the thread (D-76).
 	import {
+		BackButton,
 		Badge,
 		Button,
 		Chip,
@@ -17,6 +18,7 @@
 	} from '@eden/ui-kit'
 	import { t } from '@eden/shared/i18n'
 	import { gardenerUi } from '$lib/shell/gardener/panel-ui.svelte'
+	import { showPushed } from '$lib/shell/pushed'
 	import { undoToast } from '$lib/shell/undo'
 	import { formatDay } from '@eden/shared/dates'
 	import { ideaChips } from '../parse'
@@ -70,6 +72,14 @@
 	toolbench.reveal = undefined
 	const detail = $derived(shown.find((idea) => idea.id === selected) ?? shown[0])
 	const project = $derived(detail ? toolbench.projectOf(detail) : undefined)
+	// In a narrow page the list stands alone until an idea is picked; then the pane takes its place, under a back
+	// arrow (a pushed view).
+	const picked = $derived(shown.some((idea) => idea.id === selected))
+	let back = $state<HTMLElement>()
+	function open(id: string) {
+		selected = id
+		void showPushed(() => back)
+	}
 
 	function act(action: string, id: string) {
 		const idea = toolbench.ideas.find((entry) => entry.id === id)
@@ -94,7 +104,7 @@
 	}
 	function add(text: string) {
 		const { idea, undo } = toolbench.capture(text)
-		selected = idea.id
+		open(idea.id)
 		undoToast($t('domains.toolbench.ideas.toast.captured', { values: { title: idea.title } }), undo)
 	}
 	function seed() {
@@ -110,7 +120,7 @@
 		sample={{ onclick: seed }}
 	/>
 {:else}
-	<div class={['body', { 'body-wide': detail }]}>
+	<div class={['body', { 'body-wide': detail, 'body-open': picked }]}>
 		<div class="lists">
 			<QuickAdd
 				id={quickAddId}
@@ -123,13 +133,14 @@
 				count={rows.length}
 				{rows}
 				selectable
-				onopen={(row) => (selected = row.id)}
+				onopen={(row) => open(row.id)}
 				{onaction}
 			/>
 		</div>
 
 		{#if detail}
 			<aside class="detail" aria-labelledby="{uid}-detail">
+				<div class="back" bind:this={back}><BackButton onback={() => (selected = undefined)} /></div>
 				<h2 class="detail-title" id="{uid}-detail">{detail.title}</h2>
 				<dl class="fields">
 					<dt>{$t('domains.toolbench.ideas.detail.status')}</dt>
@@ -194,6 +205,24 @@
 	.body-wide {
 		grid-template-columns: minmax(0, 1fr) var(--sheet-md);
 		align-items: start;
+	}
+	/* the way back from the open idea, which only a narrow page needs */
+	.back {
+		display: none;
+	}
+	/* narrow page */
+	@container page (max-width: 48rem) {
+		/* one column: the list until an idea is picked, then the idea in its place */
+		.body-wide {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.body:not(.body-open) .detail,
+		.body-open .lists {
+			display: none;
+		}
+		.back {
+			display: block;
+		}
 	}
 	.lists {
 		display: flex;

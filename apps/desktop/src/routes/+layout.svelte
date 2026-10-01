@@ -359,6 +359,16 @@
 		display: flex;
 		flex-direction: column;
 		padding: var(--ed-gutter) var(--space-4);
+		/* A page adapts to this column, never to the window: the Gardener's dock narrows it, and every view asks
+		   `@container page` how much room it has */
+		container: page / inline-size;
+	}
+	/* narrow page */
+	@container page (max-width: 48rem) {
+		/* every page insets itself by the gutter, which tightens here once for all of them */
+		.content > :global(*) {
+			--ed-gutter: var(--space-4);
+		}
 	}
 	/* The arrow is centred over the page header's glyph: each page insets itself by the gutter, and the arrow's box
 	   is wider than that glyph by the ring around it */

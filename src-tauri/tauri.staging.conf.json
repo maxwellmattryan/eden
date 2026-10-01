@@ -12,7 +12,7 @@
 		]
 	},
 	"app": {
-		"windows": [{ "title": "Eden [STAGING]", "dragDropEnabled": false }]
+		"windows": [{ "title": "Eden [STAGING]", "dragDropEnabled": false, "width": 1280, "height": 820, "minWidth": 960, "minHeight": 600, "resizable": true }]
 	},
 	"plugins": {
 		"updater": {

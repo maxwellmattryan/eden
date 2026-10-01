@@ -14,6 +14,7 @@
 	// location shows for the length of a drag, even one that holds nothing.
 	import {
 		Badge,
+		BackButton,
 		Button,
 		Chip,
 		DropTarget,
@@ -34,6 +35,7 @@
 	import type { TransitionConfig } from 'svelte/transition'
 	import { undoToast } from '$lib/shell/undo'
 	import { formatDay, formatDayTime } from '@eden/shared/dates'
+	import { showPushed } from '$lib/shell/pushed'
 	import { capture } from '../capture.svelte'
 	import { CAPTURE_ACCEPT } from '../staging.svelte'
 	import { categoryGlyph } from '../words'
@@ -162,8 +164,11 @@
 				`overflow: hidden; height: ${(t * height).toFixed(2)}px; padding-bottom: ${(t * bottom).toFixed(2)}px; opacity: ${t}`,
 		}
 	}
+	// In a narrow page the pane takes the lists' place, under a back arrow (a pushed view).
+	let back = $state<HTMLElement>()
 	function pick(id: string) {
 		selected = selected === id ? undefined : id
+		void showPushed(() => back)
 	}
 
 	// Edit opens the item's form in a sheet over the page (D-95); the pane beneath shows the item it is about.
@@ -297,7 +302,7 @@
 			sample={{ onclick: seed }}
 		/>
 	{:else}
-		<div class="body">
+		<div class={['body', detail && 'body-open']}>
 			<div class="lists">
 				{#each sections as section (section.location)}
 					<DropTarget accepts={[DRAG_GROUP]} ondrop={(ids) => ids.forEach((id) => drop(id, section.location))}>
@@ -392,6 +397,7 @@
 			<div class="side">
 				{#if detail}
 					<div class="reveal" transition:reveal>
+						<div class="back" bind:this={back}><BackButton onback={() => (selected = undefined)} /></div>
 						<aside class="detail" aria-labelledby="{uid}-detail">
 							<div class="detail-head">
 								{@render picture(detail)}
@@ -534,6 +540,31 @@
 		align-items: start;
 		gap: var(--space-6);
 		padding: 0 var(--ed-gutter);
+	}
+	/* the way back from the open item, which only a narrow page needs */
+	.back {
+		display: none;
+	}
+	/* narrow page */
+	@container page (max-width: 48rem) {
+		/* one column: the lists, and what ran out under them; the open item takes the lists' place */
+		.body {
+			grid-template-columns: minmax(0, 1fr);
+		}
+		.body-open .lists {
+			display: none;
+		}
+		.back {
+			display: block;
+		}
+		.side {
+			position: static;
+			max-height: none;
+			overflow-y: visible;
+		}
+		.location-head {
+			flex-wrap: wrap;
+		}
 	}
 	/* the line a list with nothing in it says, inside its card */
 	.none {

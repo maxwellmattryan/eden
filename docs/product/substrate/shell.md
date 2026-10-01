@@ -4,12 +4,12 @@ status: draft
 summary: The frame everything sits in: layout regions, the sidebar, the Garden dashboard and its widgets, the command palette, navigation history and the back affordance, the status bar, Quick Log surfaces, the notification center, mobile structure, keyboard model and global states.
 read-this-if: You are designing navigation, layout, the dashboard, or anything that appears on every screen.
 depends-on: [domain-manifest, tasks, signals-notifications]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## Layout regions
 
-**Desktop**: a collapsible left sidebar; the main content area with a subtle back affordance at its top left; an optional right panel for the Gardener; a bottom status bar. Modals (settings, confirm sheets, Capture verification) overlay the whole window.
+**Desktop**: a collapsible left sidebar (not built yet: the sidebar is fixed at `--sidebar`; collapsing it would give a narrow page room back, D-112); the main content area with a subtle back affordance at its top left; an optional right panel for the Gardener; a bottom status bar. Modals (settings, confirm sheets, Capture verification) overlay the whole window.
 
 **Mobile**: a bottom tab bar (Garden, Today, two pinned domains, More); sheets for the Gardener, settings and Quick Log; a floating **+** button; no sidebar.
 

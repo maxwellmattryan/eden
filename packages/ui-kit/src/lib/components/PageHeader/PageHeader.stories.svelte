@@ -153,6 +153,28 @@
 	{/snippet}
 </Story>
 
+<!-- A header too narrow for the name and the actions on one line (a panel open beside the page) stacks as mobile does -->
+<Story
+	name="Narrow"
+	parameters={{ platforms: ['desktop'] }}
+	play={async ({ canvasElement }) => {
+		if (!hasCanvas(canvasElement)) return
+		const header = canvasElement.querySelector('.ed-page-header')!
+		await expect(header).toHaveClass(/ed-page-header-stacked/)
+	}}
+>
+	{#snippet template(args)}
+		<div style="width: 420px">
+			<PageHeader {...args}>
+				{#snippet filters()}
+					<Segmented items={tabs} label="Hearth sections" />
+					<Chip label="Low stock" tone="outline" selectable />
+				{/snippet}
+			</PageHeader>
+		</div>
+	{/snippet}
+</Story>
+
 <Story name="Mobile" parameters={{ platforms: ['mobile'] }}>
 	{#snippet template(args)}
 		<PageHeader {...args}>

@@ -91,9 +91,14 @@
 		menuOpen = !same
 	}
 
-	// The root, for the platform: on mobile the actions take a row of their own under the name.
+	// The root, for the platform and its own width: on mobile, and wherever the header is too narrow to hold the name
+	// and the actions on one line (a panel open beside the page), the actions take a row of their own under the name.
 	let root = $state<HTMLElement>()
-	const stacked = $derived(root ? platformOf(root) === 'mobile' : false)
+	/** The least width, in px, at which the name and the actions share a line. */
+	const STACK_ROOM = 560
+	// layout width, not the rect: a scaled ancestor shrinks the rect
+	let width = $state(0)
+	const stacked = $derived(root ? platformOf(root) === 'mobile' || (width > 0 && width < STACK_ROOM) : false)
 
 	// The motif's room, in the header's own pixels: where what stands on the left ends, and how far from the right
 	// edge what stands on the right begins. Read again whenever any of them changes size.
@@ -117,6 +122,7 @@
 <header
 	class={['ed-page-header', { 'ed-page-header-stacked': stacked, 'ed-page-header-with-aside': !!aside }, className]}
 	bind:this={root}
+	{@attach measure((_, el) => (width = el.clientWidth))}
 	{...rest}
 >
 	{#if motif}
@@ -311,7 +317,7 @@
 		align-items: center;
 		gap: var(--space-2);
 	}
-	/* mobile: the actions wrap under the name, never a second row of buttons in the header */
+	/* mobile or narrow: the actions wrap under the name, never a second row of buttons in the header */
 	.ed-page-header-stacked .ed-page-header-row {
 		flex-wrap: wrap;
 	}

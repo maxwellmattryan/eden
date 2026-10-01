@@ -6,7 +6,7 @@
 	// is edited. A recipe on its way in (pasted, linked, photographed, or drafted by the Gardener) opens in the pane as
 	// a form and is stored only when it is saved there, with its picture (D-93). Everything the pane says of the stock
 	// is worked out here, locally; a recipe that names something the owner avoids says so (D-25).
-	import { Button, Chip, Dropzone, EmptyState, toast, type ListRowData, type MenuItem } from '@eden/ui-kit'
+	import { BackButton, Button, Chip, Dropzone, EmptyState, toast, type ListRowData, type MenuItem } from '@eden/ui-kit'
 	import {
 		browseRecipes,
 		cookPlan,
@@ -21,6 +21,7 @@
 	} from '@eden/shared/domains/kitchen'
 	import { t } from '@eden/shared/i18n'
 	import { undoToast } from '$lib/shell/undo'
+	import { showPushed } from '$lib/shell/pushed'
 	import { recipeBrowse } from '../recipe-browse.svelte'
 	import { recipeDrafts, recipeImport } from '../recipe-draft.svelte'
 	import { forbidden } from '../safety.svelte'
@@ -68,6 +69,16 @@
 	let mode = $state<'view' | 'edit' | 'cook'>('view')
 	function open(id: string) {
 		recipeBrowse.selected = id
+		mode = 'view'
+		void showPushed(() => back)
+	}
+	// In a narrow page the browser stands alone until a recipe is picked, or a draft is waiting; then the recipe takes
+	// its place, under a back arrow (a pushed view). A draft has no way back but its own Save and Discard.
+	const picked = $derived(kitchen.recipes.some((recipe) => recipe.id === recipeBrowse.selected))
+	const pushed = $derived(!!recipeDrafts.current || picked)
+	let back = $state<HTMLElement>()
+	function close() {
+		recipeBrowse.selected = undefined
 		mode = 'view'
 	}
 	/**
@@ -173,7 +184,7 @@
 			sample={{ onclick: seed }}
 		/>
 	{:else}
-		<div class="body">
+		<div class={['body', pushed && 'body-open']}>
 			<div class="side">
 				{#if kitchen.recipes.length}
 					<RecipeBrowser
@@ -187,6 +198,9 @@
 				{/if}
 			</div>
 
+			{#if !recipeDrafts.current && picked}
+				<div class="back" bind:this={back}><BackButton onback={close} /></div>
+			{/if}
 			{#if recipeDrafts.current}
 				{#key recipeDrafts.current}
 					<aside class="detail" aria-labelledby="{uid}-detail">
@@ -314,6 +328,30 @@
 		margin: calc(var(--space-1) * -1);
 		padding: var(--space-1);
 		overflow-y: auto;
+	}
+	/* the way back from the open recipe, which only a narrow page needs */
+	.back {
+		display: none;
+	}
+	/* narrow page */
+	@container page (max-width: 48rem) {
+		/* one column: the browser until a recipe is picked, then the recipe in its place */
+		.body {
+			grid-template-columns: minmax(0, 1fr);
+			gap: var(--space-2);
+		}
+		.body:not(.body-open) .detail,
+		.body-open .side {
+			display: none;
+		}
+		.back {
+			display: block;
+		}
+		.side {
+			position: static;
+			max-height: none;
+			overflow-y: visible;
+		}
 	}
 
 	.detail {

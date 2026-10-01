@@ -1,7 +1,7 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
 	import { expect, fn, waitFor, within } from 'storybook/test'
-	import { canvasOf } from '../../../storybook/play.js'
+	import { canvasOf, hasCanvas } from '../../../storybook/play.js'
 	import DetailSection from '../DetailPopover/DetailSection.svelte'
 	import DataTable, { type DataTableCell, type DataTableColumn } from './DataTable.svelte'
 	import { audit, haul, integrations, stock } from '../../../stories/sample-data.js'
@@ -100,6 +100,25 @@
 	name="Stock quantities"
 	args={{ label: 'Stock in the fridge and on the counter', columns: stockColumns, rows: stockRows }}
 />
+
+<!-- Wider than its room (a panel open beside the page): the table scrolls inside itself -->
+<Story
+	name="Narrow"
+	parameters={{ platforms: ['desktop'] }}
+	args={{ label: 'Audit log', columns: auditColumns, rows: auditRows }}
+	play={async ({ canvasElement }) => {
+		if (!hasCanvas(canvasElement)) return
+		const scroller = canvasElement.querySelector<HTMLElement>('.ed-table-scroll')!
+		await expect(scroller.scrollWidth).toBeGreaterThan(scroller.clientWidth)
+		await expect(scroller.clientWidth).toBeLessThanOrEqual(240)
+	}}
+>
+	{#snippet template(args)}
+		<div style="width: 240px">
+			<DataTable {...args} />
+		</div>
+	{/snippet}
+</Story>
 
 <Story name="Muted column" args={{ label: 'Audit log', columns: auditColumns, rows: auditRows, showCaption: true }} />
 

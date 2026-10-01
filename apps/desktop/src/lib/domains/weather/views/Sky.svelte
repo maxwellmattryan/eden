@@ -998,7 +998,7 @@
 		padding: 0 var(--ed-gutter);
 	}
 	/* Two columns that fill on their own and end on one line: the forecast on the left, and the light, the air and
-	   the allergens on the right. On a phone they are one column, in reading order. */
+	   the allergens on the right. In a narrow page they are one column, in reading order. */
 	.cols {
 		display: flex;
 		flex-direction: column;
@@ -1008,6 +1008,12 @@
 	.cols-wide {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) calc(var(--sheet-sm) - var(--space-3));
+	}
+	/* narrow page */
+	@container page (max-width: 48rem) {
+		.cols-wide {
+			grid-template-columns: minmax(0, 1fr);
+		}
 	}
 	.col {
 		display: flex;

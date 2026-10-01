@@ -219,6 +219,13 @@
 		gap: var(--space-6);
 		padding: 0 var(--ed-gutter);
 	}
+	/* narrow page */
+	@container page (max-width: 48rem) {
+		/* one column: the grid, then the feed under it */
+		.content {
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
 	.feed {
 		display: flex;
 		flex-direction: column;

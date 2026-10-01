@@ -191,6 +191,12 @@
 		align-items: start;
 		gap: var(--space-3);
 	}
+	/* narrow page */
+	@container page (max-width: 48rem) {
+		.pair {
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
 	.actions {
 		display: flex;
 		flex-wrap: wrap;
