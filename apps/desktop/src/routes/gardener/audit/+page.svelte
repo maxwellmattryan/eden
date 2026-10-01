@@ -149,7 +149,7 @@
 		},
 		{ label: $t('audit.detail.tokens'), value: `${entry.tokensIn} / ${entry.tokensOut}`, mono: true },
 		...(entry.cacheRead ? [{ label: $t('audit.detail.cached'), value: String(entry.cacheRead), mono: true }] : []),
-		{ label: $t('audit.columns.cost'), hint: $t('audit.hints.cost'), value: formatCost(entry.costUsd), mono: true },
+		{ label: $t('audit.columns.cost'), value: formatCost(entry.costUsd), mono: true },
 		{
 			label: $t('audit.detail.outcome'),
 			value: $t(`audit.outcomes.${entry.outcome}`) + (entry.confirmOutcome ? ` · ${entry.confirmOutcome}` : ''),

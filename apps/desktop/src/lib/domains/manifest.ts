@@ -79,7 +79,7 @@ export interface DomainBindings<D extends BuiltDomainId> {
 	 * What the Gardener's context pack carries of a row of one of the domain's entity types, by type, where the row
 	 * itself is more than a request should pay for (D-85); `null` leaves the row out. A type with no entry is sent whole.
 	 */
-	pack?: Partial<Record<string, (row: Entity) => Entity | null>>
+	pack?: Partial<Record<string, (row: Entity<object>) => Entity<object> | null>>
 	/** What each quick action writes, by its id; `log-quick` dispatches here and the Quick Log sheet (#27) reuses it. */
 	quickActionHandlers?: Partial<Record<string, QuickActionHandler>>
 	/** The domain's part of committing a draft its tool left; the substrate's parts (tasks, events) are the shell's. */
