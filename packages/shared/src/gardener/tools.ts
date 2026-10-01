@@ -633,10 +633,36 @@ export function toolIndex(declarations: readonly DomainDeclaration[]): GardenerT
 /** The most tools one request may mark strict: the API's limit. */
 export const STRICT_LIMIT = 20
 
+/** The most optional parameters the strict tools of one request may have between them: the API's limit. */
+export const OPTIONAL_LIMIT = 24
+
+/**
+ * The tools that write and are not strict all the same, by schema key: the batch writers, whose rows are mostly
+ * fields the model leaves out, would spend the optional parameters of every strict tool several times over. Each
+ * one's handler reads its input as loosely as a read tool's does, and the owner confirms the call before it runs.
+ */
+export const LOOSE: ReadonlySet<string> = new Set([
+	'kitchen.add-stock',
+	'kitchen.update-stock',
+	'kitchen.edit-grocery',
+	'kitchen.edit-stores',
+	'kitchen.save-recipe',
+	'kitchen.change-recipe',
+])
+
 /** Whether a tool's input is held to its schema by the API: the ones that write or draft, where a stray field or a
- * missing one would store the wrong thing. A read tool's handler reads its input loosely instead. */
+ * missing one would store the wrong thing, but for the ones in `LOOSE`. A read tool's handler reads its input
+ * loosely instead. */
 export function isStrict(tool: GardenerTool): boolean {
-	return tool.declaration.access !== 'read'
+	return tool.declaration.access !== 'read' && !LOOSE.has(schemaKey(tool.domain, tool.declaration.id))
+}
+
+/** How many parameters a schema leaves optional, through its nested objects and the items of its lists. */
+export function optionalCount(schema: JsonSchema): number {
+	const properties = Object.entries(schema.properties ?? {})
+	const optional = properties.filter(([name]) => !schema.required?.includes(name)).length
+	const nested = properties.reduce((sum, [, property]) => sum + optionalCount(property), 0)
+	return optional + nested + (schema.items ? optionalCount(schema.items) : 0)
 }
 
 /** The tool as the API takes it. */
@@ -676,7 +702,8 @@ function schemaProblems(what: string, schema: JsonSchema, path: string): string[
 /**
  * What is wrong with the index, or nothing: a read outside the registry or of a T3 resource, a wire name that is
  * taken or that the API would not accept, a schema that is open or bounded, a declared tool with no words and no
- * shape, and words with no declaration.
+ * shape, words with no declaration, and more strict tools or more optional parameters across them than the API
+ * takes.
  */
 export function validateTools(index: readonly GardenerTool[]): string[] {
 	const problems: string[] = []
@@ -703,5 +730,14 @@ export function validateTools(index: readonly GardenerTool[]): string[] {
 	}
 	if (index.filter(isStrict).length > STRICT_LIMIT)
 		problems.push(`${index.filter(isStrict).length} strict tools; the API takes ${STRICT_LIMIT} at most`)
+	const optional = index.filter(isStrict).reduce((sum, tool) => sum + optionalCount(tool.schema), 0)
+	if (optional > OPTIONAL_LIMIT)
+		problems.push(`${optional} optional parameters across the strict tools; the API takes ${OPTIONAL_LIMIT} at most`)
+	for (const key of LOOSE) {
+		// a key no schema has is stale wherever it is checked; one a narrower index leaves out is not
+		const tool = index.find((entry) => schemaKey(entry.domain, entry.declaration.id) === key)
+		if (!SCHEMAS[key]) problems.push(`${key}: is loose and has no schema`)
+		else if (tool?.declaration.access === 'read') problems.push(`${key}: is loose, and a read tool is never strict`)
+	}
 	return problems
 }

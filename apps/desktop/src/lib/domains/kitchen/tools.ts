@@ -78,10 +78,19 @@ function location(value: unknown): StockLocation {
 
 type Fields = Record<string, unknown>
 
+/** What the model sent without the fields it sent as `null`: the batch tools are not strict, and a `null` is a field left out. */
+function stated(row: Fields): Fields {
+	return Object.fromEntries(Object.entries(row).filter(([, value]) => value !== null && value !== undefined))
+}
+
 /** The entries of a list the model sent, each an object; nothing for anything else. */
 function entries(input: unknown, key: string): Fields[] {
 	const value = (input as Fields | null)?.[key]
-	return Array.isArray(value) ? value.filter((entry): entry is Fields => !!entry && typeof entry === 'object') : []
+	return Array.isArray(value)
+		? value
+				.filter((entry): entry is Fields => !!entry && typeof entry === 'object' && !Array.isArray(entry))
+				.map(stated)
+		: []
 }
 
 /** The ids of a list the model sent. */
@@ -90,9 +99,11 @@ function ids(input: unknown, key: string): string[] {
 	return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string' && !!entry) : []
 }
 
-/** A text field the model sent, kept when it is empty: an empty string is how a field is cleared. */
+/** A text field the model sent, kept when it is empty: an empty string is how a field is cleared. A number is read as its text. */
 function given(row: Fields, key: string): string | undefined {
-	return typeof row[key] === 'string' ? (row[key] as string).trim() : undefined
+	const value = row[key]
+	if (typeof value === 'number' && Number.isFinite(value)) return String(value)
+	return typeof value === 'string' ? value.trim() : undefined
 }
 
 /** One undo for several writes, taken back in the reverse of their order. */
@@ -471,7 +482,7 @@ export const kitchenTools: Record<string, ToolHandler> = {
 						name,
 						brand: str(row, 'brand') ?? product?.brand,
 						size: str(row, 'size') ?? product?.size,
-						qty: str(row, 'qty') ?? '1',
+						qty: given(row, 'qty') || '1',
 						unit: str(row, 'unit'),
 						location: location(row.location),
 						expiry: str(row, 'expiry'),
@@ -625,7 +636,7 @@ export const kitchenTools: Record<string, ToolHandler> = {
 						name,
 						brand: str(row, 'brand') ?? product?.brand,
 						size: str(row, 'size') ?? product?.size,
-						qty: str(row, 'qty') ?? '',
+						qty: given(row, 'qty') ?? '',
 						...(price === undefined ? {} : { price }),
 						note: str(row, 'note'),
 					},
@@ -861,18 +872,18 @@ export const kitchenTools: Record<string, ToolHandler> = {
 		preview: preview('change-recipe', (input) => {
 			const recipe = kitchen.recipeById(str(input, 'id') ?? '')
 			if (!recipe) return [undefined]
-			const fields = Object.keys((input ?? {}) as Fields).filter((key) => key !== 'id' && key !== 'remove')
+			const sent = stated((input ?? {}) as Fields)
+			const fields = Object.keys(sent).filter((key) => key !== 'id' && key !== 'remove')
 			return [
-				(input as Fields).remove === true
-					? say('remove', recipe.name)
-					: say('change', `${recipe.name} (${fields.join(', ')})`),
+				sent.remove === true ? say('remove', recipe.name) : say('change', `${recipe.name} (${fields.join(', ')})`),
 			]
 		}),
 		run: async (input, ctx) => {
 			const id = str(input, 'id') ?? ''
 			const recipe = kitchen.recipeById(id)
 			if (!recipe) return unknown('recipe', 'recipe', [id])
-			const { id: _id, remove, ...fields } = input as Fields
+			// a field sent as `null` is one left out, never one to clear: the stored recipe keeps it
+			const { id: _id, remove, ...fields } = stated(input as Fields)
 			if (remove === true) {
 				const { undo } = kitchen.removeRecipe(id)
 				ctx.undo(get(t)('domains.kitchen.gardener.toast.recipeRemoved', { values: { name: recipe.name } }), undo)

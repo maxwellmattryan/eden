@@ -21,13 +21,16 @@ import {
 	type GardenerTool,
 	type JsonSchema,
 	isStrict,
+	LOOSE,
+	OPTIONAL_LIMIT,
+	optionalCount,
 	STRICT_LIMIT,
 } from './tools.js'
 
 const index = toolIndex(declarations)
 
 describe('the tool index', () => {
-	it('validates, and holds the twenty-four tools', () => {
+	it('validates, and holds the twenty-eight tools', () => {
 		expect(validateTools(index)).toEqual([])
 		expect(index).toHaveLength(28)
 		expect(Object.keys(SCHEMAS)).toHaveLength(28)
@@ -120,18 +123,28 @@ describe('the tool index', () => {
 		}
 	})
 
-	it('shapes a tool for the API: strict where it writes or drafts, loose where it reads', () => {
-		const tool = parseWireName('kitchen_add-stock', index)!
+	it('shapes a tool for the API: strict where it writes or drafts, loose where it reads or writes in batches', () => {
+		const tool = parseWireName('kitchen_plan-week', index)!
 		expect(toApiTool(tool)).toEqual({
-			name: 'kitchen_add-stock',
+			name: 'kitchen_plan-week',
 			description: tool.description,
 			input_schema: tool.schema,
 			strict: true,
 		})
-		expect(tool.schema).toMatchObject({ type: 'object', required: ['items'], additionalProperties: false })
+		expect(tool.schema).toMatchObject({ type: 'object', additionalProperties: false })
 		expect(toApiTool(parseWireName('weather_forecast', index)!)).not.toHaveProperty('strict')
+		// the batch writers are loose: their rows' optional fields would overrun the budget below
+		for (const key of LOOSE) {
+			const loose = parseWireName(key.replace('.', '_'), index)!
+			expect(loose.declaration.access, key).not.toBe('read')
+			expect(toApiTool(loose), key).not.toHaveProperty('strict')
+		}
 		// the API takes twenty strict tools at most, and every request may carry the whole index
-		expect(index.filter(isStrict).length).toBeLessThanOrEqual(STRICT_LIMIT)
+		const strict = index.filter(isStrict)
+		expect(strict.length).toBeLessThanOrEqual(STRICT_LIMIT)
+		// and twenty-four optional parameters across them
+		expect(optionalCount(parseWireName('kitchen_edit-grocery', index)!.schema)).toBe(19)
+		expect(strict.reduce((sum, entry) => sum + optionalCount(entry.schema), 0)).toBeLessThanOrEqual(OPTIONAL_LIMIT)
 	})
 
 	it("orders a surface's tools: the domain's, the substrate's, the rest", () => {
@@ -172,5 +185,25 @@ describe('the tool index', () => {
 		expect(problems).toContain('kitchen.storage-tip: input.n uses minimum')
 		expect(problems).toContain('kitchen.unknown: has no schema')
 		expect(problems).toContain('create-task: has a schema and no declaration')
+
+		// a strict tool with more optional parameters than the API takes across all of them
+		const wide = parseWireName('create-task', index)!
+		const many = Object.fromEntries(
+			Array.from({ length: OPTIONAL_LIMIT + 1 }, (_, at) => [`f${at}`, { type: 'string' }])
+		)
+		const over = validateTools([
+			{
+				...wide,
+				schema: { type: 'object', properties: many, required: [], additionalProperties: false } as JsonSchema,
+			},
+		])
+		expect(over).toContain(
+			`${OPTIONAL_LIMIT + 1} optional parameters across the strict tools; the API takes ${OPTIONAL_LIMIT} at most`
+		)
+		// a loose key on a tool that reads says nothing: it was never strict
+		const edit = parseWireName('kitchen_edit-grocery', index)!
+		expect(validateTools([{ ...edit, declaration: { ...edit.declaration, access: 'read' } }])).toContain(
+			'kitchen.edit-grocery: is loose, and a read tool is never strict'
+		)
 	})
 })
