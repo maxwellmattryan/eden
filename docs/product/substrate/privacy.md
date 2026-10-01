@@ -4,7 +4,7 @@ status: draft
 summary: The sensitivity tiers T0–T3 and what each allows for storage, sync, AI and export; what never leaves the device; what third parties receive; the owner's controls; a one-screen threat model.
 read-this-if: Anything you are designing touches personal data, an external service, or the Gardener.
 depends-on: [decisions]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## Principles (Phase 1)
@@ -54,6 +54,7 @@ Tiers attach to resources in `substrate/registry.md`:
 | an integration | the OAuth scopes granted and the request parameters the connector needs (rounded coordinates for weather, a calendar id for Google) | anything from another domain |
 | a web page the owner gave the address of | one request for that page, made by the crate, with no cookie, credential or referrer (D-88); counted in the egress ledger under `web-page` | anything from the workspace |
 | a picture the owner linked for a stock item | one request for that picture, made by the crate under the same checks (D-91); a grocer's product page is never requested, only the picture its address names; counted under `web-image` | anything from the workspace |
+| a store's website, which the owner gave | up to two requests for its page (as typed, then under `www.`) and up to five for its icon (those the page names, then the site's usual addresses), made by the crate under the same checks (D-103); counted under `web-page` and `web-image` | anything from the workspace; no third-party icon service is asked |
 | a plugin (later) | exactly what its manifest declares under the same grants | anything undeclared |
 | crash reporting | nothing; logs stay local and are exported by hand (OQ-10) | |
 

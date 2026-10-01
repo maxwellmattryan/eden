@@ -2,7 +2,7 @@
 	// Hearth's Grocery view (product/domains/kitchen.md, "Surfaces"): the same header as Stock with the Grocery tab
 	// selected and one action, Add, whose menu offers Add item and Add store (D-102); then one list per store (D-96),
 	// all of them on the page at once. A store's list carries its name in the display face, its shop day when it has
-	// one, the count of what is checked, Complete, Edit store and Add as quiet icon buttons, and its rows. What names no
+	// one, about what it costs (D-105), Complete, Edit store and Add as quiet icon buttons, and its rows. What names no
 	// store yet sits in "Miscellaneous" beneath them. Every row carries an origin badge (manual, recipe, low stock); a
 	// checked row is struck through and stays until its list is completed. On desktop the side holds Buy it again
 	// and, beneath it, the stores (D-101): each row says what is left to buy and the store's shop day or its last
@@ -14,11 +14,13 @@
 		Chip,
 		EmptyState,
 		Field,
+		FileButton,
 		IconButton,
 		List,
 		PageHeader,
 		Segmented,
 		Sheet,
+		Thumbnail,
 		domainGlyph,
 		type ListRowData,
 		type MenuItem,
@@ -44,6 +46,10 @@
 		editing?: string
 		/** The store whose form is open in its sheet, by id. */
 		store?: string
+		/** A picture chosen for a store in its form, its website's fetched again, and the one it had removed (D-103). */
+		onstorepicture?: (id: string, files: File[]) => void
+		onfetchpicture?: (id: string) => void
+		onremovepicture?: (id: string) => void
 		/** The form open in its sheet to add with: an item's, or a store's. */
 		adding?: 'item' | 'store'
 		/** Add in the item's form: its name, and its store's id, '' for the unfiled list, none when no store was picked. */
@@ -88,6 +94,9 @@
 		onaddstore,
 		onsavestore,
 		ondeletestore,
+		onstorepicture,
+		onfetchpicture,
+		onremovepicture,
 		onnavigate,
 	}: Props = $props()
 
@@ -112,7 +121,11 @@
 	const rowOf = (item: Item): ListRowData => ({
 		id: item.id,
 		primary: item.name,
-		chips: item.qty ? [{ label: item.qty, mono: true }] : [],
+		secondary: item.brand,
+		chips: [
+			...(item.qty ? [{ label: item.qty, mono: true }] : []),
+			...(item.size ? [{ id: 'size', label: item.size, mono: true }] : []),
+		],
 		badges: [{ kind: 'origin' as const, label: item.origin }],
 		done: isDone(item),
 		checkable: true,
@@ -124,8 +137,13 @@
 		[...grocery.stores, undefined]
 			.map((entry) => {
 				const list = grocery.lists.find((candidate) => candidate.storeId === entry?.id)
-				const rows = empty ? [] : grocery.items.filter((item) => item.listId === list?.id).map(rowOf)
+				const items = empty ? [] : grocery.items.filter((item) => item.listId === list?.id)
+				const rows = items.map(rowOf)
+				// about what the list costs (D-105): each priced line times its bare count, the rest counted apart
+				const priced = items.filter((item) => item.price !== undefined)
+				const total = priced.reduce((sum, item) => sum + item.price! * (Number(item.qty) || 1), 0)
 				return {
+					estimate: priced.length ? { total: total.toFixed(2), unpriced: items.length - priced.length } : undefined,
 					id: entry?.id ?? 'any',
 					storeId: entry?.id,
 					name: entry?.name ?? ANY,
@@ -228,6 +246,9 @@
 					id: entry.id,
 					primary: entry.name,
 					hint: entry.note,
+					thumbnail: entry.picture,
+					icon: 'store' as const,
+					tile: true,
 					chips: block.shopDay
 						? [{ label: block.shopDay, icon: 'calendar' as const }]
 						: entry.shoppedOn
@@ -291,6 +312,13 @@
 					{#each blocks as block (block.id)}
 						<section class="store" aria-labelledby="{uid}-{block.id}">
 							<header class="store-head">
+								{#if block.storeId}
+									<Thumbnail
+										size="md"
+										src={grocery.stores.find((entry) => entry.id === block.storeId)?.picture}
+										icon="store"
+									/>
+								{/if}
 								<h2 class="store-title" id="{uid}-{block.id}">{block.name}</h2>
 								{#if block.shopDay}
 									<Chip
@@ -302,7 +330,13 @@
 								{/if}
 								<span class="store-tools">
 									{#if block.rows.length}
-										<span class="store-count">{block.checked} of {block.rows.length} checked</span>
+										{#if block.estimate}
+											<span class="store-count">
+												about ${block.estimate.total}{block.estimate.unpriced
+													? `, ${block.estimate.unpriced} unpriced`
+													: ''}
+											</span>
+										{/if}
 									{/if}
 									<IconButton
 										icon="check-check"
@@ -436,6 +470,38 @@
 						storeOpen = false
 					}}
 				>
+					{#if opened}
+						<div class="picture-row">
+							<Thumbnail size="md" src={opened.picture} icon="store" />
+							<FileButton
+								label="Choose a picture"
+								icon="image-plus"
+								accept={['image/jpeg', 'image/png', 'image/webp']}
+								multiple={false}
+								tooltip
+								onfiles={(files) => onstorepicture?.(opened.id, files)}
+							/>
+							{#if place.url.trim()}
+								<IconButton
+									icon="refresh-cw"
+									size="sm"
+									label="Fetch the picture from the website"
+									tooltip
+									onclick={() => onfetchpicture?.(opened.id)}
+								/>
+							{/if}
+							{#if opened.picture}
+								<IconButton
+									icon="trash"
+									size="sm"
+									label="Remove the picture"
+									danger
+									tooltip
+									onclick={() => onremovepicture?.(opened.id)}
+								/>
+							{/if}
+						</div>
+					{/if}
 					<Field label="Name" bind:value={place.name} />
 					<div class="group" role="group" aria-labelledby="{uid}-sells">
 						<span class="group-label" id="{uid}-sells">Sells</span>
@@ -519,7 +585,7 @@
 		gap: var(--space-4);
 		min-width: 0;
 	}
-	/* One list per store: its name, its shop day when it has one, the count of what is checked and its two actions */
+	/* One list per store: its name, its shop day when it has one, about what it costs and its actions */
 	.store {
 		display: flex;
 		flex-direction: column;
@@ -550,6 +616,7 @@
 		padding-right: calc(1px + var(--space-2) + var(--space-1));
 	}
 	.store-count {
+		white-space: nowrap;
 		font: var(--ed-t-data-sm);
 		letter-spacing: var(--ed-t-data-sm-tracking);
 		font-variant-numeric: tabular-nums;
@@ -588,6 +655,12 @@
 		font: var(--ed-t-title);
 		letter-spacing: var(--ed-t-title-tracking);
 		font-variation-settings: var(--ed-t-title-opsz);
+	}
+	/* the store's picture with the buttons that change it */
+	.picture-row {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
 	}
 	.form {
 		display: flex;

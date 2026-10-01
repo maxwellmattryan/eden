@@ -243,7 +243,9 @@ export const SCHEMAS: Readonly<Record<string, { description: string; schema: Jso
 					description: 'Every item to add, one entry each.',
 					items: object(
 						{
-							name: text('The item, as the owner named it.'),
+							name: text('The item itself, as the owner named it, without its maker: "butter".'),
+							brand: text('Who makes it, when the owner said: "Kerrygold". Left out otherwise.'),
+							size: text('How much one package holds, when the owner said: "16 oz". Left out otherwise.'),
 							qty: text('The amount alone, as a number or a word: 2, 500, half. 1 when unsaid.'),
 							unit: text('The unit of the amount: g, ml, bunch, tin. Left out for a plain count.'),
 							location: {

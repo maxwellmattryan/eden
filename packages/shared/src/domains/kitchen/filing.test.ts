@@ -1,18 +1,28 @@
 import { describe, expect, it } from 'vitest'
-import { fileRows, groceryBlocks, orderStores, remember, reorderStores, storeFor } from './filing.js'
+import {
+	boughtOf,
+	fileRows,
+	groceryBlocks,
+	orderStores,
+	remember,
+	reorderStores,
+	storeFor,
+	storeForPack,
+	storeNamed,
+} from './filing.js'
 import type { Grocery, GroceryStore, GroceryItem } from './types.js'
 
 const heb: GroceryStore = {
 	id: 'heb',
 	name: 'H-E-B',
 	sells: ['grocery'],
-	bought: { milk: '2026-09-20T10:00:00.000Z', lime: '2026-09-27T10:00:00.000Z' },
+	bought: { milk: { at: '2026-09-20T10:00:00.000Z' }, lime: { at: '2026-09-27T10:00:00.000Z' } },
 }
 const target: GroceryStore = {
 	id: 'target',
 	name: 'Target',
 	sells: ['grocery', 'home-goods'],
-	bought: { milk: '2026-09-25T10:00:00.000Z', 'paper towel': '2026-09-25T10:00:00.000Z' },
+	bought: { milk: { at: '2026-09-25T10:00:00.000Z' }, 'paper towel': { at: '2026-09-25T10:00:00.000Z' } },
 }
 const item = (name: string, listId: string, done = false): GroceryItem => ({
 	id: name,
@@ -41,12 +51,83 @@ describe('filing a grocery item', () => {
 
 	it('remembers what was bought, under the normalised name, without touching the store it was given', () => {
 		const at = '2026-10-01T09:00:00.000Z'
-		const after = remember(heb, ['Whole Milk', 'Eggs'], at)
-		expect(after.bought).toMatchObject({ milk: at, egg: at, lime: '2026-09-27T10:00:00.000Z' })
+		const after = remember(heb, [{ name: 'Whole Milk' }, { name: 'Eggs' }], at)
+		expect(after.bought).toEqual({ milk: { at }, egg: { at }, lime: { at: '2026-09-27T10:00:00.000Z' } })
 		expect(heb.bought).not.toHaveProperty('egg')
 		expect(storeFor('eggs', [after, target])?.id).toBe('heb')
 		expect(remember(heb, [], at)).toBe(heb)
-		expect(remember(heb, ['  '], at)).toBe(heb)
+		expect(remember(heb, [{ name: '  ' }], at)).toBe(heb)
+	})
+
+	it('reads a memory written before prices, a bare timestamp for each name', () => {
+		const old = { ...heb, bought: { lime: '2026-09-27T10:00:00.000Z' } } as unknown as GroceryStore
+		expect(boughtOf('2026-09-27T10:00:00.000Z')).toEqual({ at: '2026-09-27T10:00:00.000Z' })
+		expect(storeFor('Limes', [old, target])?.id).toBe('heb')
+		const at = '2026-10-01T09:00:00.000Z'
+		expect(remember(old, [{ name: 'limes', price: 0.5 }], at).bought).toEqual({ lime: { at, price: 0.5 } })
+	})
+
+	it('remembers what was paid, and keeps it when the thing is only listed again', () => {
+		const paid = '2026-10-01T09:00:00.000Z'
+		const listed = '2026-10-05T09:00:00.000Z'
+		const bought = remember(heb, [{ name: 'Butter', brand: 'Kerrygold', size: '8 oz', price: 4.99 }], paid)
+		expect(bought.bought?.butter).toEqual({ at: paid, price: 4.99, size: '8 oz', brand: 'Kerrygold' })
+		const again = remember(bought, [{ name: 'butter' }], listed)
+		expect(again.bought?.butter).toEqual({ at: listed, price: 4.99, size: '8 oz', brand: 'Kerrygold', pricedAt: paid })
+		// a new price replaces the whole of the old one
+		const next = remember(again, [{ name: 'butter', price: 5.49 }], '2026-10-08T09:00:00.000Z')
+		expect(next.bought?.butter).toEqual({ at: '2026-10-08T09:00:00.000Z', price: 5.49 })
+	})
+
+	it('does not let an old receipt read late replace a newer price, or move the last purchase back', () => {
+		const newer = remember(heb, [{ name: 'Butter', price: 5.49 }], '2026-10-08T09:00:00.000Z')
+		const late = remember(
+			newer,
+			[
+				{ name: 'Butter', price: 4.99 },
+				{ name: 'Milk', price: 3.2 },
+			],
+			'2026-09-10T12:00:00.000Z'
+		)
+		expect(late.bought?.butter).toEqual({ at: '2026-10-08T09:00:00.000Z', price: 5.49 })
+		// milk had no price: the old receipt's is the best known, dated when it was paid
+		expect(late.bought?.milk).toEqual({
+			at: '2026-09-20T10:00:00.000Z',
+			price: 3.2,
+			pricedAt: '2026-09-10T12:00:00.000Z',
+		})
+	})
+
+	it('finds the store a receipt names', () => {
+		const lamar = { ...target, id: 'plus', name: 'H-E-B plus!' }
+		expect(storeNamed('HEB', [heb, target])?.id).toBe('heb')
+		expect(storeNamed('H-E-B #123', [target, heb])?.id).toBe('heb')
+		expect(storeNamed('H-E-B PLUS! LAMAR', [heb, lamar])?.id).toBe('plus')
+		expect(storeNamed('Costco Wholesale', [heb, target])).toBeUndefined()
+		expect(storeNamed('', [heb])).toBeUndefined()
+	})
+
+	it('sends a model a store without what it remembers, its picture or its address', () => {
+		const row = {
+			id: 'heb',
+			payload: {
+				name: 'H-E-B',
+				sells: ['grocery'],
+				bought: heb.bought,
+				photo: 'p-1',
+				position: 0,
+				note: 'Park at the back.',
+				place: { address: '1000 E 41st St', url: 'https://www.heb.com' },
+			},
+		}
+		expect(storeForPack(row)).toEqual({
+			id: 'heb',
+			payload: { name: 'H-E-B', sells: ['grocery'], note: 'Park at the back.', place: { url: 'https://www.heb.com' } },
+		})
+		expect(storeForPack({ payload: { name: 'Target', sells: [], place: { address: 'x' } } }).payload).toEqual({
+			name: 'Target',
+			sells: [],
+		})
 	})
 
 	it('groups a batch by store, in the order each store first appears', () => {

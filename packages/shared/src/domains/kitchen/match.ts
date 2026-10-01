@@ -85,19 +85,45 @@ export function normaliseName(name: string): string {
 	return words(name).join(' ')
 }
 
+/** A brand as it is compared: case, accents, spaces and punctuation aside. Its words are left as they are. */
+export function normaliseBrand(brand: string | undefined): string {
+	return (brand ?? '')
+		.toLowerCase()
+		.normalize('NFKD')
+		.replace(/[̀-ͯ]/g, '')
+		.replace(/[^a-z0-9぀-ヿ一-龯]+/g, '')
+}
+
+/** Whether two brands can be one: the same once normalised, or either not said (D-104). */
+export function sameBrand(a: string | undefined, b: string | undefined): boolean {
+	const [one, other] = [normaliseBrand(a), normaliseBrand(b)]
+	return !one || !other || one === other
+}
+
+/** Whether two things are one: the same normalised name, and brands that can be one. */
+export function sameItem(a: { name: string; brand?: string }, b: { name: string; brand?: string }): boolean {
+	const name = normaliseName(a.name)
+	return !!name && name === normaliseName(b.name) && sameBrand(a.brand, b.brand)
+}
+
 /**
- * The stock item a captured row would merge into: the same normalised name in the same location, with a quantity
- * the row's can be added to. The first one, as the stock is ordered. Failing that, an item of that name that ran
- * out (D-92), wherever it was kept and in whatever unit: nothing of it is left to add to, so the row brings it back.
+ * The stock item a captured row would merge into: the same normalised name in the same location, of a brand that
+ * can be the row's (D-104), with a quantity the row's can be added to. One of the row's own brand before one that
+ * names none, then the first, as the stock is ordered. Failing that, an item of that name that ran out (D-92),
+ * wherever it was kept and in whatever unit: nothing of it is left to add to, so the row brings it back.
  */
 export function mergeTarget(
-	row: { name: string; location: StockLocation; qty: string; unit?: string },
+	row: { name: string; brand?: string; location: StockLocation; qty: string; unit?: string },
 	stock: readonly StockItem[]
 ): StockItem | undefined {
 	const name = normaliseName(row.name)
+	const brand = normaliseBrand(row.brand)
 	const amount = parseAmount(row.qty, row.unit)
 	if (!name || !amount) return undefined
-	const named = stock.filter((item) => normaliseName(item.name) === name)
+	const exact = (item: StockItem) => (brand && normaliseBrand(item.brand) === brand ? 0 : 1)
+	const named = stock
+		.filter((item) => normaliseName(item.name) === name && sameBrand(item.brand, row.brand))
+		.sort((a, b) => exact(a) - exact(b))
 	return (
 		named.find((item) => {
 			if (item.location !== row.location) return false
@@ -123,13 +149,14 @@ function closes(short: string[], long: string[]): boolean {
  * that ran out covers nothing (D-92).
  */
 export function stockFor(ingredient: string, stock: readonly StockItem[]): StockItem[] {
-	const wanted = words(ingredient).filter((word) => !FORMS.has(word))
-	if (!wanted.length) return []
 	return stock
-		.filter((item) => {
-			if (isOut(item)) return false
-			const held = words(item.name).filter((word) => !FORMS.has(word))
-			return closes(wanted, held) || closes(held, wanted)
-		})
+		.filter((item) => !isOut(item) && nameCovers(ingredient, item.name))
 		.sort((a, b) => (a.expiry ?? UNDATED).localeCompare(b.expiry ?? UNDATED))
+}
+
+/** Whether two names are one thing as an ingredient reads them: the same with the cut left off, or one closing the other. */
+export function nameCovers(a: string, b: string): boolean {
+	const one = words(a).filter((word) => !FORMS.has(word))
+	const other = words(b).filter((word) => !FORMS.has(word))
+	return closes(one, other) || closes(other, one)
 }

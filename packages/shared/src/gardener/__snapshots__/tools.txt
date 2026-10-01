@@ -251,7 +251,15 @@
 						"properties": {
 							"name": {
 								"type": "string",
-								"description": "The item, as the owner named it."
+								"description": "The item itself, as the owner named it, without its maker: \"butter\"."
+							},
+							"brand": {
+								"type": "string",
+								"description": "Who makes it, when the owner said: \"Kerrygold\". Left out otherwise."
+							},
+							"size": {
+								"type": "string",
+								"description": "How much one package holds, when the owner said: \"16 oz\". Left out otherwise."
 							},
 							"qty": {
 								"type": "string",

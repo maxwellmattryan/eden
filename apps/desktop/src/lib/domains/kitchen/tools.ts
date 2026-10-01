@@ -11,6 +11,7 @@ import { answer, type DraftCard } from '@eden/shared/gardener'
 import {
 	CAPTURE_MODES,
 	CATEGORIES,
+	haulReceipt,
 	haulRows,
 	isSafe,
 	LOCATIONS,
@@ -66,8 +67,9 @@ export function captureMode(input: unknown): CaptureMode {
 	return (CAPTURE_MODES as readonly string[]).includes(mode ?? '') ? (mode as CaptureMode) : 'haul'
 }
 
-/** The lines both kinds of capture end on: how amounts are written, where an item is in a photo, what to leave out. */
+/** The lines both kinds of capture end on: how an item is named, how amounts are written, where an item is in a photo, what to leave out. */
 const captureRules = (today: string) => [
+	'Name each item as the thing itself, and give who makes it and how much one package holds apart from the name: "butter" with the brand "Kerrygold" and the size "8 oz", never "Kerrygold butter 8 oz". The app matches items by that name, so the same thing must get the same name from a receipt as from a photo.',
 	`Where an amount is printed, give it as printed. Where you have to estimate one, use ${settings.measurement === 'imperial' ? 'ounces and pounds' : 'grams and millilitres'}, or a plain count for things that are counted.`,
 	'For each item you can see in a photo, say which file it is in (`photo`, counting the files from 1 in the order given) and the box around the item alone in that photo (`box`), so a picture of it can be cut out. Draw the box tight to the item. For an item you read from a receipt, an order or a list and cannot see, `photo` is 0.',
 	`Today is ${today}.`,
@@ -194,7 +196,19 @@ export const kitchenTools: Record<string, ToolHandler> = {
 				rows: answer.list(
 					answer.object({
 						name: answer.text(
-							'The item, named in full as a shopper would say it: "Greek yogurt", never a receipt’s abbreviation.'
+							'The item itself, as a shopper would say it: "Greek yogurt", "butter"; never a receipt’s abbreviation, and without its maker or its package size.'
+						),
+						brand: answer.text(
+							'Who makes it, as the item or the receipt shows: "Kerrygold", "H-E-B"; an empty string for what has no brand, such as loose produce, or when none can be read.'
+						),
+						size: answer.text(
+							'How much one package holds, as printed: "16 oz", "12 ct", or the weight of something sold by weight, "1.24 lb"; an empty string when it is not shown.'
+						),
+						priceCents: answer.integer(
+							'What the receipt or the order charged for this line, in cents, after any discount printed on the line: 698 for $6.98; 0 when no file prices it.'
+						),
+						count: answer.integer(
+							'How many packages that price is for: 2 for "2 @ 3.49"; 1 when the line shows no multiple.'
 						),
 						qty: answer.text('The amount alone, as a number: 2, 500, 1.5.'),
 						unit: answer.text(
@@ -224,6 +238,12 @@ export const kitchenTools: Record<string, ToolHandler> = {
 						}),
 					})
 				),
+				store: answer.text(
+					'The shop a receipt or an order is from, as it is printed; an empty string when no file shows one.'
+				),
+				boughtOn: answer.text(
+					'The day printed on the receipt or the order, as YYYY-MM-DD; an empty string when no file shows one.'
+				),
 			}),
 			prompt: (input, ctx) =>
 				(captureMode(input) === 'stock'
@@ -231,7 +251,7 @@ export const kitchenTools: Record<string, ToolHandler> = {
 							'These files are photos of the owner’s kitchen as it stands: the inside of the fridge or the freezer, pantry shelves, the counter. List every food, drink, supplement and other kitchen consumable you can see, one row each. The owner checks the rows before they become their stock.',
 							'An item that shows in two photos is one row. Put each item where its photo shows it: what is in the fridge is `fridge`, what is on a pantry shelf is `pantry`, and so on, wherever that kind of food is usually kept.',
 							'Count what you can count and estimate what you cannot: a carton that looks half full is half its size.',
-							'These things were not bought today, so do not guess how long they keep: `daysUntilExpiry` is 0 for every row, and `expiryDate` is filled only where a date can be read on the item.',
+							'These things were not bought today, so do not guess how long they keep: `daysUntilExpiry` is 0 for every row, and `expiryDate` is filled only where a date can be read on the item. Nothing here has a price or a shop: `priceCents` is 0 and `count` is 1 for every row, and `store` and `boughtOn` are empty.',
 							'Leave out what is not a consumable: containers, appliances, dishes, magnets.',
 							...captureRules(ctx.today),
 						]
@@ -239,13 +259,15 @@ export const kitchenTools: Record<string, ToolHandler> = {
 							'These files are one grocery haul: photos of the groceries, receipts, an order confirmation or a list, in any mix. List every item that was bought, one row each. The owner checks the rows before they are added to their stock.',
 							'An item that shows in two of the files, on the receipt and in a photo, is one row. A receipt’s or an order’s quantity and weight win over what a photo suggests; a photo says what an abbreviated receipt line is.',
 							'Leave out what is not food, drink, a supplement or another kitchen consumable, and every line that is not an item: totals, tax, discounts, bags, fees, an item that was refunded or not delivered.',
+							'Where a receipt or an order prices an item, give that line’s price as printed and how many packages it is for; do not divide it yourself. An item only seen in a photo has no price. Give the shop’s name and the day when a receipt or an order shows them.',
 							...captureRules(ctx.today),
 						]
 				).join('\n'),
 			parse: async (text, input, ctx) => {
 				await kitchen.load()
 				const mode = captureMode(input)
-				const rows = haulRows(parseJson(text), { today: ctx.today, stock: kitchen.data().stock, newId, mode })
+				const parsed = parseJson(text)
+				const rows = haulRows(parsed, { today: ctx.today, stock: kitchen.data().stock, newId, mode })
 				if (!rows.length)
 					return {
 						output: { error: 'No grocery items could be read from the files. Tell the owner; they can try others.' },
@@ -254,7 +276,14 @@ export const kitchenTools: Record<string, ToolHandler> = {
 				const sources = (ctx.files?.blocks ?? []).map(({ id, name, mime }) => ({ id, name, mime }))
 				return {
 					output: { status: 'drafted', rows: rows.length, note: DRAFTED },
-					card: { kind: 'capture', mode, rows, ...(sources.length ? { sources } : {}) },
+					card: {
+						kind: 'capture',
+						mode,
+						rows,
+						...(sources.length ? { sources } : {}),
+						// where and when it was bought, for the prices the rows carry (D-105)
+						...(mode === 'haul' ? haulReceipt(parsed, ctx.today) : {}),
+					},
 				}
 			},
 			maxTokens: 8000,
@@ -265,7 +294,13 @@ export const kitchenTools: Record<string, ToolHandler> = {
 			schema: answer.object({
 				items: answer.list(
 					answer.object({
-						name: answer.text('The thing to buy.'),
+						name: answer.text('The thing to buy, without its maker: "butter".'),
+						brand: answer.text(
+							'The brand to buy, when the stock or the owner’s words name one for it; an empty string otherwise.'
+						),
+						size: answer.text(
+							'The package size to buy, when the stock names one for it: "16 oz"; an empty string otherwise.'
+						),
 						qty: answer.text('How much, with its unit: 2, 500 g, 1 bunch.'),
 						note: answer.text('What it is for, in a few words, when that is not obvious; an empty string otherwise.'),
 					})
@@ -287,9 +322,21 @@ export const kitchenTools: Record<string, ToolHandler> = {
 					.join('\n')
 			},
 			parse: (text) => {
-				const parsed = parseJson<{ items?: { name?: string; qty?: string; note?: string }[] }>(text)
+				const parsed = parseJson<{
+					items?: { name?: string; brand?: string; size?: string; qty?: string; note?: string }[]
+				}>(text)
 				const items = (parsed?.items ?? []).flatMap((item) =>
-					item.name ? [{ name: item.name, qty: item.qty ?? '', note: item.note || undefined }] : []
+					item.name
+						? [
+								{
+									name: item.name,
+									...(item.brand ? { brand: item.brand } : {}),
+									...(item.size ? { size: item.size } : {}),
+									qty: item.qty ?? '',
+									note: item.note || undefined,
+								},
+							]
+						: []
 				)
 				if (!items.length)
 					return { output: { error: 'The list came back empty. Tell the owner it could not be drafted.' } }
@@ -306,6 +353,8 @@ export const kitchenTools: Record<string, ToolHandler> = {
 					return [
 						{
 							name,
+							brand: str(row, 'brand'),
+							size: str(row, 'size'),
 							qty: str(row, 'qty') ?? '1',
 							unit: str(row, 'unit'),
 							location: location(row.location),
@@ -400,7 +449,8 @@ export const kitchenTools: Record<string, ToolHandler> = {
 					day: answer.text('The day to shop, as YYYY-MM-DD; an empty string when nothing needs buying.'),
 					items: answer.list(
 						answer.object({
-							name: answer.text('The thing to buy.'),
+							name: answer.text('The thing to buy, without its maker: "butter".'),
+							brand: answer.text('The brand to buy, when the stock names one for it; an empty string otherwise.'),
 							qty: answer.text('How much, with its unit.'),
 						})
 					),
@@ -427,7 +477,7 @@ export const kitchenTools: Record<string, ToolHandler> = {
 			parse: (text) => {
 				const parsed = parseJson<{
 					days?: { day: string; meals: { name: string; recipeId?: string }[] }[]
-					shopDay?: { day: string; items: { name: string; qty?: string }[] }
+					shopDay?: { day: string; items: { name: string; brand?: string; qty?: string }[] }
 					tasks?: { title: string; due?: string }[]
 				}>(text)
 				// a field with nothing to say arrives as an empty string: it is left off the card
@@ -453,7 +503,13 @@ export const kitchenTools: Record<string, ToolHandler> = {
 							? [{ kind: 'shop-day', title: get(t)('domains.kitchen.plan.shopDay'), day: shop.day }]
 							: [],
 						meals,
-						grocery: shop?.items?.filter((item) => item.name).map((item) => ({ name: item.name, qty: item.qty ?? '' })),
+						grocery: shop?.items
+							?.filter((item) => item.name)
+							.map((item) => ({
+								name: item.name,
+								...(item.brand ? { brand: item.brand } : {}),
+								qty: item.qty ?? '',
+							})),
 					},
 				}
 			},

@@ -16,7 +16,8 @@ describe('a product link', () => {
 	it('reads a size with a decimal and a two-word unit, and a name with none', () => {
 		expect(productLink('https://www.heb.com/product-detail/h-e-b-whole-milk-greek-yogurt-32-oz/1234567')).toMatchObject(
 			{
-				name: 'H-E-B whole milk greek yogurt',
+				name: 'Whole milk greek yogurt',
+				brand: 'H-E-B',
 				size: '32 oz',
 				imageUrl: 'https://images.heb.com/is/image/HEBGrocery/001234567-1?hei=480&fit=constrain&qlt=80',
 			}
@@ -28,6 +29,7 @@ describe('a product link', () => {
 		})
 		const plain = productLink('https://www.heb.com/product-detail/fresh-bananas/320229?utm=x#top')
 		expect(plain).toMatchObject({ name: 'Fresh bananas' })
+		expect(plain).not.toHaveProperty('brand')
 		expect(plain).not.toHaveProperty('size')
 	})
 

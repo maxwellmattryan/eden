@@ -4,11 +4,12 @@
 // one request (`capture-haul`, run without a conversation); the rows come back to be edited; Commit writes the stock.
 // Nothing is stored before Commit: the files wait in memory (`StagedSources`), and closing the sheet lets them go.
 // The same sheet takes stock (D-89): photos of the shelves as they stand, read as what is there now. Either way, an
-// item seen in a photo gets a picture cut from it (D-90), shown on its row and kept with the item.
+// item seen in a photo gets a picture cut from it (D-90), shown on its row and kept with the item. A haul read from
+// a receipt or an order names its store and prices its rows; the store, once the owner has checked it, learns them.
 import { get } from 'svelte/store'
 import { logError } from '@eden/shared/api'
 import { newId, readAttachment, toUri } from '@eden/shared/data'
-import { remerge, type CaptureMode, type HaulRow } from '@eden/shared/domains/kitchen'
+import { remerge, storeNamed, type CaptureMode, type HaulRow } from '@eden/shared/domains/kitchen'
 import { attachmentForm, type DraftCard } from '@eden/shared/gardener'
 import { t } from '@eden/shared/i18n'
 import { threadAttachments } from '$lib/shell/gardener/attachments.svelte'
@@ -28,6 +29,11 @@ export class HaulCapture {
 	/** What is being read: a shop just brought home, or the shelves as they stand. */
 	mode = $state<CaptureMode>('haul')
 	rows = $state<HaulRow[]>([])
+	/** The shop the sources name, as printed; the store of the owner's it was bought at, which learns the prices
+	 * (D-105); and the day on the receipt, as an ISO date. */
+	storeRead = $state<string>()
+	storeId = $state<string>()
+	boughtOn = $state<string>()
 	/** Why the last read did not answer. */
 	failure = $state<ToolFailure | undefined>()
 	/** Who would read the sources and roughly what it would cost; absent until it has been worked out. */
@@ -94,6 +100,7 @@ export class HaulCapture {
 		if (!this.open || this.phase !== 'reading') return
 		if (result.card?.kind === 'capture') {
 			this.rows = result.card.rows as HaulRow[]
+			this.#bought(result.card)
 			this.phase = 'rows'
 			void this.#picture()
 			return
@@ -142,7 +149,7 @@ export class HaulCapture {
 	}
 
 	/**
-	 * Changes a row. A change of what the merge is worked out from (the name, the place, the amount) works it out
+	 * Changes a row. A change of what the merge is worked out from (the name, the brand, the place, the amount) works it out
 	 * again; the merge's own switch is the owner's choice and is kept as given.
 	 */
 	edit(id: string, patch: Partial<Omit<HaulRow, 'merge'>> & { merge?: { on: boolean } }): void {
@@ -155,7 +162,7 @@ export class HaulCapture {
 				delete next.estimated
 			}
 			if (merge && row.merge) return { ...next, merge: { ...row.merge, on: merge.on } }
-			const moved = 'name' in fields || 'location' in fields || 'qty' in fields || 'unit' in fields
+			const moved = 'name' in fields || 'brand' in fields || 'location' in fields || 'qty' in fields || 'unit' in fields
 			return moved ? remerge(next, kitchen.stock) : next
 		})
 	}
@@ -183,7 +190,8 @@ export class HaulCapture {
 				height: source.height,
 			}))
 		const linked = this.staging.sources.flatMap((source) => (source.stored ? [toUri('attachment', source.stored)] : []))
-		const { created, merged, undo } = kitchen.commitHaul(rows, images, linked, this.mode)
+		const from = this.storeId ? { storeId: this.storeId, boughtOn: this.boughtOn } : undefined
+		const { created, merged, undo } = kitchen.commitHaul(rows, images, linked, this.mode, from)
 		if (created + merged > 0) {
 			const key =
 				this.mode === 'stock' ? 'domains.kitchen.capture.toast.taken' : 'domains.kitchen.capture.toast.committed'
@@ -217,6 +225,7 @@ export class HaulCapture {
 			thumbnail: threadAttachments.thumbnail(source.id),
 		}))
 		this.rows = card.rows.map((row) => remerge(row as HaulRow, kitchen.stock))
+		this.#bought(card)
 		this.phase = 'rows'
 		this.open = true
 		void this.#picture()
@@ -229,8 +238,23 @@ export class HaulCapture {
 		this.#reset()
 	}
 
+	/** Takes where and when the haul was bought from what was read: the store of the owner's the name finds, if any. */
+	#bought(card: { store?: string; boughtOn?: string }): void {
+		this.storeRead = card.store
+		this.storeId = card.store ? storeNamed(card.store, kitchen.grocery.stores)?.id : undefined
+		this.boughtOn = card.boughtOn
+	}
+
+	/** The owner's own choice of the store the haul was bought at; none is no store, and no prices are kept. */
+	setStore(id: string | undefined): void {
+		this.storeId = id
+	}
+
 	#reset(): void {
 		this.#previewing += 1
+		this.storeRead = undefined
+		this.storeId = undefined
+		this.boughtOn = undefined
 		this.#settle = undefined
 		this.phase = 'collect'
 		this.mode = 'haul'

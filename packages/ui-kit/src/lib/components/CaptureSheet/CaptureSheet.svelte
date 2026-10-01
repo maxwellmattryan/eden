@@ -22,7 +22,12 @@
 	/** One recognised item. The sheet never changes a row: every edit is a patch handed to `onrowchange`. */
 	export interface CaptureRow {
 		id: string
+		/** The thing itself; who makes it and how much one package is are their own fields. */
 		name: string
+		brand?: string
+		size?: string
+		/** What one of it cost, on a receipt or an order; shown for a haul only. */
+		price?: number
 		qty: string
 		unit?: string
 		location: CaptureLocation
@@ -49,6 +54,19 @@
 		label: string
 	}
 
+	/** A store the haul may have been bought at. */
+	export interface CaptureStore {
+		id: string
+		label: string
+	}
+
+	/** A price as its field shows it, and the field's text as a price: nothing for what is not an amount. */
+	const priceText = (price: number | undefined) => (price === undefined ? '' : String(price))
+	const priceOf = (text: string) => {
+		const amount = Number(text.trim().replace(',', '.'))
+		return text.trim() && Number.isFinite(amount) && amount >= 0 ? amount : undefined
+	}
+
 	/** The four locations, in the order the chips show them. */
 	export const LOCATIONS: readonly CaptureLocation[] = ['fridge', 'freezer', 'pantry', 'counter']
 
@@ -66,9 +84,11 @@
 	// (files, or a list as text), with the provider, the model and the cost named at the foot beside Read. While the
 	// provider reads there is a spinner and Stop; a read that failed says why and offers Retry. Then the rows are
 	// checked: the sources' thumbnails with the provider line beneath, and each row editable inline, the name, the
-	// quantity and unit, the expiry with its estimated badge, the location as a radio group of chips, the category
+	// quantity and unit, the expiry with its estimated badge, beneath them the brand, the package's size and, for a
+	// haul, what one cost, the location as a radio group of chips, the category
 	// behind a chip that opens a menu, a merge switch when a stock item matches, a tip behind an info glyph, and
-	// remove; "Add a row" under the list, the counts and Commit at the foot.
+	// remove; "Add a row" under the list, the counts and Commit at the foot. A haul given `stores` names the store it
+	// was bought at under the provider line, behind a chip that opens a menu, since a price belongs to a store.
 	// The sheet holds no draft of its own: `phase`, `files` and `rows` are the parent's, every edit is a callback, and
 	// nothing is stored until the parent acts on `oncommit`. Discard, Escape and the scrim call `onclose`. On mobile
 	// the sheet is full height and each row takes several lines; `layout` reads the platform once unless it is forced.
@@ -119,6 +139,12 @@
 		error?: string
 		/** The categories a row may be filed under; without any, rows show no category. */
 		categories?: CaptureCategory[]
+		/** The stores a haul may have been bought at; with any, a haul names its store under the provider line. */
+		stores?: CaptureStore[]
+		/** The id of the store the haul was bought at; none while no store is picked. */
+		store?: string
+		/** The store's name as the sources give it, said while no store is picked: one the owner does not keep. */
+		storeHint?: string
 		/** wide puts the thumbnails beside the rows, stacked above them at full height; auto follows data-platform. */
 		layout?: 'auto' | 'wide' | 'stacked'
 		/** The app's own line under the provider line: a link to settings. */
@@ -140,6 +166,8 @@
 		onremoverow?: (id: string) => void
 		/** "Add a row"; the new row's name takes focus once it is in `rows`. */
 		onaddrow?: () => void
+		/** The store picked from the menu; nothing for "No store". */
+		onstorechange?: (id: string | undefined) => void
 		/** Commit. The sheet stays open: the parent closes it once its write is through. */
 		oncommit?: () => void
 		/** The capture is discarded: the Discard button, Escape or the scrim. */
@@ -159,6 +187,9 @@
 		blocked,
 		error,
 		categories,
+		stores,
+		store,
+		storeHint,
 		layout = 'auto',
 		notice,
 		onfiles,
@@ -170,6 +201,7 @@
 		onrowchange,
 		onremoverow,
 		onaddrow,
+		onstorechange,
 		oncommit,
 		onclose,
 		class: className = '',
@@ -200,6 +232,17 @@
 		const current = rows.find((row) => row.id === menuFor)?.category
 		return (categories ?? []).map(({ id, label }) => ({ id, label, checked: id === current }))
 	})
+
+	// The store's menu hangs on its chip under the provider line.
+	let storeOpen = $state(false)
+	let storeAnchor = $state<HTMLElement | null>(null)
+	const bought = $derived(kind === 'haul' && stores?.length ? stores : undefined)
+	const picked = $derived(bought?.find((entry) => entry.id === store))
+	const storeItems = $derived<MenuItem[]>([
+		...(bought ?? []).map(({ id, label }) => ({ id, label, checked: id === store })),
+		{ id: '', label: s.capture.noStore, checked: !picked },
+	])
+	const priced = $derived(rows.some((row) => row.price !== undefined))
 
 	/** A row's name where it is spoken, with a stand-in while it has none. */
 	const named = (row: CaptureRow) => row.name.trim() || s.capture.unnamed
@@ -347,6 +390,26 @@
 						</ul>
 					{/if}
 					<p class="ed-capture-provider">{s.capture.readBy(providerLine)}</p>
+					{#if bought}
+						<div class="ed-capture-store">
+							<Chip
+								label={picked ? s.capture.boughtAt(picked.label) : s.capture.pickStore}
+								tone="outline"
+								icon="chevron-down"
+								aria-haspopup="menu"
+								aria-expanded={storeOpen}
+								onclick={(e) => {
+									storeAnchor = e.currentTarget as HTMLElement
+									storeOpen = !storeOpen
+								}}
+							/>
+							{#if !picked && (storeHint || priced)}
+								<p class="ed-capture-provider">
+									{storeHint ? s.capture.storeRead(storeHint) : s.capture.pricesNeedStore}
+								</p>
+							{/if}
+						</div>
+					{/if}
 				</div>
 				<div class="ed-capture-main">
 					{#if rows.length}
@@ -386,6 +449,36 @@
 											aria-label={s.capture.rowUnit}
 											oninput={(e) => change(row.id, { unit: e.currentTarget.value || undefined })}
 										/>
+									</div>
+									<div class="ed-capture-detail">
+										<div class="ed-capture-brand">
+											<Field
+												value={row.brand ?? ''}
+												placeholder={s.capture.rowBrand}
+												aria-label={s.capture.rowBrand}
+												oninput={(e) => change(row.id, { brand: e.currentTarget.value || undefined })}
+											/>
+										</div>
+										<div class="ed-capture-size">
+											<Field
+												value={row.size ?? ''}
+												placeholder={s.capture.rowSize}
+												aria-label={s.capture.rowSize}
+												oninput={(e) => change(row.id, { size: e.currentTarget.value || undefined })}
+											/>
+										</div>
+										{#if kind === 'haul'}
+											<div class="ed-capture-price">
+												<Field
+													value={priceText(row.price)}
+													mono
+													inputmode="decimal"
+													placeholder={s.capture.rowPrice}
+													aria-label={s.capture.rowPrice}
+													oninput={(e) => change(row.id, { price: priceOf(e.currentTarget.value) })}
+												/>
+											</div>
+										{/if}
 									</div>
 									<div class="ed-capture-expiry">
 										<!-- a date the owner sets is no longer a guess -->
@@ -469,6 +562,14 @@
 				label={s.capture.category}
 				items={menuItems}
 				onselect={pickCategory}
+			/>
+			<Menu
+				bind:open={storeOpen}
+				anchor={storeAnchor}
+				align="start"
+				label={s.capture.store}
+				items={storeItems}
+				onselect={(item) => onstorechange?.(item.id || undefined)}
 			/>
 		{:else if phase === 'collect'}
 			<Dropzone {...rules} ondrop={hand}>
@@ -668,8 +769,17 @@
 		min-width: 0;
 	}
 
+	.ed-capture-store {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: var(--space-1);
+		min-width: 0;
+	}
+
 	/* The list owns the column tracks and each row subgrids into them, so names, quantities, units and dates align
-	   down the list. A row is two lines, the fields over the chips, and a third when it may merge. */
+	   down the list. A row is three lines, the fields, what is known of the product and the chips, and a fourth
+	   when it may merge. */
 	.ed-capture-rows {
 		list-style: none;
 		margin: 0;
@@ -692,6 +802,7 @@
 		grid-template-columns: subgrid;
 		grid-template-areas:
 			'name qty unit expiry actions'
+			'detail detail detail detail detail'
 			'locations locations locations meta meta'
 			'merge merge merge merge merge';
 		align-items: center;
@@ -743,6 +854,24 @@
 	}
 	.ed-capture-expiry {
 		grid-area: expiry;
+		min-width: 0;
+	}
+	/* the brand takes what the size and the price leave */
+	.ed-capture-detail {
+		grid-area: detail;
+		display: flex;
+		gap: var(--space-2);
+		margin-top: var(--space-2);
+		min-width: 0;
+	}
+	.ed-capture-brand {
+		flex: 1;
+		min-width: 0;
+	}
+	.ed-capture-size,
+	.ed-capture-price {
+		flex: none;
+		width: calc(var(--space-8) * 3);
 		min-width: 0;
 	}
 	.ed-capture-actions {
@@ -812,6 +941,7 @@
 		grid-template-areas:
 			'name name name actions'
 			'qty unit expiry expiry'
+			'detail detail detail detail'
 			'locations locations locations locations'
 			'meta meta meta meta'
 			'merge merge merge merge';

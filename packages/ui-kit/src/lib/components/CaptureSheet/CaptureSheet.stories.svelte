@@ -115,6 +115,7 @@
 			onrowchange: fn(),
 			onremoverow: fn(),
 			onaddrow: fn(),
+			onstorechange: fn(),
 			oncommit: fn(),
 			onclose: fn(),
 		},
@@ -135,12 +136,14 @@
 	let phase = $state<CapturePhase>('collect')
 	let files = $state<CaptureFile[]>([])
 	let rows = $state<CaptureRow[]>([])
+	let store = $state<string>()
 	let serial = 0
 
 	function start(args: Args) {
 		phase = args.phase
 		files = args.files
 		rows = args.rows
+		store = args.store
 		open = true
 	}
 	const stage = (file: CaptureFile) => (files = [...files, file])
@@ -158,7 +161,12 @@
 		{phase}
 		{files}
 		{rows}
+		{store}
 		notice={args.blocked ? settings : undefined}
+		onstorechange={(id) => {
+			store = id
+			args.onstorechange?.(id)
+		}}
 		onfiles={(picked) => {
 			for (const file of picked) stage({ key: `new-${++serial}`, name: file.name, detail: formatBytes(file.size) })
 			args.onfiles?.(picked)
@@ -376,6 +384,70 @@
 		await expect(args.oncommit).toHaveBeenCalledTimes(1)
 		await waitFor(() => expect(dialog).not.toBeVisible())
 		await expect(args.onclose).not.toHaveBeenCalled()
+	}}
+/>
+
+<!-- A haul read from a receipt: the store it was bought at under the provider line, behind a chip whose menu
+     changes it, and on each row the brand, the package's size and what one cost. With no store picked the prices
+     have nowhere to be remembered, and the sheet says so -->
+<Story
+	name="Bought at a store"
+	args={{ phase: 'rows', files: [receipt], rows: haul.rows.slice(3, 6), stores: haul.stores, store: haul.store }}
+	{template}
+	play={async ({ canvasElement, args }) => {
+		const { canvas } = await opened(canvasElement, s.title)
+		const chip = canvas.getByRole('button', { name: s.boughtAt('H-E-B') })
+		await expect(chip).toBeVisible()
+		const items = within(canvas.getByRole('list', { name: s.draftRows })).getAllByRole('listitem')
+		const yogurt = within(items[0]!)
+		await expect(yogurt.getByRole('textbox', { name: s.rowBrand })).toHaveValue('Fage')
+		await expect(yogurt.getByRole('textbox', { name: s.rowSize })).toHaveValue('500 g')
+		const price = yogurt.getByRole('textbox', { name: s.rowPrice })
+		await expect(price).toHaveValue('5.49')
+		await fireEvent.input(price, { target: { value: '5,99' } })
+		await expect(args.onrowchange).toHaveBeenLastCalledWith('h-04', { price: 5.99 })
+		// the tofu was on no receipt line: its price is empty, and a brand typed for it is a patch like any other
+		const tofu = within(items[2]!)
+		await expect(tofu.getByRole('textbox', { name: s.rowPrice })).toHaveValue('')
+		await userEvent.type(tofu.getByRole('textbox', { name: s.rowBrand }), 'Hodo')
+		await expect(args.onrowchange).toHaveBeenLastCalledWith('h-06', { brand: 'Hodo' })
+
+		await userEvent.click(chip)
+		await userEvent.click(await canvas.findByRole('menuitem', { name: s.noStore }))
+		await waitFor(() => expect(args.onstorechange).toHaveBeenLastCalledWith(undefined))
+		await expect(canvas.getByRole('button', { name: s.pickStore })).toBeVisible()
+		await expect(canvas.getByText(s.pricesNeedStore)).toBeVisible()
+	}}
+/>
+
+<!-- The receipt names a shop that is not one of the owner's: no store is picked, and the name it read is said -->
+<Story
+	name="Store not known"
+	args={{
+		phase: 'rows',
+		files: [receipt],
+		rows: haul.rows.slice(3, 6),
+		stores: haul.stores,
+		storeHint: 'Costco Wholesale',
+	}}
+	{template}
+	play={async ({ canvasElement }) => {
+		const { canvas } = await opened(canvasElement, s.title)
+		await expect(canvas.getByRole('button', { name: s.pickStore })).toBeVisible()
+		await expect(canvas.getByText(s.storeRead('Costco Wholesale'))).toBeVisible()
+	}}
+/>
+
+<!-- Taking stock shows no prices and no store: the shelves were not bought today -->
+<Story
+	name="Stock has no prices"
+	args={{ kind: 'stock', phase: 'rows', files: [photo], rows: taken, stores: haul.stores }}
+	{template}
+	play={async ({ canvasElement }) => {
+		const { canvas } = await opened(canvasElement, s.stock.title)
+		await expect(canvas.queryByRole('textbox', { name: s.rowPrice })).toBeNull()
+		await expect(canvas.queryByRole('button', { name: s.pickStore })).toBeNull()
+		await expect(canvas.getAllByRole('textbox', { name: s.rowBrand }).length).toBeGreaterThan(0)
 	}}
 />
 

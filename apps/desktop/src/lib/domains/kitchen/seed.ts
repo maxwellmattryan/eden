@@ -27,6 +27,8 @@ export function seedData(): KitchenData {
 		stock: stock.map((item): StockItem => ({
 			id: item.id,
 			name: item.name,
+			brand: item.brand,
+			size: item.size,
 			qty: item.qty,
 			unit: item.unit,
 			location: item.location,
@@ -76,6 +78,9 @@ export function seedData(): KitchenData {
 				id: item.id,
 				listId: item.listId,
 				name: item.name,
+				...(item.brand ? { brand: item.brand } : {}),
+				...(item.size ? { size: item.size } : {}),
+				...(item.price === undefined ? {} : { price: item.price }),
 				qty: item.qty,
 				done: item.done,
 				...origin(item.origin),

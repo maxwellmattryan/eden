@@ -229,7 +229,7 @@
 		// decorative: the row's name is its text
 		await expect(image).toHaveAttribute('alt', '')
 		await expect(tiled!.querySelector('img')).toBeNull()
-		const tile = tiled!.querySelector('.ed-row-tile')!
+		const tile = tiled!.querySelector('.ed-thumb-tile')!
 		await expect(tile.getBoundingClientRect().width).toBe(image!.getBoundingClientRect().width)
 		await expect(tile.getBoundingClientRect().left).toBe(image!.getBoundingClientRect().left)
 	}}

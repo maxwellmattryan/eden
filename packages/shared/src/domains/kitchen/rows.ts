@@ -12,7 +12,7 @@ import {
 	type RecipePayload,
 	type StockPayload,
 } from './types.js'
-import { orderStores } from './filing.js'
+import { boughtMap, orderStores } from './filing.js'
 import { groceryFromLegacy } from './upgrade.js'
 
 export const emptyGrocery = (): Grocery => ({ stores: [], lists: [], items: [] })
@@ -99,7 +99,13 @@ export function kitchenFromRows(rows: {
 			id: row.id,
 		})),
 		grocery: {
-			stores: orderStores(rows.stores.map((row) => ({ ...row.payload, id: row.id }))),
+			// a store from before prices holds bare timestamps: they read as entries with no price (D-105)
+			stores: orderStores(
+				rows.stores.map((row) => {
+					const bought = boughtMap(row.payload.bought)
+					return { ...row.payload, ...(bought ? { bought } : {}), id: row.id }
+				})
+			),
 			lists: rows.lists.map((row) => ({ ...row.payload, id: row.id })),
 			items: rows.items.map((row) => ({ ...row.payload, id: row.id })),
 		},

@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { mergeTarget, normaliseName, singular, stockFor } from './match.js'
+import {
+	mergeTarget,
+	nameCovers,
+	normaliseBrand,
+	normaliseName,
+	sameBrand,
+	sameItem,
+	singular,
+	stockFor,
+} from './match.js'
 import type { StockItem, StockLocation } from './types.js'
 
 let next = 0
@@ -52,6 +61,39 @@ describe("Hearth's name matching", () => {
 		expect(mergeTarget({ name: 'Egg noodles', qty: '1', location: 'fridge' }, stock)).toBeUndefined()
 		expect(mergeTarget({ name: 'Spinach', qty: '1', unit: 'bag', location: 'fridge' }, stock)).toBeUndefined()
 		expect(mergeTarget({ name: 'Spinach', qty: 'some', location: 'fridge' }, stock)).toBeUndefined()
+	})
+
+	it('reads two brands as one when they are written alike, or when one is not said', () => {
+		expect(normaliseBrand('H-E-B')).toBe('heb')
+		expect(sameBrand('Kerrygold', 'kerry gold')).toBe(true)
+		expect(sameBrand('Häagen-Dazs', 'haagen dazs')).toBe(true)
+		expect(sameBrand('Kerrygold', undefined)).toBe(true)
+		expect(sameBrand('Kerrygold', 'Land O Lakes')).toBe(false)
+		expect(sameItem({ name: 'Butter', brand: 'Kerrygold' }, { name: 'butter' })).toBe(true)
+		expect(sameItem({ name: 'Butter', brand: 'Kerrygold' }, { name: 'Butter', brand: 'Plugra' })).toBe(false)
+		expect(sameItem({ name: '' }, { name: '' })).toBe(false)
+	})
+
+	it('merges a row into the item of its brand, before one that names none, and never into another brand', () => {
+		const plain = item('Hot sauce', '1')
+		const cholula = { ...item('Hot sauce', '1'), brand: 'Cholula' }
+		const stock = [plain, cholula]
+		const row = { name: 'hot sauce', qty: '1', location: 'fridge' as const }
+		expect(mergeTarget({ ...row, brand: 'cholula' }, stock)).toBe(cholula)
+		expect(mergeTarget(row, stock)).toBe(plain)
+		expect(mergeTarget({ ...row, brand: 'Valentina' }, stock)).toBe(plain)
+		expect(mergeTarget({ ...row, brand: 'Valentina' }, [cholula])).toBeUndefined()
+		// one that ran out comes back only as its own brand
+		const gone = { ...cholula, qty: '0', location: 'pantry' as const }
+		expect(mergeTarget({ ...row, brand: 'Valentina' }, [gone])).toBeUndefined()
+		expect(mergeTarget(row, [gone])).toBe(gone)
+	})
+
+	it('reads two names as one thing the way an ingredient does', () => {
+		expect(nameCovers('spinach', 'Baby spinach')).toBe(true)
+		expect(nameCovers('Salmon fillets', 'salmon')).toBe(true)
+		expect(nameCovers('rice', 'Rice vinegar')).toBe(false)
+		expect(nameCovers('', 'Rice')).toBe(false)
 	})
 
 	it('finds the stock an ingredient means, the soonest to expire first', () => {

@@ -28,6 +28,8 @@ export type StockCategory = (typeof CATEGORIES)[number]
 export const ITEM_PHOTO = 'item-photo'
 /** The registry id of the Attachment kind a recipe's picture is kept as (D-93). */
 export const RECIPE_PHOTO = 'recipe-photo'
+/** The registry id of the Attachment kind a store's picture is kept as (D-103). */
+export const STORE_PHOTO = 'store-photo'
 
 /** What a capture reads: a shop just brought home, or the shelves as they stand (D-89). */
 export type CaptureMode = 'haul' | 'stock'
@@ -35,7 +37,12 @@ export const CAPTURE_MODES: readonly CaptureMode[] = ['haul', 'stock']
 
 export interface StockItem {
 	id: string
+	/** The thing itself, "butter": what it is matched by. Who makes it is `brand` (D-104). */
 	name: string
+	/** Who makes it, when that matters: "Kerrygold". */
+	brand?: string
+	/** How much one package is: "16 oz", "12 ct". */
+	size?: string
 	qty: string
 	unit?: string
 	location: StockLocation
@@ -95,13 +102,26 @@ export type GroceryOrigin = 'manual' | 'recipe' | 'low-stock' | 'ran-out'
 export const STORE_SELLS = ['grocery', 'home-goods'] as const
 export type StoreSells = (typeof STORE_SELLS)[number]
 
+/** What a store remembers of one thing (D-97, D-105): when it was last bought or listed there, and what was last paid. */
+export interface Bought {
+	/** When it was last bought here, or put on this store's list, as an ISO timestamp. */
+	at: string
+	/** What one package last cost here, in the one currency. */
+	price?: number
+	/** The package and the brand that price was for. */
+	size?: string
+	brand?: string
+	/** When the price was learned, where that is before `at`: a listing moves `at` on and leaves the price. */
+	pricedAt?: string
+}
+
 /** A store Hearth shops at (D-96). Each has a list of its own. */
 export interface GroceryStore {
 	id: string
 	name: string
 	sells: StoreSells[]
-	/** What was last bought here and when: a normalised name to an ISO timestamp. It is what files a new item. */
-	bought?: Record<string, string>
+	/** What was last bought here, by normalised name: when, which files a new item (D-97), and what was paid (D-105). */
+	bought?: Record<string, Bought>
 	/** Where the store sits among the stores, lowest first (D-101); one without sorts last, as it was made. */
 	position?: number
 	/** When its list was last completed, as an ISO timestamp: the last trip. */
@@ -110,6 +130,8 @@ export interface GroceryStore {
 	note?: string
 	/** Where the store is, until it links a `venue` Place (D-101). */
 	place?: StorePlace
+	/** The store's picture (D-103): the id of a `store-photo` Attachment, whose row holds the small image shown. */
+	photo?: string
 }
 
 /**
@@ -134,6 +156,11 @@ export interface GroceryList {
 export interface GroceryItem {
 	id: string
 	name: string
+	/** The brand to buy, and the package's size, as a stock item holds them (D-104). */
+	brand?: string
+	size?: string
+	/** What one is expected to cost, as the owner typed it (D-105); its store learns it when the list is completed. */
+	price?: number
 	qty: string
 	listId: string
 	origin: GroceryOrigin
@@ -181,7 +208,8 @@ export type RecipePayload = Omit<Recipe, 'id' | 'ingredients' | 'steps'> & {
 	ingredients?: Ingredient[]
 	steps?: string[]
 }
-export type GroceryStorePayload = Omit<GroceryStore, 'id'>
+/** A store written before it remembered prices holds a bare timestamp for each name; `boughtOf` reads either. */
+export type GroceryStorePayload = Omit<GroceryStore, 'id' | 'bought'> & { bought?: Record<string, Bought | string> }
 export type GroceryListPayload = Omit<GroceryList, 'id'>
 /** A grocery item names the list it is on. */
 export type GroceryItemPayload = Omit<GroceryItem, 'id'>

@@ -78,7 +78,7 @@ describe('the grocery rows from before a list per store', () => {
 		upgrade()
 
 		const stores = read().stores.map((row) => ({ ...row.payload, id: row.id }))
-		expect(stores[0]!.bought).toEqual({ lime: NOW })
+		expect(stores[0]!.bought).toEqual({ lime: { at: NOW } })
 		expect(storeFor('paper towel', stores)?.name).toBe('Costco')
 	})
 
@@ -110,7 +110,7 @@ describe('the grocery rows from before a list per store', () => {
 
 		const { stores, lists, items } = read()
 		expect(stores.map((store) => store.payload.name)).toEqual(['Target'])
-		expect(stores[0]!.payload.bought).toEqual({ soap: NOW })
+		expect(stores[0]!.payload.bought).toEqual({ soap: { at: NOW } })
 		expect(lists.find((row) => row.id === old)?.payload).toEqual({ shopDay: '2026-10-03T10:00:00' })
 		expect(items.find((row) => row.id === tape)?.payload.listId).toBe(old)
 		const target = lists.find((row) => row.payload.storeId === stores[0]!.id)!
@@ -146,7 +146,8 @@ describe('the grocery rows from before a list per store', () => {
 		const { stores, lists, items } = read()
 		expect(stores).toHaveLength(1)
 		// What the store already remembered stands; what the lists held is added.
-		expect(stores[0]!.payload.bought).toEqual({ lime: '2026-09-01T10:00:00.000Z', egg: NOW })
+		// a memory from before prices is left as it was written, and reads as an entry all the same
+		expect(stores[0]!.payload.bought).toEqual({ lime: '2026-09-01T10:00:00.000Z', egg: { at: NOW } })
 		expect(lists.map((row) => row.id)).toEqual([first])
 		expect(lists[0]!.payload).toEqual({ storeId: known.id })
 		expect(items.find((row) => row.id === eggs)?.payload.listId).toBe(first)

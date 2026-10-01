@@ -69,6 +69,7 @@ export { tooltip } from './components/Tooltip/tooltip.js'
 
 // Files
 export { default as Dropzone } from './components/Dropzone/Dropzone.svelte'
+export { default as DropTarget } from './components/DropTarget/DropTarget.svelte'
 export {
 	checkFiles,
 	formatBytes,
@@ -111,6 +112,7 @@ export { default as Thread } from './components/GardenerMessage/Thread.svelte'
 export { default as Greeting } from './components/Greeting/Greeting.svelte'
 export { default as Markdown } from './components/Markdown/Markdown.svelte'
 export { default as Spinner } from './components/Spinner/Spinner.svelte'
+export { default as Thumbnail } from './components/Thumbnail/Thumbnail.svelte'
 export { default as Sprouting } from './components/Sprouting/Sprouting.svelte'
 export { default as CanSee } from './components/CanSee/CanSee.svelte'
 export type { CanSeeItem } from './components/CanSee/CanSee.svelte'
@@ -144,6 +146,7 @@ export { default as CaptureSheet } from './components/CaptureSheet/CaptureSheet.
 export {
 	LOCATIONS,
 	type CaptureCategory,
+	type CaptureStore,
 	type CaptureKind,
 	type CaptureFile,
 	type CaptureLocation,

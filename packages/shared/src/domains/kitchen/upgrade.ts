@@ -6,6 +6,7 @@ import { toUri, type BatchOp, type Entity } from '../../data/index.js'
 import { normaliseName } from './match.js'
 import {
 	KITCHEN,
+	type Bought,
 	type GroceryOrigin,
 	type Grocery,
 	type GroceryStorePayload,
@@ -55,7 +56,7 @@ export function groceryUpgrade(
 		if (!isOld(list.payload) && !listOf.has(list.payload.storeId ?? '')) listOf.set(list.payload.storeId ?? '', list.id)
 	}
 	const madeStores = new Map<string, GroceryStorePayload>()
-	const bought = new Map<string, Record<string, string>>()
+	const bought = new Map<string, Record<string, Bought>>()
 	const ops: BatchOp[] = []
 	const later: BatchOp[] = []
 
@@ -96,7 +97,7 @@ export function groceryUpgrade(
 			const listId = storeId ? listFor(storeId) : listOf.get('')!
 			if (storeId) {
 				const key = normaliseName(rest.name)
-				if (key) bought.set(storeId, { ...bought.get(storeId), [key]: now })
+				if (key) bought.set(storeId, { ...bought.get(storeId), [key]: { at: now } })
 			}
 			if ('store' in item.payload || listId !== rest.listId) {
 				later.push({ op: 'updateEntity', id: item.id, payload: { ...rest, listId } satisfies GroceryItemPayload })

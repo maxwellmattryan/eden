@@ -1,32 +1,42 @@
 <script lang="ts">
 	// Hearth's Grocery view (Domains/Hearth/Grocery): one list per store (D-96), all on the page at once: the store's
-	// name in the display face, its shop day when it has one (D-98), the count of what is checked, Complete, Edit store and
+	// name in the display face, its shop day when it has one (D-98), about what it costs (D-105), Complete, Edit store and
 	// Add as quiet icon buttons, and its rows. What no store has yet sits under "Miscellaneous". Every row leads with
 	// its checkbox and carries an origin badge (manual, recipe, low stock, ran out); a checked row is struck through
 	// and stays until its list is completed. It is a checklist: a click on a row or on its checkbox checks it off
-	// (D-94), and Edit and Move to are in the row's menu. At the side, in view while the lists scroll (D-101): Buy it
+	// (D-94), and Edit and Move to are in the row's menu. A row can also be dragged onto another store's list, which is
+	// the same move (D-106); Miscellaneous shows for the length of a drag even when it holds nothing.
+	// At the side, in view while the lists scroll (D-101): Buy it
 	// again (D-92), what ran out, each one a click from a list; and beneath it the stores in the owner's order, each
 	// row saying what is left to buy and its shop day or its last trip. A click on a store goes to its list; its menu
 	// edits, moves and deletes it. Nothing is typed on the page: an item's form and a store's open in a sheet over it
 	// (D-95), the same one to add as to edit, and the header's Add menu opens either through `addItem` and `addStore`
-	// (D-102). An item added with no store picked is filed where it was last bought (D-97).
+	// (D-102). An item added with no store picked is filed where it was last bought (D-97). A store has a picture
+	// (D-103), beside its name and in its row: its website's icon, fetched when the website is saved, or one the
+	// owner chose in its form, or the store glyph on a tile.
 	import {
 		Button,
 		Chip,
+		DropTarget,
 		EmptyState,
 		Field,
+		FileButton,
 		IconButton,
 		List,
 		Sheet,
+		Thumbnail,
+		toast,
 		type ListRowData,
 		type MenuItem,
 	} from '@eden/ui-kit'
 	import { openExternal } from '@eden/shared/api'
-	import { STORE_SELLS, shopDayMorning } from '@eden/shared/domains/kitchen'
+	import { STORE_SELLS, listEstimate, shopDayMorning } from '@eden/shared/domains/kitchen'
+	import { formatUsd } from '@eden/shared/gardener'
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { undoToast } from '$lib/shell/undo'
 	import { daysFromToday, daysSince, formatEventTime, todayIso } from '@eden/shared/dates'
+	import { PICTURE_ACCEPT, fitPicture, storeLogo } from '../staging.svelte'
 	import { categoryGlyph } from '../words'
 	import {
 		kitchen,
@@ -72,13 +82,37 @@
 	const toRow = (item: GroceryItem, store: GroceryStore | undefined): ListRowData => ({
 		id: item.id,
 		primary: item.name,
-		chips: item.qty ? [{ label: item.qty, mono: true }] : [],
+		secondary: item.brand,
+		chips: [
+			...(item.qty ? [{ label: item.qty, mono: true }] : []),
+			...(item.size ? [{ id: 'size', label: item.size, mono: true }] : []),
+			// a price the owner typed on the line; what the store remembers shows only in the list's sum (D-105)
+			...(item.price === undefined
+				? []
+				: [
+						{
+							id: 'price',
+							label: $t('domains.kitchen.grocery.priced', { values: { price: formatUsd(item.price) } }),
+							mono: true,
+						},
+					]),
+		],
 		badges: [{ kind: 'origin' as const, label: originLabel(item) }],
 		done: item.done,
 		checkable: true,
 		actions: actionsFor(item, store),
 	})
 	const total = $derived(kitchen.grocery.items.length)
+
+	/** The group the lists' rows are dragged in, from one store's list to another's (D-106). */
+	const DRAG_GROUP = 'grocery-item'
+	let dragging = $state(false)
+	/** The lists on the page; while a row is held, Miscellaneous is among them even when empty, to be dropped on. */
+	const blocks = $derived.by((): GroceryBlock[] => {
+		const all = kitchen.blocks
+		if (!dragging || all.some((block) => !block.store)) return all
+		return [...all, { items: [], checked: 0, left: 0 }]
+	})
 
 	/** The toast of an item that landed on a list: it names the store, or says only that it was added. */
 	function landed(name: string, store: GroceryStore | undefined, undo: Undo) {
@@ -121,6 +155,8 @@
 	const toAgainRow = (item: StockItem): ListRowData => ({
 		id: item.id,
 		primary: item.name,
+		secondary: item.brand,
+		chips: item.size ? [{ label: item.size, mono: true }] : [],
 		thumbnail: kitchen.photoOf(item),
 		icon: categoryGlyph(item.category),
 		tile: true,
@@ -138,7 +174,13 @@
 		const stocked = kitchen.stockById(id)
 		if (!stocked) return
 		const target = storeId === undefined ? undefined : storeId || null
-		const { store, undo } = kitchen.addToGrocery(stocked.name, '', 'ran-out', undefined, target)
+		// the brand and the size to buy again go with the name (D-104)
+		const row = {
+			name: stocked.name,
+			...(stocked.brand ? { brand: stocked.brand } : {}),
+			...(stocked.size ? { size: stocked.size } : {}),
+		}
+		const { store, undo } = kitchen.addToGrocery(row, 'ran-out', target)
 		landed(stocked.name, store, undo)
 	}
 	function onagain(menuItem: MenuItem, row: ListRowData) {
@@ -151,41 +193,66 @@
 
 	// An item's form, in its sheet (D-95), to add with or to edit; saved as one change. `store` is the store's id,
 	// '' for the unfiled list; none, while adding, is no store picked: the item goes where it was last bought (D-97).
-	type ItemForm = { name: string; qty: string; store: string | undefined; note: string }
+	type ItemForm = {
+		name: string
+		brand: string
+		size: string
+		price: string
+		qty: string
+		store: string | undefined
+		note: string
+	}
+	const BLANK: ItemForm = { name: '', brand: '', size: '', price: '', qty: '', store: undefined, note: '' }
+	/** The price as typed, as an amount; nothing for what is not one. */
+	const priceOf = (text: string) => {
+		const amount = Number(text.trim().replace(',', '.'))
+		return text.trim() && Number.isFinite(amount) && amount >= 0 ? amount : undefined
+	}
+	/** The form's fields as an item holds them: trimmed, and an empty one cleared. */
+	const fields = () => ({
+		name: form.name.trim(),
+		brand: form.brand.trim() || undefined,
+		size: form.size.trim() || undefined,
+		price: priceOf(form.price),
+		qty: form.qty.trim(),
+		note: form.note.trim() || undefined,
+	})
 	let itemOpen = $state(false)
 	let editing = $state<string>()
-	let form = $state<ItemForm>({ name: '', qty: '', store: undefined, note: '' })
+	let form = $state<ItemForm>({ ...BLANK })
 	const edited = $derived(kitchen.grocery.items.find((item) => item.id === editing))
 	/**
 	 * Opens the item's form blank: the header's Add item and the empty state's action with no store picked, a
 	 * list's own Add with its store picked ('' for the unfiled list).
 	 */
 	export function addItem(store?: string) {
-		form = { name: '', qty: '', store, note: '' }
+		form = { ...BLANK, store }
 		editing = undefined
 		itemOpen = true
 	}
 	function create() {
 		const target = form.store === undefined ? undefined : form.store || null
-		const note = form.note.trim() || undefined
-		const { item, store, undo } = kitchen.addToGrocery(form.name.trim(), form.qty.trim(), 'manual', note, target)
+		const { item, store, undo } = kitchen.addToGrocery(fields(), 'manual', target)
 		landed(item.name, store, undo)
 		itemOpen = false
 	}
 	function edit(id: string) {
 		const item = kitchen.grocery.items.find((entry) => entry.id === id)
 		if (!item) return
-		form = { name: item.name, qty: item.qty, store: kitchen.storeOf(item)?.id ?? '', note: item.note ?? '' }
+		form = {
+			name: item.name,
+			brand: item.brand ?? '',
+			size: item.size ?? '',
+			price: item.price === undefined ? '' : String(item.price),
+			qty: item.qty,
+			store: kitchen.storeOf(item)?.id ?? '',
+			note: item.note ?? '',
+		}
 		editing = id
 		itemOpen = true
 	}
 	function save(item: GroceryItem) {
-		const { undo } = kitchen.updateGrocery(item.id, {
-			name: form.name.trim(),
-			qty: form.qty.trim(),
-			note: form.note.trim() || undefined,
-			storeId: form.store || null,
-		})
+		const { undo } = kitchen.updateGrocery(item.id, { ...fields(), storeId: form.store || null })
 		undoToast($t('domains.kitchen.grocery.toast.edited', { values: { name: form.name.trim() || item.name } }), undo)
 		itemOpen = false
 	}
@@ -203,6 +270,9 @@
 				id: store.id,
 				primary: store.name,
 				hint: store.note,
+				thumbnail: kitchen.storePhotoOf(store),
+				icon: 'store' as const,
+				tile: true,
 				chips: shopDay
 					? [{ label: formatEventTime(shopDay, format), icon: 'calendar' as const }]
 					: store.shoppedAt
@@ -294,6 +364,52 @@
 		note: place.note.trim(),
 		shopDay: place.date ? `${place.date}T${place.time || '10:00'}:00` : undefined,
 	})
+	/**
+	 * A store's picture from its website (D-103), fetched once the website is saved and set when it arrives, unless
+	 * the store has gone, has a picture by then or has another website. The undo it answers takes the picture back,
+	 * or stops one still on its way.
+	 */
+	function fetchLogo(id: string, url: string): Undo {
+		let stopped = false
+		let unpicture: Undo | undefined
+		void storeLogo(url).then((image) => {
+			const store = kitchen.storeById(id)
+			if (stopped || !image || !store || store.photo || store.place?.url !== url) return
+			unpicture = kitchen.setStorePhoto(id, image).undo
+		})
+		return () => {
+			stopped = true
+			unpicture?.()
+		}
+	}
+	// A store's own picture, in its form: one the owner picks, fitted whole, the website's fetched again, or none.
+	// Each is its own write with its own undo (D-95).
+	async function choosePicture(store: GroceryStore, files: File[]) {
+		const image = files[0] ? await fitPicture(files[0]) : undefined
+		if (!image) {
+			toast({ message: $t('domains.kitchen.grocery.toast.pictureFailed') })
+			return
+		}
+		const { undo } = kitchen.setStorePhoto(store.id, image)
+		undoToast($t('domains.kitchen.grocery.toast.pictureSet', { values: { store: store.name } }), undo)
+	}
+	let fetching = $state(false)
+	async function fetchPicture(store: GroceryStore) {
+		if (fetching || !place.url.trim()) return
+		fetching = true
+		const image = await storeLogo(place.url)
+		fetching = false
+		if (!image) {
+			toast({ message: $t('domains.kitchen.grocery.toast.pictureNotFound') })
+			return
+		}
+		const { undo } = kitchen.setStorePhoto(store.id, image)
+		undoToast($t('domains.kitchen.grocery.toast.pictureSet', { values: { store: store.name } }), undo)
+	}
+	function removePicture(store: GroceryStore) {
+		const { undo } = kitchen.setStorePhoto(store.id, undefined)
+		undoToast($t('domains.kitchen.grocery.toast.pictureRemoved', { values: { store: store.name } }), undo)
+	}
 	/** Add in the store's form: the store with all its form held, and its shop day, as one undo. */
 	function createStore() {
 		const { sells, where, note, shopDay } = placeFields()
@@ -305,6 +421,7 @@
 		}
 		const undos = [undo]
 		if (shopDay) undos.push(kitchen.setShopDay(store.id, shopDay))
+		if (where.url) undos.push(fetchLogo(store.id, where.url))
 		undoToast($t('domains.kitchen.grocery.toast.storeAdded', { values: { store: store.name } }), () =>
 			undos.reverse().forEach((entry) => entry())
 		)
@@ -342,6 +459,8 @@
 		if (!same) undos.push(kitchen.updateStore(store.id, { name, sells, note, place: where }).undo)
 		const moved = shopDay !== shopDayOf(store.id)
 		if (moved) undos.push(kitchen.setShopDay(store.id, shopDay))
+		// a website that is new to a store with no picture brings its icon (D-103)
+		if (where.url && where.url !== (store.place?.url ?? '') && !store.photo) undos.push(fetchLogo(store.id, where.url))
 		storeOpen = false
 		if (!undos.length) return
 		// a morning already past has no reminder to promise
@@ -362,82 +481,93 @@
 				action={{ label: $t('domains.kitchen.grocery.empty.action'), icon: 'plus', onclick: () => addItem() }}
 			/>
 		{/if}
-		{#each kitchen.blocks as block (block.store?.id ?? '')}
+		{#each blocks as block (block.store?.id ?? '')}
 			{@const key = block.store?.id ?? 'any'}
 			{@const name = nameOf(block.store)}
-			<section
-				class="store"
-				aria-labelledby="{uid}-{key}"
-				onfocusin={() => (at = block.store?.id)}
-				onfocusout={() => (at = undefined)}
-			>
-				<header class="store-head">
-					<h2 class="store-title" id="{uid}-{key}" tabindex="-1">{name}</h2>
-					{#if block.store && block.list?.shopDay}
-						<Chip
-							label={formatEventTime(block.list.shopDay, format)}
-							icon="calendar"
-							tone="outline"
-							onclick={() => editStore(block.store!.id)}
-						/>
-					{/if}
-					<span class="store-tools">
-						{#if block.items.length}
-							<span class="store-count">
-								{$t('domains.kitchen.grocery.checked', {
-									values: { checked: block.checked, total: block.items.length },
-								})}
-							</span>
-						{/if}
-						<IconButton
-							icon="check-check"
-							size="xs"
-							label={$t('domains.kitchen.grocery.complete', { values: { store: name } })}
-							tooltip={$t('domains.kitchen.grocery.completeHint')}
-							disabled={block.checked === 0}
-							onclick={() => complete(block)}
-						/>
+			<DropTarget accepts={[DRAG_GROUP]} ondrop={(ids) => ids.forEach((id) => move(id, block.store?.id ?? ''))}>
+				<section
+					class="store"
+					aria-labelledby="{uid}-{key}"
+					onfocusin={() => (at = block.store?.id)}
+					onfocusout={() => (at = undefined)}
+				>
+					<header class="store-head">
 						{#if block.store}
-							<IconButton
-								icon="pencil"
-								size="xs"
-								label={$t('domains.kitchen.grocery.editStore', { values: { store: name } })}
-								tooltip={$t('domains.kitchen.grocery.editStoreHint')}
+							<Thumbnail size="md" src={kitchen.storePhotoOf(block.store)} icon="store" />
+						{/if}
+						<h2 class="store-title" id="{uid}-{key}" tabindex="-1">{name}</h2>
+						{#if block.store && block.list?.shopDay}
+							<Chip
+								label={formatEventTime(block.list.shopDay, format)}
+								icon="calendar"
+								tone="outline"
 								onclick={() => editStore(block.store!.id)}
 							/>
 						{/if}
-						<IconButton
-							icon="plus"
-							size="xs"
-							label={$t('domains.kitchen.grocery.addTo', { values: { store: name } })}
-							tooltip={$t('domains.kitchen.grocery.addItem')}
-							onclick={() => addItem(block.store?.id ?? '')}
+						<span class="store-tools">
+							{#if block.items.length}
+								{@const estimate = listEstimate(block.items, kitchen.grocery.stores, block.store?.id)}
+								{#if estimate.priced}
+									<span class="store-count">
+										{$t(
+											estimate.unpriced ? 'domains.kitchen.grocery.estimateSome' : 'domains.kitchen.grocery.estimate',
+											{ values: { total: formatUsd(estimate.total), count: estimate.unpriced } }
+										)}
+									</span>
+								{/if}
+							{/if}
+							<IconButton
+								icon="check-check"
+								size="xs"
+								label={$t('domains.kitchen.grocery.complete', { values: { store: name } })}
+								tooltip={$t('domains.kitchen.grocery.completeHint')}
+								disabled={block.checked === 0}
+								onclick={() => complete(block)}
+							/>
+							{#if block.store}
+								<IconButton
+									icon="pencil"
+									size="xs"
+									label={$t('domains.kitchen.grocery.editStore', { values: { store: name } })}
+									tooltip={$t('domains.kitchen.grocery.editStoreHint')}
+									onclick={() => editStore(block.store!.id)}
+								/>
+							{/if}
+							<IconButton
+								icon="plus"
+								size="xs"
+								label={$t('domains.kitchen.grocery.addTo', { values: { store: name } })}
+								tooltip={$t('domains.kitchen.grocery.addItem')}
+								onclick={() => addItem(block.store?.id ?? '')}
+							/>
+						</span>
+					</header>
+					{#if block.items.length && block.checked === block.items.length}
+						<p class="voice">{$t('domains.kitchen.grocery.allChecked')}</p>
+					{/if}
+					{#if block.items.length}
+						<List
+							rows={block.items.map((item) => toRow(item, block.store))}
+							onpick={(row) => toggle(row.id)}
+							oncheck={(row) => toggle(row.id)}
+							{onaction}
+							dragGroup={DRAG_GROUP}
+							ondragstate={(on) => (dragging = on)}
 						/>
-					</span>
-				</header>
-				{#if block.items.length && block.checked === block.items.length}
-					<p class="voice">{$t('domains.kitchen.grocery.allChecked')}</p>
-				{/if}
-				{#if block.items.length}
-					<List
-						rows={block.items.map((item) => toRow(item, block.store))}
-						onpick={(row) => toggle(row.id)}
-						oncheck={(row) => toggle(row.id)}
-						{onaction}
-					/>
-				{:else if total > 0}
-					<EmptyState
-						inline
-						title={$t('domains.kitchen.grocery.emptyList.title')}
-						text={$t('domains.kitchen.grocery.emptyList.text')}
-						action={{
-							label: $t('domains.kitchen.grocery.addItem'),
-							icon: 'plus',
-							onclick: () => addItem(block.store?.id ?? ''),
-						}}
-					/>
-				{/if}
-			</section>
+					{:else if total > 0}
+						<EmptyState
+							inline
+							title={$t('domains.kitchen.grocery.emptyList.title')}
+							text={$t('domains.kitchen.grocery.emptyList.text')}
+							action={{
+								label: $t('domains.kitchen.grocery.addItem'),
+								icon: 'plus',
+								onclick: () => addItem(block.store?.id ?? ''),
+							}}
+						/>
+					{/if}
+				</section>
+			</DropTarget>
 		{/each}
 	</div>
 
@@ -486,7 +616,19 @@
 			}}
 		>
 			<Field label={$t('domains.kitchen.grocery.pane.name')} bind:value={form.name} />
-			<Field label={$t('domains.kitchen.grocery.pane.quantity')} bind:value={form.qty} mono />
+			<div class="pair">
+				<Field label={$t('domains.kitchen.grocery.pane.brand')} bind:value={form.brand} />
+				<Field
+					label={$t('domains.kitchen.grocery.pane.size')}
+					placeholder={$t('domains.kitchen.grocery.pane.sizeHint')}
+					bind:value={form.size}
+				/>
+			</div>
+			<div class="pair">
+				<Field label={$t('domains.kitchen.grocery.pane.quantity')} bind:value={form.qty} mono />
+				<Field label={$t('domains.kitchen.grocery.pane.price')} bind:value={form.price} mono inputmode="decimal" />
+			</div>
+			<p class="help">{$t('domains.kitchen.grocery.pane.priceHelp')}</p>
 			<div class="group" role="group" aria-labelledby="{uid}-where">
 				<span class="group-label" id="{uid}-where">{$t('domains.kitchen.grocery.pane.store')}</span>
 				<div class="chips">
@@ -534,6 +676,39 @@
 				else createStore()
 			}}
 		>
+			{#if shown}
+				<div class="picture-row">
+					<Thumbnail size="md" src={kitchen.storePhotoOf(shown)} icon="store" />
+					<FileButton
+						label={$t('domains.kitchen.grocery.pane.choosePicture')}
+						icon="image-plus"
+						accept={PICTURE_ACCEPT}
+						multiple={false}
+						tooltip
+						onfiles={(files) => void choosePicture(shown, files)}
+					/>
+					{#if place.url.trim()}
+						<IconButton
+							icon="refresh-cw"
+							size="sm"
+							label={$t('domains.kitchen.grocery.pane.fetchPicture')}
+							tooltip
+							disabled={fetching}
+							onclick={() => void fetchPicture(shown)}
+						/>
+					{/if}
+					{#if shown.photo}
+						<IconButton
+							icon="trash"
+							size="sm"
+							label={$t('domains.kitchen.grocery.pane.removePicture')}
+							danger
+							tooltip
+							onclick={() => removePicture(shown)}
+						/>
+					{/if}
+				</div>
+			{/if}
 			<Field label={$t('domains.kitchen.grocery.pane.name')} bind:value={place.name} />
 			<div class="group" role="group" aria-labelledby="{uid}-sells">
 				<span class="group-label" id="{uid}-sells">{$t('domains.kitchen.grocery.pane.sells')}</span>
@@ -626,7 +801,7 @@
 		gap: var(--space-4);
 		min-width: 0;
 	}
-	/* One list per store: its name, its shop day when it has one, the count of what is checked and its two actions */
+	/* One list per store: its name, its shop day when it has one, about what it costs and its actions */
 	.store {
 		scroll-margin-top: var(--space-4);
 		display: flex;
@@ -637,6 +812,12 @@
 		display: flex;
 		align-items: center;
 		flex-wrap: wrap;
+		gap: var(--space-2);
+	}
+	/* the store's picture with the buttons that change it */
+	.picture-row {
+		display: flex;
+		align-items: center;
 		gap: var(--space-2);
 	}
 	/* A store's name, and Miscellaneous, in the display face */
@@ -657,7 +838,9 @@
 	.store-tools {
 		padding-right: calc(1px + var(--space-2) + var(--space-1));
 	}
+	/* About what the list costs (D-105), kept whole */
 	.store-count {
+		white-space: nowrap;
 		font: var(--ed-t-data-sm);
 		letter-spacing: var(--ed-t-data-sm-tracking);
 		font-variant-numeric: tabular-nums;

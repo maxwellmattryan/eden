@@ -52,6 +52,15 @@ describe('what ran out in Hearth', () => {
 		expect(buyAgain(stock, [{ name: 'eggs' }]).map((entry) => entry.name)).toEqual(['Whole Milk'])
 	})
 
+	it('still offers one brand when another of the same name is on the list', () => {
+		const stock = [out('Butter', 1, { brand: 'Kerrygold' }), out('Eggs', 2)]
+		expect(buyAgain(stock, [{ name: 'butter', brand: 'Plugra' }]).map((entry) => entry.name)).toEqual([
+			'Butter',
+			'Eggs',
+		])
+		expect(buyAgain(stock, [{ name: 'butter' }]).map((entry) => entry.name)).toEqual(['Eggs'])
+	})
+
 	it('lets go of what nobody bought again', () => {
 		const stock = [out('Saffron', 91), out('Milk', 89), item('Eggs'), item('Old', { qty: '0' })]
 		expect(lapsed(stock, NOW).map((entry) => entry.name)).toEqual(['Saffron'])

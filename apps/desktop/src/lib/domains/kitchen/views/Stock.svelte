@@ -90,14 +90,23 @@
 			: [{ id: 'ranOut', label: $t('domains.kitchen.stock.actions.ranOut'), icon: 'circle-dashed' as const }]),
 		{ id: 'delete', label: $t('domains.kitchen.stock.actions.delete'), icon: 'trash', destructive: true },
 	]
+	/** The package's size beside what is held, apart from it by its id: "2" of "16 oz". */
+	const sizeChip = (item: StockItem) => (item.size ? [{ id: 'size', label: item.size, mono: true }] : [])
+	/** What a grocery line takes of a stock item: its name, and the brand and the size to buy again (D-104). */
+	const groceryRow = (item: StockItem) => ({
+		name: item.name,
+		...(item.brand ? { brand: item.brand } : {}),
+		...(item.size ? { size: item.size } : {}),
+	})
 	const toRow = (item: StockItem): ListRowData => ({
 		id: item.id,
 		primary: item.name,
+		secondary: item.brand,
 		thumbnail: kitchen.photoOf(item),
 		icon: categoryGlyph(item.category),
 		tile: true,
 		hint: item.tip,
-		chips: [{ label: quantity(item), mono: true }],
+		chips: [{ label: quantity(item), mono: true }, ...sizeChip(item)],
 		badges: [
 			...(kitchen.low(item) ? [{ kind: 'warning' as const, label: $t('domains.kitchen.stock.badge.lowStock') }] : []),
 			...(item.estimated ? [{ kind: 'estimated' as const }] : []),
@@ -111,11 +120,12 @@
 	const toOutRow = (item: StockItem): ListRowData => ({
 		id: item.id,
 		primary: item.name,
+		secondary: item.brand,
 		thumbnail: kitchen.photoOf(item),
 		icon: categoryGlyph(item.category),
 		tile: true,
 		hint: item.tip,
-		chips: [{ label: locationLabel(item.location) }],
+		chips: [{ label: locationLabel(item.location) }, ...sizeChip(item)],
 		meta: item.outAt ? formatDay(item.outAt.slice(0, 10)) : undefined,
 		actions: actionsFor(item),
 	})
@@ -160,8 +170,7 @@
 
 	function addToGrocery(item: StockItem) {
 		return kitchen.addToGrocery(
-			item.name,
-			'',
+			groceryRow(item),
 			kitchen.out(item) ? 'ran-out' : kitchen.low(item) ? 'low-stock' : 'manual'
 		)
 	}
@@ -189,12 +198,12 @@
 	function onaction(menuItem: MenuItem, row: ListRowData) {
 		act(menuItem.id ?? '', row.id)
 	}
-	/** The chips the quick-add line shows: a product link reads as its name, its size and its store; any other line as typed. */
+	/** The chips the quick-add line shows: a product link reads as its brand and name, its size and its store; any other line as typed. */
 	const parseLine = (text: string): ParsedChip[] => {
 		const product = productLink(text)
 		if (!product) return defaultParse(text)
 		return [
-			{ label: product.name },
+			{ label: product.brand ? `${product.brand} ${product.name}` : product.name },
 			...(product.size ? [{ label: product.size, mono: true }] : []),
 			{ label: product.store, icon: 'image' as const },
 		]
@@ -210,11 +219,11 @@
 	}
 	/**
 	 * A product's link in the quick-add line (D-91): the item is added at once under the name its address gives, with
-	 * its size beside the name, and its picture follows when it has been fetched. One undo takes back both.
+	 * its size and, where the address says it, its brand as their own (D-104), and its picture follows when it has
+	 * been fetched. One undo takes back both.
 	 */
 	async function addProduct(product: ProductLink) {
-		const name = product.size ? `${product.name} (${product.size})` : product.name
-		const { item, undo } = kitchen.addStockItem({ name })
+		const { item, undo } = kitchen.addStockItem({ name: product.name, brand: product.brand, size: product.size })
 		let unpicture: (() => void) | undefined
 		undoToast($t('domains.kitchen.stock.toast.added', { values: { name: item.name } }), () => {
 			unpicture?.()
@@ -247,7 +256,7 @@
 	function groceryMany(ids: string[], from: StockLocation) {
 		const items = kitchen.stock.filter((item) => ids.includes(item.id))
 		const { undo } = kitchen.addGroceryItems(
-			items.map((item) => ({ name: item.name })),
+			items.map(groceryRow),
 			items.every((item) => kitchen.low(item)) ? 'low-stock' : 'manual'
 		)
 		undoToast($t('domains.kitchen.stock.toast.addedManyToGrocery', { values: { count: items.length } }), undo)
@@ -379,6 +388,14 @@
 								{/if}
 							</div>
 							<dl class="fields">
+								{#if detail.brand}
+									<dt>{$t('domains.kitchen.stock.detail.brand')}</dt>
+									<dd>{detail.brand}</dd>
+								{/if}
+								{#if detail.size}
+									<dt>{$t('domains.kitchen.stock.detail.size')}</dt>
+									<dd class="mono">{detail.size}</dd>
+								{/if}
 								<dt>{$t('domains.kitchen.stock.detail.quantity')}</dt>
 								<dd class="mono">
 									{#if kitchen.out(detail)}

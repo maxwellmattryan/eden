@@ -16,6 +16,9 @@ export type StockLocation = 'fridge' | 'freezer' | 'pantry' | 'counter'
 export interface StockItem {
 	id: string
 	name: string
+	/** Who makes it and how much one package is, where the item has them (D-104). */
+	brand?: string
+	size?: string
 	qty: string
 	unit?: string
 	location: StockLocation
@@ -59,6 +62,8 @@ export const stock: StockItem[] = [
 	{
 		id: 'st-05',
 		name: 'Greek yogurt',
+		brand: 'Fage',
+		size: '500 g',
 		qty: '500',
 		unit: 'g',
 		location: 'fridge',
@@ -98,7 +103,16 @@ export const stock: StockItem[] = [
 	{ id: 'st-11', name: 'Short-grain rice', qty: '2', unit: 'kg', location: 'pantry', category: 'grains-and-pasta' },
 	{ id: 'st-12', name: 'Soba', qty: '300', unit: 'g', location: 'pantry', category: 'grains-and-pasta' },
 	{ id: 'st-13', name: 'Canned black beans', qty: '2', location: 'pantry', category: 'canned-and-jarred' },
-	{ id: 'st-14', name: 'Olive oil', qty: '500', unit: 'ml', location: 'pantry', category: 'condiments-and-spices' },
+	{
+		id: 'st-14',
+		name: 'Olive oil',
+		brand: 'H-E-B',
+		size: '500 ml',
+		qty: '500',
+		unit: 'ml',
+		location: 'pantry',
+		category: 'condiments-and-spices',
+	},
 	{
 		id: 'st-15',
 		name: 'Soy sauce (low sodium)',
@@ -162,6 +176,10 @@ export const ranOut: (StockItem & { outOn: string })[] = [
 export interface HaulRow {
 	id: string
 	name: string
+	/** The maker and the package, apart from the name (D-104), and what one cost on the receipt (D-105). */
+	brand?: string
+	size?: string
+	price?: number
 	qty: string
 	unit?: string
 	location: StockLocation
@@ -196,6 +214,12 @@ export const haulCategories = [
  * but the tofu, which the capture could not place; the spinach carries a storage tip.
  */
 export const haul = {
+	/** The stores the haul may have been bought at, and the one its receipt names (D-105). */
+	stores: [
+		{ id: 'gs-01', label: 'H-E-B' },
+		{ id: 'gs-02', label: 'Target' },
+	],
+	store: 'gs-01',
 	provider: 'Anthropic',
 	model: 'Haiku',
 	cost: '0.6 ¢',
@@ -240,6 +264,9 @@ export const haul = {
 		{
 			id: 'h-04',
 			name: 'Greek yogurt',
+			brand: 'Fage',
+			size: '500 g',
+			price: 5.49,
 			qty: '500',
 			unit: 'g',
 			location: 'fridge',
@@ -249,6 +276,7 @@ export const haul = {
 		{
 			id: 'h-05',
 			name: 'Lemons',
+			price: 0.5,
 			qty: '3',
 			location: 'fridge',
 			expiry: '2026-10-09',
@@ -419,7 +447,18 @@ export interface SampleGroceryStore {
 	address?: string
 	url?: string
 	phone?: string
+	/** The store's picture (D-103), as a data URL; one without shows the store glyph on a tile. */
+	picture?: string
 }
+/**
+ * A stand-in for a store's picture, as a data URL: a story needs no binary asset, the app's CSP has no blob:, and a
+ * real store's mark is not the kit's to ship.
+ */
+export const storePicture =
+	'data:image/svg+xml,' +
+	encodeURIComponent(
+		'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8"><rect width="8" height="8" fill="#fff"/><circle cx="4" cy="4" r="2.6" fill="#b5483a"/><rect x="2.4" y="3.5" width="3.2" height="1" fill="#fff"/></svg>'
+	)
 /** One list per store; the list with no store holds what is not filed yet. The shop day is optional. */
 export interface SampleGroceryList {
 	id: string
@@ -430,6 +469,11 @@ export interface SampleGroceryItem {
 	id: string
 	listId: string
 	name: string
+	/** The brand and the package to buy, where the line names them (D-104). */
+	brand?: string
+	size?: string
+	/** What one costs: typed on the line, or what its store last charged (D-105). The list's sum is made of these. */
+	price?: number
 	qty: string
 	origin: string
 	done: boolean
@@ -447,6 +491,7 @@ export const grocery: { stores: SampleGroceryStore[]; lists: SampleGroceryList[]
 			shoppedOn: '09-26',
 			address: '2400 S Congress Ave, Austin',
 			url: 'https://www.heb.com',
+			picture: storePicture,
 		},
 		{
 			id: 'gs-02',
@@ -462,10 +507,28 @@ export const grocery: { stores: SampleGroceryStore[]; lists: SampleGroceryList[]
 		{ id: 'gl-00' },
 	],
 	items: [
-		{ id: 'g-01', listId: 'gl-01', name: 'LMNT citrus', qty: '1 box', origin: 'low stock', done: false },
-		{ id: 'g-02', listId: 'gl-01', name: 'Limes', qty: '4', origin: 'recipe', done: false },
+		{
+			id: 'g-01',
+			listId: 'gl-01',
+			name: 'LMNT citrus',
+			size: '30 ct',
+			price: 45,
+			qty: '1 box',
+			origin: 'low stock',
+			done: false,
+		},
+		{ id: 'g-02', listId: 'gl-01', name: 'Limes', price: 0.33, qty: '4', origin: 'recipe', done: false },
 		{ id: 'g-03', listId: 'gl-01', name: 'Ginger', qty: '1', origin: 'recipe: soba', done: true },
-		{ id: 'g-04', listId: 'gl-02', name: 'Paper towels', qty: '', origin: 'manual', done: false },
+		{
+			id: 'g-04',
+			listId: 'gl-02',
+			name: 'Paper towels',
+			brand: 'Bounty',
+			size: '6 ct',
+			qty: '',
+			origin: 'manual',
+			done: false,
+		},
 		{ id: 'g-05', listId: 'gl-00', name: 'Coffee filters', qty: '', origin: 'manual', done: false },
 	],
 }

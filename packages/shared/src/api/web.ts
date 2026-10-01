@@ -41,7 +41,8 @@ export async function fetchPage(url: string): Promise<FetchedPage> {
 }
 
 /**
- * The picture at an `https` address, as its bytes: a JPEG, a PNG or a WebP of five megabytes at most. It rejects as
+ * The picture at an `https` address, as its bytes: a JPEG, a PNG, a WebP or a site's `.ico` of five megabytes
+ * at most. It rejects as
  * `fetchPage` does, with `web:not-image` for an address that is something else.
  */
 export async function fetchImage(url: string): Promise<Uint8Array> {

@@ -37,6 +37,7 @@ pub(super) const RESOURCES: &[Resource] = &[
     Resource { id: "haul-photo", category: Category::Kind, primitive: Some("attachment"), owner: "kitchen", tier: Tier::T1, phase: Some(1) },
     Resource { id: "item-photo", category: Category::Kind, primitive: Some("attachment"), owner: "kitchen", tier: Tier::T1, phase: Some(1) },
     Resource { id: "recipe-photo", category: Category::Kind, primitive: Some("attachment"), owner: "kitchen", tier: Tier::T1, phase: Some(1) },
+    Resource { id: "store-photo", category: Category::Kind, primitive: Some("attachment"), owner: "kitchen", tier: Tier::T1, phase: Some(1) },
     Resource { id: "skill", category: Category::Fact, primitive: None, owner: "toolbench", tier: Tier::T1, phase: Some(1) },
     Resource { id: "owned-hardware", category: Category::Fact, primitive: None, owner: "toolbench", tier: Tier::T1, phase: Some(1) },
     Resource { id: "preferred-tool", category: Category::Fact, primitive: None, owner: "toolbench", tier: Tier::T1, phase: Some(1) },

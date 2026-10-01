@@ -14,8 +14,16 @@ import {
 	TEXT_MAX_BYTES,
 	type AttachmentBlock,
 } from '@eden/shared/gardener'
-import { fetchImage, logError, webErrorCode } from '@eden/shared/api'
-import { emlToText, htmlToText, pictureAddress } from '@eden/shared/domains/kitchen'
+import { fetchImage, fetchPage, logError, webErrorCode } from '@eden/shared/api'
+import {
+	emlToText,
+	guessedIcons,
+	htmlToText,
+	iconAddresses,
+	pictureAddress,
+	siteAddress,
+	wwwAddress,
+} from '@eden/shared/domains/kitchen'
 import { measure, sizeLabel, toSend } from '$lib/shell/gardener/files'
 import type { ToolFiles } from '$lib/shell/gardener/types'
 
@@ -147,14 +155,32 @@ export async function cutPicture(
 }
 
 /**
- * A picture from a grocer's page (D-91): the whole of it, on a white square, since a product shot is already framed
- * and its edges are part of it.
+ * A picture the webview will show but not decode from its bytes alone, a site's `.ico` in some webviews (D-103):
+ * read as an image element first, from a data URL, which the app's CSP allows.
  */
-export async function fitPicture(picture: Blob): Promise<string | undefined> {
+async function drawn(picture: Blob): Promise<ImageBitmap> {
+	const reader = new FileReader()
+	const address = await new Promise<string>((resolve, reject) => {
+		reader.onload = () => resolve(String(reader.result))
+		reader.onerror = () => reject(reader.error ?? new Error('unreadable'))
+		reader.readAsDataURL(picture.type ? picture : new Blob([picture], { type: 'image/x-icon' }))
+	})
+	const image = new Image()
+	image.src = address
+	await image.decode()
+	return createImageBitmap(image)
+}
+
+/**
+ * A picture from a grocer's page (D-91): the whole of it, on a white square, since a product shot is already framed
+ * and its edges are part of it. One smaller than `least` on its longer edge is not taken.
+ */
+export async function fitPicture(picture: Blob, least = 0): Promise<string | undefined> {
 	let bitmap: ImageBitmap | undefined
 	try {
-		bitmap = await createImageBitmap(picture)
+		bitmap = await createImageBitmap(picture).catch(() => drawn(picture))
 		const side = Math.max(bitmap.width, bitmap.height)
+		if (side < least) return undefined
 		// drawn from a square around the picture: what falls outside it is the white the canvas starts with
 		return await pictureOf(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side)
 	} catch {
@@ -179,6 +205,68 @@ export async function linkedPicture(link: string): Promise<string | undefined> {
 		return undefined
 	}
 }
+
+/** A store's icon of this size or more is taken as soon as it is found. */
+const LOGO_GOOD = 48
+/** A smaller one is kept only when the site has none better; under this it is a blur, and the glyph reads better. */
+const LOGO_LEAST = 32
+/** How many of the icons a page names are tried before the ones at the usual addresses. */
+const LOGO_TRIES = 3
+
+/**
+ * A store's picture from its website (D-103): the icon its page names for a home screen, or the one at a usual
+ * address when the page will not be read or names none, fetched by the app and fitted whole. The site is asked as
+ * the owner typed it and, when that will not be read, under `www.`, since many sites live only there. Nothing when
+ * the site gives none worth showing; the store keeps its glyph and the owner is not told.
+ */
+export async function storeLogo(url: string): Promise<string | undefined> {
+	const site = siteAddress(url)
+	if (!site) return undefined
+	const sites = [site, wwwAddress(site)].filter((entry): entry is string => !!entry)
+	let named: string[] = []
+	// where the site answered from, after its redirects: the usual addresses are asked there
+	let home: string[] = sites
+	for (const entry of sites) {
+		try {
+			const page = await fetchPage(entry)
+			named = iconAddresses(page.html, page.url)
+			home = [page.url]
+			break
+		} catch (error) {
+			void logError('web', "A store's page could not be fetched", webErrorCode(error)).catch(() => null)
+		}
+	}
+	const addresses = [...named.slice(0, LOGO_TRIES), ...home.flatMap(guessedIcons)].filter(
+		(address, at, all) => all.indexOf(address) === at
+	)
+	let small: string | undefined
+	for (const address of addresses) {
+		try {
+			const picture = new Blob([(await fetchImage(address)) as Uint8Array<ArrayBuffer>])
+			const image = await fitPicture(picture, LOGO_GOOD)
+			if (image) return image
+			small ??= await fitPicture(picture, LOGO_LEAST)
+		} catch (error) {
+			void logError('web', "A store's picture could not be fetched", webErrorCode(error)).catch(() => null)
+		}
+	}
+	return small
+}
+
+/** The pictures an owner may choose for an item or a store: what the webview decodes, HEIC included. */
+export const PICTURE_ACCEPT = [
+	'image/jpeg',
+	'image/png',
+	'image/webp',
+	'image/heic',
+	'image/heif',
+	'.jpg',
+	'.jpeg',
+	'.png',
+	'.webp',
+	'.heic',
+	'.heif',
+]
 
 /** A picture the owner chose for an item: the middle square of their photo, small. HEIC is taken like any other. */
 export async function squarePicture(photo: Blob): Promise<string | undefined> {

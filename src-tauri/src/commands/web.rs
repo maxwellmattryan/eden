@@ -12,7 +12,7 @@
 //!   a name that answers differently a moment later (DNS rebinding) cannot move the request somewhere else.
 //! - Redirects are followed by hand, five at most, and each one passes every check again.
 //! - Fifteen seconds a hop. A page is two megabytes at most and only HTML; a picture five, and only a JPEG, a PNG
-//!   or a WebP.
+//!   or a WebP, or the `.ico` a site keeps as its icon (D-103).
 //! - Each request that leaves is one row's worth in the egress ledger, under `web-page` or `web-image` (D-71): the
 //!   ledger counts requests and bytes by destination and day and holds no address, so neither the host nor the
 //!   path is kept.
@@ -39,7 +39,7 @@ pub const IMAGE_DESTINATION: &str = "web-image";
 /// Who is asking: the app by name and version, nothing that pretends to be a browser.
 const USER_AGENT: &str = concat!("Eden/", env!("CARGO_PKG_VERSION"));
 const ACCEPTS: &str = "text/html, application/xhtml+xml;q=0.9";
-const ACCEPTS_IMAGE: &str = "image/jpeg, image/png, image/webp";
+const ACCEPTS_IMAGE: &str = "image/jpeg, image/png, image/webp, image/x-icon;q=0.8";
 /// One hop from the first lookup to the last byte of the body.
 const HOP_TIMEOUT: Duration = Duration::from_secs(15);
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
@@ -89,7 +89,10 @@ impl Want {
     fn mismatch(self) -> EdenError {
         match self {
             Want::Page => refused("not-html", "the address is not a web page"),
-            Want::Image => refused("not-image", "the address is not a JPEG, a PNG or a WebP"),
+            Want::Image => refused(
+                "not-image",
+                "the address is not a JPEG, a PNG, a WebP or an icon",
+            ),
         }
     }
 }
@@ -292,12 +295,19 @@ fn is_html(content_type: &str) -> bool {
         || essence.eq_ignore_ascii_case("application/xhtml+xml")
 }
 
-/// Whether a `Content-Type` is a picture the webview can draw and a model can take.
+/// Whether a `Content-Type` is a picture the webview can draw: one a model can take, or a site's `.ico` (D-103),
+/// which the webview redraws as a JPEG before it is kept.
 fn is_image(content_type: &str) -> bool {
     let essence = content_type.split(';').next().unwrap_or_default().trim();
-    ["image/jpeg", "image/png", "image/webp"]
-        .iter()
-        .any(|kind| essence.eq_ignore_ascii_case(kind))
+    [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/x-icon",
+        "image/vnd.microsoft.icon",
+    ]
+    .iter()
+    .any(|kind| essence.eq_ignore_ascii_case(kind))
 }
 
 fn too_large(cap: usize) -> EdenError {
@@ -464,7 +474,7 @@ pub async fn fetch_page(workspace: State<'_, Workspace>, url: String) -> Result<
 }
 
 /// Fetches the picture at an `https` address (D-91) and answers its bytes, as a raw response: a JPEG, a PNG or a
-/// WebP of five megabytes at most, under the same checks as a page. Every request that leaves is counted in the
+/// WebP, or a site's `.ico` (D-103), of five megabytes at most, under the same checks as a page. Every request that leaves is counted in the
 /// egress ledger under `web-image`.
 #[tauri::command]
 pub async fn fetch_image(
@@ -817,8 +827,14 @@ mod tests {
     }
 
     #[test]
-    fn a_picture_is_a_jpeg_a_png_or_a_webp_and_nothing_else() {
-        for content_type in ["image/jpeg", "IMAGE/PNG", "image/webp; q=1"] {
+    fn a_picture_is_a_jpeg_a_png_a_webp_or_an_icon_and_nothing_else() {
+        for content_type in [
+            "image/jpeg",
+            "IMAGE/PNG",
+            "image/webp; q=1",
+            "image/x-icon",
+            "image/vnd.microsoft.icon",
+        ] {
             assert!(is_image(content_type), "{content_type:?}");
             assert!(Want::Image.takes(content_type), "{content_type:?}");
             assert!(!Want::Page.takes(content_type), "{content_type:?}");

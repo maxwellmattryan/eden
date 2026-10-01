@@ -20,6 +20,7 @@
 	// A row that leaves `rows` collapses (ListRow's `collapse`) and is in the DOM until it has; the grid stays mounted
 	// so the last row can leave too, and it is a grid only while it has rows. A leaving row that holds focus hands it
 	// to the row that takes its place, or to the one before it when it was last (`onleave`).
+	// With a `dragGroup` the rows can be dragged out, by a desktop pointer, to a DropTarget that accepts the group.
 	import type { Snippet } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
 	import { untrack } from 'svelte'
@@ -55,6 +56,13 @@
 		onaction?: (item: MenuItem, row: ListRowData) => void
 		/** The selected ids after every toggle, and [] when Done clears them. */
 		onselect?: (ids: string[]) => void
+		/**
+		 * Makes the rows ones a desktop pointer can drag to a `DropTarget` that accepts this group. Off while
+		 * selecting.
+		 */
+		dragGroup?: string
+		/** A row was picked up (`true`) or let go, dropped or not (`false`). */
+		ondragstate?: (dragging: boolean) => void
 		/** Content after the rows: an EmptyState when there are none, a footer link. */
 		children?: Snippet
 		/** Actions on the selection, in the header beside the count while selecting; takes the selected ids. */
@@ -74,6 +82,8 @@
 		oncheck,
 		onaction,
 		onselect,
+		dragGroup,
+		ondragstate,
 		children,
 		bulk,
 		class: className = '',
@@ -206,6 +216,8 @@
 				}}
 				onselect={(on) => toggle(row, on)}
 				{onleave}
+				dragGroup={selecting ? undefined : dragGroup}
+				{ondragstate}
 			/>
 		{/each}
 	</div>

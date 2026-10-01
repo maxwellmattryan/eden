@@ -178,11 +178,15 @@
 	const toRow = (item: StockItem): ListRowData => ({
 		id: item.id,
 		primary: item.name,
+		secondary: item.brand,
 		thumbnail: photos[item.id],
 		icon: glyphOf(item),
 		tile: true,
 		hint: TIP[item.id],
-		chips: [{ label: quantity(item), mono: true }],
+		chips: [
+			{ label: quantity(item), mono: true },
+			...(item.size ? [{ id: 'size', label: item.size, mono: true }] : []),
+		],
 		badges: [
 			...(item.lowStock ? [{ kind: 'warning' as const, label: 'low stock' }] : []),
 			...(item.estimated ? [{ kind: 'estimated' as const }] : []),

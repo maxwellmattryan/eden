@@ -18,7 +18,12 @@ export interface PhotoBox {
 /** One row of a haul on the capture sheet, before it is stock. */
 export interface HaulRow {
 	id: string
+	/** The thing itself; its maker and its package are `brand` and `size` (D-104). */
 	name: string
+	brand?: string
+	size?: string
+	/** What one of it cost, read from a receipt or an order (D-105); none for what was only seen in a photo. */
+	price?: number
 	qty: string
 	unit?: string
 	location: StockLocation
@@ -59,14 +64,15 @@ export function photoBox(raw: unknown): PhotoBox | undefined {
 	return { left, top, right, bottom }
 }
 
-/** How the sheet names the item a row merges into: its name and what it holds, "Eggs (8)". */
-export function mergeLabel(item: Pick<StockItem, 'name' | 'qty' | 'unit'>): string {
-	return `${item.name} (${item.unit ? `${item.qty} ${item.unit}` : item.qty})`
+/** How the sheet names the item a row merges into: its brand, its name and what it holds, "Eggs (8)". */
+export function mergeLabel(item: Pick<StockItem, 'name' | 'brand' | 'qty' | 'unit'>): string {
+	const name = item.brand ? `${item.brand} ${item.name}` : item.name
+	return `${name} (${item.unit ? `${item.qty} ${item.unit}` : item.qty})`
 }
 
 /**
- * A row with its merge worked out again, after its name, its location, its quantity or its unit changed. A row
- * that still lands on the same item keeps the owner's choice; one that lands on another, or on none, starts over.
+ * A row with its merge worked out again, after its name, its brand, its location, its quantity or its unit
+ * changed. A row that still lands on the same item keeps the owner's choice; one that lands on another, or on none, starts over.
  */
 export function remerge(row: HaulRow, stock: readonly StockItem[]): HaulRow {
 	const target = mergeTarget(row, stock)
@@ -76,9 +82,31 @@ export function remerge(row: HaulRow, stock: readonly StockItem[]): HaulRow {
 }
 
 /**
+ * What one of a row cost: the line's price in cents, as the answer gives it, over the packages the line is for. The
+ * division is done here, not by the model. Nothing for a line with no price.
+ */
+export function unitPrice(cents: unknown, count: unknown): number | undefined {
+	if (typeof cents !== 'number' || !Number.isFinite(cents) || cents <= 0) return undefined
+	const packages = typeof count === 'number' && count >= 1 ? Math.round(count) : 1
+	return Math.round(cents / packages) / 100
+}
+
+/**
+ * The shop and the day a haul's receipt or order is from, as the answer gives them beside its rows (D-105): a
+ * name as printed, and a day that is not after today. Nothing for either the files do not show.
+ */
+export function haulReceipt(parsed: unknown, today: string): { store?: string; boughtOn?: string } {
+	const raw = parsed as { store?: unknown; boughtOn?: unknown } | null
+	const store = text(raw?.store)
+	const day = text(raw?.boughtOn)
+	return { ...(store ? { store } : {}), ...(ISO_DAY.test(day) && day <= today ? { boughtOn: day } : {}) }
+}
+
+/**
  * The rows of a haul from the model's answer (`{ rows: [...] }`, the shape `capture-haul` holds it to). A row with
  * no name is dropped; a location or a category the answer made up falls back; an expiry is the date read from a
- * label when there is one, else today plus the days this kind of food keeps, marked estimated.
+ * label when there is one, else today plus the days this kind of food keeps, marked estimated. A price is kept
+ * for a haul only: the shelves as they stand were not bought today (D-89).
  */
 export function haulRows(
 	parsed: unknown,
@@ -101,9 +129,13 @@ export function haulRows(
 		const file = typeof raw.photo === 'number' ? Math.round(raw.photo) : 0
 		const box = file > 0 ? photoBox(raw.box) : undefined
 		const qty = typeof raw.qty === 'number' ? String(raw.qty) : text(raw.qty)
+		const price = ctx.mode === 'stock' ? undefined : unitPrice(raw.priceCents, raw.count)
 		const row: HaulRow = {
 			id: ctx.newId(),
 			name,
+			...(text(raw.brand) ? { brand: text(raw.brand) } : {}),
+			...(text(raw.size) ? { size: text(raw.size) } : {}),
+			...(price === undefined ? {} : { price }),
 			qty: parseAmount(qty) ? qty : '1',
 			...(text(raw.unit) ? { unit: text(raw.unit) } : {}),
 			location,
@@ -120,8 +152,8 @@ export function haulRows(
 /**
  * What a stock item holds once a row has merged into it: the two quantities together in the item's own unit (or,
  * taking stock, the row's quantity alone), the earlier of the two expiries (what was there goes off first), and the
- * row's category and tip where the item had none. An item that ran out (D-92) has nothing to add to: it comes back
- * with the row's amount, unit, location and expiry as they are. `null` when the quantities cannot be added, which
+ * row's brand, size, category and tip where the item had none. An item that ran out (D-92) has nothing to add to:
+ * it comes back with the row's amount, unit, location and expiry as they are, and in the row's size of package. `null` when the quantities cannot be added, which
  * `mergeTarget` rules out for a row it matched.
  */
 export function mergeInto(item: StockItem, row: HaulRow, mode: CaptureMode = 'haul'): StockItem | null {
@@ -131,6 +163,8 @@ export function mergeInto(item: StockItem, row: HaulRow, mode: CaptureMode = 'ha
 		const { expiry: _was, estimated: _guess, outAt: _outAt, unit: _unit, ...kept } = item
 		return {
 			...kept,
+			...(item.brand || !row.brand ? {} : { brand: row.brand }),
+			...(row.size ? { size: row.size } : {}),
 			qty: row.qty.trim(),
 			...(row.unit?.trim() ? { unit: row.unit.trim() } : {}),
 			location: row.location,
@@ -149,6 +183,8 @@ export function mergeInto(item: StockItem, row: HaulRow, mode: CaptureMode = 'ha
 	const { expiry: _expiry, estimated: _estimated, ...rest } = item
 	return {
 		...rest,
+		...(item.brand || !row.brand ? {} : { brand: row.brand }),
+		...(item.size || !row.size ? {} : { size: row.size }),
 		qty: formatAmount(sum).qty,
 		...(expiry ? { expiry } : {}),
 		...(expiry && estimated ? { estimated: true } : {}),

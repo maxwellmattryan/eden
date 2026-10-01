@@ -22,7 +22,8 @@
 			{ "id": "shop-day", "primitive": "event", "tier": "T0" },
 			{ "id": "haul-photo", "primitive": "attachment", "tier": "T1" },
 			{ "id": "item-photo", "primitive": "attachment", "tier": "T1" },
-			{ "id": "recipe-photo", "primitive": "attachment", "tier": "T1" }
+			{ "id": "recipe-photo", "primitive": "attachment", "tier": "T1" },
+			{ "id": "store-photo", "primitive": "attachment", "tier": "T1" }
 		]
 	},
 	"reads": ["medical-dietary-restriction", "favorite-supplement", "home-area"],

@@ -184,11 +184,11 @@ export type DraftCard =
 			events: { kind: string; title: string; day: string }[]
 			meals?: { day: string; meals: { name: string; recipeId?: string }[] }[]
 			/** What the plan's shop day needs, for the grocery list. */
-			grocery?: { name: string; qty: string }[]
+			grocery?: { name: string; brand?: string; qty: string }[]
 			/** The project the tasks belong to, when they do. */
 			projectId?: string
 	  }
-	| { kind: 'grocery'; items: { name: string; qty: string; note?: string }[] }
+	| { kind: 'grocery'; items: { name: string; brand?: string; size?: string; qty: string; note?: string }[] }
 	| { kind: 'code'; language: string; code: string; title?: string }
 	| {
 			kind: 'capture'
@@ -198,6 +198,10 @@ export type DraftCard =
 			rows: {
 				id: string
 				name: string
+				brand?: string
+				size?: string
+				/** What one of it cost, from a receipt or an order (D-105). */
+				price?: number
 				qty: string
 				unit?: string
 				location: 'fridge' | 'freezer' | 'pantry' | 'counter'
@@ -213,6 +217,9 @@ export type DraftCard =
 			}[]
 			/** The files the rows were read from, by their Attachment ids: never a path, never the bytes. */
 			sources?: { id: string; name: string; mime: string }[]
+			/** The shop the haul's receipt names, as printed, and its day as an ISO date (D-105). */
+			store?: string
+			boughtOn?: string
 	  }
 	| {
 			kind: 'recipe'

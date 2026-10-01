@@ -178,6 +178,17 @@ export interface UiStrings {
 		rowQty: string
 		rowUnit: string
 		rowExpiry: string
+		rowBrand: string
+		rowSize: string
+		rowPrice: string
+		/** The store a haul was bought at: the menu's name, its chip with none picked and with one, and "No store". */
+		store: string
+		pickStore: string
+		boughtAt: (store: string) => string
+		noStore: string
+		/** Under the chip while no store is picked: the name the sources gave, or that prices need a store. */
+		storeRead: (name: string) => string
+		pricesNeedStore: string
 		/** The category chip with nothing chosen and the menu's name; the chip's accessible name with a choice. */
 		category: string
 		categoryNamed: (label: string) => string
@@ -434,6 +445,15 @@ export const defaultStrings: UiStrings = {
 		rowQty: 'Quantity',
 		rowUnit: 'Unit',
 		rowExpiry: 'Expiry',
+		rowBrand: 'Brand',
+		rowSize: 'Size',
+		rowPrice: 'Price',
+		store: 'Store',
+		pickStore: 'Pick the store',
+		boughtAt: (store) => `Bought at ${store}`,
+		noStore: 'No store',
+		storeRead: (name) => `Read as ${name}, which is not one of your stores.`,
+		pricesNeedStore: 'Prices are remembered once the store is picked.',
 		category: 'Category',
 		categoryNamed: (label) => `Category: ${label}`,
 		location: (name) => `Location of ${name}`,

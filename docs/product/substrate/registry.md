@@ -70,6 +70,7 @@ updated: 2026-10-01
 | `haul-photo` | kind (attachment) | T1 | |
 | `item-photo` | kind (attachment) | T1 | a stock item's picture (D-90) |
 | `recipe-photo` | kind (attachment) | T1 | a recipe's picture (D-93) |
+| `store-photo` | kind (attachment) | T1 | a store's picture (D-103) |
 
 ## Toolbench (`toolbench`), Phase 1
 

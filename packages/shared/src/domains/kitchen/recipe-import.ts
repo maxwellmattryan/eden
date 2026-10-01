@@ -79,7 +79,7 @@ const tagsOf = (value: unknown): string[] =>
 		.slice(0, 5)
 
 /** An `https` address a page names, absolute; nothing for any other kind of address. */
-function httpsAddress(value: string, base?: string): string | undefined {
+export function httpsAddress(value: string, base?: string): string | undefined {
 	try {
 		const url = new URL(value.trim(), base)
 		return url.protocol === 'https:' ? url.href : undefined

@@ -126,7 +126,8 @@
 	// in at the leading edge and a click or Space toggles the row onto brand-muted; a Ctrl, Cmd or Shift click outside
 	// the mode is the list's to answer (`onextend`). Inside List the row is a grid row with one gridcell and the list manages its tab stop, and
 	// it leaves with a collapse (`collapse` above); on its own it is a list item and its own tab stop. A press on a
-	// button in the row (the hint, the ⋯) never toggles or opens the row.
+	// button in the row (the hint, the ⋯) never toggles or opens the row. With a `dragGroup` a desktop pointer can pick
+	// the row up and drop it on a DropTarget that accepts the group; the row dims while it is held.
 	import { tick } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
 	import type { AnchorLike } from '../../internal/anchor.js'
@@ -136,6 +137,8 @@
 	import Chip from '../Chip/Chip.svelte'
 	import IconButton from '../IconButton/IconButton.svelte'
 	import Menu from '../Menu/Menu.svelte'
+	import Thumbnail from '../Thumbnail/Thumbnail.svelte'
+	import { rowDragSource } from '../../internal/row-drag.js'
 	import { longPress } from './long-press.js'
 
 	type Props = Omit<HTMLAttributes<HTMLDivElement>, 'id' | 'role' | 'children' | 'onselect'> &
@@ -164,6 +167,10 @@
 			onselect?: (selected: boolean) => void
 			/** Set by List: the row's leave from the list has begun, before it goes inert; the list moves its focus on. */
 			onleave?: (row: HTMLElement) => void
+			/** Makes the row one a pointer can drag to a `DropTarget` that accepts this group; desktop only. */
+			dragGroup?: string
+			/** The row was picked up (`true`) or let go, dropped or not (`false`). */
+			ondragstate?: (dragging: boolean) => void
 		}
 	let {
 		id,
@@ -192,6 +199,8 @@
 		onaction,
 		onselect,
 		onleave,
+		dragGroup,
+		ondragstate,
 		class: className = '',
 		...rest
 	}: Props = $props()
@@ -308,10 +317,8 @@
 			<Icon name="check" size="sm" />
 		</button>
 	{/if}
-	{#if thumbnail}
-		<img class="ed-row-thumb" src={thumbnail} alt="" />
-	{:else if icon && tile}
-		<span class="ed-row-thumb ed-row-tile" aria-hidden="true"><Icon name={icon} size="sm" /></span>
+	{#if thumbnail || (icon && tile)}
+		<Thumbnail class="ed-row-thumb" src={thumbnail} {icon} />
 	{:else if icon}
 		<Icon name={icon} size="sm" class="ed-row-icon" />
 	{/if}
@@ -381,6 +388,11 @@
 	{oncontextmenu}
 	{onkeydown}
 	{@attach longPress(() => ({ onpress: openAt, ignore: CONTROLS }))}
+	{@attach rowDragSource(() => ({
+		group: () => dragGroup,
+		ids: () => [id],
+		onState: (dragging) => ondragstate?.(dragging),
+	}))}
 	{...rest}
 >
 	{#if inGrid}
@@ -406,7 +418,9 @@
 		border-bottom: 1px solid var(--stroke-subtle);
 		color: var(--text-primary);
 		cursor: default;
-		transition: background-color var(--ed-duration-micro) var(--ed-ease-out);
+		transition:
+			background-color var(--ed-duration-micro) var(--ed-ease-out),
+			opacity var(--ed-duration-micro) var(--ed-ease-out);
 	}
 	.ed-row:last-child {
 		border-bottom: 0;
@@ -430,6 +444,10 @@
 	.ed-row-selecting,
 	.ed-row-pickable {
 		cursor: pointer;
+	}
+	/* picked up and held by the pointer: the row left behind goes quiet until it is let go */
+	.ed-row[data-dragging] {
+		opacity: 0.4;
 	}
 	/* the ring sits inside the row, so the card's clipping and the dividers keep all of it */
 	.ed-row:focus-visible {
@@ -491,22 +509,6 @@
 	}
 
 	.ed-row :global(.ed-row-icon) {
-		color: var(--text-secondary);
-	}
-	/* the row's picture, or its glyph on a tile of the same size: square, and never squeezed by the text */
-	.ed-row-thumb {
-		flex: none;
-		box-sizing: border-box;
-		width: var(--space-8);
-		height: var(--space-8);
-		border: 1px solid var(--stroke-subtle);
-		border-radius: var(--ed-radius-control);
-		object-fit: cover;
-		background: var(--surface-2);
-	}
-	.ed-row-tile {
-		display: inline-grid;
-		place-items: center;
 		color: var(--text-secondary);
 	}
 	.ed-row-text {

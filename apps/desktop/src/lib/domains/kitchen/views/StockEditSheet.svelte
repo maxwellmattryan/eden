@@ -1,6 +1,6 @@
 <script lang="ts">
 	// A stock item's form, in a sheet over the page (D-95): its picture with the buttons that change it, then its name,
-	// amount, location, date, category, low-stock threshold and tip, and last the link a picture can be fetched from
+	// brand and package size (D-104), amount, location, date, category, low-stock threshold and tip, and last the link a picture can be fetched from
 	// (D-91). Save writes the fields as one change with one undo; Cancel, Escape and the scrim leave them as they were.
 	// The picture is not one of the fields: choosing, linking or removing it is its own write with its own undo (D-90).
 	// The page opens it through `edit(item)`.
@@ -20,7 +20,7 @@
 	import { CATEGORIES } from '@eden/shared/domains/kitchen'
 	import { t } from '@eden/shared/i18n'
 	import { undoToast } from '$lib/shell/undo'
-	import { linkedPicture, squarePicture } from '../staging.svelte'
+	import { PICTURE_ACCEPT, linkedPicture, squarePicture } from '../staging.svelte'
 	import { categoryGlyph } from '../words'
 	import { LOCATIONS, kitchen, type StockItem, type StockLocation, type StockPatch } from '../store.svelte'
 
@@ -36,6 +36,8 @@
 	const item = $derived(kitchen.stock.find((entry) => entry.id === editing))
 	let form = $state({
 		name: '',
+		brand: '',
+		size: '',
 		qty: '',
 		unit: '',
 		location: 'pantry' as StockLocation,
@@ -49,6 +51,8 @@
 	export function edit(target: StockItem) {
 		form = {
 			name: target.name,
+			brand: target.brand ?? '',
+			size: target.size ?? '',
 			qty: target.qty,
 			unit: target.unit ?? '',
 			location: target.location,
@@ -65,6 +69,8 @@
 		const threshold = Number(form.threshold.replace(',', '.'))
 		const patch: StockPatch = {
 			name: form.name.trim(),
+			brand: form.brand.trim() || undefined,
+			size: form.size.trim() || undefined,
 			qty: form.qty.trim(),
 			unit: form.unit.trim() || undefined,
 			location: form.location,
@@ -90,19 +96,6 @@
 	let categoryOpen = $state(false)
 
 	// An item's own picture: the middle of a photo the owner picks, or none, which leaves the category's glyph.
-	const PICTURES = [
-		'image/jpeg',
-		'image/png',
-		'image/webp',
-		'image/heic',
-		'image/heif',
-		'.jpg',
-		'.jpeg',
-		'.png',
-		'.webp',
-		'.heic',
-		'.heif',
-	]
 	async function setPicture(target: StockItem, files: File[]) {
 		const image = files[0] ? await squarePicture(files[0]) : undefined
 		if (!image) {
@@ -156,7 +149,7 @@
 				<FileButton
 					label={$t('domains.kitchen.stock.detail.choosePicture')}
 					icon="image-plus"
-					accept={PICTURES}
+					accept={PICTURE_ACCEPT}
 					multiple={false}
 					tooltip
 					onfiles={(files) => void setPicture(item, files)}
@@ -173,6 +166,14 @@
 				{/if}
 			</div>
 			<Field label={$t('domains.kitchen.stock.detail.name')} bind:value={form.name} />
+			<div class="pair">
+				<Field label={$t('domains.kitchen.stock.detail.brand')} bind:value={form.brand} />
+				<Field
+					label={$t('domains.kitchen.stock.detail.size')}
+					placeholder={$t('domains.kitchen.stock.detail.sizeHint')}
+					bind:value={form.size}
+				/>
+			</div>
 			<div class="pair">
 				<Field label={$t('domains.kitchen.stock.detail.quantity')} bind:value={form.qty} mono inputmode="decimal" />
 				<Field label={$t('domains.kitchen.stock.detail.unit')} bind:value={form.unit} />

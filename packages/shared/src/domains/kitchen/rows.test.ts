@@ -67,7 +67,7 @@ const today: KitchenData = {
 	recipes: [],
 	grocery: {
 		stores: [
-			{ id: 'gs-01', name: 'H-E-B', sells: ['grocery'], bought: { lime: '2026-09-27T10:00:00.000Z' } },
+			{ id: 'gs-01', name: 'H-E-B', sells: ['grocery'], bought: { lime: { at: '2026-09-27T10:00:00.000Z' } } },
 			{ id: 'gs-02', name: 'Target', sells: ['grocery', 'home-goods'] },
 		],
 		lists: [
@@ -107,7 +107,7 @@ describe('kitchen rows', () => {
 
 		// A list still names its store and an item its list, under their new ids.
 		expect(stores.map((store) => store.name)).toEqual(['H-E-B', 'Target'])
-		expect(stores[0]!.bought).toEqual({ lime: '2026-09-27T10:00:00.000Z' })
+		expect(stores[0]!.bought).toEqual({ lime: { at: '2026-09-27T10:00:00.000Z' } })
 		expect(lists.map((list) => list.storeId)).toEqual([stores[0]!.id, stores[1]!.id, undefined])
 		expect(lists[0]!.shopDay).toBe('2026-10-03T10:00:00')
 		expect(items.map((item) => item.listId)).toEqual(lists.map((list) => list.id))

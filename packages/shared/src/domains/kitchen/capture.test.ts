@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { haulRows, mergeInto, mergeLabel, photoBox, remerge, type HaulRow } from './capture.js'
+import { haulReceipt, haulRows, mergeInto, mergeLabel, photoBox, remerge, unitPrice, type HaulRow } from './capture.js'
 import type { StockItem } from './types.js'
 
 const TODAY = '2026-09-30'
@@ -103,6 +103,46 @@ describe('a captured haul', () => {
 			{ today: TODAY, stock, newId: ids() }
 		)
 		expect(row).toMatchObject({ qty: '1', location: 'counter' })
+	})
+
+	it('reads the brand and the size as their own, and names the brand in the merge', () => {
+		const butter: StockItem = { ...eggs, id: 'butter', name: 'Butter', brand: 'Kerrygold', qty: '1' }
+		const [row, bare] = haulRows(
+			{
+				rows: [
+					{ name: 'Butter', brand: ' Kerrygold ', size: '8 oz', qty: 2, location: 'fridge' },
+					{ name: 'Bananas', brand: '', size: '', qty: 6, location: 'counter' },
+				],
+			},
+			{ today: TODAY, stock: [butter], newId: ids() }
+		)
+		expect(row).toMatchObject({ name: 'Butter', brand: 'Kerrygold', size: '8 oz' })
+		expect(row!.merge).toEqual({ id: 'butter', name: 'Kerrygold Butter (1)', on: true })
+		expect(bare).not.toHaveProperty('brand')
+		expect(bare).not.toHaveProperty('size')
+		expect(remerge({ ...row!, brand: 'Plugra' }, [butter]).merge).toBeUndefined()
+	})
+
+	it('reads what one cost from a receipt line, and where and when it was bought', () => {
+		const answer = {
+			rows: [
+				{ name: 'Butter', qty: 2, location: 'fridge', priceCents: 998, count: 2 },
+				{ name: 'Limes', qty: 4, location: 'counter', priceCents: 100, count: 3 },
+				{ name: 'Bananas', qty: 6, location: 'counter', priceCents: 0, count: 1 },
+			],
+			store: ' H-E-B #455 ',
+			boughtOn: '2026-09-28',
+		}
+		const rows = haulRows(answer, { today: TODAY, stock: [], newId: ids() })
+		expect(rows.map((row) => row.price)).toEqual([4.99, 0.33, undefined])
+		expect(haulReceipt(answer, TODAY)).toEqual({ store: 'H-E-B #455', boughtOn: '2026-09-28' })
+		// a day that is not one, or is after today, is none; so is a shop that is not named
+		expect(haulReceipt({ store: '', boughtOn: '2026-10-09' }, TODAY)).toEqual({})
+		expect(haulReceipt({ boughtOn: 'yesterday' }, TODAY)).toEqual({})
+		expect(unitPrice('4.99', 1)).toBeUndefined()
+		expect(unitPrice(349, 0)).toBe(3.49)
+		// the shelves as they stand were not bought today
+		expect(haulRows(answer, { today: TODAY, stock: [], newId: ids(), mode: 'stock' })[0]).not.toHaveProperty('price')
 	})
 
 	it('marks the row that lands on something in stock', () => {
@@ -235,5 +275,17 @@ describe('a captured haul', () => {
 		})
 		expect(sooner).toMatchObject({ qty: '20', expiry: '2026-10-05', estimated: true })
 		expect(mergeInto(rice, { id: 'h', name: 'Rice', qty: '1', unit: 'bag', location: 'pantry' })).toBeNull()
+		// the row's brand and size fill what the item lacks, and never replace its own
+		const row = { id: 'h', name: 'Eggs', brand: 'Vital Farms', size: '12 ct', qty: '12', location: 'fridge' as const }
+		expect(mergeInto(eggs, row)).toMatchObject({ brand: 'Vital Farms', size: '12 ct' })
+		expect(mergeInto({ ...eggs, brand: 'Pete and Gerry', size: '6 ct' }, row)).toMatchObject({
+			brand: 'Pete and Gerry',
+			size: '6 ct',
+		})
+		// one that ran out comes back in the package now bought
+		expect(mergeInto({ ...eggs, qty: '0', brand: 'Vital Farms', size: '6 ct' }, row)).toMatchObject({
+			brand: 'Vital Farms',
+			size: '12 ct',
+		})
 	})
 })

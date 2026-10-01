@@ -25,7 +25,7 @@
 			docs: {
 				description: {
 					component:
-						'Hearth’s Grocery view (product/domains/kitchen.md), mocked from kit components under D-54. The Stock header with the Grocery tab selected and one action, Add, whose menu offers Add item and Add store (D-102), then one list per store (D-96), all on the page at once: the store’s name in the display face, its shop day when it has one, the count of what is checked, Complete, Add (the item’s form with that store picked) and Edit store as quiet icon buttons, and its rows; what names no store yet sits in Miscellaneous. Each row carries an origin badge (manual, recipe, low stock); a checked row is struck through and stays until its list is completed. On desktop the side holds Buy it again and, beneath it, the stores in the owner’s order (D-101): each row says what is left to buy and the store’s shop day or its last trip, a click goes to its list and its menu edits, moves and deletes it; a store’s form (its name, what it sells, where it is, a note, its optional shop day) and an item’s open in a sheet (D-95), the same one to add as to edit. On mobile there is no side: a swipe to the right checks a row off and a swipe to the left deletes it.',
+						'Hearth’s Grocery view (product/domains/kitchen.md), mocked from kit components under D-54. The Stock header with the Grocery tab selected and one action, Add, whose menu offers Add item and Add store (D-102), then one list per store (D-96), all on the page at once: the store’s name in the display face, its shop day when it has one, about what it costs (D-105), Complete, Add (the item’s form with that store picked) and Edit store as quiet icon buttons, and its rows; what names no store yet sits in Miscellaneous. Each row carries an origin badge (manual, recipe, low stock); a checked row is struck through and stays until its list is completed. On desktop the side holds Buy it again and, beneath it, the stores in the owner’s order (D-101): each row says what is left to buy and the store’s shop day or its last trip, a click goes to its list and its menu edits, moves and deletes it; a store’s form (its name, what it sells, where it is, a note, its optional shop day) and an item’s open in a sheet (D-95), the same one to add as to edit. On mobile there is no side: a swipe to the right checks a row off and a swipe to the left deletes it.',
 				},
 			},
 		},
@@ -43,6 +43,9 @@
 			onaddstore: fn(),
 			onsavestore: fn(),
 			ondeletestore: fn(),
+			onstorepicture: fn(),
+			onfetchpicture: fn(),
+			onremovepicture: fn(),
 			onnavigate: fn(),
 		},
 	})
@@ -71,9 +74,10 @@
 		await expect(canvas.getByRole('button', { name: 'Add' })).toHaveAttribute('aria-haspopup', 'menu')
 		const heb = listOf(canvas, 'H-E-B')
 		await expect(heb.getByText(groceryShopDay)).toBeVisible()
-		await expect(heb.getByText('1 of 3 checked')).toBeVisible()
+		await expect(heb.getByText('about $46.32, 1 unpriced')).toBeVisible()
 		const target = listOf(canvas, 'Target')
-		await expect(target.getByText('0 of 1 checked')).toBeVisible()
+		// nothing on Target's list has a price, so it says no sum
+		await expect(target.queryByText(/^about/)).toBeNull()
 		await expect(target.queryByText(groceryShopDay)).toBeNull()
 		await expect(target.getByRole('button', { name: 'Complete Target' })).toBeDisabled()
 		await userEvent.click(heb.getByRole('button', { name: 'Complete H-E-B' }))
@@ -87,6 +91,11 @@
 			await expect(stores[0]).toHaveTextContent('2 left')
 			await expect(stores[0]).toHaveTextContent(groceryShopDay)
 			await expect(stores[1]).toHaveTextContent('Shopped 5 days ago')
+			// each store leads with its picture (D-103): H-E-B its own, Target the store glyph on a tile
+			await expect(stores[0]!.querySelector('img.ed-thumb')).not.toBeNull()
+			await expect(stores[1]!.querySelector('.ed-thumb-tile')).not.toBeNull()
+			await expect(canvas.getByRole('region', { name: 'H-E-B' }).querySelector('img.ed-thumb')).not.toBeNull()
+			await expect(canvas.getByRole('region', { name: 'Miscellaneous' }).querySelector('.ed-thumb')).toBeNull()
 			await userEvent.click(stores[1]!)
 			await expect(args.ongostore).toHaveBeenCalledWith('gs-02')
 		} else {
@@ -105,7 +114,6 @@
 		if (!hasCanvas(canvasElement)) return
 		const canvas = canvasOf(canvasElement)
 		const heb = listOf(canvas, 'H-E-B')
-		await expect(heb.getByText('3 of 3 checked')).toBeVisible()
 		await expect(heb.getByText('Everything is checked. Complete the list once you are home.')).toBeVisible()
 		await expect(heb.getByRole('button', { name: 'Complete H-E-B' })).toBeEnabled()
 		await expect(listOf(canvas, 'Target').getByRole('button', { name: 'Complete Target' })).toBeEnabled()
@@ -168,6 +176,11 @@
 		await expect(sheet.getByRole('button', { name: 'Home goods' })).toHaveAttribute('aria-pressed', 'true')
 		await expect(sheet.getByRole('textbox', { name: 'Address' })).toHaveValue('2400 S Congress Ave, Austin')
 		await expect(sheet.getByRole('textbox', { name: 'Website' })).toHaveValue('https://www.heb.com')
+		// its picture, with the buttons that change it (D-103)
+		await userEvent.click(sheet.getByRole('button', { name: 'Fetch the picture from the website' }))
+		await expect(args.onfetchpicture).toHaveBeenCalledWith('gs-01')
+		await userEvent.click(sheet.getByRole('button', { name: 'Remove the picture' }))
+		await expect(args.onremovepicture).toHaveBeenCalledWith('gs-01')
 		await expect(sheet.getByLabelText('Shop day')).toHaveValue('2026-10-03')
 		await expect(sheet.getByLabelText('Time')).toHaveValue('10:00')
 		await userEvent.click(sheet.getByRole('button', { name: 'Delete store' }))

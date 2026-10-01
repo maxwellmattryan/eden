@@ -231,6 +231,9 @@
 				"detail": {
 					"editing": "Edit item",
 					"name": "Name",
+					"brand": "Brand",
+					"size": "Package size",
+					"sizeHint": "16 oz",
 					"quantity": "Quantity",
 					"unit": "Unit",
 					"location": "Location",
@@ -286,7 +289,9 @@
 				"addPlaceholder": "Add an item",
 				"buyAgain": "Buy it again",
 				"buyAgainNone": "Nothing to buy again.",
-				"checked": "{checked} of {total} checked",
+				"estimate": "about ${total}",
+				"priced": "${price}",
+				"estimateSome": "about ${total}, {count} unpriced",
 				"allChecked": "Everything is checked. Complete the list once you are home.",
 				"anyStore": "Miscellaneous",
 				"toBuy": "{count, plural, =0 {Nothing to buy} one {# item to buy} other {# items to buy}}",
@@ -332,11 +337,20 @@
 					"storeSaved": "{store} saved.",
 					"storeRemoved": "{store} deleted. What was on its list is under Miscellaneous.",
 					"shopDaySetLate": "Shop day set.",
-					"storeMoved": "{store} moved."
+					"storeMoved": "{store} moved.",
+					"pictureSet": "{store} has a new picture.",
+					"pictureRemoved": "{store}'s picture was removed.",
+					"pictureFailed": "That picture could not be read.",
+					"pictureNotFound": "The website gave no picture to use."
 				},
 				"pane": {
 					"editing": "Edit item",
 					"name": "Name",
+					"brand": "Brand",
+					"size": "Package size",
+					"sizeHint": "16 oz",
+					"price": "Price",
+					"priceHelp": "What one costs. The store remembers it when the list is completed.",
 					"quantity": "Quantity",
 					"store": "Store",
 					"storeHelp": "With no store picked, it goes where it was last bought.",
@@ -353,7 +367,10 @@
 					"today": "Today",
 					"tomorrow": "Tomorrow",
 					"noShopDay": "No shop day",
-					"deleteStore": "Delete store"
+					"deleteStore": "Delete store",
+					"choosePicture": "Choose a picture",
+					"fetchPicture": "Fetch the picture from the website",
+					"removePicture": "Remove the picture"
 				},
 				"addItem": "Add item",
 				"addTo": "Add to {store}",
@@ -390,6 +407,8 @@
 				"steps": "Steps",
 				"tipFor": "A tip for {name}",
 				"editing": "Edit recipe",
+				"missingEstimate": "About ${total} to buy what is missing.",
+				"missingUnpriced": "{count, plural, one {# has no price yet.} other {# have no price yet.}}",
 				"actions": {
 					"cook": "Cook this",
 					"addMissing": "{count, plural, =0 {Add missing to grocery} other {Add # missing to grocery}}",

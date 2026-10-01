@@ -23,9 +23,11 @@
 		formatIngredient,
 		ingredientStatus,
 		isSafe,
+		missingEstimate,
 		normaliseName,
 		type CookLine,
 	} from '@eden/shared/domains/kitchen'
+	import { formatUsd } from '@eden/shared/gardener'
 	import { t } from '@eden/shared/i18n'
 	import { undoToast } from '$lib/shell/undo'
 	import { toast } from '@eden/ui-kit'
@@ -91,6 +93,13 @@
 	const detail = $derived(kitchen.recipes.find((recipe) => recipe.id === selected) ?? ordered[0])
 	const status = $derived(detail ? ingredientStatus(detail, kitchen.stock) : [])
 	const missing = $derived(status.filter((line) => line.state === 'missing'))
+	/** About what the missing ingredients cost to buy, a package of each, from what the stores remember (D-105). */
+	const toBuy = $derived(
+		missingEstimate(
+			missing.map((line) => line.ingredient.name),
+			kitchen.grocery.stores
+		)
+	)
 
 	// The pane's modes over a saved recipe: read, edit, or the questions cooking it asks.
 	let mode = $state<'view' | 'edit' | 'cook'>('view')
@@ -351,6 +360,14 @@
 								{/each}
 							</ol>
 						</section>
+					{/if}
+					{#if toBuy.priced}
+						<p class="quiet">
+							{$t('domains.kitchen.recipes.missingEstimate', { values: { total: formatUsd(toBuy.total) } })}
+							{#if toBuy.unpriced}
+								{$t('domains.kitchen.recipes.missingUnpriced', { values: { count: toBuy.unpriced } })}
+							{/if}
+						</p>
 					{/if}
 					<div class="detail-actions">
 						<Button

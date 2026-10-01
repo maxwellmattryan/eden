@@ -9,6 +9,7 @@
 	import { MAX_FILES } from '@eden/shared/gardener'
 	import { t } from '@eden/shared/i18n'
 	import { capture } from '../capture.svelte'
+	import { kitchen } from '../store.svelte'
 	import { CAPTURE_ACCEPT, sourceDetail, type CaptureRefusal } from '../staging.svelte'
 	import { failureOf, readerOf, refusalOf } from '../words'
 
@@ -27,6 +28,8 @@
 		capture.rows.map(({ image, seen: _seen, ...row }) => ({ ...row, thumbnail: image }))
 	)
 	const categories = $derived(CATEGORIES.map((id) => ({ id, label: $t(`domains.kitchen.categories.${id}`) })))
+	// the stores a haul may have been bought at: the one picked learns the prices on the rows (D-105)
+	const stores = $derived(kitchen.grocery.stores.map((store) => ({ id: store.id, label: store.name })))
 	const rules = $derived({
 		accept: [...CAPTURE_ACCEPT],
 		maxFiles: MAX_FILES,
@@ -53,6 +56,10 @@
 	{rows}
 	{rules}
 	{categories}
+	{stores}
+	store={capture.storeId}
+	storeHint={capture.storeRead}
+	onstorechange={(id) => capture.setStore(id)}
 	provider={reader.provider}
 	model={reader.model}
 	cost={reader.cost}

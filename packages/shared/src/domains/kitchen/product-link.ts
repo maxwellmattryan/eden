@@ -12,8 +12,10 @@
 export interface ProductLink {
 	/** The store the link is to, as the owner would say it. */
 	store: string
-	/** The product's name, from the words in its address. */
+	/** The product's name, from the words in its address, less the grocer's own name when it leads. */
 	name: string
+	/** The brand, when the address leads with the grocer's own; any other maker's name stays in `name` (D-104). */
+	brand?: string
 	/** How much one of it is, when the address ends with it: "9 ct", "16 oz". */
 	size?: string
 	/** Where the grocer's picture of it is. */
@@ -28,6 +30,9 @@ const HEB_PRODUCT = /^\/product-detail\/([a-z0-9-]+)\/(\d{1,9})\/?$/i
 const HEB_IMAGES = 'https://images.heb.com/is/image/HEBGrocery/'
 /** The first picture of the product, no taller than this and fitted whole. */
 const HEB_PICTURE = '-1?hei=480&fit=constrain&qlt=80'
+
+/** The grocer's own brand, as an address leads with it. */
+const HEB_BRAND = /^h-e-b-(?=.)/i
 
 /** A name from the words of an address: spaces for the hyphens, a capital to start, the store's own name as it is written. */
 function words(slug: string): string {
@@ -55,11 +60,14 @@ export function productLink(text: string): ProductLink | undefined {
 	if (!match) return undefined
 	const [, slug, id] = match
 	const sized = SIZE.exec(slug!.toLowerCase())
-	const name = words(sized ? sized[1]! : slug!)
+	const named = sized ? sized[1]! : slug!
+	const own = HEB_BRAND.test(named)
+	const name = words(named.replace(HEB_BRAND, ''))
 	if (!name) return undefined
 	return {
 		store: 'H-E-B',
 		name,
+		...(own ? { brand: 'H-E-B' } : {}),
 		...(sized ? { size: `${sized[2]!.replace('-', '.')} ${sized[3]!.replace('-', ' ')}` } : {}),
 		imageUrl: `${HEB_IMAGES}${id!.padStart(9, '0')}${HEB_PICTURE}`,
 	}

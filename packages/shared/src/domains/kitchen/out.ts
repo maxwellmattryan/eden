@@ -1,7 +1,7 @@
 // What ran out (product/domains/kitchen.md, "What ran out"; D-92): an item used up stays a stock row holding
 // nothing, so it can be shown as run out and bought again with its picture, its category and its tip. Stock shows
 // the recent ones, the grocery list offers them all, and one nobody bought again is let go in the end.
-import { normaliseName } from './match.js'
+import { sameItem } from './match.js'
 import { isOut } from './quantity.js'
 import type { GroceryItem, StockItem } from './types.js'
 
@@ -32,10 +32,15 @@ export function recentlyOut(stock: readonly StockItem[], now: number): StockItem
 	return stock.filter((item) => isOut(item) && daysOut(item, now) <= RECENT_DAYS).sort(newestFirst)
 }
 
-/** "Buy it again": everything that ran out, the newest first, less what is already on the grocery list by name. */
-export function buyAgain(stock: readonly StockItem[], listed: readonly Pick<GroceryItem, 'name'>[]): StockItem[] {
-	const names = new Set(listed.map((item) => normaliseName(item.name)))
-	return stock.filter((item) => isOut(item) && !names.has(normaliseName(item.name))).sort(newestFirst)
+/**
+ * "Buy it again": everything that ran out, the newest first, less what is already on a grocery list: the same
+ * name, of a brand that can be its own (D-104).
+ */
+export function buyAgain(
+	stock: readonly StockItem[],
+	listed: readonly Pick<GroceryItem, 'name' | 'brand'>[]
+): StockItem[] {
+	return stock.filter((item) => isOut(item) && !listed.some((line) => sameItem(line, item))).sort(newestFirst)
 }
 
 /** What is let go: run out more than `KEEP_DAYS` ago and never bought again. */

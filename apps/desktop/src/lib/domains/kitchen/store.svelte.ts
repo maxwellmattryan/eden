@@ -34,6 +34,7 @@ import {
 	isLow,
 	isOut,
 	ITEM_PHOTO,
+	STORE_PHOTO,
 	KITCHEN,
 	kitchenFromRows,
 	kitchenRows,
@@ -123,10 +124,21 @@ export type StockSort = 'expiry' | 'name' | 'added'
 
 /** What the owner may change of a stock item; `undefined` for a field clears it. */
 export type StockPatch = Partial<
-	Pick<StockItem, 'name' | 'qty' | 'unit' | 'location' | 'expiry' | 'category' | 'threshold' | 'tip'>
+	Pick<StockItem, 'name' | 'brand' | 'size' | 'qty' | 'unit' | 'location' | 'expiry' | 'category' | 'threshold' | 'tip'>
 >
 /** What the owner may change of a grocery item; `storeId` moves it to that store's list, `null` to the unfiled one. */
-export type GroceryPatch = Partial<Pick<GroceryItem, 'name' | 'qty' | 'note'>> & { storeId?: string | null }
+export type GroceryPatch = Partial<Pick<GroceryItem, 'name' | 'brand' | 'size' | 'price' | 'qty' | 'note'>> & {
+	storeId?: string | null
+}
+/** A line as it is put on a list: its name, and what else is known of it. */
+export type GroceryRow = Pick<GroceryItem, 'name'> &
+	Partial<Pick<GroceryItem, 'brand' | 'size' | 'price' | 'qty' | 'note'>>
+/** Where and when a captured haul was bought (D-105): the store that learns its prices, and the receipt's day. */
+export interface HaulFrom {
+	storeId: string
+	/** An ISO date; none when the files show no day, which reads as now. */
+	boughtOn?: string
+}
 /**
  * Where an added item goes: a store's id puts it on that store's list, `null` on the unfiled one, and nothing files
  * it where it was last bought (D-97).
@@ -170,7 +182,10 @@ export class KitchenStore {
 	stock = $state<StockItem[]>([])
 	recipes = $state<Recipe[]>([])
 	grocery = $state<Grocery>(emptyGrocery())
-	/** The items' pictures (D-90): the small image of each `item-photo` Attachment, by the Attachment's id. */
+	/**
+	 * The items' pictures (D-90) and the stores' (D-103): the small image of each `item-photo` and `store-photo`
+	 * Attachment, by the Attachment's id.
+	 */
 	readonly photos = new SvelteMap<string, string>()
 	/** The recipes' pictures in full (D-93), by the Attachment's id: object URLs, read when a recipe is first opened. */
 	readonly #images = new SvelteMap<string, string>()
@@ -199,6 +214,11 @@ export class KitchenStore {
 	/** An item's picture, when it has one. */
 	photoOf(item: Pick<StockItem, 'photo'>): string | undefined {
 		return item.photo ? this.photos.get(item.photo) : undefined
+	}
+
+	/** A store's picture, when it has one (D-103). */
+	storePhotoOf(store: Pick<GroceryStore, 'photo'> | undefined): string | undefined {
+		return store?.photo ? this.photos.get(store.photo) : undefined
 	}
 
 	/** Low, by the rule the low-stock digest counts by: holding no more than its threshold. */
@@ -237,7 +257,7 @@ export class KitchenStore {
 				queryEntities<StockPayload>({ type: KITCHEN.stock }),
 				queryEntities<RecipePayload>({ type: KITCHEN.recipe }),
 				// the pictures are what the rows are shown with, never what they stand on
-				queryAttachments({ kinds: [ITEM_PHOTO, RECIPE_PHOTO] }).catch(() => []),
+				queryAttachments({ kinds: [ITEM_PHOTO, RECIPE_PHOTO, STORE_PHOTO] }).catch(() => []),
 			])
 			// rows from before there was a list per store (D-96) are brought over once, then read again
 			let [stores, lists, items] = await groceryRows()
@@ -348,11 +368,26 @@ export class KitchenStore {
 	 * Adds one item from its fields: what a quick-add line parses to, and what a product's link names (D-91). A name
 	 * that ran out (D-92) brings that item back, with its picture, where it was kept unless the line says where.
 	 */
-	addStockItem(fields: { name: string; qty?: string; unit?: string; location?: StockLocation }): {
+	addStockItem(fields: {
+		name: string
+		brand?: string
+		size?: string
+		qty?: string
+		unit?: string
+		location?: StockLocation
+	}): {
 		item: StockItem
 		undo: Undo
 	} {
-		const row = { id: '', name: fields.name, qty: fields.qty || '1', unit: fields.unit, location: 'pantry' as const }
+		const row = {
+			id: '',
+			name: fields.name,
+			...(fields.brand ? { brand: fields.brand } : {}),
+			...(fields.size ? { size: fields.size } : {}),
+			qty: fields.qty || '1',
+			unit: fields.unit,
+			location: 'pantry' as const,
+		}
 		const empty = this.stock.filter((entry) => isOut(entry))
 		const held = mergeTarget(row, empty)
 		const back = held
@@ -369,6 +404,8 @@ export class KitchenStore {
 		const item: StockItem = without({
 			id: newId(),
 			name: fields.name,
+			brand: fields.brand || undefined,
+			size: fields.size || undefined,
 			qty: fields.qty || '1',
 			unit: fields.unit,
 			location: fields.location ?? 'pantry',
@@ -381,11 +418,22 @@ export class KitchenStore {
 
 	/** Adds several stock items in one batch, one feed entry and one undo: what the Gardener's `add-stock` writes. */
 	addStockRows(
-		rows: { name: string; qty: string; unit?: string; location: StockLocation; expiry?: string; estimated?: boolean }[]
+		rows: {
+			name: string
+			brand?: string
+			size?: string
+			qty: string
+			unit?: string
+			location: StockLocation
+			expiry?: string
+			estimated?: boolean
+		}[]
 	): { items: StockItem[]; undo: Undo } {
 		const items: StockItem[] = rows.map((row) => ({
 			id: newId(),
 			name: row.name,
+			brand: row.brand || undefined,
+			size: row.size || undefined,
 			qty: row.qty,
 			unit: row.unit || undefined,
 			location: row.location,
@@ -415,16 +463,32 @@ export class KitchenStore {
 	 * which takes back the new items, the merges and the photos alike. `linked` names files already in the workspace
 	 * (the ones on a Gardener message), which are linked to the stock rather than stored again. Taking stock (`mode`
 	 * `stock`, D-89) sets a matched item's quantity where a haul adds to it. A row's picture, cut from its photo, is
-	 * kept as the item's (D-90), unless the item it merges into has one already.
+	 * kept as the item's (D-90), unless the item it merges into has one already. A haul bought at a store Hearth has
+	 * (`from`, D-105) teaches that store every row, with the price of each that has one, and counts as its last
+	 * trip; the same undo takes that back.
 	 */
 	commitHaul(
 		rows: readonly HaulRow[],
 		images: readonly HaulImage[] = [],
 		linked: readonly string[] = [],
-		mode: CaptureMode = 'haul'
+		mode: CaptureMode = 'haul',
+		from?: HaulFrom
 	): { created: number; merged: number; undo: Undo } {
 		const before = $state.snapshot(this.stock)
 		const at = nowIso()
+		const shop = mode === 'haul' ? $state.snapshot(this.storeById(from?.storeId)) : undefined
+		// a receipt's day at noon, so a day's trip sorts among the day's other writes; never after now
+		const boughtAt = from?.boughtOn && `${from.boughtOn}T12:00:00.000Z` < at ? `${from.boughtOn}T12:00:00.000Z` : at
+		const taught = shop
+			? remember(
+					shop,
+					rows.filter((row) => row.name.trim()).map(({ name, brand, size, price }) => ({ name, brand, size, price })),
+					boughtAt
+				)
+			: undefined
+		const shopped = taught
+			? { ...taught, shoppedAt: shop?.shoppedAt && shop.shoppedAt > boughtAt ? shop.shoppedAt : boughtAt }
+			: undefined
 		const created: StockItem[] = []
 		const merged: { before: StockItem; after: StockItem }[] = []
 		const pictures: { id: string; stockId: string; name: string; image: string }[] = []
@@ -458,6 +522,8 @@ export class KitchenStore {
 					id,
 					photo: picture(row, id),
 					name: row.name.trim(),
+					brand: row.brand?.trim() || undefined,
+					size: row.size?.trim() || undefined,
 					qty: row.qty.trim() || '1',
 					unit: row.unit?.trim(),
 					location: row.location,
@@ -486,9 +552,11 @@ export class KitchenStore {
 						...this.stock.map((item) => merged.find((entry) => entry.after.id === item.id)?.after ?? item),
 						...created,
 					]
+					this.#showStore(shopped)
 				},
 				revert: () => {
 					this.stock = before
+					if (shopped) this.#showStore(shop)
 					for (const entry of pictures) this.photos.delete(entry.id)
 				},
 				write: async () => {
@@ -496,6 +564,7 @@ export class KitchenStore {
 						await applyBatch([
 							...created.map((item) => this.#create('stock', item)),
 							...merged.map(({ after }) => this.#update('stock', after)),
+							...this.#storeOp(shopped),
 						])
 						rowsWritten = true
 						// a file that is already in the workspace is linked, on its own: one that has since been deleted
@@ -540,6 +609,7 @@ export class KitchenStore {
 					applyBatch([
 						...created.map((item): BatchOp => ({ op: 'delete', uri: toUri(KITCHEN.stock, item.id) })),
 						...merged.map(({ before: was }) => this.#update('stock', was)),
+						...(shopped ? this.#storeOp(shop) : []),
 						...photos.slice(0, photosWritten).map((photo): BatchOp => ({ op: 'delete', uri: photoUri(photo.id) })),
 					]).then(() =>
 						// a picture that could not be kept has no row to take back
@@ -552,22 +622,31 @@ export class KitchenStore {
 		return { created: created.length, merged: merged.length, undo }
 	}
 
-	/** Writes an item's picture as its Attachment; a picture that cannot be kept leaves the item standing. */
-	async #keepPicture(id: string, stockId: string, name: string, image: string): Promise<void> {
+	/**
+	 * Writes a picture as its Attachment, an item's unless `of` says a store's; a picture that cannot be kept leaves
+	 * what it is of standing.
+	 */
+	async #keepPicture(
+		id: string,
+		ownerId: string,
+		name: string,
+		image: string,
+		of: { kind: string; type: string } = { kind: ITEM_PHOTO, type: KITCHEN.stock }
+	): Promise<void> {
 		try {
 			await attachBytes(
 				{
 					id,
-					kind: ITEM_PHOTO,
+					kind: of.kind,
 					fileName: `${name.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '') || 'item'}.jpg`,
 					mime: 'image/jpeg',
 					thumbnail: image,
-					links: [{ uri: toUri(KITCHEN.stock, stockId), relation: 'from' }],
+					links: [{ uri: toUri(of.type, ownerId), relation: 'from' }],
 				},
 				bytesOf(image)
 			)
 		} catch (error) {
-			await logError('data', "An item's picture could not be kept", String(error)).catch(() => null)
+			await logError('data', 'A picture could not be kept', String(error)).catch(() => null)
 		}
 	}
 
@@ -739,7 +818,7 @@ export class KitchenStore {
 	 * with none named, each goes where it was last bought, and what no store remembers is left unfiled.
 	 */
 	#put(
-		rows: { name: string; qty?: string; note?: string }[],
+		rows: GroceryRow[],
 		origin: GroceryOrigin,
 		target: GroceryTarget,
 		feedKey: string,
@@ -751,6 +830,9 @@ export class KitchenStore {
 		const items: GroceryItem[] = rows.map((row) => ({
 			id: newId(),
 			name: row.name,
+			...(row.brand ? { brand: row.brand } : {}),
+			...(row.size ? { size: row.size } : {}),
+			...(row.price === undefined ? {} : { price: row.price }),
 			qty: row.qty ?? '',
 			listId: this.#listFor(storeIdFor(row.name)),
 			origin,
@@ -759,9 +841,10 @@ export class KitchenStore {
 		}))
 		const ids = items.map((item) => item.id)
 		const remembered = named
-			? remember(
+			? // putting a thing on a store's list teaches where it is filed, and no price: it is not bought yet
+				remember(
 					named,
-					rows.map((row) => row.name),
+					rows.map((row) => ({ name: row.name })),
 					nowIso()
 				)
 			: undefined
@@ -790,25 +873,23 @@ export class KitchenStore {
 
 	/** Adds one item; the answer names the store whose list it landed on, none when it is not filed. */
 	addToGrocery(
-		name: string,
-		qty = '',
+		row: GroceryRow,
 		origin: GroceryOrigin = 'manual',
-		note?: string,
 		target?: GroceryTarget
 	): { item: GroceryItem; store: GroceryStore | undefined; undo: Undo } {
-		const { items, undo } = this.#put([{ name, qty, note }], origin, target, 'garden.feed.groceryAdded', { name })
+		const { items, undo } = this.#put([row], origin, target, 'garden.feed.groceryAdded', { name: row.name })
 		const item = items[0]!
 		return { item, store: this.storeOf(item), undo }
 	}
 
 	addGrocery(text: string, target?: GroceryTarget): { item: GroceryItem; store: GroceryStore | undefined; undo: Undo } {
 		const parsed = parseGrocery(text)
-		return this.addToGrocery(parsed.name, parsed.qty, 'manual', undefined, target)
+		return this.addToGrocery(parsed, 'manual', target)
 	}
 
 	/** Puts several items on the lists at once: what a drafted list, a plan or a recipe's missing lines commit. */
 	addGroceryItems(
-		rows: { name: string; qty?: string; note?: string }[],
+		rows: GroceryRow[],
 		origin: GroceryOrigin = 'manual',
 		target?: GroceryTarget
 	): { items: GroceryItem[]; undo: Undo } {
@@ -837,7 +918,7 @@ export class KitchenStore {
 			listId: moving ? this.#listFor(to?.id) : before.listId,
 		}
 		const named = moving && to ? $state.snapshot(to) : undefined
-		const remembered = named ? remember(named, [after.name], nowIso()) : undefined
+		const remembered = named ? remember(named, [{ name: after.name }], nowIso()) : undefined
 		const put = (record: GroceryItem) =>
 			(this.grocery.items = this.grocery.items.map((entry) => (entry.id === id ? record : entry)))
 		const undo = this.#commit({
@@ -874,7 +955,7 @@ export class KitchenStore {
 
 	/**
 	 * Completes a list: the trip is done, so what is checked leaves it, its store remembers having sold those things
-	 * (which is what files the next ones there, D-97) and when it was shopped, and its shop day, now past, is cleared. What is not checked
+	 * (which is what files the next ones there, D-97), what a priced line cost (D-105) and when it was shopped, and its shop day, now past, is cleared. What is not checked
 	 * stays for the next trip. One batch, one undo.
 	 */
 	completeList(listId: string): { count: number; undo: Undo } {
@@ -889,9 +970,10 @@ export class KitchenStore {
 		const at = nowIso()
 		const remembered = named
 			? {
+					// a price the owner typed on a line is what the store now knows the thing to cost (D-105)
 					...remember(
 						named,
-						done.map((item) => item.name),
+						done.map(({ name, brand, size, price }) => ({ name, brand, size, price })),
 						at
 					),
 					shoppedAt: at,
@@ -1017,6 +1099,48 @@ export class KitchenStore {
 		return { store: found, undo }
 	}
 
+	/**
+	 * Gives a store a picture (a small image as a data URL), or takes its picture away (D-103). The one it had is
+	 * deleted with the change and comes back with the undo.
+	 */
+	setStorePhoto(id: string, image: string | undefined): { store: GroceryStore | undefined; undo: Undo } {
+		const found = this.storeById(id)
+		if (!found) return { store: undefined, undo: () => {} }
+		const was = found.photo
+		const photo = image ? newId() : undefined
+		// the store as it stands when the write runs: its list may have been completed since, and that is kept
+		const withPhoto = (value: string | undefined): GroceryStore | undefined => {
+			const now = this.storeById(id)
+			return now ? without({ ...$state.snapshot(now), photo: value }) : undefined
+		}
+		const show = (value: string | undefined) => {
+			const next = withPhoto(value)
+			if (next) this.#showStore(next)
+		}
+		const undo = this.#commit({
+			apply: () => {
+				if (photo && image) this.photos.set(photo, image)
+				show(photo)
+			},
+			revert: () => {
+				show(was)
+				if (photo) this.photos.delete(photo)
+			},
+			write: async () => {
+				if (photo && image)
+					await this.#keepPicture(photo, id, found.name, image, { kind: STORE_PHOTO, type: KITCHEN.store })
+				await applyBatch(this.#storeOp(withPhoto(photo)))
+				if (was) await deleteRows([photoUri(was)]).catch(() => null)
+			},
+			unwrite: async () => {
+				if (was) await restoreRows([photoUri(was)]).catch(() => null)
+				await applyBatch(this.#storeOp(withPhoto(was)))
+				if (photo) await deleteRows([photoUri(photo)]).catch(() => null)
+			},
+		})
+		return { store: found, undo }
+	}
+
 	/** Moves a store up or down among the stores (D-101), and its list with it on the page. One write, one undo. */
 	moveStore(id: string, delta: number): { store: GroceryStore | undefined; undo: Undo } {
 		const before = $state.snapshot(this.grocery.stores)
@@ -1054,7 +1178,12 @@ export class KitchenStore {
 				.snapshot(this.grocery.items)
 				.filter((item) => moved.includes(item.id))
 				.map((item) => this.#update('grocery', { ...item, listId: to }))
-		const gone = [toUri(KITCHEN.store, id), ...(list ? [toUri(KITCHEN.list, list.id)] : [])]
+		// its picture goes with it, and comes back with it
+		const gone = [
+			toUri(KITCHEN.store, id),
+			...(list ? [toUri(KITCHEN.list, list.id)] : []),
+			...(store.photo ? [photoUri(store.photo)] : []),
+		]
 		const undo = this.#commit({
 			apply: () => {
 				if (list) move(list.id, unfiled)
