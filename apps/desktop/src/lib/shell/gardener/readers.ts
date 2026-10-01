@@ -5,12 +5,20 @@ import { queryEntities, queryEvents, queryPlaces, queryTasks } from '@eden/share
 import type { PackReaders } from '@eden/shared/gardener'
 import { queryFacts } from '@eden/shared/profile'
 import type { FactId } from '@eden/shared/registry'
+import { manifests } from '../../domains/index.js'
 import { grants } from '../grants.svelte.js'
 import { readForPack } from './files.js'
 
+/** The rows of a type as its domain's `pack` binding shapes them (D-85); a type without one is sent whole. */
+async function entities(type: string) {
+	const rows = await queryEntities({ type })
+	const project = manifests.find((manifest) => manifest.pack?.[type])?.pack?.[type]
+	return project ? rows.flatMap((row) => project(row) ?? []) : rows
+}
+
 export const readers: PackReaders = {
 	facts: (types) => queryFacts({ types: types as FactId[] }),
-	entities: (type) => queryEntities({ type }),
+	entities,
 	primitives: (primitive, query) => {
 		if (primitive === 'task') return queryTasks(query)
 		if (primitive === 'event') return queryEvents(query)

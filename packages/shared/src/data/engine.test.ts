@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createEngine, DATA_KEY, LOCAL_CALENDAR_SOURCE, type EngineStorage } from './engine.js'
 import { dataErrorCode } from './errors.js'
+import type { Entity } from './types.js'
 import { newId } from './ulid.js'
 
 function memory(): EngineStorage & { map: Map<string, string> } {
@@ -490,6 +491,73 @@ describe('engine', () => {
 		engine.deleteRows([first.uri])
 		engine.createEntity(overlay)
 		engine.createEntity({ ...overlay, externalId: 'work' })
+	})
+
+	it('puts a mirror, replaces it and drops it', () => {
+		const { engine } = setup()
+		const put = (payload: object) =>
+			engine.applyBatch([
+				{ op: 'putMirror', input: { type: 'forecast', source: 'open-meteo', externalId: '30.31,-97.74', payload } },
+			]).rows[0] as Entity
+
+		const first = put({ temp: 21 })
+		expect(first.mirror).toBe(true)
+
+		// putting it again replaces the row it names: the same id, a later stamp, the new payload whole
+		const second = put({ hi: 30 })
+		expect(second.id).toBe(first.id)
+		expect(second.payload).toEqual({ hi: 30 })
+		expect(second.updatedAt > first.updatedAt).toBe(true)
+		expect(engine.queryEntities({ type: 'forecast' })).toHaveLength(1)
+
+		// a deleted mirror still holds its key, and a put brings it back
+		engine.deleteRows([first.uri])
+		expect(engine.queryEntities({ type: 'forecast' })).toHaveLength(0)
+		const third = put({ hi: 31 })
+		expect(third.id).toBe(first.id)
+		expect(third.deletedAt).toBeNull()
+
+		// a drop takes the row and its links, and leaves no tombstone
+		const place = `eden://place/${newId()}`
+		engine.applyBatch([
+			{ op: 'link', owner: first.uri, link: { uri: place, relation: 'at' } },
+			{ op: 'dropMirror', uri: first.uri },
+		])
+		expect(engine.queryEntities({ type: 'forecast', includeDeleted: true })).toEqual([])
+		expect(engine.queryLinks({ target: place })).toEqual([])
+	})
+
+	it('refuses to drop what is not a mirror', () => {
+		const { engine } = setup()
+		const recipe = engine.createEntity({ type: 'recipe', payload: { name: 'Dal' } })
+		expect(codeOf(() => engine.applyBatch([{ op: 'dropMirror', uri: recipe.uri }]))).toBe('invalid')
+		expect(engine.queryEntities({ type: 'recipe' })).toHaveLength(1)
+		expect(codeOf(() => engine.applyBatch([{ op: 'dropMirror', uri: `eden://forecast/${newId()}` }]))).toBe('not-found')
+		// a mirror names a registered type and carries an object, as any entity does
+		const bad = { source: 'nws', externalId: 'a' }
+		expect(
+			codeOf(() => engine.applyBatch([{ op: 'putMirror', input: { ...bad, type: 'spaceship', payload: {} } }]))
+		).toBe('invalid')
+		expect(
+			codeOf(() =>
+				engine.applyBatch([{ op: 'putMirror', input: { ...bad, type: 'alert', payload: 'text' as unknown as object } }])
+			)
+		).toBe('invalid')
+	})
+
+	it('sweeps the mirrors past their retention', () => {
+		const { engine, clock } = setup()
+		engine.applyBatch([
+			{ op: 'putMirror', input: { type: 'alert', source: 'nws', externalId: 'a', payload: {} } },
+			{ op: 'createEntity', input: { type: 'recipe', payload: { name: 'Dal' } } },
+		])
+		const day = 24 * 60 * 60 * 1000
+		clock.now += 6 * day
+		expect(engine.queryEntities({ type: 'alert' })).toHaveLength(1)
+		clock.now += 2 * day
+		expect(engine.queryEntities({ type: 'alert', includeDeleted: true })).toEqual([])
+		// what is not a mirror is the owner's, however old
+		expect(engine.queryEntities({ type: 'recipe' })).toHaveLength(1)
 	})
 
 	it('applies a batch whole or not at all', () => {

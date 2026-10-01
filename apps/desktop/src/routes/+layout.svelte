@@ -44,7 +44,7 @@
 	import { gardenerUi } from '$lib/shell/gardener/panel-ui.svelte'
 	import { gardenerSetup } from '$lib/shell/gardener/setup.svelte'
 	import { missingHandlers } from '$lib/shell/gardener/handlers'
-	import { fileDropGuard, logError } from '@eden/shared/api'
+	import { fileDropGuard, isTauri, logError } from '@eden/shared/api'
 	import { formatUsd, GRADES } from '@eden/shared/gardener'
 
 	let { children } = $props()
@@ -205,6 +205,18 @@
 		onopen: () => gardenerUi.show(),
 	})
 
+	// The development clamp (D-81), said once: an info button just left of the grade switch whose tooltip names
+	// the models, in the app, where a request can be sent.
+	const clampNotice = $derived(
+		gardenerSetup.clamped && isTauri()
+			? {
+					label: $t('gardener.devClamp', {
+						values: { model: gardenerSetup.map.light.model, deep: gardenerSetup.map.deep.model },
+					}),
+				}
+			: undefined
+	)
+
 	// ⌘, opens Settings; ⌘G the Gardener; ⌘1 to ⌘9 go to the sidebar positions (shell.md, keyboard model).
 	function onkeydown(e: KeyboardEvent) {
 		if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return
@@ -288,6 +300,7 @@
 			{banner}
 			integrations={[]}
 			gardener={gardenerChip}
+			notice={clampNotice}
 			inbox={notices}
 			logs={[]}
 			oninboxclose={() => void inbox.markRead()}

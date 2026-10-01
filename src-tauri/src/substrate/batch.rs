@@ -5,7 +5,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::entities::{self, EntityInput};
+use super::entities::{self, EntityInput, MirrorInput};
 use super::hlc::{read_meta, write_meta};
 use super::links::{self, LinkInput};
 use super::primitives;
@@ -44,6 +44,14 @@ pub enum BatchOp {
     Link {
         owner: String,
         link: LinkInput,
+    },
+    /// Creates the mirror its source and external id name, or replaces it (D-32).
+    PutMirror {
+        input: MirrorInput,
+    },
+    /// Removes a mirror outright.
+    DropMirror {
+        uri: String,
     },
 }
 
@@ -112,6 +120,12 @@ pub fn apply(ctx: &mut WriteCtx, ops: Vec<BatchOp>, marker: Option<&str>) -> Res
             }
             BatchOp::Link { owner, link } => {
                 links::link(ctx, &owner, &link)?;
+            }
+            BatchOp::PutMirror { input } => {
+                rows.push(serde_json::to_value(entities::put_mirror(ctx, input)?)?)
+            }
+            BatchOp::DropMirror { uri } => {
+                entities::drop_mirror(ctx, &uri)?;
             }
         }
     }
@@ -243,5 +257,127 @@ mod tests {
         assert!(workspace
             .write(|ctx| apply(ctx, batch(), Some("Not A Marker")))
             .is_err());
+    }
+
+    #[test]
+    fn a_mirror_is_put_replaced_and_dropped() {
+        let workspace = Workspace::in_memory();
+        let put = |payload: Value| {
+            ops(json!([
+                { "op": "putMirror", "input": { "type": "forecast", "source": "open-meteo",
+                  "externalId": "30.31,-97.74", "payload": payload } },
+            ]))
+        };
+        let first = workspace
+            .write(|ctx| apply(ctx, put(json!({ "temp": 21 })), None))
+            .unwrap();
+        assert_eq!(first.rows[0]["mirror"], json!(true));
+
+        // Putting it again replaces the row it names: the same id, a later stamp, the new payload whole.
+        let second = workspace
+            .write(|ctx| apply(ctx, put(json!({ "hi": 30 })), None))
+            .unwrap();
+        assert_eq!(second.rows[0]["id"], first.rows[0]["id"]);
+        assert_eq!(second.rows[0]["payload"], json!({ "hi": 30 }));
+        assert!(second.rows[0]["updatedAt"].as_str() > first.rows[0]["updatedAt"].as_str());
+        assert_eq!(count(&workspace, "forecast"), 1);
+
+        // A deleted mirror still holds its key, and a put brings it back.
+        let uri = first.rows[0]["uri"].as_str().unwrap().to_string();
+        workspace.write(|ctx| rows::delete(ctx, &uri)).unwrap();
+        assert_eq!(count(&workspace, "forecast"), 0);
+        let third = workspace
+            .write(|ctx| apply(ctx, put(json!({ "hi": 31 })), None))
+            .unwrap();
+        assert_eq!(third.rows[0]["id"], first.rows[0]["id"]);
+        assert_eq!(third.rows[0]["deletedAt"], Value::Null);
+        assert_eq!(count(&workspace, "forecast"), 1);
+
+        // A drop takes the row and its links, and leaves no tombstone.
+        let place = format!("eden://place/{}", crate::substrate::ids::new_id());
+        let drop = ops(json!([
+            { "op": "link", "owner": uri, "link": { "uri": place, "relation": "at" } },
+            { "op": "dropMirror", "uri": uri },
+        ]));
+        workspace.write(|ctx| apply(ctx, drop, None)).unwrap();
+        let filter = EntityQuery {
+            type_id: "forecast".to_string(),
+            include_deleted: true,
+            ..Default::default()
+        };
+        assert!(workspace
+            .read(|conn| entities::query(conn, &filter))
+            .unwrap()
+            .is_empty());
+        let links = crate::substrate::links::LinkQuery {
+            target: Some(place),
+            ..Default::default()
+        };
+        assert!(workspace
+            .read(|conn| links::query(conn, &links))
+            .unwrap()
+            .is_empty());
+    }
+
+    #[test]
+    fn a_drop_is_refused_for_what_is_not_a_mirror() {
+        let workspace = Workspace::in_memory();
+        let created = workspace
+            .write(|ctx| {
+                apply(
+                    ctx,
+                    ops(json!([
+                        { "op": "createEntity", "input": { "type": "recipe", "payload": { "name": "Dal" } } },
+                    ])),
+                    None,
+                )
+            })
+            .unwrap();
+        let uri = created.rows[0]["uri"].as_str().unwrap().to_string();
+        let drop = |uri: &str| ops(json!([{ "op": "dropMirror", "uri": uri }]));
+        assert!(matches!(
+            workspace.write(|ctx| apply(ctx, drop(&uri), None)),
+            Err(EdenError::InvalidOperation(_))
+        ));
+        assert_eq!(count(&workspace, "recipe"), 1);
+        let missing = format!("eden://forecast/{}", crate::substrate::ids::new_id());
+        assert!(matches!(
+            workspace.write(|ctx| apply(ctx, drop(&missing), None)),
+            Err(EdenError::NotFound(_))
+        ));
+        // A mirror names a registered type and carries an object, as any entity does.
+        for bad in [
+            json!({ "type": "spaceship", "source": "nws", "externalId": "a", "payload": {} }),
+            json!({ "type": "alert", "source": "nws", "externalId": "a", "payload": "text" }),
+        ] {
+            let put = ops(json!([{ "op": "putMirror", "input": bad }]));
+            assert!(matches!(
+                workspace.write(|ctx| apply(ctx, put, None)),
+                Err(EdenError::InvalidOperation(_))
+            ));
+        }
+    }
+
+    #[test]
+    fn the_sweep_takes_the_mirrors_past_their_retention() {
+        let workspace = Workspace::in_memory();
+        let batch = ops(json!([
+            { "op": "putMirror", "input": { "type": "alert", "source": "nws", "externalId": "a", "payload": {} } },
+            { "op": "createEntity", "input": { "type": "recipe", "payload": { "name": "Dal" } } },
+        ]));
+        workspace.write(|ctx| apply(ctx, batch, None)).unwrap();
+        let now = crate::substrate::hlc::now_ms();
+        let day = 24 * 60 * 60 * 1000;
+        let sweep = |at: u64| {
+            workspace
+                .write(|ctx| entities::sweep_mirrors(ctx.conn, at))
+                .unwrap()
+        };
+        assert_eq!(sweep(now + 6 * day), 0);
+        assert_eq!(count(&workspace, "alert"), 1);
+        assert_eq!(sweep(now + 8 * day), 1);
+        assert_eq!(count(&workspace, "alert"), 0);
+        // What is not a mirror is the owner's, however old.
+        assert_eq!(count(&workspace, "recipe"), 1);
     }
 }

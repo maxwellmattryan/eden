@@ -112,6 +112,8 @@ An entity URI resolves to its owner through `ownerOf`, so a link survives a chan
 
 Each app has `src/lib/domains/manifest.ts` with `defineDomain(id, bindings)`, which joins a declaration to what the app binds. On desktop the widget bindings are typed over the declaration's built widget ids: a widget without a binding does not compile, and neither does a binding for a widget nobody declared. The phone binds a route and a live glyph, and its widgets when its Garden is built.
 
+`pack` is what the Gardener's context pack carries of a row, by entity type, for a type whose row is more than a request should pay for (D-85): the shell's pack readers apply it after the query, a type without an entry is sent whole, and `null` leaves a row out. Sky binds one for `forecast`.
+
 `subscribe` is where a domain hears its schedules and its signals and registers its mirrors with the refresh coordinator (`engineering/signals.md`). The shell calls it once when it starts, before any store is loaded, so what it binds reads rows and not the domain's store; its answer unbinds.
 
 `tools` binds a handler to each tool the domain declares and `quickActionHandlers` a store write to each quick action (`engineering/gardener.md`, "Tools"); the domain keeps them in `tools.ts`, which imports its own store and the shell and nothing of another domain.
@@ -162,7 +164,7 @@ The Gardener's runtime (`engineering/gardener.md`) calls `resolveTool` before ev
 | mobile | `apps/mobile/src/lib/domains/<id>/` | `manifest.ts` (bindings), and its surfaces as they are built |
 | Rust | `src-tauri/src/domains/<id>/` | models, services and commands, for a domain that needs the crate |
 
-Every folder under a `domains/` is a domain, named by its plain id. What belongs to the shell lives in `src/lib/shell/`: the Garden (`shell/garden/`), the activity feed (`shell/feed.svelte.ts`), the inbox (`shell/inbox.svelte.ts`), the undo toast. Sky's model, providers and store predate this layout and stay in `packages/shared/src/weather/`; its manifest is in `domains/weather/`. In the crate, `domains/documents.rs` is the document store and not a domain.
+Every folder under a `domains/` is a domain, named by its plain id. What belongs to the shell lives in `src/lib/shell/`: the Garden (`shell/garden/`), the activity feed (`shell/feed.svelte.ts`), the inbox (`shell/inbox.svelte.ts`), the undo toast. Sky's model, providers, row mapping and store predate this layout and stay in `packages/shared/src/weather/`; its manifest is in `domains/weather/`. In the crate, `domains/documents.rs` is the document store and not a domain.
 
 ## Isolation
 

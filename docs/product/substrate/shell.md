@@ -33,7 +33,7 @@ Every view push goes on a history stack with back and forward, like a browser. T
 
 ## Status bar (Phase 1)
 
-Left: sync state and one chip per integration. Right: the Gardener chip (the conversation's grade and model with a switch for the grade (D-74), budget meter, grey when no key on this device), the notification bell with unread count, and the **+** button. On mobile these live behind More and the floating button.
+Left: sync state and one chip per integration. Right: the Gardener chip (the conversation's grade and model with a switch for the grade (D-74), budget meter, grey when no key on this device; in a development build an info button between the chip and the switch, whose tooltip names the clamp's models, D-81), the notification bell with unread count, and the **+** button. On mobile these live behind More and the floating button.
 
 The grade switch is the kit's `StatusBarGardener` with `grades` and `onchangegrade`; the words for a tool that is unavailable, and why, are the kit's `gardener.unavailable*` strings (`engineering/gardener.md`).
 

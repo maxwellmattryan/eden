@@ -315,18 +315,6 @@
 	)
 </script>
 
-<!-- the development clamp, once, at the composer's foot: an info glyph whose tooltip says it -->
-{#snippet clampNote()}
-	<IconButton
-		icon="info"
-		size="xs"
-		label={$t('gardener.devClamp', {
-			values: { model: gardenerSetup.map.light.model, deep: gardenerSetup.map.deep.model },
-		})}
-		tooltip
-	/>
-{/snippet}
-
 <!-- what waits on the message: a chip per file, each removable until it is sent -->
 {#snippet stagedChips()}
 	{#each staged as entry (entry.key)}
@@ -477,7 +465,6 @@
 					allowEmpty={staged.length > 0}
 					longPaste={LONG_PASTE_CHARS}
 					tools={composerTools}
-					meta={gardenerSetup.clamped && inApp ? clampNote : undefined}
 					onsend={(text) => void send(text)}
 					onfiles={picked}
 					onstop={() => void runtime.cancel()}

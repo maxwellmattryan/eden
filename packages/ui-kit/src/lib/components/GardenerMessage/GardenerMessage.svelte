@@ -1,6 +1,7 @@
 <script lang="ts">
 	// The Gardener's bubble on ai-muted with its name in ai, whatever the accent, so a reply is never mistaken for the
-	// owner's own data (D-40); the owner's own message on surface-2, aligned to the end, with no name. The reply body
+	// owner's own data (D-40); the owner's own message on surface-2, aligned to the end, with no name. Every bubble has
+	// a tail, a tightened bottom corner on its speaker's side: the start for the Gardener, the end for the owner. The reply body
 	// is the voice in text-primary; the owner's words are body text. Replies stream: `text` may grow word by word, and
 	// children (tool and proposal cards) follow the text inside the same bubble. With `markdown` a reply's text is
 	// drawn as Markdown; the owner's words never are. The words select. Under the bubble, when the app gives a `time`
@@ -141,6 +142,8 @@
 	.ed-msg-ai .ed-msg-bubble {
 		background: var(--ed-msg-ground);
 		border-color: color-mix(in srgb, var(--ed-msg-ink) 25%, transparent);
+		/* the tail: the bottom corner on the speaker's side is tightened, so the bubble points at who said it */
+		border-end-start-radius: var(--space-1);
 	}
 	.ed-msg-owner {
 		align-self: flex-end;
@@ -149,6 +152,7 @@
 	}
 	.ed-msg-owner .ed-msg-bubble {
 		background: var(--surface-2);
+		border-end-end-radius: var(--space-1);
 	}
 	.ed-msg-name {
 		margin: 0;

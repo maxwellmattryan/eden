@@ -20,6 +20,8 @@
 	/** The sync line is the first integration's last good time. */
 	const sync = googleWork.detail!
 	const offline = `Offline. Showing the forecast from ${skyToday.lastGood}.`
+	/** What a development build says about the models it runs on. */
+	const clamp = `Development build: light and standard run on ${budget.model}.`
 
 	/** The sample notifications as inbox items: the domain glyph, its themed name, one quiet action to snooze. */
 	const notices: InboxItem[] = inbox.map((notice) => ({
@@ -124,6 +126,22 @@
 		await userEvent.keyboard('{Escape}')
 		await waitFor(() => expect(quickLog).not.toBeVisible())
 		await waitFor(() => expect(plus).toHaveFocus())
+	}}
+/>
+
+<!-- A standing note from the app: an info button between the chip and the grade caret, named by its sentence -->
+<Story
+	name="With notice"
+	{template}
+	args={{ gardener: { ...gardener, grade: 'standard', grades, onchangegrade: fn() }, notice: { label: clamp } }}
+	play={async ({ canvasElement }) => {
+		if (!framed(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		const note = canvas.getByRole('button', { name: clamp })
+		const caret = canvas.getByRole('button', { name: strings.gardener.switchGrade })
+		await expect(note.compareDocumentPosition(caret) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+		const chip = canvas.getByRole('button', { name: (name: string) => name.startsWith(budget.model) })
+		await expect(chip.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 	}}
 />
 

@@ -54,6 +54,14 @@
 		icon?: IconName
 	}
 
+	/** A standing note about this build or device: an info button whose tooltip says it. */
+	export interface StatusBarNotice {
+		/** The sentence, which is the button's name and its tooltip. */
+		label: string
+		/** info unless told otherwise. */
+		icon?: IconName
+	}
+
 	/** One notification behind the bell, shown as an InboxCard. */
 	export interface InboxItem {
 		id: string
@@ -77,7 +85,8 @@
 	// banner in its place, and one chip per integration; a chip opens a small dialog with its detail and the one action
 	// that helps (Connect when it is granted but not connected here, Sync now when it is stale or failed). Right: the
 	// Gardener chip (the model and its budget meter in honey, grey without a key) that opens the Gardener, with a caret
-	// beside it opening the grade menu when the app hands it grades, the bell that
+	// beside it opening the grade menu when the app hands it grades, the notice when the app hands one (an info
+	// button whose tooltip is the sentence, between the chip and the caret, first of the icon buttons), the bell that
 	// opens the inbox as a stack of InboxCards (the cards keep their unread mark while it is open; the app hears it
 	// close), and + that opens the embedded Quick Log. Every panel is a Popover dialog
 	// unfurling upwards from the bar: Escape or a pointer outside closes it and focus returns to its button. On mobile
@@ -103,6 +112,8 @@
 		integrations?: StatusBarIntegration[]
 		/** The Gardener chip; omit it to hide it. */
 		gardener?: StatusBarGardener
+		/** A standing note, first of the icon buttons on the right, before the grade caret: its sentence is the tooltip. */
+		notice?: StatusBarNotice
 		/** The notifications behind the bell; the unread ones make its count. */
 		inbox?: InboxItem[]
 		/** The enabled quick actions behind +. */
@@ -121,6 +132,7 @@
 		banner,
 		integrations = [],
 		gardener,
+		notice,
 		inbox = [],
 		logs = [],
 		onlog,
@@ -266,8 +278,13 @@
 				aria-label={gardenerName}
 				onclick={gardener.onopen ? openGardener : undefined}
 			/>
+		{/if}
+		{#if notice}
+			<IconButton icon={notice.icon ?? 'info'} label={notice.label} size="sm" tooltip />
+		{/if}
+		{#if gardener}
 			{#if grades.length}
-				<span class="ed-status-anchor ed-status-grade" bind:this={gradeAnchor}>
+				<span class={['ed-status-anchor', !notice && 'ed-status-grade']} bind:this={gradeAnchor}>
 					<IconButton
 						icon={currentGradeIcon}
 						label={s.gardener.switchGrade}
@@ -388,7 +405,7 @@
 		gap: var(--space-2);
 		flex: none;
 	}
-	/* The caret sits tight against the model chip, as one control in two parts */
+	/* The caret sits tight against the model chip, as one control in two parts, unless the notice stands between */
 	.ed-status-grade {
 		margin-left: calc(-1 * var(--space-1));
 	}

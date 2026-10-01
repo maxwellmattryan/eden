@@ -151,6 +151,104 @@ pub fn update(ctx: &mut WriteCtx, id: &str, payload: Value) -> Result<Entity> {
     Ok(entity)
 }
 
+/// A mirror as a refresh writes it (D-32): the row is named by its type, its source and its external id.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MirrorInput {
+    #[serde(rename = "type")]
+    pub type_id: String,
+    pub source: String,
+    pub external_id: String,
+    pub payload: Value,
+    pub snapshot: Option<Value>,
+}
+
+/// Mirrors are kept this long after they were last written (product/substrate/data.md, "Retention").
+const MIRROR_DAYS: u64 = 7;
+
+/// Writes a mirror: the row its source and external id name is replaced, payload and snapshot, and comes back if it
+/// was deleted, keeping its id; without one it is created. What a refresh calls, however often.
+pub fn put_mirror(ctx: &mut WriteCtx, input: MirrorInput) -> Result<Entity> {
+    check_payload(&input.payload)?;
+    let held: Option<String> = ctx
+        .conn
+        .query_row(
+            "SELECT id FROM entities WHERE type = ?1 AND source = ?2 AND external_id = ?3 AND mirror = 1",
+            [&input.type_id, &input.source, &input.external_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    let Some(id) = held else {
+        return create(
+            ctx,
+            EntityInput {
+                id: None,
+                type_id: input.type_id,
+                payload: input.payload,
+                mirror: true,
+                source: Some(input.source),
+                external_id: Some(input.external_id),
+                snapshot: input.snapshot,
+            },
+        );
+    };
+    let stamp = hlc::next(ctx.conn)?;
+    ctx.conn.execute(
+        "UPDATE entities SET payload = ?1, snapshot = ?2, updated_at = ?3, deleted_at = NULL WHERE id = ?4",
+        rusqlite::params![
+            input.payload.to_string(),
+            input
+                .snapshot
+                .filter(|snapshot| !snapshot.is_null())
+                .map(|snapshot| snapshot.to_string()),
+            stamp,
+            id,
+        ],
+    )?;
+    let entity = get(ctx.conn, &id)?.ok_or_else(|| EdenError::NotFound(format!("entity {id}")))?;
+    ctx.record(&entity.uri, ChangeOp::Updated);
+    Ok(entity)
+}
+
+/// Removes a mirror outright, with its links: it is this device's copy of what is kept elsewhere, so there is no
+/// tombstone to carry (D-32). A row that is not a mirror is refused; one that is not there is not found.
+pub fn drop_mirror(ctx: &mut WriteCtx, uri: &str) -> Result<()> {
+    let parsed = Uri::parse(uri)?;
+    let mirror: Option<bool> = ctx
+        .conn
+        .query_row(
+            "SELECT mirror FROM entities WHERE id = ?1 AND type = ?2",
+            [&parsed.id, &parsed.type_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    match mirror {
+        None => return Err(EdenError::NotFound(uri.to_string())),
+        Some(false) => return Err(EdenError::InvalidOperation(format!("not a mirror: {uri}"))),
+        Some(true) => {}
+    }
+    ctx.conn
+        .execute("DELETE FROM links WHERE owner_id = ?1", [&parsed.id])?;
+    ctx.conn
+        .execute("DELETE FROM entities WHERE id = ?1", [&parsed.id])?;
+    ctx.record(uri, ChangeOp::Deleted);
+    Ok(())
+}
+
+/// Removes the mirrors that were last written more than `MIRROR_DAYS` ago, with their links, and answers how many.
+pub(crate) fn sweep_mirrors(conn: &Connection, now_ms: u64) -> Result<usize> {
+    let cutoff = now_ms.saturating_sub(MIRROR_DAYS * 24 * 60 * 60 * 1000);
+    let stamp = format!("{cutoff:016x}-00000000-00000000");
+    conn.execute(
+        "DELETE FROM links WHERE owner_id IN (SELECT id FROM entities WHERE mirror = 1 AND updated_at < ?1)",
+        [&stamp],
+    )?;
+    Ok(conn.execute(
+        "DELETE FROM entities WHERE mirror = 1 AND updated_at < ?1",
+        [&stamp],
+    )?)
+}
+
 /// One row by id, deleted or not, with its live links.
 pub fn get(conn: &Connection, id: &str) -> Result<Option<Entity>> {
     let entity = conn

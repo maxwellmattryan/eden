@@ -63,6 +63,7 @@ import {
 	type Link,
 	type LinkInput,
 	type LinkQuery,
+	type MirrorInput,
 	type PrimitiveRow,
 	type Primitives,
 	type PrimitiveType,
@@ -228,6 +229,9 @@ const sameLink = (link: Link, owner: string, uri: string, relation: string) =>
 	link.owner === owner && link.uri === uri && link.relation === relation
 const text = (value: unknown) => (typeof value === 'string' ? value : null)
 
+/** Mirrors are kept this long after they were last written (product/substrate/data.md, "Retention"). */
+const MIRROR_MS = 7 * 24 * 60 * 60 * 1000
+
 export type Engine = ReturnType<typeof createEngine>
 
 export function createEngine(storage: EngineStorage, options: EngineOptions = {}) {
@@ -286,6 +290,7 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 					// The log is swept when the workspace opens, as in the crate.
 					const cutoff = auditCutoff(now())
 					state.audit = state.audit.filter((entry) => entry.at >= cutoff)
+					sweepMirrors(state)
 					return state
 				}
 			} catch {
@@ -410,6 +415,40 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 		const row = { ...common(input.type, id, stamp(state), input), payload: structuredClone(input.payload) }
 		state.rows[id] = row
 		return withLinks(state, row)
+	}
+
+	/** The mirror its source and external id name, replaced and brought back, or made (D-32). */
+	function putMirror(state: State, input: MirrorInput<object>): Entity {
+		if (!isObject(input.payload)) throw invalid("an entity's payload is a JSON object")
+		const held = Object.values(state.rows).find(
+			(row) =>
+				row.type === input.type && row.mirror && row.source === input.source && row.externalId === input.externalId
+		)
+		if (!held) return createEntity(state, { ...input, mirror: true })
+		held.payload = structuredClone(input.payload)
+		held.snapshot = structuredClone(input.snapshot) ?? null
+		held.deletedAt = null
+		held.updatedAt = stamp(state)
+		return withLinks(state, held)
+	}
+
+	/** Removes a mirror outright, with its links: there is no tombstone to carry. */
+	function dropMirror(state: State, uri: string): void {
+		const row = find(state, uri)
+		if (isPrimitive(row.type)) throw notFound(uri)
+		if (!row.mirror) throw invalid(`not a mirror: ${uri}`)
+		state.links = state.links.filter((entry) => entry.owner !== row.uri)
+		delete state.rows[row.id]
+	}
+
+	/** Lets go of the entity mirrors last written more than seven days ago, as the crate does when it opens. */
+	function sweepMirrors(state: State): void {
+		const cutoff = formatStamp({ wallMs: Math.max(0, now() - MIRROR_MS), counter: 0, node: 0 })
+		for (const row of Object.values(state.rows)) {
+			if (!row.mirror || isPrimitive(row.type) || row.updatedAt >= cutoff) continue
+			state.links = state.links.filter((entry) => entry.owner !== row.uri)
+			delete state.rows[row.id]
+		}
 	}
 
 	function updateEntity(state: State, id: string, payload: object): Entity {
@@ -706,6 +745,8 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 					else if (op.op === 'updatePrimitive') rows.push(updatePrimitive(state, batchable(op.type), op.id, op.patch))
 					else if (op.op === 'delete') setDeleted(state, op.uri, true)
 					else if (op.op === 'restore') setDeleted(state, op.uri, false)
+					else if (op.op === 'putMirror') rows.push(putMirror(state, op.input))
+					else if (op.op === 'dropMirror') dropMirror(state, op.uri)
 					else link(state, op.owner, op.link)
 				}
 				if (marker !== undefined) state.markers.push(marker)

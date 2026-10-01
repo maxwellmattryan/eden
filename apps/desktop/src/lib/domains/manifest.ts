@@ -4,7 +4,7 @@
 // the Garden and the palette's index from the result and nothing else.
 import type { Component } from 'svelte'
 import type { ResolvedPathname } from '$app/types'
-import type { BundleExtra } from '@eden/shared/data'
+import type { BundleExtra, Entity } from '@eden/shared/data'
 import {
 	declarationOf,
 	type BuiltDomainId,
@@ -75,6 +75,11 @@ export interface DomainBindings<D extends BuiltDomainId> {
 	 * tool, `delegate` for a model-backed one. A declared tool with no handler is unavailable, and a test says so.
 	 */
 	tools?: Partial<Record<string, ToolHandler>>
+	/**
+	 * What the Gardener's context pack carries of a row of one of the domain's entity types, by type, where the row
+	 * itself is more than a request should pay for (D-85); `null` leaves the row out. A type with no entry is sent whole.
+	 */
+	pack?: Partial<Record<string, (row: Entity) => Entity | null>>
 	/** What each quick action writes, by its id; `log-quick` dispatches here and the Quick Log sheet (#27) reuses it. */
 	quickActionHandlers?: Partial<Record<string, QuickActionHandler>>
 	/** The domain's part of committing a draft its tool left; the substrate's parts (tasks, events) are the shell's. */

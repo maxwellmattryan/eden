@@ -3,8 +3,9 @@
 import { goto } from '$app/navigation'
 import { resolve } from '$app/paths'
 import { iconFor } from '@eden/ui-kit'
+import type { Entity } from '@eden/shared/data'
 import { defineDomain } from '../manifest.js'
-import { weather } from '@eden/shared/weather'
+import { forecastForPack, SKY, weather, type ForecastPayload } from '@eden/shared/weather'
 import SunAndMoon from './widgets/SunAndMoon.svelte'
 import WeatherNow from './widgets/WeatherNow.svelte'
 import { weatherTools } from './tools.js'
@@ -19,4 +20,6 @@ export const weatherManifest = defineDomain('weather', {
 	load: () => weather.load(),
 	subscribe: () => weather.bind(),
 	tools: weatherTools,
+	// the tools answer the hours and the details; the pack carries the week at a glance
+	pack: { [SKY.forecast]: (row) => forecastForPack(row as Entity<ForecastPayload>) },
 })
