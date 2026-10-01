@@ -285,14 +285,19 @@
 				"add": "追加",
 				"addPlaceholder": "品目を追加",
 				"buyAgain": "また買う",
+				"buyAgainNone": "また買うものはありません。",
 				"checked": "{total}件中{checked}件チェック済み",
 				"allChecked": "すべてチェック済みです。帰ったらリストを完了しましょう。",
 				"anyStore": "その他",
 				"toBuy": "{count, plural, =0 {買うものはありません} other {あと#件}}",
 				"empty": {
 					"title": "買うものはありません",
-					"text": "一行で追加するか、ストックで切らしたものに印を付けるか、レシピから足りない材料を送ってください。",
+					"text": "品目を追加するか、ストックで切らしたものに印を付けるか、レシピから足りない材料を送ってください。",
 					"action": "項目を追加"
+				},
+				"emptyList": {
+					"title": "このリストにはまだ何もありません",
+					"text": "ここに追加するか、ストックで切らしたものに印を付けてください。"
 				},
 				"origin": {
 					"manual": "手入力",
@@ -306,6 +311,9 @@
 					"edit": "編集",
 					"moveTo": "移動",
 					"addTo": "追加先",
+					"openWebsite": "ウェブサイトを開く",
+					"moveUp": "上へ移動",
+					"moveDown": "下へ移動",
 					"delete": "削除"
 				},
 				"toast": {
@@ -323,16 +331,22 @@
 					"storeExists": "{store}はすでにあります。",
 					"storeSaved": "{store}を保存しました。",
 					"storeRemoved": "{store}を削除しました。リストにあった品目は「その他」にあります。",
-					"shopDaySetLate": "買い物の日を設定しました。"
+					"shopDaySetLate": "買い物の日を設定しました。",
+					"storeMoved": "{store}を移動しました。"
 				},
 				"pane": {
 					"editing": "品目を編集",
 					"name": "名前",
 					"quantity": "数量",
 					"store": "店",
+					"storeHelp": "店を選ばなければ、前回買った店のリストに入ります。",
 					"note": "メモ",
 					"editingStore": "店を編集",
 					"sells": "扱うもの",
+					"address": "住所",
+					"website": "ウェブサイト",
+					"phone": "電話",
+					"storeNote": "メモ",
 					"shopDay": "買い物の日",
 					"shopTime": "時刻",
 					"shopDayHelp": "任意です。設定すると、当日の朝にお知らせが届きます。",
@@ -341,10 +355,13 @@
 					"noShopDay": "買い物の日なし",
 					"deleteStore": "店を削除"
 				},
+				"addItem": "品目を追加",
 				"addTo": "{store}に追加",
 				"addStore": "店を追加",
 				"stores": "店",
-				"storesHelp": "店ごとにリストがあります。新しい品目は、前に買った店のリストに入ります。",
+				"storesNone": "店はまだありません。上の「追加」から追加してください。",
+				"left": "あと{count}件",
+				"shopped": "{when}に買い物",
 				"complete": "{store}を完了",
 				"completeHint": "完了：チェック済みを整理",
 				"editStore": "{store}を編集",
@@ -1241,6 +1258,7 @@
 		"on": "オン",
 		"off": "オフ",
 		"noData": "データはまだありません",
+		"datePart": { "year": "年", "month": "月", "day": "日" },
 		"gardener": {
 			"name": "庭師",
 			"open": "庭師を開く",

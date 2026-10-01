@@ -135,8 +135,6 @@
 		const own = row.actions ?? []
 		return selectable && !selecting ? [selectItem, ...own] : own
 	}
-	/** Whether any row ends in a ⋯ button: the header's count then sits over that column. */
-	const menus = $derived(rows.some((row) => actionsFor(row).length > 0))
 	/** The rows of the grid that are staying: those still in `rows`, by id, so a row on its way out is not counted. */
 	function staying(grid: Element): Element[] {
 		const ids = new Set(rows.map((row) => row.id))
@@ -160,7 +158,7 @@
 	}
 </script>
 
-<div class={['ed-list', { 'ed-list-selecting': selecting, 'ed-list-menus': menus }, className]} {...rest}>
+<div class={['ed-list', { 'ed-list-selecting': selecting }, className]} {...rest}>
 	{#if header || count !== undefined || selectable}
 		<div class="ed-list-header">
 			<span class="ed-list-title" id={headerId}>{header}</span>
@@ -254,26 +252,23 @@
 		gap: var(--space-3);
 		flex: none;
 	}
-	/* over a ⋯ column the count is centred on it: a box the width of the rows' sm IconButton, which a longer
-	   "n selected" outgrows toward the leading side */
-	.ed-list-menus .ed-list-count {
+	/* the count is always centred on the rows' ⋯ column, whether or not any row has one now (an empty list, a list
+	   with no menus), so every count in the kit stands in the same place: a box the width of the rows' sm
+	   IconButton, which a longer "n selected" outgrows toward the leading side */
+	.ed-list-count {
 		box-sizing: border-box;
 		min-width: calc(var(--control-height) - var(--space-1));
 		text-align: center;
-	}
-	/* and the Select label ends where the rows' meta ends: the button gives up its trailing padding */
-	.ed-list-menus .ed-list-toggle {
-		margin-inline-end: calc(-1 * var(--ed-btn-pad));
-	}
-	.ed-list-toggle {
-		display: inline-flex;
-	}
-	.ed-list-count {
 		white-space: nowrap;
 		font: var(--ed-t-data-sm);
 		letter-spacing: var(--ed-t-data-sm-tracking);
 		font-variation-settings: var(--ed-t-data-sm-opsz);
 		font-variant-numeric: tabular-nums;
+	}
+	.ed-list-toggle {
+		display: inline-flex;
+		/* the Select label ends where the rows' meta ends: the button gives up its trailing padding */
+		margin-inline-end: calc(-1 * var(--ed-btn-pad));
 	}
 	.ed-list-grid {
 		display: flex;

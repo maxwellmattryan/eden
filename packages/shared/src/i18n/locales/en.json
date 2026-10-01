@@ -285,14 +285,19 @@
 				"add": "Add",
 				"addPlaceholder": "Add an item",
 				"buyAgain": "Buy it again",
+				"buyAgainNone": "Nothing to buy again.",
 				"checked": "{checked} of {total} checked",
 				"allChecked": "Everything is checked. Complete the list once you are home.",
 				"anyStore": "Miscellaneous",
 				"toBuy": "{count, plural, =0 {Nothing to buy} one {# item to buy} other {# items to buy}}",
 				"empty": {
 					"title": "Nothing to buy",
-					"text": "Add an item in one line, mark what ran out in Stock, or send a recipe's missing ingredients here.",
+					"text": "Add an item, mark what ran out in Stock, or send a recipe's missing ingredients here.",
 					"action": "Add an item"
+				},
+				"emptyList": {
+					"title": "No items in this list yet",
+					"text": "Add one here, or mark what ran out in Stock."
 				},
 				"origin": {
 					"manual": "manual",
@@ -306,6 +311,9 @@
 					"edit": "Edit",
 					"moveTo": "Move to",
 					"addTo": "Add to",
+					"openWebsite": "Open website",
+					"moveUp": "Move up",
+					"moveDown": "Move down",
 					"delete": "Delete"
 				},
 				"toast": {
@@ -323,16 +331,22 @@
 					"storeExists": "{store} is already a store.",
 					"storeSaved": "{store} saved.",
 					"storeRemoved": "{store} deleted. What was on its list is under Miscellaneous.",
-					"shopDaySetLate": "Shop day set."
+					"shopDaySetLate": "Shop day set.",
+					"storeMoved": "{store} moved."
 				},
 				"pane": {
 					"editing": "Edit item",
 					"name": "Name",
 					"quantity": "Quantity",
 					"store": "Store",
+					"storeHelp": "With no store picked, it goes where it was last bought.",
 					"note": "Note",
 					"editingStore": "Edit store",
 					"sells": "Sells",
+					"address": "Address",
+					"website": "Website",
+					"phone": "Phone",
+					"storeNote": "Note",
 					"shopDay": "Shop day",
 					"shopTime": "Time",
 					"shopDayHelp": "Optional. With a shop day set, a reminder arrives that morning.",
@@ -341,10 +355,13 @@
 					"noShopDay": "No shop day",
 					"deleteStore": "Delete store"
 				},
+				"addItem": "Add item",
 				"addTo": "Add to {store}",
-				"addStore": "Add a store",
+				"addStore": "Add store",
 				"stores": "Stores",
-				"storesHelp": "Each store keeps a list of its own. A new item goes where it was last bought.",
+				"storesNone": "No stores yet. Add one from Add, at the top.",
+				"left": "{count} left",
+				"shopped": "Shopped {when}",
 				"complete": "Complete {store}",
 				"completeHint": "Complete: clear what is checked",
 				"editStore": "Edit {store}",

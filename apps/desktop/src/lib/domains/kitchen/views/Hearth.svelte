@@ -30,7 +30,8 @@
 
 	const uid = $props.id()
 	const quickAddId = `${uid}-quick-add`
-	const storeAddId = `${uid}-store-add`
+	/** The Grocery view, whose sheets the header's Add menu opens. */
+	let grocery = $state<Grocery>()
 
 	const tab = $derived.by<KitchenTab>(() => {
 		const requested = page.params.tab ?? ''
@@ -74,16 +75,26 @@
 		if (tab === 'recipes') {
 			return [{ label: $t('domains.kitchen.recipes.add'), icon: 'plus', onclick: () => recipeImport.start() }]
 		}
+		// one Add, whose menu offers what can be added (D-102)
 		return [
 			{
 				label: $t('domains.kitchen.grocery.add'),
 				icon: 'plus',
 				variant: kitchen.grocery.items.length ? undefined : 'secondary',
-				onclick: focusQuickAdd,
-			},
-			{
-				label: $t('domains.kitchen.grocery.addStore'),
-				onclick: () => document.getElementById(storeAddId)?.focus(),
+				menu: [
+					{
+						id: 'item',
+						label: $t('domains.kitchen.grocery.addItem'),
+						icon: 'list',
+						onselect: () => grocery?.addItem(),
+					},
+					{
+						id: 'store',
+						label: $t('domains.kitchen.grocery.addStore'),
+						icon: 'map-pin',
+						onselect: () => grocery?.addStore(),
+					},
+				],
 			},
 		]
 	})
@@ -145,7 +156,7 @@
 	{:else if tab === 'recipes'}
 		<Recipes />
 	{:else}
-		<Grocery {quickAddId} {storeAddId} onadd={focusQuickAdd} />
+		<Grocery bind:this={grocery} />
 	{/if}
 </div>
 

@@ -25,7 +25,7 @@
 			docs: {
 				description: {
 					component:
-						'Hearth’s Grocery view (product/domains/kitchen.md), mocked from kit components under D-54. The Stock header with the Grocery tab selected and Add as the primary action, a quick-add line that files an item where it was last bought, then one list per store (D-96), all on the page at once: the store’s name, its shop day when it has one, the count of what is checked, Complete and Edit store as quiet icon buttons, its rows and an add line of its own; what names no store yet sits in Miscellaneous. Each row carries an origin badge (manual, recipe, low stock); a checked row is struck through and stays until its list is completed. On desktop the pane on the right is the stores; a store’s form (its name, what it sells, its optional shop day) and an item’s open in a sheet (D-95). On mobile there is no pane: a swipe to the right checks a row off and a swipe to the left deletes it.',
+						'Hearth’s Grocery view (product/domains/kitchen.md), mocked from kit components under D-54. The Stock header with the Grocery tab selected and one action, Add, whose menu offers Add item and Add store (D-102), then one list per store (D-96), all on the page at once: the store’s name in the display face, its shop day when it has one, the count of what is checked, Complete, Add (the item’s form with that store picked) and Edit store as quiet icon buttons, and its rows; what names no store yet sits in Miscellaneous. Each row carries an origin badge (manual, recipe, low stock); a checked row is struck through and stays until its list is completed. On desktop the side holds Buy it again and, beneath it, the stores in the owner’s order (D-101): each row says what is left to buy and the store’s shop day or its last trip, a click goes to its list and its menu edits, moves and deletes it; a store’s form (its name, what it sells, where it is, a note, its optional shop day) and an item’s open in a sheet (D-95), the same one to add as to edit. On mobile there is no side: a swipe to the right checks a row off and a swipe to the left deletes it.',
 				},
 			},
 		},
@@ -38,6 +38,8 @@
 			onagain: fn(),
 			onaction: fn(),
 			onsave: fn(),
+			ongostore: fn(),
+			onmovestore: fn(),
 			onaddstore: fn(),
 			onsavestore: fn(),
 			ondeletestore: fn(),
@@ -64,11 +66,12 @@
 			await expect(canvas.getByRole('heading', { level: 2, name })).toBeVisible()
 		}
 		await expect(canvas.queryByText('H-E-B Saturday')).toBeNull()
-		await expect(canvas.getByRole('textbox', { name: 'Add an item' })).toBeVisible()
+		// nothing is typed on the page: adding is the header's one action (D-102)
+		await expect(within(canvas.getByRole('main')).queryAllByRole('textbox')).toHaveLength(0)
+		await expect(canvas.getByRole('button', { name: 'Add' })).toHaveAttribute('aria-haspopup', 'menu')
 		const heb = listOf(canvas, 'H-E-B')
 		await expect(heb.getByText(groceryShopDay)).toBeVisible()
 		await expect(heb.getByText('1 of 3 checked')).toBeVisible()
-		await expect(heb.getByRole('textbox', { name: 'Add to H-E-B' })).toBeVisible()
 		const target = listOf(canvas, 'Target')
 		await expect(target.getByText('0 of 1 checked')).toBeVisible()
 		await expect(target.queryByText(groceryShopDay)).toBeNull()
@@ -77,12 +80,18 @@
 		await expect(args.oncomplete).toHaveBeenCalledWith('gs-01')
 		if (canvas.queryByRole('contentinfo', { name: strings.statusBar.label })) {
 			await expect(rowsIn(canvas)).toBe(grocery.items.length + grocery.stores.length)
-			const pane = within(canvas.getByRole('complementary', { name: 'Stores' }))
-			await expect(pane.getAllByRole('row')).toHaveLength(grocery.stores.length)
-			await expect(pane.getByRole('textbox', { name: 'Add a store' })).toBeVisible()
+			// the side: nothing to buy again, then the stores, each with what is left and its shop day or last trip
+			await expect(canvas.getByText('Nothing to buy again.')).toBeVisible()
+			const stores = within(canvas.getByRole('grid', { name: 'Stores' })).getAllByRole('row')
+			await expect(stores).toHaveLength(grocery.stores.length)
+			await expect(stores[0]).toHaveTextContent('2 left')
+			await expect(stores[0]).toHaveTextContent(groceryShopDay)
+			await expect(stores[1]).toHaveTextContent('Shopped 5 days ago')
+			await userEvent.click(stores[1]!)
+			await expect(args.ongostore).toHaveBeenCalledWith('gs-02')
 		} else {
 			await expect(rowsIn(canvas)).toBe(grocery.items.length)
-			await expect(canvas.queryByRole('complementary')).toBeNull()
+			await expect(canvas.queryByRole('grid', { name: 'Stores' })).toBeNull()
 		}
 	}}
 />
@@ -103,7 +112,7 @@
 	}}
 />
 
-<!-- Nothing on any list: the quick-add line, the EmptyState, and every store still there with its own add line -->
+<!-- Nothing on any list: the EmptyState with Add an item, and every store still there -->
 <Story
 	name="Empty"
 	{template}
@@ -112,8 +121,8 @@
 		if (!hasCanvas(canvasElement)) return
 		const canvas = canvasOf(canvasElement)
 		await expect(canvas.getByRole('heading', { level: 2, name: 'Nothing to buy' })).toBeVisible()
-		await expect(canvas.getByRole('textbox', { name: 'Add an item' })).toBeVisible()
-		await expect(canvas.getByRole('textbox', { name: 'Add to Target' })).toBeVisible()
+		await expect(canvas.getByRole('button', { name: 'Add an item' })).toBeVisible()
+		await expect(canvas.getByRole('heading', { level: 2, name: 'Target' })).toBeVisible()
 		await expect(canvas.getByRole('button', { name: 'Complete H-E-B' })).toBeDisabled()
 		await expect(canvas.queryByRole('heading', { level: 2, name: 'Miscellaneous' })).toBeNull()
 		await expect(within(canvas.getByRole('region', { name: 'H-E-B' })).queryAllByRole('row')).toHaveLength(0)
@@ -157,6 +166,8 @@
 		await expect(sheet.getByRole('button', { name: 'Home goods' })).toHaveAttribute('aria-pressed', 'false')
 		await userEvent.click(sheet.getByRole('button', { name: 'Home goods' }))
 		await expect(sheet.getByRole('button', { name: 'Home goods' })).toHaveAttribute('aria-pressed', 'true')
+		await expect(sheet.getByRole('textbox', { name: 'Address' })).toHaveValue('2400 S Congress Ave, Austin')
+		await expect(sheet.getByRole('textbox', { name: 'Website' })).toHaveValue('https://www.heb.com')
 		await expect(sheet.getByLabelText('Shop day')).toHaveValue('2026-10-03')
 		await expect(sheet.getByLabelText('Time')).toHaveValue('10:00')
 		await userEvent.click(sheet.getByRole('button', { name: 'Delete store' }))
@@ -191,7 +202,91 @@
 	}}
 />
 
-<!-- Buy it again (D-92): what ran out sits beneath the lists, and a click on a row puts it on the list it was last bought from -->
+<!-- Add in the header opens a menu of what can be added (D-102); Add store opens the store's form, blank -->
+<Story
+	name="Add menu"
+	{template}
+	parameters={{ platforms: ['desktop'], platformFrame: 'inline' }}
+	play={async ({ canvasElement }) => {
+		if (!hasCanvas(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		await userEvent.click(canvas.getByRole('button', { name: 'Add' }))
+		const item = await canvas.findByRole('menuitem', { name: 'Add item' })
+		// the menu unfurls before its items can be seen
+		await waitFor(() => expect(item).toBeVisible())
+		await userEvent.click(canvas.getByRole('menuitem', { name: 'Add store' }))
+		const sheet = within(await within(canvasElement.ownerDocument.body).findByRole('dialog', { name: 'Add store' }))
+		await waitFor(() => expect(sheet.getByRole('textbox', { name: 'Name' })).toBeVisible())
+		await expect(sheet.getByRole('textbox', { name: 'Name' })).toHaveValue('')
+	}}
+/>
+
+<!-- Add on a list: the item's form, blank, with that list's store already picked -->
+<Story
+	name="Adding to a list"
+	{template}
+	parameters={{ platforms: ['desktop'], platformFrame: 'inline' }}
+	play={async ({ canvasElement, args }) => {
+		if (!hasCanvas(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		await userEvent.click(listOf(canvas, 'Target').getByRole('button', { name: 'Add to Target' }))
+		const sheet = within(await within(canvasElement.ownerDocument.body).findByRole('dialog', { name: 'Add item' }))
+		await waitFor(() => expect(sheet.getByRole('textbox', { name: 'Name' })).toBeVisible())
+		const where = within(sheet.getByRole('group', { name: 'Store' }))
+		await expect(where.getByRole('button', { name: 'Target' })).toHaveAttribute('aria-pressed', 'true')
+		await userEvent.type(sheet.getByRole('textbox', { name: 'Name' }), 'Dish soap')
+		await userEvent.click(sheet.getByRole('button', { name: 'Add' }))
+		await expect(args.onadd).toHaveBeenCalledWith('Dish soap', 'gs-02')
+	}}
+/>
+
+<!-- Add item: the item's form, blank, with no store picked until one is; Add reports the name and the store -->
+<Story
+	name="Adding an item"
+	{template}
+	args={{ adding: 'item' }}
+	parameters={{ platforms: ['desktop'], platformFrame: 'inline' }}
+	play={async ({ canvasElement, args }) => {
+		if (!hasCanvas(canvasElement)) return
+		const sheet = within(await within(canvasElement.ownerDocument.body).findByRole('dialog', { name: 'Add item' }))
+		await waitFor(() => expect(sheet.getByRole('textbox', { name: 'Name' })).toBeVisible())
+		await expect(sheet.getByRole('button', { name: 'Add' })).toBeDisabled()
+		const where = within(sheet.getByRole('group', { name: 'Store' }))
+		for (const name of ['H-E-B', 'Target', 'Miscellaneous']) {
+			await expect(where.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'false')
+		}
+		await expect(sheet.getByText('With no store picked, it goes where it was last bought.')).toBeVisible()
+		await userEvent.type(sheet.getByRole('textbox', { name: 'Name' }), 'Oat milk')
+		// a store picked can be unpicked again while adding
+		await userEvent.click(where.getByRole('button', { name: 'H-E-B' }))
+		await userEvent.click(where.getByRole('button', { name: 'H-E-B' }))
+		await expect(where.getByRole('button', { name: 'H-E-B' })).toHaveAttribute('aria-pressed', 'false')
+		await userEvent.click(where.getByRole('button', { name: 'Target' }))
+		await userEvent.click(sheet.getByRole('button', { name: 'Add' }))
+		await expect(args.onadd).toHaveBeenCalledWith('Oat milk', 'gs-02')
+	}}
+/>
+
+<!-- Add store: the store's form, blank, Grocery picked among what it sells and no Delete store at its foot -->
+<Story
+	name="Adding a store"
+	{template}
+	args={{ adding: 'store' }}
+	parameters={{ platforms: ['desktop'], platformFrame: 'inline' }}
+	play={async ({ canvasElement, args }) => {
+		if (!hasCanvas(canvasElement)) return
+		const sheet = within(await within(canvasElement.ownerDocument.body).findByRole('dialog', { name: 'Add store' }))
+		await waitFor(() => expect(sheet.getByRole('textbox', { name: 'Name' })).toBeVisible())
+		await expect(sheet.getByRole('button', { name: 'Grocery' })).toHaveAttribute('aria-pressed', 'true')
+		await expect(sheet.queryByRole('button', { name: 'Delete store' })).toBeNull()
+		await expect(sheet.getByRole('button', { name: 'Add' })).toBeDisabled()
+		await userEvent.type(sheet.getByRole('textbox', { name: 'Name' }), 'Central Market')
+		await userEvent.click(sheet.getByRole('button', { name: 'Add' }))
+		await expect(args.onaddstore).toHaveBeenCalledWith('Central Market')
+	}}
+/>
+
+<!-- Buy it again (D-92): what ran out sits at the side above the stores (D-101), and a click on a row puts it on the list it was last bought from -->
 <Story
 	name="BuyAgain"
 	{template}

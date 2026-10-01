@@ -48,6 +48,7 @@ import {
 	RECIPE_PHOTO,
 	recentlyOut,
 	remember,
+	reorderStores,
 	storeFor,
 	type CaptureMode,
 	type Grocery,
@@ -66,6 +67,7 @@ import {
 	type StockItem,
 	type StockLocation,
 	type StockPayload,
+	type StorePlace,
 	type StoreSells,
 } from '@eden/shared/domains/kitchen'
 import { feed } from '../../shell/feed.svelte.js'
@@ -130,6 +132,8 @@ export type GroceryPatch = Partial<Pick<GroceryItem, 'name' | 'qty' | 'note'>> &
  * it where it was last bought (D-97).
  */
 export type GroceryTarget = string | null | undefined
+/** What a store's form changes; an empty note or an empty field of its place clears it. */
+export type StorePatch = Partial<Pick<GroceryStore, 'name' | 'sells' | 'note' | 'place'>>
 
 type ListName = 'stock' | 'grocery' | 'recipes'
 type Kept = StockItem | GroceryItem | Recipe
@@ -870,7 +874,7 @@ export class KitchenStore {
 
 	/**
 	 * Completes a list: the trip is done, so what is checked leaves it, its store remembers having sold those things
-	 * (which is what files the next ones there, D-97), and its shop day, now past, is cleared. What is not checked
+	 * (which is what files the next ones there, D-97) and when it was shopped, and its shop day, now past, is cleared. What is not checked
 	 * stays for the next trip. One batch, one undo.
 	 */
 	completeList(listId: string): { count: number; undo: Undo } {
@@ -882,12 +886,16 @@ export class KitchenStore {
 		const listBefore = $state.snapshot(list)
 		const { shopDay, ...listAfter } = listBefore
 		const named = $state.snapshot(this.storeById(list.storeId))
+		const at = nowIso()
 		const remembered = named
-			? remember(
-					named,
-					done.map((item) => item.name),
-					nowIso()
-				)
+			? {
+					...remember(
+						named,
+						done.map((item) => item.name),
+						at
+					),
+					shoppedAt: at,
+				}
 			: undefined
 		const uris = ids.map((id) => toUri(KITCHEN.item, id))
 		const undo = this.#commit(
@@ -951,12 +959,28 @@ export class KitchenStore {
 		}
 	}
 
-	/** Adds a store, which has a list from then on. A name a store already has, whatever its case, answers that store. */
-	addStore(name: string, sells: StoreSells[] = ['grocery']): { store: GroceryStore; created: boolean; undo: Undo } {
+	/**
+	 * Adds a store, which has a list from then on, with whatever else its form held (its note, where it is). A name
+	 * a store already has, whatever its case, answers that store.
+	 */
+	addStore(
+		name: string,
+		sells: StoreSells[] = ['grocery'],
+		more: Pick<StorePatch, 'note' | 'place'> = {}
+	): { store: GroceryStore; created: boolean; undo: Undo } {
 		const key = name.trim().toLowerCase()
 		const known = this.grocery.stores.find((store) => store.name.trim().toLowerCase() === key)
 		if (known) return { store: known, created: false, undo: () => {} }
-		const store: GroceryStore = { id: newId(), name: name.trim(), sells }
+		const position = Math.max(-1, ...this.grocery.stores.map((entry, at) => entry.position ?? at)) + 1
+		const place = without<StorePlace>(more.place ?? {})
+		const store: GroceryStore = without({
+			id: newId(),
+			name: name.trim(),
+			sells,
+			position,
+			note: more.note?.trim(),
+			place: Object.keys(place).length ? place : undefined,
+		})
 		const { id, ...payload } = store
 		const uri = toUri(KITCHEN.store, id)
 		const undo = this.#commit({
@@ -968,15 +992,22 @@ export class KitchenStore {
 		return { store, created: true, undo }
 	}
 
-	/** Changes a store's name or what it sells. Its list and what it remembers are its own and stay. */
-	updateStore(
-		id: string,
-		patch: Partial<Pick<GroceryStore, 'name' | 'sells'>>
-	): { store: GroceryStore | undefined; undo: Undo } {
+	/**
+	 * Changes a store's name, what it sells, its note or where it is (D-101). Its list and what it remembers are its
+	 * own and stay.
+	 */
+	updateStore(id: string, patch: StorePatch): { store: GroceryStore | undefined; undo: Undo } {
 		const found = this.storeById(id)
 		if (!found) return { store: undefined, undo: () => {} }
 		const before = $state.snapshot(found)
-		const after: GroceryStore = { ...before, ...patch, name: patch.name?.trim() || before.name }
+		const place = 'place' in patch ? without<StorePlace>(patch.place ?? {}) : before.place
+		const after: GroceryStore = without({
+			...before,
+			...patch,
+			name: patch.name?.trim() || before.name,
+			note: 'note' in patch ? patch.note?.trim() : before.note,
+			place: place && Object.keys(place).length ? place : undefined,
+		})
 		const undo = this.#commit({
 			apply: () => this.#showStore(after),
 			revert: () => this.#showStore(before),
@@ -984,6 +1015,22 @@ export class KitchenStore {
 			unwrite: () => applyBatch(this.#storeOp(before)),
 		})
 		return { store: found, undo }
+	}
+
+	/** Moves a store up or down among the stores (D-101), and its list with it on the page. One write, one undo. */
+	moveStore(id: string, delta: number): { store: GroceryStore | undefined; undo: Undo } {
+		const before = $state.snapshot(this.grocery.stores)
+		const { stores: after, changed } = reorderStores(before, id, delta)
+		if (!changed.length) return { store: undefined, undo: () => {} }
+		const ids = changed.map((store) => store.id)
+		const undo = this.#commit({
+			apply: () => (this.grocery.stores = after),
+			revert: () => (this.grocery.stores = before),
+			write: () => applyBatch(changed.flatMap((store) => this.#storeOp(store))),
+			unwrite: () =>
+				applyBatch(before.filter((store) => ids.includes(store.id)).flatMap((store) => this.#storeOp(store))),
+		})
+		return { store: this.storeById(id), undo }
 	}
 
 	/**

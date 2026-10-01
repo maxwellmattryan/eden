@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fileRows, groceryBlocks, remember, storeFor } from './filing.js'
+import { fileRows, groceryBlocks, orderStores, remember, reorderStores, storeFor } from './filing.js'
 import type { Grocery, GroceryStore, GroceryItem } from './types.js'
 
 const heb: GroceryStore = {
@@ -70,10 +70,10 @@ describe("the page's lists", () => {
 	it('shows one list per store in the stores’ order, then what is unfiled', () => {
 		const blocks = groceryBlocks(grocery)
 		expect(blocks.map((block) => block.store?.name)).toEqual(['H-E-B', 'Target', undefined])
-		expect(blocks[0]).toMatchObject({ list: { id: 'l-heb', shopDay: '2026-10-03T10:00:00' }, checked: 1 })
+		expect(blocks[0]).toMatchObject({ list: { id: 'l-heb', shopDay: '2026-10-03T10:00:00' }, checked: 1, left: 1 })
 		expect(blocks[0]!.items.map((entry) => entry.name)).toEqual(['Limes', 'Ginger'])
 		// A store with no list row yet still has its place, holding nothing.
-		expect(blocks[1]).toEqual({ store: target, items: [], checked: 0 })
+		expect(blocks[1]).toEqual({ store: target, items: [], checked: 0, left: 0 })
 		expect(blocks[2]).toMatchObject({ list: { id: 'l-any' }, checked: 0 })
 	})
 
@@ -95,5 +95,36 @@ describe("the page's lists", () => {
 		expect(blocks).toHaveLength(2)
 		expect(blocks[1]!.store).toBeUndefined()
 		expect(blocks[1]!.items.map((entry) => entry.name)).toEqual(['Soap', 'Tape'])
+	})
+})
+
+describe("the stores' order", () => {
+	const costco: GroceryStore = { id: 'costco', name: 'Costco', sells: ['grocery'] }
+
+	it('puts stores by position, and those without one after, as given', () => {
+		const ordered = orderStores([costco, { ...heb, position: 1 }, target, { ...target, id: 'first', position: 0 }])
+		expect(ordered.map((store) => store.id)).toEqual(['first', 'heb', 'costco', 'target'])
+		expect(orderStores([])).toEqual([])
+	})
+
+	it('moves a store and numbers every store by where it sits', () => {
+		const { stores, changed } = reorderStores([heb, target, costco], 'costco', -1)
+		expect(stores.map((store) => [store.id, store.position])).toEqual([
+			['heb', 0],
+			['costco', 1],
+			['target', 2],
+		])
+		expect(changed).toHaveLength(3)
+		// Once numbered, a move writes only the two that swapped.
+		const again = reorderStores(stores, 'heb', 1)
+		expect(again.stores.map((store) => store.id)).toEqual(['costco', 'heb', 'target'])
+		expect(again.changed.map((store) => store.id)).toEqual(['costco', 'heb'])
+		expect(heb.position).toBeUndefined()
+	})
+
+	it('changes nothing at an end, or for a store that is not there', () => {
+		expect(reorderStores([heb, target], 'heb', -1).changed).toEqual([])
+		expect(reorderStores([heb, target], 'target', 1).changed).toEqual([])
+		expect(reorderStores([heb, target], 'gone', 1)).toEqual({ stores: [heb, target], changed: [] })
 	})
 })

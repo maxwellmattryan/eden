@@ -29,6 +29,38 @@ export function remember(store: GroceryStore, names: readonly string[], at: stri
 	return { ...store, bought }
 }
 
+/** The stores in the owner's order (D-101): by `position`, and those without one after, in the order given. */
+export function orderStores<T extends Pick<GroceryStore, 'position'>>(stores: readonly T[]): T[] {
+	return stores
+		.map((store, at) => ({ store, at }))
+		.sort((a, b) => (a.store.position ?? Infinity) - (b.store.position ?? Infinity) || a.at - b.at)
+		.map((entry) => entry.store)
+}
+
+/**
+ * The stores with one moved `delta` places, every one numbered by where it now sits, and those whose number
+ * changed, which are the rows to write. Nothing changes for a store that is not there or already at that end.
+ */
+export function reorderStores(
+	stores: readonly GroceryStore[],
+	id: string,
+	delta: number
+): { stores: GroceryStore[]; changed: GroceryStore[] } {
+	const from = stores.findIndex((store) => store.id === id)
+	const to = Math.max(0, Math.min(stores.length - 1, from + delta))
+	if (from < 0 || to === from) return { stores: [...stores], changed: [] }
+	const moved = [...stores]
+	moved.splice(to, 0, ...moved.splice(from, 1))
+	const changed: GroceryStore[] = []
+	const numbered = moved.map((store, position) => {
+		if (store.position === position) return store
+		const next = { ...store, position }
+		changed.push(next)
+		return next
+	})
+	return { stores: numbered, changed }
+}
+
 /** A batch of rows by where each is filed, in the order each store first appears; no `storeId` is the unfiled list. */
 export function fileRows<T extends { name: string }>(
 	rows: readonly T[],
@@ -53,6 +85,8 @@ export interface GroceryBlock {
 	items: GroceryItem[]
 	/** How many of the items are checked off. */
 	checked: number
+	/** How many are still to buy. */
+	left: number
 }
 
 /**
@@ -65,6 +99,7 @@ export function groceryBlocks(grocery: Grocery): GroceryBlock[] {
 		...(list ? { list } : {}),
 		items,
 		checked: items.filter((item) => item.done).length,
+		left: items.filter((item) => !item.done).length,
 	})
 	const known = new Set(grocery.stores.map((store) => store.id))
 	const filed = new Map<string, string>()

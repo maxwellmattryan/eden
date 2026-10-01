@@ -64,7 +64,7 @@ export function groceryUpgrade(
 		if (known) return known
 		const id = newId()
 		storeIds.set(keyOf(name), id)
-		madeStores.set(id, { name: name.trim(), sells: ['grocery'] })
+		madeStores.set(id, { name: name.trim(), sells: ['grocery'], position: rows.stores.length + madeStores.size })
 		return id
 	}
 	const listFor = (storeId: string): string => {

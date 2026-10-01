@@ -102,6 +102,24 @@ export interface GroceryStore {
 	sells: StoreSells[]
 	/** What was last bought here and when: a normalised name to an ISO timestamp. It is what files a new item. */
 	bought?: Record<string, string>
+	/** Where the store sits among the stores, lowest first (D-101); one without sorts last, as it was made. */
+	position?: number
+	/** When its list was last completed, as an ISO timestamp: the last trip. */
+	shoppedAt?: string
+	/** The owner's own note about the store: where to park, what it never has. */
+	note?: string
+	/** Where the store is, until it links a `venue` Place (D-101). */
+	place?: StorePlace
+}
+
+/**
+ * What a Place will hold of a store (product/substrate/primitives.md, "Place"), under the names it has there, so
+ * the move to a `venue` Place is a copy. The address is the owner's to type and is T2, as a Place's is.
+ */
+export interface StorePlace {
+	address?: string
+	url?: string
+	phone?: string
 }
 
 /** One store's list; the list with no store holds what is not filed yet. */

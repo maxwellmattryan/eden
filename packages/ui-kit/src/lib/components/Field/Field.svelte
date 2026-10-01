@@ -12,6 +12,7 @@
 	import type { HTMLInputAttributes, HTMLTextareaAttributes } from 'svelte/elements'
 	import type { IconName } from '../../icons/icons.js'
 	import Icon from '../../icons/Icon.svelte'
+	import { useStrings } from '../../i18n/context.js'
 	import Chip from '../Chip/Chip.svelte'
 	import InputWrap from './InputWrap.svelte'
 
@@ -72,6 +73,21 @@
 		...rest
 	}: Props = $props()
 
+	/** The types an engine draws as parts, with a stand-in where nothing is set. */
+	const PARTED = ['date', 'time', 'datetime-local', 'month', 'week']
+	const unset = $derived(PARTED.includes(type ?? '') && !value)
+
+	const s = useStrings()
+	/** A date's format in the order the system writes one, MM/DD/YYYY or its like: what an unset date shows at rest. */
+	const dateFormat = $derived(
+		new Intl.DateTimeFormat(undefined, { year: 'numeric', month: '2-digit', day: '2-digit' })
+			.formatToParts(new Date())
+			.map((part) =>
+				part.type === 'year' || part.type === 'month' || part.type === 'day' ? s.datePart[part.type] : part.value
+			)
+			.join('')
+	)
+	const format = $derived(unset ? (placeholder ?? (type === 'date' ? dateFormat : undefined)) : undefined)
 	const message = $derived(error || helper)
 	const messageId = $derived(`${id}-message`)
 
@@ -106,21 +122,25 @@
 				onkeydown={keydown}
 				{...textareaRest}></textarea>
 		{:else}
-			<input
-				class="ed-field-input"
-				class:ed-field-input-mono={mono}
-				class:ed-field-input-lg={large}
-				{id}
-				{type}
-				{placeholder}
-				value={value ?? ''}
-				inputmode={large ? 'decimal' : undefined}
-				aria-invalid={error ? 'true' : undefined}
-				aria-describedby={message ? messageId : undefined}
-				oninput={input}
-				onkeydown={keydown}
-				{...rest}
-			/>
+			<span class="ed-field-slot">
+				<input
+					class="ed-field-input"
+					class:ed-field-input-mono={mono}
+					class:ed-field-input-lg={large}
+					{id}
+					{type}
+					{placeholder}
+					value={value ?? ''}
+					inputmode={large ? 'decimal' : undefined}
+					data-unset={unset ? '' : undefined}
+					aria-invalid={error ? 'true' : undefined}
+					aria-describedby={message ? messageId : undefined}
+					oninput={input}
+					onkeydown={keydown}
+					{...rest}
+				/>
+				{#if format}<span class="ed-field-format" data-tertiary aria-hidden="true">{format}</span>{/if}
+			</span>
 		{/if}
 		{#if unit || trailing}
 			<span class="ed-field-side">
@@ -161,8 +181,29 @@
 		align-self: flex-start;
 		height: calc(var(--ed-control) - 2px);
 	}
-	.ed-field-input {
+	/* The input's place in the row, shared with the format an unset date shows over it */
+	.ed-field-slot {
+		display: grid;
 		flex: 1;
+		min-width: 0;
+		height: 100%;
+	}
+	.ed-field-slot > * {
+		grid-area: 1 / 1;
+	}
+	.ed-field-format {
+		align-self: center;
+		overflow: hidden;
+		font: var(--ed-t-text);
+		color: var(--text-tertiary);
+		white-space: nowrap;
+		pointer-events: none;
+	}
+	.ed-field-input:focus + .ed-field-format {
+		display: none;
+	}
+	.ed-field-input {
+		width: 100%;
 		min-width: 0;
 		height: 100%;
 		margin: 0;
@@ -251,6 +292,16 @@
 		background: var(--brand-primary);
 		color: var(--on-brand);
 		outline: none;
+	}
+	/* A date or a time with nothing set must read as empty. An engine fills the parts with a stand-in (WebKit with
+	   today's date and the time now, Chromium with the format), which in the field's own ink reads as a value someone
+	   chose. At rest the stand-in is hidden and the format (or the placeholder) shows in its place; in hand the parts
+	   show in the placeholder's ink, to say what is typed where. */
+	.ed-field-input[data-unset]::-webkit-datetime-edit {
+		color: var(--text-tertiary);
+	}
+	.ed-field-input[data-unset]:not(:focus)::-webkit-datetime-edit {
+		opacity: 0;
 	}
 	.ed-field-message {
 		margin: 0;

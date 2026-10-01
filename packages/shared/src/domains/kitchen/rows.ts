@@ -12,6 +12,7 @@ import {
 	type RecipePayload,
 	type StockPayload,
 } from './types.js'
+import { orderStores } from './filing.js'
 import { groceryFromLegacy } from './upgrade.js'
 
 export const emptyGrocery = (): Grocery => ({ stores: [], lists: [], items: [] })
@@ -81,7 +82,7 @@ export function kitchenUris(data: KitchenData): string[] {
 	]
 }
 
-/** The rows as the store holds them, each in the order it was made. */
+/** The rows as the store holds them, each in the order it was made; the stores in the owner's order (D-101). */
 export function kitchenFromRows(rows: {
 	stock: Entity<StockPayload>[]
 	recipes: Entity<RecipePayload>[]
@@ -98,7 +99,7 @@ export function kitchenFromRows(rows: {
 			id: row.id,
 		})),
 		grocery: {
-			stores: rows.stores.map((row) => ({ ...row.payload, id: row.id })),
+			stores: orderStores(rows.stores.map((row) => ({ ...row.payload, id: row.id }))),
 			lists: rows.lists.map((row) => ({ ...row.payload, id: row.id })),
 			items: rows.items.map((row) => ({ ...row.payload, id: row.id })),
 		},

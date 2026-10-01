@@ -1,12 +1,14 @@
 <script lang="ts">
 	// Hearth's Grocery view (product/domains/kitchen.md, "Surfaces"): the same header as Stock with the Grocery tab
-	// selected and Add as the primary action, a quick-add line that files an item where it was last bought, then one
-	// list per store (D-96), all of them on the page at once. A store's list carries its name, its shop day when it has
-	// one, the count of what is checked, Complete and Edit store as quiet icon buttons, its rows and an add line of its
-	// own. What names no store yet sits in "Miscellaneous" beneath them. Every row carries an origin badge (manual, recipe,
-	// low stock); a checked row is struck through and stays until its list is completed. On desktop the pane on the
-	// right is the stores; a store's form (its name, what it sells, its shop day) and an item's open in a sheet (D-95). On
-	// mobile there is no pane: a swipe to the right checks a row off and a swipe to the left deletes it.
+	// selected and one action, Add, whose menu offers Add item and Add store (D-102); then one list per store (D-96),
+	// all of them on the page at once. A store's list carries its name in the display face, its shop day when it has
+	// one, the count of what is checked, Complete, Edit store and Add as quiet icon buttons, and its rows. What names no
+	// store yet sits in "Miscellaneous" beneath them. Every row carries an origin badge (manual, recipe, low stock); a
+	// checked row is struck through and stays until its list is completed. On desktop the side holds Buy it again
+	// and, beneath it, the stores (D-101): each row says what is left to buy and the store's shop day or its last
+	// trip, a click goes to its list, and its menu edits, moves and deletes it. An item's form and a store's (its
+	// name, what it sells, where it is, a note, its shop day) open in a sheet (D-95), the same one to add as to edit.
+	// On mobile there is no side: a swipe to the right checks a row off and a swipe to the left deletes it.
 	import {
 		Button,
 		Chip,
@@ -15,7 +17,6 @@
 		IconButton,
 		List,
 		PageHeader,
-		QuickAdd,
 		Segmented,
 		Sheet,
 		domainGlyph,
@@ -36,15 +37,17 @@
 		empty?: boolean
 		/** No list has a shop day: the chip is gone from every store. */
 		noShopDay?: boolean
-		/** Buy it again (D-92): what ran out, beneath the lists, each a row that opens onto a list. */
+		/** Buy it again (D-92): what ran out, at the side, each a row that opens onto a list. Without it the list is empty. */
 		buyAgain?: boolean
 		onagain?: (row: ListRowData) => void
 		/** The item whose form is open in its sheet, by id. */
 		editing?: string
 		/** The store whose form is open in its sheet, by id. */
 		store?: string
-		/** A line added: from the page's own field with no store, from a list's field with that store's id. */
-		onadd?: (text: string, store?: string) => void
+		/** The form open in its sheet to add with: an item's, or a store's. */
+		adding?: 'item' | 'store'
+		/** Add in the item's form: its name, and its store's id, '' for the unfiled list, none when no store was picked. */
+		onadd?: (name: string, store?: string) => void
 		/** Complete a store's list: what is checked leaves it. Without an id, the unfiled list. */
 		oncomplete?: (store?: string) => void
 		oncheck?: (row: ListRowData) => void
@@ -53,7 +56,11 @@
 		onaction?: (item: MenuItem, row: ListRowData) => void
 		/** Save in the item's form, with the item's id. */
 		onsave?: (id: string) => void
-		/** A store named in the stores pane. */
+		/** A click on a store at the side: go to its list. */
+		ongostore?: (id: string) => void
+		/** Move up or Move down in a store's menu, as -1 or 1. */
+		onmovestore?: (id: string, delta: number) => void
+		/** Add in the store's form, with the name it was given. */
 		onaddstore?: (name: string) => void
 		/** Save in the store's form, with the store's id. */
 		onsavestore?: (id: string) => void
@@ -68,6 +75,7 @@
 		onagain,
 		editing,
 		store,
+		adding,
 		onadd,
 		oncomplete,
 		oncheck,
@@ -75,6 +83,8 @@
 		onopen,
 		onaction,
 		onsave,
+		ongostore,
+		onmovestore,
 		onaddstore,
 		onsavestore,
 		ondeletestore,
@@ -127,29 +137,40 @@
 			.filter((block) => block.storeId || block.rows.length)
 	)
 	const total = $derived(blocks.reduce((sum, block) => sum + block.rows.length, 0))
+	// One action, whose menu offers what can be added (D-102); secondary while the empty state holds the primary.
 	const headerActions = $derived([
 		{
 			label: 'Add',
 			icon: 'plus' as const,
 			variant: empty ? ('secondary' as const) : undefined,
-			onclick: () => onadd?.(''),
+			menu: [
+				{ id: 'add-item', label: 'Add item', icon: 'list' as const, onselect: () => addItem() },
+				{ id: 'add-store', label: 'Add store', icon: 'map-pin' as const, onselect: () => addStore() },
+			],
 		},
-		{ label: 'Add a store', icon: 'map-pin' as const, onclick: () => onaddstore?.('') },
 	])
 
-	// The item's form: the fields of the row being edited. A recipe's name after the origin is the item's note.
-	const formOf = (item?: Item) => ({
+	// The item's form: the fields of the row being edited, or blank to add with. A recipe's name after the origin is
+	// the item's note. `store` is the store's id, '' for the unfiled list; none while adding means no store is picked.
+	type ItemForm = { name: string; qty: string; store: string | undefined; note: string }
+	const formOf = (item?: Item): ItemForm => ({
 		name: item?.name ?? '',
 		qty: item?.qty ?? '',
-		store: storeOf(item),
+		store: item ? storeOf(item) : undefined,
 		note: item?.origin.split(':')[1]?.trim() ?? '',
 	})
 	// svelte-ignore state_referenced_locally
 	let current = $state(editing)
 	// svelte-ignore state_referenced_locally
-	let itemOpen = $state(!!editing)
+	let itemOpen = $state(!!editing || adding === 'item')
 	let form = $state(formOf(grocery.items.find((item) => item.id === editing)))
 	const edited = $derived(empty ? undefined : grocery.items.find((item) => item.id === current))
+	/** Opens the item's form blank, with a list's store picked when its own Add opened it ('' for the unfiled list). */
+	function addItem(storeId?: string) {
+		form = { ...formOf(), store: storeId }
+		current = undefined
+		itemOpen = true
+	}
 	function act(item: MenuItem, row: ListRowData) {
 		if (item.id === 'edit') {
 			form = formOf(grocery.items.find((entry) => entry.id === row.id))
@@ -165,12 +186,21 @@
 	function storeForm(entry?: Store) {
 		const shopDay = noShopDay ? undefined : grocery.lists.find((list) => list.storeId === entry?.id)?.shopDay
 		const [, date = '', time = ''] = /(\d{2}-\d{2}) (\d{2}:\d{2})/.exec(shopDay ?? '') ?? []
-		return { name: entry?.name ?? '', sells: [...(entry?.sells ?? [])], date: date && `2026-${date}`, time }
+		return {
+			name: entry?.name ?? '',
+			sells: [...(entry?.sells ?? SELLS.slice(0, 1))],
+			address: entry?.address ?? '',
+			url: entry?.url ?? '',
+			phone: entry?.phone ?? '',
+			note: entry?.note ?? '',
+			date: date && `2026-${date}`,
+			time,
+		}
 	}
 	// svelte-ignore state_referenced_locally
 	let shown = $state(store)
 	// svelte-ignore state_referenced_locally
-	let storeOpen = $state(!!store)
+	let storeOpen = $state(!!store || adding === 'store')
 	let place = $state(storeForm(grocery.stores.find((entry) => entry.id === store)))
 	const opened = $derived(grocery.stores.find((entry) => entry.id === shown))
 	function openStore(id?: string) {
@@ -179,25 +209,65 @@
 		shown = id
 		storeOpen = true
 	}
+	function addStore() {
+		place = storeForm()
+		shown = undefined
+		storeOpen = true
+	}
+	/** The dataset's today, which a store's last trip is counted from. */
+	const SAMPLE_TODAY = '2026-09-30'
+	const shopped = (on: string) =>
+		`Shopped ${Math.round((Date.parse(SAMPLE_TODAY) - Date.parse(`2026-${on}`)) / 86_400_000)} days ago`
 	const storeRows = $derived<ListRowData[]>(
-		grocery.stores.map((entry) => ({
-			id: entry.id,
-			primary: entry.name,
-			chips: entry.sells.map((label) => ({ label: title(label) })),
-			actions: [
-				{ id: 'edit-store', label: 'Edit', icon: 'pencil' as const },
-				{ id: 'delete-store', label: 'Delete', icon: 'trash' as const, destructive: true },
-			],
-		}))
+		blocks
+			.filter((block) => block.storeId)
+			.map((block, at, all) => {
+				const entry = grocery.stores.find((candidate) => candidate.id === block.storeId)!
+				const left = block.rows.length - block.checked
+				return {
+					id: entry.id,
+					primary: entry.name,
+					hint: entry.note,
+					chips: block.shopDay
+						? [{ label: block.shopDay, icon: 'calendar' as const }]
+						: entry.shoppedOn
+							? [{ label: shopped(entry.shoppedOn) }]
+							: [],
+					meta: left ? `${left} left` : undefined,
+					actions: [
+						{ id: 'edit-store', label: 'Edit', icon: 'pencil' as const },
+						...(entry.url ? [{ id: 'website', label: 'Open website', icon: 'external-link' as const }] : []),
+						...(at > 0 ? [{ id: 'up', label: 'Move up', icon: 'chevron-up' as const }] : []),
+						...(at < all.length - 1 ? [{ id: 'down', label: 'Move down', icon: 'chevron-down' as const }] : []),
+						{ id: 'delete-store', label: 'Delete', icon: 'trash' as const, destructive: true },
+					],
+				}
+			})
 	)
 	function actStore(item: MenuItem, row: ListRowData) {
 		if (item.id === 'edit-store') openStore(row.id)
+		if (item.id === 'up') onmovestore?.(row.id, -1)
+		if (item.id === 'down') onmovestore?.(row.id, 1)
 		if (item.id === 'delete-store') ondeletestore?.(row.id)
 	}
 	const againTo: MenuItem[] = [
 		...grocery.stores.map((entry) => ({ id: `again:${entry.id}`, label: entry.name })),
 		{ id: 'again:', label: ANY },
 	]
+	const againRows = $derived<ListRowData[]>(
+		buyAgain
+			? ranOut.map((item) => ({
+					id: item.id,
+					primary: item.name,
+					icon: 'package' as const,
+					tile: true,
+					actions: [
+						{ id: 'again', label: 'Add to', icon: 'plus' as const, children: againTo },
+						{ id: 'delete', label: 'Delete', icon: 'trash' as const, destructive: true },
+					],
+				}))
+			: []
+	)
 </script>
 
 <AppFrame current="kitchen" {onnavigate}>
@@ -211,12 +281,11 @@
 
 			<div class={['body', { 'body-wide': platform === 'desktop' }]}>
 				<div class="lists">
-					<QuickAdd placeholder="Add an item" onadd={(text) => onadd?.(text)} />
 					{#if total === 0}
 						<EmptyState
 							title="Nothing to buy"
-							text="Add an item in one line, mark what ran out in Stock, or send a recipe's missing ingredients here."
-							action={{ label: 'Add an item', icon: 'plus', onclick: () => onadd?.('') }}
+							text="Add an item, mark what ran out in Stock, or send a recipe's missing ingredients here."
+							action={{ label: 'Add an item', icon: 'plus', onclick: () => addItem() }}
 						/>
 					{/if}
 					{#each blocks as block (block.id)}
@@ -252,6 +321,13 @@
 											onclick={() => openStore(block.storeId)}
 										/>
 									{/if}
+									<IconButton
+										icon="plus"
+										size="xs"
+										label="Add to {block.name}"
+										tooltip="Add item"
+										onclick={() => addItem(block.storeId ?? '')}
+									/>
 								</span>
 							</header>
 							{#if block.rows.length && block.checked === block.rows.length}
@@ -268,144 +344,155 @@
 										{onopen}
 									/>
 								</div>
-							{/if}
-							{#if block.storeId}
-								<QuickAdd placeholder="Add to {block.name}" onadd={(text) => onadd?.(text, block.storeId)} />
+							{:else if total > 0}
+								<EmptyState
+									inline
+									title="No items in this list yet"
+									text="Add one here, or mark what ran out in Stock."
+									action={{ label: 'Add item', icon: 'plus', onclick: () => addItem(block.storeId ?? '') }}
+								/>
 							{/if}
 						</section>
 					{/each}
-					{#if buyAgain && platform === 'desktop'}
-						<List
-							header="Buy it again"
-							count={ranOut.length}
-							rows={ranOut.map((item) => ({
-								id: item.id,
-								primary: item.name,
-								icon: 'package' as const,
-								tile: true,
-								actions: [
-									{ id: 'again', label: 'Add to', icon: 'plus' as const, children: againTo },
-									{ id: 'delete', label: 'Delete', icon: 'trash' as const, destructive: true },
-								],
-							}))}
-							onpick={onagain}
-							onaction={act}
-						/>
-					{/if}
 				</div>
 
 				{#if platform === 'desktop'}
-					<aside class="pane" aria-labelledby="{uid}-pane">
-						<h2 class="pane-title" id="{uid}-pane">Stores</h2>
-						<List rows={storeRows} onpick={(row) => openStore(row.id)} onaction={actStore} />
-						<QuickAdd placeholder="Add a store" parse={() => []} onadd={(text) => onaddstore?.(text)} />
-						<p class="help">Each store keeps a list of its own. A new item goes where it was last bought.</p>
-					</aside>
+					<div class="side">
+						<List header="Buy it again" count={againRows.length} rows={againRows} onpick={onagain} onaction={act}>
+							{#if !againRows.length}
+								<p class="voice none">Nothing to buy again.</p>
+							{/if}
+						</List>
+						<List
+							header="Stores"
+							count={storeRows.length}
+							rows={storeRows}
+							onpick={(row) => ongostore?.(row.id)}
+							onopen={(row) => openStore(row.id)}
+							onaction={actStore}
+						/>
+					</div>
 				{/if}
 			</div>
 
-			{#if platform === 'desktop' && edited}
-				<Sheet bind:open={itemOpen} size="sm" labelledby="{uid}-item-title">
-					{#snippet header()}
-						<h2 class="form-title" id="{uid}-item-title">Edit item</h2>
-					{/snippet}
-					<form
-						class="form"
-						id="{uid}-item-form"
-						onsubmit={(event) => {
-							event.preventDefault()
-							onsave?.(edited.id)
-							itemOpen = false
-						}}
-					>
-						<Field label="Name" bind:value={form.name} />
-						<Field label="Quantity" bind:value={form.qty} mono />
-						<div class="group" role="group" aria-labelledby="{uid}-where">
-							<span class="group-label" id="{uid}-where">Store</span>
-							<div class="chips">
-								{#each [...grocery.stores.map( (entry) => ({ id: entry.id, label: entry.name }) ), { id: '', label: ANY }] as entry (entry.id)}
-									<Chip
-										label={entry.label}
-										selectable
-										tone={form.store === entry.id ? 'accent' : 'outline'}
-										bind:selected={() => form.store === entry.id, () => (form.store = entry.id)}
-									/>
-								{/each}
-							</div>
-						</div>
-						<Field label="Note" bind:value={form.note} />
-					</form>
-					{#snippet footer()}
-						<Button label="Cancel" variant="quiet" onclick={() => (itemOpen = false)} />
-						<Button label="Save" variant="primary" type="submit" form="{uid}-item-form" disabled={!form.name.trim()} />
-					{/snippet}
-				</Sheet>
-			{/if}
-			{#if platform === 'desktop' && opened}
-				<Sheet bind:open={storeOpen} size="sm" labelledby="{uid}-store-title">
-					{#snippet header()}
-						<h2 class="form-title" id="{uid}-store-title">Edit store</h2>
-					{/snippet}
-					<form
-						class="form"
-						id="{uid}-store-form"
-						onsubmit={(event) => {
-							event.preventDefault()
-							onsavestore?.(opened.id)
-							storeOpen = false
-						}}
-					>
-						<Field label="Name" bind:value={place.name} />
-						<div class="group" role="group" aria-labelledby="{uid}-sells">
-							<span class="group-label" id="{uid}-sells">Sells</span>
-							<div class="chips">
-								{#each SELLS as kind (kind)}
-									<Chip
-										label={title(kind)}
-										selectable
-										tone={place.sells.includes(kind) ? 'accent' : 'outline'}
-										bind:selected={
-											() => place.sells.includes(kind),
-											(on) =>
-												(place.sells = on ? [...place.sells, kind] : place.sells.filter((entry) => entry !== kind))
-										}
-									/>
-								{/each}
-							</div>
-						</div>
-						<div class="pair">
-							<Field label="Shop day" type="date" bind:value={place.date} />
-							<Field label="Time" type="time" bind:value={place.time} disabled={!place.date} />
-						</div>
+			<Sheet bind:open={itemOpen} size="sm" labelledby="{uid}-item-title">
+				{#snippet header()}
+					<h2 class="form-title" id="{uid}-item-title">{edited ? 'Edit item' : 'Add item'}</h2>
+				{/snippet}
+				<form
+					class="form"
+					id="{uid}-item-form"
+					onsubmit={(event) => {
+						event.preventDefault()
+						if (edited) onsave?.(edited.id)
+						else onadd?.(form.name.trim(), form.store)
+						itemOpen = false
+					}}
+				>
+					<Field label="Name" bind:value={form.name} />
+					<Field label="Quantity" bind:value={form.qty} mono />
+					<div class="group" role="group" aria-labelledby="{uid}-where">
+						<span class="group-label" id="{uid}-where">Store</span>
 						<div class="chips">
-							<Chip label="Today" tone="outline" onclick={() => (place.date = TODAY)} />
-							<Chip label="Tomorrow" tone="outline" onclick={() => (place.date = TOMORROW)} />
-							{#if place.date}
+							{#each [...grocery.stores.map( (entry) => ({ id: entry.id, label: entry.name }) ), { id: '', label: ANY }] as entry (entry.id)}
 								<Chip
-									label="No shop day"
-									tone="outline"
-									onclick={() => {
-										place.date = ''
-										place.time = ''
-									}}
+									label={entry.label}
+									selectable
+									tone={form.store === entry.id ? 'accent' : 'outline'}
+									bind:selected={
+										() => form.store === entry.id, (on) => (form.store = on || edited ? entry.id : undefined)
+									}
 								/>
-							{/if}
+							{/each}
 						</div>
-						<p class="help">Optional. With a shop day set, a reminder arrives that morning.</p>
-					</form>
-					{#snippet footer()}
-						<Button label="Delete store" variant="quiet" icon="trash" onclick={() => ondeletestore?.(opened.id)} />
-						<Button label="Cancel" variant="quiet" onclick={() => (storeOpen = false)} />
-						<Button
-							label="Save"
-							variant="primary"
-							type="submit"
-							form="{uid}-store-form"
-							disabled={!place.name.trim()}
-						/>
-					{/snippet}
-				</Sheet>
-			{/if}
+						{#if !edited}
+							<p class="help">With no store picked, it goes where it was last bought.</p>
+						{/if}
+					</div>
+					<Field label="Note" bind:value={form.note} />
+				</form>
+				{#snippet footer()}
+					<Button label="Cancel" variant="quiet" onclick={() => (itemOpen = false)} />
+					<Button
+						label={edited ? 'Save' : 'Add'}
+						variant="primary"
+						type="submit"
+						form="{uid}-item-form"
+						disabled={!form.name.trim()}
+					/>
+				{/snippet}
+			</Sheet>
+			<Sheet bind:open={storeOpen} size="sm" labelledby="{uid}-store-title">
+				{#snippet header()}
+					<h2 class="form-title" id="{uid}-store-title">{opened ? 'Edit store' : 'Add store'}</h2>
+				{/snippet}
+				<form
+					class="form"
+					id="{uid}-store-form"
+					onsubmit={(event) => {
+						event.preventDefault()
+						if (opened) onsavestore?.(opened.id)
+						else onaddstore?.(place.name.trim())
+						storeOpen = false
+					}}
+				>
+					<Field label="Name" bind:value={place.name} />
+					<div class="group" role="group" aria-labelledby="{uid}-sells">
+						<span class="group-label" id="{uid}-sells">Sells</span>
+						<div class="chips">
+							{#each SELLS as kind (kind)}
+								<Chip
+									label={title(kind)}
+									selectable
+									tone={place.sells.includes(kind) ? 'accent' : 'outline'}
+									bind:selected={
+										() => place.sells.includes(kind),
+										(on) => (place.sells = on ? [...place.sells, kind] : place.sells.filter((entry) => entry !== kind))
+									}
+								/>
+							{/each}
+						</div>
+					</div>
+					<Field label="Address" bind:value={place.address} />
+					<div class="pair">
+						<Field label="Website" type="url" bind:value={place.url} />
+						<Field label="Phone" type="tel" bind:value={place.phone} />
+					</div>
+					<Field label="Note" multiline bind:value={place.note} />
+					<div class="pair">
+						<Field label="Shop day" type="date" bind:value={place.date} />
+						<Field label="Time" type="time" bind:value={place.time} disabled={!place.date} />
+					</div>
+					<div class="chips">
+						<Chip label="Today" tone="outline" onclick={() => (place.date = TODAY)} />
+						<Chip label="Tomorrow" tone="outline" onclick={() => (place.date = TOMORROW)} />
+						{#if place.date}
+							<Chip
+								label="No shop day"
+								tone="outline"
+								onclick={() => {
+									place.date = ''
+									place.time = ''
+								}}
+							/>
+						{/if}
+					</div>
+					<p class="help">Optional. With a shop day set, a reminder arrives that morning.</p>
+				</form>
+				{#snippet footer()}
+					{#if opened}
+						<Button label="Delete store" variant="danger" onclick={() => ondeletestore?.(opened.id)} />
+					{/if}
+					<Button label="Cancel" variant="quiet" onclick={() => (storeOpen = false)} />
+					<Button
+						label={opened ? 'Save' : 'Add'}
+						variant="primary"
+						type="submit"
+						form="{uid}-store-form"
+						disabled={!place.name.trim()}
+					/>
+				{/snippet}
+			</Sheet>
 		</div>
 	{/snippet}
 </AppFrame>
@@ -416,7 +503,7 @@
 		flex-direction: column;
 		padding-bottom: var(--space-8);
 	}
-	/* The list on the left and its pane on the right on a wide screen; one column otherwise */
+	/* The lists on the left and the side on the right on a wide screen; one column otherwise */
 	.body {
 		display: grid;
 		gap: var(--space-6);
@@ -444,17 +531,23 @@
 		flex-wrap: wrap;
 		gap: var(--space-2);
 	}
+	/* A store's name, and Miscellaneous, in the display face */
 	.store-title {
 		margin: 0;
-		font: var(--ed-t-title-lg);
-		letter-spacing: var(--ed-t-title-lg-tracking);
-		font-variation-settings: var(--ed-t-title-lg-opsz);
+		font: var(--ed-t-display-md);
+		letter-spacing: var(--ed-t-display-md-tracking);
+		font-variation-settings: var(--ed-t-display-md-opsz);
 	}
 	.store-tools {
 		display: flex;
 		align-items: center;
 		gap: var(--space-2);
 		margin-left: auto;
+	}
+	/* The last tool, Add, stands over the rows' menu buttons: the card's edge, the row's padding, and half of what
+	   the row's button is wider by */
+	.body-wide .store-tools {
+		padding-right: calc(1px + var(--space-2) + var(--space-1));
 	}
 	.store-count {
 		font: var(--ed-t-data-sm);
@@ -480,24 +573,15 @@
 		overflow: hidden;
 	}
 
-	/* The pane: the stores */
-	.pane {
+	.none {
+		padding: var(--space-3);
+	}
+	/* The side: Buy it again (D-92), and beneath it the stores (D-101) */
+	.side {
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-4);
-		box-sizing: border-box;
-		padding: var(--space-4);
-		border: 1px solid var(--ed-card-border);
-		border-radius: var(--ed-radius-card);
-		background: var(--surface-1);
-		box-shadow: var(--shadow-card);
-	}
-	.pane-title {
-		margin: 0;
-		font: var(--ed-t-display-sm);
-		letter-spacing: var(--ed-t-display-sm-tracking);
-		font-variation-settings: var(--ed-t-display-sm-opsz);
-		text-wrap: balance;
+		min-width: 0;
 	}
 	.form-title {
 		margin: 0;

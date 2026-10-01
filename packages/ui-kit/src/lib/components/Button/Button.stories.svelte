@@ -114,7 +114,8 @@
 						<Button label="Undo" variant="quiet" />
 					</div>
 					<p class="ed-t-body-sm" style="margin: 0; color: var(--text-secondary)">
-						Press and hold a filled button: raised sinks it by a pixel and drops its shadow; flat only deepens the wash.
+						Raised gives a filled button its sheen and inner highlight; flat leaves the plain fill. Both press the same
+						way.
 					</p>
 				</section>
 			{/each}

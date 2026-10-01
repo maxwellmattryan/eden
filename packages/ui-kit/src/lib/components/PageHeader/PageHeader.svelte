@@ -2,6 +2,7 @@
 	import type { ComponentProps } from 'svelte'
 	import type { IconName } from '../../icons/icons.js'
 	import Button from '../Button/Button.svelte'
+	import type { MenuItem } from '../Menu/Menu.svelte'
 
 	/** A header action, rendered as a Button; the first in the list is the page's primary. */
 	export interface PageHeaderAction {
@@ -14,6 +15,8 @@
 		/** Shown but not yet available: the Garden's "Edit layout" before edit mode exists. */
 		disabled?: boolean
 		onclick?: () => void
+		/** The button opens a Menu of these instead of acting itself: one Add that offers what can be added. */
+		menu?: MenuItem[]
 	}
 </script>
 
@@ -24,7 +27,8 @@
 	// row beneath when the page is a list. The top right is also where a page's notices sit (`aside`): what the owner
 	// should know before reading the page, such as a weather alert. It stands beside the name and the filters together,
 	// so a notice of a few lines never makes the header taller than they are. On mobile the actions and the aside
-	// wrap under the name. Never a second row of buttons. A domain's motif (D-62) fills the room the header leaves
+	// wrap under the name. Never a second row of buttons. An action with a `menu` opens it under itself, lined up
+	// with the button's end, and the pick is reported by the item's own `onselect`. A domain's motif (D-62) fills the room the header leaves
 	// empty: from where the name and the filters end to where the actions or the notices begin, or to the page's
 	// gutter when there are none. It never lies behind anything the header holds, and it fades in from the name's side
 	// and out towards the page: decoration, so it takes no pointer and has no name.
@@ -34,6 +38,7 @@
 	import { measure } from '../../internal/measure.js'
 	import { platformOf } from '../../internal/platform.js'
 	import BackButton from '../BackButton/BackButton.svelte'
+	import Menu from '../Menu/Menu.svelte'
 
 	type Props = Omit<HTMLAttributes<HTMLElement>, 'children'> & {
 		/** The themed domain name, the page's h1. */
@@ -72,6 +77,19 @@
 		class: className = '',
 		...rest
 	}: Props = $props()
+
+	// The one menu an action opens: which action's it is, and the button it hangs from.
+	const keyOf = (action: PageHeaderAction) => action.id ?? action.label
+	let menuKey = $state<string>()
+	let menuAnchor = $state<HTMLElement>()
+	let menuOpen = $state(false)
+	const menuAction = $derived(actions.find((action) => keyOf(action) === menuKey))
+	function toggleMenu(action: PageHeaderAction, button: HTMLElement) {
+		const same = menuOpen && menuKey === keyOf(action)
+		menuKey = keyOf(action)
+		menuAnchor = button
+		menuOpen = !same
+	}
 
 	// The root, for the platform: on mobile the actions take a row of their own under the name.
 	let root = $state<HTMLElement>()
@@ -129,16 +147,31 @@
 		</div>
 		{#if actions.length}
 			<div class="ed-page-header-actions" bind:this={actionsRow} {@attach motif && place}>
-				{#each actions as action, i (action.id ?? action.label)}
-					<Button
-						label={action.label}
-						icon={action.icon}
-						variant={action.variant ?? (i === 0 ? 'primary' : 'secondary')}
-						disabled={action.disabled}
-						onclick={action.onclick}
-					/>
+				{#each actions as action, i (keyOf(action))}
+					{#if action.menu?.length}
+						<Button
+							label={action.label}
+							icon={action.icon}
+							variant={action.variant ?? (i === 0 ? 'primary' : 'secondary')}
+							disabled={action.disabled}
+							aria-haspopup="menu"
+							aria-expanded={menuOpen && menuKey === keyOf(action)}
+							onclick={(event) => toggleMenu(action, event.currentTarget)}
+						/>
+					{:else}
+						<Button
+							label={action.label}
+							icon={action.icon}
+							variant={action.variant ?? (i === 0 ? 'primary' : 'secondary')}
+							disabled={action.disabled}
+							onclick={action.onclick}
+						/>
+					{/if}
 				{/each}
 			</div>
+			{#if menuAction?.menu?.length}
+				<Menu bind:open={menuOpen} anchor={menuAnchor} label={menuAction.label} items={menuAction.menu} />
+			{/if}
 		{/if}
 	</div>
 	{#if filters}

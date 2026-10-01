@@ -63,7 +63,7 @@ updated: 2026-10-01
 | `household-size` | fact | T1 | |
 | `stock-item` | entity | T0 | |
 | `recipe` | entity | T0 | |
-| `grocery-store` | entity | T0 | a store Hearth shops at; each has a list of its own |
+| `grocery-store` | entity | T0 | a store Hearth shops at; each has a list of its own; `place.address` field is T2 (D-101) |
 | `grocery-list` | entity | T0 | |
 | `grocery-item` | entity | T0 | |
 | `shop-day` | kind (event) | T0 | |

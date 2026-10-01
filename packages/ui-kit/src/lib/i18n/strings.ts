@@ -45,6 +45,8 @@ export interface UiStrings {
 	/** The name of a glyph that explains a label, such as a table column's info button. */
 	about: (name: string) => string
 	noData: string
+	/** The letters that stand for a date's parts in an unset date field: MM/DD/YYYY, in the system's order. */
+	datePart: { year: string; month: string; day: string }
 	gardener: {
 		name: string
 		open: string
@@ -329,6 +331,7 @@ export const defaultStrings: UiStrings = {
 	step: (current, total) => `Step ${current} of ${total}`,
 	about: (name) => `About ${name}`,
 	noData: 'No data yet',
+	datePart: { year: 'YYYY', month: 'MM', day: 'DD' },
 	gardener: {
 		name: 'Gardener',
 		open: 'Open the Gardener',

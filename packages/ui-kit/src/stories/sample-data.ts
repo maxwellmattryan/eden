@@ -408,11 +408,17 @@ export const recipeDraft: Omit<SampleRecipe, 'id' | 'inStock'> & { sourceUrl: st
 	sourceUrl: 'https://example.com/recipes/lemon-yogurt-chicken-thighs',
 }
 
-/** A store Hearth shops at (D-96): its name and what it sells. */
+/** A store Hearth shops at (D-96): its name, what it sells, and what the owner keeps of it (D-101). */
 export interface SampleGroceryStore {
 	id: string
 	name: string
 	sells: ('grocery' | 'home goods')[]
+	/** The day its list was last completed, `MM-DD`. */
+	shoppedOn?: string
+	note?: string
+	address?: string
+	url?: string
+	phone?: string
 }
 /** One list per store; the list with no store holds what is not filed yet. The shop day is optional. */
 export interface SampleGroceryList {
@@ -434,8 +440,21 @@ export const groceryShopDay = 'Sat 10-03 10:00'
 
 export const grocery: { stores: SampleGroceryStore[]; lists: SampleGroceryList[]; items: SampleGroceryItem[] } = {
 	stores: [
-		{ id: 'gs-01', name: 'H-E-B', sells: ['grocery'] },
-		{ id: 'gs-02', name: 'Target', sells: ['grocery', 'home goods'] },
+		{
+			id: 'gs-01',
+			name: 'H-E-B',
+			sells: ['grocery'],
+			shoppedOn: '09-26',
+			address: '2400 S Congress Ave, Austin',
+			url: 'https://www.heb.com',
+		},
+		{
+			id: 'gs-02',
+			name: 'Target',
+			sells: ['grocery', 'home goods'],
+			shoppedOn: '09-25',
+			note: 'Park on the roof; the garage fills by noon.',
+		},
 	],
 	lists: [
 		{ id: 'gl-01', storeId: 'gs-01', shopDay: groceryShopDay },

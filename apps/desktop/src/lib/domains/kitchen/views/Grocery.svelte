@@ -1,12 +1,15 @@
 <script lang="ts">
-	// Hearth's Grocery view (Domains/Hearth/Grocery): a quick-add line that files an item where it was last bought
-	// (D-97), then one list per store (D-96), all on the page at once: the store's name, its shop day when it has one
-	// (D-98), the count of what is checked, Complete and Edit store as quiet icon buttons, its rows and an add line of
-	// its own. What no store has yet sits under "Miscellaneous". Every row leads with its checkbox and carries an origin
-	// badge (manual, recipe, low stock, ran out); a checked row is struck through and stays until its list is completed.
-	// It is a checklist: a click on a row or on its checkbox checks it off (D-94), and Edit and Move to are in the row's
-	// menu. The pane on the right is the stores; an item's form and a store's open in a sheet over the page (D-95).
-	// Beneath the lists sits Buy it again (D-92): what ran out, each one a click from a list.
+	// Hearth's Grocery view (Domains/Hearth/Grocery): one list per store (D-96), all on the page at once: the store's
+	// name in the display face, its shop day when it has one (D-98), the count of what is checked, Complete, Edit store and
+	// Add as quiet icon buttons, and its rows. What no store has yet sits under "Miscellaneous". Every row leads with
+	// its checkbox and carries an origin badge (manual, recipe, low stock, ran out); a checked row is struck through
+	// and stays until its list is completed. It is a checklist: a click on a row or on its checkbox checks it off
+	// (D-94), and Edit and Move to are in the row's menu. At the side, in view while the lists scroll (D-101): Buy it
+	// again (D-92), what ran out, each one a click from a list; and beneath it the stores in the owner's order, each
+	// row saying what is left to buy and its shop day or its last trip. A click on a store goes to its list; its menu
+	// edits, moves and deletes it. Nothing is typed on the page: an item's form and a store's open in a sheet over it
+	// (D-95), the same one to add as to edit, and the header's Add menu opens either through `addItem` and `addStore`
+	// (D-102). An item added with no store picked is filed where it was last bought (D-97).
 	import {
 		Button,
 		Chip,
@@ -14,16 +17,16 @@
 		Field,
 		IconButton,
 		List,
-		QuickAdd,
 		Sheet,
 		type ListRowData,
 		type MenuItem,
 	} from '@eden/ui-kit'
+	import { openExternal } from '@eden/shared/api'
 	import { STORE_SELLS, shopDayMorning } from '@eden/shared/domains/kitchen'
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { undoToast } from '$lib/shell/undo'
-	import { daysFromToday, formatEventTime, todayIso } from '@eden/shared/dates'
+	import { daysFromToday, daysSince, formatEventTime, todayIso } from '@eden/shared/dates'
 	import { categoryGlyph } from '../words'
 	import {
 		kitchen,
@@ -34,16 +37,6 @@
 		type StoreSells,
 		type Undo,
 	} from '../store.svelte'
-
-	type Props = {
-		/** The id the page's Add action focuses. */
-		quickAddId: string
-		/** The id the page's Add a store action focuses. */
-		storeAddId: string
-		/** The empty state's primary action: focus the quick-add line. */
-		onadd: () => void
-	}
-	let { quickAddId, storeAddId, onadd }: Props = $props()
 
 	const uid = $props.id()
 	const lang = $derived($locale ?? 'en')
@@ -155,17 +148,30 @@
 		const { item, undo } = kitchen.removeStock(row.id)
 		if (item) undoToast($t('domains.kitchen.stock.toast.removed', { values: { name: item.name } }), undo)
 	}
-	/** A line added: from the page's own field it is filed where it was last bought, from a list's field on that list. */
-	function add(text: string, storeId?: string) {
-		const { item, store, undo } = kitchen.addGrocery(text, storeId)
-		landed(item.name, store, undo)
-	}
 
-	// An item's form, in its sheet (D-95); saved as one change. `store` is the store's id, '' for the unfiled list.
+	// An item's form, in its sheet (D-95), to add with or to edit; saved as one change. `store` is the store's id,
+	// '' for the unfiled list; none, while adding, is no store picked: the item goes where it was last bought (D-97).
+	type ItemForm = { name: string; qty: string; store: string | undefined; note: string }
 	let itemOpen = $state(false)
 	let editing = $state<string>()
-	let form = $state({ name: '', qty: '', store: '', note: '' })
+	let form = $state<ItemForm>({ name: '', qty: '', store: undefined, note: '' })
 	const edited = $derived(kitchen.grocery.items.find((item) => item.id === editing))
+	/**
+	 * Opens the item's form blank: the header's Add item and the empty state's action with no store picked, a
+	 * list's own Add with its store picked ('' for the unfiled list).
+	 */
+	export function addItem(store?: string) {
+		form = { name: '', qty: '', store, note: '' }
+		editing = undefined
+		itemOpen = true
+	}
+	function create() {
+		const target = form.store === undefined ? undefined : form.store || null
+		const note = form.note.trim() || undefined
+		const { item, store, undo } = kitchen.addToGrocery(form.name.trim(), form.qty.trim(), 'manual', note, target)
+		landed(item.name, store, undo)
+		itemOpen = false
+	}
 	function edit(id: string) {
 		const item = kitchen.grocery.items.find((entry) => entry.id === id)
 		if (!item) return
@@ -184,27 +190,69 @@
 		itemOpen = false
 	}
 
-	// The stores, in the pane: each opens its form, and a line adds one.
+	// The stores, at the side: each row goes to its list.
+	/** A last trip by its day: `today`, `yesterday`, `5 days ago`. */
+	const dayAgo = (iso: string) =>
+		new Intl.RelativeTimeFormat(lang, { numeric: 'auto' }).format(-Math.max(0, daysSince(iso)), 'day')
+	const storeBlocks = $derived(kitchen.blocks.filter((block) => block.store))
 	const storeRows = $derived<ListRowData[]>(
-		kitchen.grocery.stores.map((store) => ({
-			id: store.id,
-			primary: store.name,
-			chips: store.sells.map((kind) => ({ label: $t(`domains.kitchen.grocery.sells.${kind}`) })),
-			actions: [
-				{ id: 'edit', label: $t('domains.kitchen.grocery.actions.edit'), icon: 'pencil' as const },
-				{
-					id: 'delete',
-					label: $t('domains.kitchen.grocery.actions.delete'),
-					icon: 'trash' as const,
-					destructive: true,
-				},
-			],
-		}))
+		storeBlocks.map((block, at) => {
+			const store = block.store!
+			const shopDay = block.list?.shopDay
+			return {
+				id: store.id,
+				primary: store.name,
+				hint: store.note,
+				chips: shopDay
+					? [{ label: formatEventTime(shopDay, format), icon: 'calendar' as const }]
+					: store.shoppedAt
+						? [
+								{
+									label: $t('domains.kitchen.grocery.shopped', {
+										values: { when: dayAgo(store.shoppedAt) },
+									}),
+								},
+							]
+						: [],
+				meta: block.left ? $t('domains.kitchen.grocery.left', { values: { count: block.left } }) : undefined,
+				actions: [
+					{ id: 'edit', label: $t('domains.kitchen.grocery.actions.edit'), icon: 'pencil' as const },
+					...(store.place?.url
+						? [
+								{
+									id: 'website',
+									label: $t('domains.kitchen.grocery.actions.openWebsite'),
+									icon: 'external-link' as const,
+								},
+							]
+						: []),
+					...(at > 0
+						? [{ id: 'up', label: $t('domains.kitchen.grocery.actions.moveUp'), icon: 'chevron-up' as const }]
+						: []),
+					...(at < storeBlocks.length - 1
+						? [{ id: 'down', label: $t('domains.kitchen.grocery.actions.moveDown'), icon: 'chevron-down' as const }]
+						: []),
+					{
+						id: 'delete',
+						label: $t('domains.kitchen.grocery.actions.delete'),
+						icon: 'trash' as const,
+						destructive: true,
+					},
+				],
+			}
+		})
 	)
-	function addStore(text: string) {
-		const { store, created, undo } = kitchen.addStore(text)
-		const key = created ? 'domains.kitchen.grocery.toast.storeAdded' : 'domains.kitchen.grocery.toast.storeExists'
-		undoToast($t(key, { values: { store: store.name } }), undo)
+	/** The store whose list holds the focus: the stores' current row. */
+	let at = $state<string>()
+	/** Goes to a store's list: its section comes into view and its name takes the focus. */
+	function goTo(id: string) {
+		const name = document.getElementById(`${uid}-${id}`)
+		name?.closest('section')?.scrollIntoView({ block: 'nearest' })
+		name?.focus({ preventScroll: true })
+	}
+	function moveStore(id: string, delta: number) {
+		const { store, undo } = kitchen.moveStore(id, delta)
+		if (store) undoToast($t('domains.kitchen.grocery.toast.storeMoved', { values: { store: store.name } }), undo)
 	}
 	function removeStore(id: string) {
 		const { store, undo } = kitchen.removeStore(id)
@@ -213,13 +261,54 @@
 	}
 	function onstore(menuItem: MenuItem, row: ListRowData) {
 		if (menuItem.id === 'edit') editStore(row.id)
+		else if (menuItem.id === 'website') void openExternal(kitchen.storeById(row.id)?.place?.url ?? '')
+		else if (menuItem.id === 'up') moveStore(row.id, -1)
+		else if (menuItem.id === 'down') moveStore(row.id, 1)
 		else if (menuItem.id === 'delete') removeStore(row.id)
 	}
 
-	// A store's form, in its sheet (D-95): its name, what it sells and its shop day, which is optional (D-98).
+	// A store's form, in its sheet (D-95): its name, what it sells, where it is (D-101), a note and its shop day,
+	// which is optional (D-98).
+	const blankPlace = () => ({
+		name: '',
+		sells: ['grocery'] as StoreSells[],
+		address: '',
+		url: '',
+		phone: '',
+		note: '',
+		date: '',
+		time: '',
+	})
 	let storeOpen = $state(false)
 	let storeId = $state<string>()
-	let place = $state({ name: '', sells: [] as StoreSells[], date: '', time: '' })
+	let place = $state(blankPlace())
+	/** Opens the store's form blank: the header's Add store. */
+	export function addStore() {
+		place = blankPlace()
+		storeId = undefined
+		storeOpen = true
+	}
+	const placeFields = () => ({
+		sells: STORE_SELLS.filter((kind) => place.sells.includes(kind)),
+		where: { address: place.address.trim(), url: place.url.trim(), phone: place.phone.trim() },
+		note: place.note.trim(),
+		shopDay: place.date ? `${place.date}T${place.time || '10:00'}:00` : undefined,
+	})
+	/** Add in the store's form: the store with all its form held, and its shop day, as one undo. */
+	function createStore() {
+		const { sells, where, note, shopDay } = placeFields()
+		const { store, created, undo } = kitchen.addStore(place.name, sells, { note, place: where })
+		storeOpen = false
+		if (!created) {
+			undoToast($t('domains.kitchen.grocery.toast.storeExists', { values: { store: store.name } }), undo)
+			return
+		}
+		const undos = [undo]
+		if (shopDay) undos.push(kitchen.setShopDay(store.id, shopDay))
+		undoToast($t('domains.kitchen.grocery.toast.storeAdded', { values: { store: store.name } }), () =>
+			undos.reverse().forEach((entry) => entry())
+		)
+	}
 	const shown = $derived(kitchen.storeById(storeId))
 	const shopDayOf = (id: string) => kitchen.grocery.lists.find((list) => list.storeId === id)?.shopDay
 	function editStore(id: string) {
@@ -229,6 +318,10 @@
 		place = {
 			name: store.name,
 			sells: [...store.sells],
+			address: store.place?.address ?? '',
+			url: store.place?.url ?? '',
+			phone: store.place?.phone ?? '',
+			note: store.note ?? '',
 			date: shopDay?.slice(0, 10) ?? '',
 			time: shopDay?.slice(11, 16) ?? '',
 		}
@@ -238,11 +331,15 @@
 	function saveStore(store: GroceryStore) {
 		const undos: Undo[] = []
 		const name = place.name.trim() || store.name
-		const sells = STORE_SELLS.filter((kind) => place.sells.includes(kind))
-		if (name !== store.name || sells.join() !== store.sells.join()) {
-			undos.push(kitchen.updateStore(store.id, { name, sells }).undo)
-		}
-		const shopDay = place.date ? `${place.date}T${place.time || '10:00'}:00` : undefined
+		const { sells, where, note, shopDay } = placeFields()
+		const same =
+			name === store.name &&
+			sells.join() === store.sells.join() &&
+			note === (store.note ?? '') &&
+			where.address === (store.place?.address ?? '') &&
+			where.url === (store.place?.url ?? '') &&
+			where.phone === (store.place?.phone ?? '')
+		if (!same) undos.push(kitchen.updateStore(store.id, { name, sells, note, place: where }).undo)
 		const moved = shopDay !== shopDayOf(store.id)
 		if (moved) undos.push(kitchen.setShopDay(store.id, shopDay))
 		storeOpen = false
@@ -258,20 +355,24 @@
 
 <div class="body">
 	<div class="lists">
-		<QuickAdd id={quickAddId} placeholder={$t('domains.kitchen.grocery.addPlaceholder')} onadd={(text) => add(text)} />
 		{#if total === 0}
 			<EmptyState
 				title={$t('domains.kitchen.grocery.empty.title')}
 				text={$t('domains.kitchen.grocery.empty.text')}
-				action={{ label: $t('domains.kitchen.grocery.empty.action'), icon: 'plus', onclick: onadd }}
+				action={{ label: $t('domains.kitchen.grocery.empty.action'), icon: 'plus', onclick: () => addItem() }}
 			/>
 		{/if}
 		{#each kitchen.blocks as block (block.store?.id ?? '')}
 			{@const key = block.store?.id ?? 'any'}
 			{@const name = nameOf(block.store)}
-			<section class="store" aria-labelledby="{uid}-{key}">
+			<section
+				class="store"
+				aria-labelledby="{uid}-{key}"
+				onfocusin={() => (at = block.store?.id)}
+				onfocusout={() => (at = undefined)}
+			>
 				<header class="store-head">
-					<h2 class="store-title" id="{uid}-{key}">{name}</h2>
+					<h2 class="store-title" id="{uid}-{key}" tabindex="-1">{name}</h2>
 					{#if block.store && block.list?.shopDay}
 						<Chip
 							label={formatEventTime(block.list.shopDay, format)}
@@ -305,6 +406,13 @@
 								onclick={() => editStore(block.store!.id)}
 							/>
 						{/if}
+						<IconButton
+							icon="plus"
+							size="xs"
+							label={$t('domains.kitchen.grocery.addTo', { values: { store: name } })}
+							tooltip={$t('domains.kitchen.grocery.addItem')}
+							onclick={() => addItem(block.store?.id ?? '')}
+						/>
 					</span>
 				</header>
 				{#if block.items.length && block.checked === block.items.length}
@@ -317,52 +425,64 @@
 						oncheck={(row) => toggle(row.id)}
 						{onaction}
 					/>
-				{/if}
-				{#if block.store}
-					<QuickAdd
-						placeholder={$t('domains.kitchen.grocery.addTo', { values: { store: name } })}
-						onadd={(text) => add(text, block.store!.id)}
+				{:else if total > 0}
+					<EmptyState
+						inline
+						title={$t('domains.kitchen.grocery.emptyList.title')}
+						text={$t('domains.kitchen.grocery.emptyList.text')}
+						action={{
+							label: $t('domains.kitchen.grocery.addItem'),
+							icon: 'plus',
+							onclick: () => addItem(block.store?.id ?? ''),
+						}}
 					/>
 				{/if}
 			</section>
 		{/each}
-		{#if kitchen.buyAgain.length}
-			<List
-				header={$t('domains.kitchen.grocery.buyAgain')}
-				count={kitchen.buyAgain.length}
-				rows={kitchen.buyAgain.map(toAgainRow)}
-				onpick={(row) => again(row.id)}
-				onaction={onagain}
-			/>
-		{/if}
 	</div>
 
-	<aside class="pane" aria-labelledby="{uid}-pane">
-		<h2 class="pane-title" id="{uid}-pane">{$t('domains.kitchen.grocery.stores')}</h2>
-		{#if storeRows.length}
-			<List rows={storeRows} onpick={(row) => editStore(row.id)} onaction={onstore} />
-		{/if}
-		<QuickAdd
-			id={storeAddId}
-			placeholder={$t('domains.kitchen.grocery.addStore')}
-			parse={() => []}
-			onadd={(text) => addStore(text)}
-		/>
-		<p class="help">{$t('domains.kitchen.grocery.storesHelp')}</p>
-	</aside>
+	<div class="side">
+		<List
+			header={$t('domains.kitchen.grocery.buyAgain')}
+			count={kitchen.buyAgain.length}
+			rows={kitchen.buyAgain.map(toAgainRow)}
+			onpick={(row) => again(row.id)}
+			onaction={onagain}
+		>
+			{#if !kitchen.buyAgain.length}
+				<p class="voice none">{$t('domains.kitchen.grocery.buyAgainNone')}</p>
+			{/if}
+		</List>
+		<List
+			header={$t('domains.kitchen.grocery.stores')}
+			count={storeRows.length}
+			rows={storeRows}
+			current={at}
+			onpick={(row) => goTo(row.id)}
+			onopen={(row) => editStore(row.id)}
+			onaction={onstore}
+		>
+			{#if !storeRows.length}
+				<p class="voice none">{$t('domains.kitchen.grocery.storesNone')}</p>
+			{/if}
+		</List>
+	</div>
 </div>
 
 <Sheet bind:open={itemOpen} size="sm" labelledby="{uid}-item-title">
 	{#snippet header()}
-		<h2 class="title" id="{uid}-item-title">{$t('domains.kitchen.grocery.pane.editing')}</h2>
+		<h2 class="title" id="{uid}-item-title">
+			{$t(edited ? 'domains.kitchen.grocery.pane.editing' : 'domains.kitchen.grocery.addItem')}
+		</h2>
 	{/snippet}
-	{#if edited}
+	{#if edited || !editing}
 		<form
 			class="form"
 			id="{uid}-item-form"
 			onsubmit={(event) => {
 				event.preventDefault()
-				save(edited)
+				if (edited) save(edited)
+				else create()
 			}}
 		>
 			<Field label={$t('domains.kitchen.grocery.pane.name')} bind:value={form.name} />
@@ -375,10 +495,13 @@
 							label={entry.label}
 							selectable
 							tone={form.store === entry.id ? 'accent' : 'outline'}
-							bind:selected={() => form.store === entry.id, () => (form.store = entry.id)}
+							bind:selected={() => form.store === entry.id, (on) => (form.store = on || edited ? entry.id : undefined)}
 						/>
 					{/each}
 				</div>
+				{#if !edited}
+					<p class="help">{$t('domains.kitchen.grocery.pane.storeHelp')}</p>
+				{/if}
 			</div>
 			<Field label={$t('domains.kitchen.grocery.pane.note')} bind:value={form.note} />
 		</form>
@@ -386,26 +509,29 @@
 	{#snippet footer()}
 		<Button label={$t('common.cancel')} variant="quiet" onclick={() => (itemOpen = false)} />
 		<Button
-			label={$t('common.save')}
+			label={$t(edited ? 'common.save' : 'domains.kitchen.grocery.add')}
 			variant="primary"
 			type="submit"
 			form="{uid}-item-form"
-			disabled={!edited || !form.name.trim()}
+			disabled={(!edited && !!editing) || !form.name.trim()}
 		/>
 	{/snippet}
 </Sheet>
 
 <Sheet bind:open={storeOpen} size="sm" labelledby="{uid}-store-title">
 	{#snippet header()}
-		<h2 class="title" id="{uid}-store-title">{$t('domains.kitchen.grocery.pane.editingStore')}</h2>
+		<h2 class="title" id="{uid}-store-title">
+			{$t(shown ? 'domains.kitchen.grocery.pane.editingStore' : 'domains.kitchen.grocery.addStore')}
+		</h2>
 	{/snippet}
-	{#if shown}
+	{#if shown || !storeId}
 		<form
 			class="form"
 			id="{uid}-store-form"
 			onsubmit={(event) => {
 				event.preventDefault()
-				saveStore(shown)
+				if (shown) saveStore(shown)
+				else createStore()
 			}}
 		>
 			<Field label={$t('domains.kitchen.grocery.pane.name')} bind:value={place.name} />
@@ -425,6 +551,12 @@
 					{/each}
 				</div>
 			</div>
+			<Field label={$t('domains.kitchen.grocery.pane.address')} bind:value={place.address} />
+			<div class="pair">
+				<Field label={$t('domains.kitchen.grocery.pane.website')} type="url" bind:value={place.url} />
+				<Field label={$t('domains.kitchen.grocery.pane.phone')} type="tel" bind:value={place.phone} />
+			</div>
+			<Field label={$t('domains.kitchen.grocery.pane.storeNote')} multiline bind:value={place.note} />
 			<div class="pair">
 				<Field label={$t('domains.kitchen.grocery.pane.shopDay')} type="date" bind:value={place.date} />
 				<Field
@@ -463,24 +595,23 @@
 		{#if shown}
 			<Button
 				label={$t('domains.kitchen.grocery.pane.deleteStore')}
-				variant="quiet"
-				icon="trash"
+				variant="danger"
 				onclick={() => removeStore(shown.id)}
 			/>
 		{/if}
 		<Button label={$t('common.cancel')} variant="quiet" onclick={() => (storeOpen = false)} />
 		<Button
-			label={$t('common.save')}
+			label={$t(shown ? 'common.save' : 'domains.kitchen.grocery.add')}
 			variant="primary"
 			type="submit"
 			form="{uid}-store-form"
-			disabled={!shown || !place.name.trim()}
+			disabled={(!shown && !!storeId) || !place.name.trim()}
 		/>
 	{/snippet}
 </Sheet>
 
 <style>
-	/* The list on the left and its pane on the right */
+	/* The lists on the left and the side on the right */
 	.body {
 		flex: 1 0 auto;
 		display: grid;
@@ -497,6 +628,7 @@
 	}
 	/* One list per store: its name, its shop day when it has one, the count of what is checked and its two actions */
 	.store {
+		scroll-margin-top: var(--space-4);
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-3);
@@ -507,17 +639,23 @@
 		flex-wrap: wrap;
 		gap: var(--space-2);
 	}
+	/* A store's name, and Miscellaneous, in the display face */
 	.store-title {
 		margin: 0;
-		font: var(--ed-t-title-lg);
-		letter-spacing: var(--ed-t-title-lg-tracking);
-		font-variation-settings: var(--ed-t-title-lg-opsz);
+		font: var(--ed-t-display-md);
+		letter-spacing: var(--ed-t-display-md-tracking);
+		font-variation-settings: var(--ed-t-display-md-opsz);
 	}
 	.store-tools {
 		display: flex;
 		align-items: center;
 		gap: var(--space-2);
 		margin-left: auto;
+	}
+	/* The last tool, Add, stands over the rows' menu buttons: the card's edge, the row's padding, and half of what
+	   the row's button is wider by */
+	.store-tools {
+		padding-right: calc(1px + var(--space-2) + var(--space-1));
 	}
 	.store-count {
 		font: var(--ed-t-data-sm);
@@ -533,26 +671,19 @@
 		color: var(--text-secondary);
 	}
 
-	/* The pane: the stores; it stays in view while the lists scroll */
-	.pane {
+	.none {
+		padding: var(--space-3);
+	}
+	/* The side stays in view while the lists scroll: Buy it again (D-92), and beneath it the stores (D-101) */
+	.side {
 		position: sticky;
 		top: var(--space-4);
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-4);
-		box-sizing: border-box;
-		padding: var(--space-4);
-		border: 1px solid var(--ed-card-border);
-		border-radius: var(--ed-radius-card);
-		background: var(--surface-1);
-		box-shadow: var(--shadow-card);
-	}
-	.pane-title {
-		margin: 0;
-		font: var(--ed-t-display-sm);
-		letter-spacing: var(--ed-t-display-sm-tracking);
-		font-variation-settings: var(--ed-t-display-sm-opsz);
-		text-wrap: balance;
+		min-width: 0;
+		max-height: calc(100vh - var(--space-8) * 3);
+		overflow-y: auto;
 	}
 	.form {
 		display: flex;

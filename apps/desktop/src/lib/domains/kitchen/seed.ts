@@ -50,10 +50,22 @@ export function seedData(): KitchenData {
 		})),
 		// the sample's ids stand in until the rows take their own (`kitchenRows`)
 		grocery: {
-			stores: grocery.stores.map((store) => ({
+			stores: grocery.stores.map((store, position) => ({
 				id: store.id,
 				name: store.name,
 				sells: store.sells.map((kind) => (kind === 'home goods' ? 'home-goods' : kind)),
+				position,
+				...(store.shoppedOn ? { shoppedAt: `${shiftSampleDate(store.shoppedOn)}T10:00:00` } : {}),
+				...(store.note ? { note: store.note } : {}),
+				...(store.address || store.url || store.phone
+					? {
+							place: {
+								...(store.address ? { address: store.address } : {}),
+								...(store.url ? { url: store.url } : {}),
+								...(store.phone ? { phone: store.phone } : {}),
+							},
+						}
+					: {}),
 			})),
 			lists: grocery.lists.map((list) => ({
 				id: list.id,

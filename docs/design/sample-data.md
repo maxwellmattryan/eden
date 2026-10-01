@@ -68,7 +68,7 @@ The salmon's tip: "Pat the fillets dry first: the glaze holds and the edges cara
 
 **A recipe on its way in** (`recipeDraft`), read from the link `https://example.com/recipes/lemon-yogurt-chicken-thighs` and not saved yet: Lemon-yogurt chicken thighs (serves 2, 35 min, tag weeknight). Ingredients: 500 g chicken thighs; 150 g Greek yogurt; 1 lemons, zest and juice; 2 cloves garlic, grated; 1 tbsp olive oil; 1 dill, a small bunch (the one thing not in stock). Steps: Stir the yogurt, the lemon, the garlic and the oil together and coat the chicken. / Roast at 220 °C for 25 minutes, until the edges char. / Rest for five minutes and scatter with the dill.
 
-**Grocery**, one list per store. Stores: H-E-B (sells grocery) and Target (sells grocery and home goods). H-E-B's list: LMNT citrus ×1 box (origin low-stock), limes ×4, ginger ×1 (origin recipe: soba, checked); its `shop-day` Event is Saturday 10-03 10:00. Target's list: paper towels (manual), no shop day. Not filed to a store yet: coffee filters (manual).
+**Grocery**, one list per store. Stores, in this order: H-E-B (sells grocery; 2400 S Congress Ave, Austin; https://www.heb.com; last shopped 09-26) and Target (sells grocery and home goods; last shopped 09-25; note: Park on the roof; the garage fills by noon.). H-E-B's list: LMNT citrus ×1 box (origin low-stock), limes ×4, ginger ×1 (origin recipe: soba, checked); its `shop-day` Event is Saturday 10-03 10:00. Target's list: paper towels (manual), no shop day. Not filed to a store yet: coffee filters (manual).
 
 ## Toolbench
 

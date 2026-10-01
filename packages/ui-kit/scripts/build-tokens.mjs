@@ -352,7 +352,7 @@ function baseCss() {
 	])
 	out += block('::selection', ['background: var(--brand-muted)', 'color: var(--text-primary)'])
 	out +=
-		'\n/* Paper grain at lush (D-61): a fixed layer over the whole page, overlay blended so one mid-grey tile reads in both themes without shifting colour, and at an opacity that leaves text crisp. It ignores the pointer. The tile is raw desaturated noise, never pushed for contrast, which is what keeps it fine (D-63), and it jumps to a new offset about eight times a second (D-63), which reads as fresh grain. .ed-canvas frames paint their own. */\n'
+		'\n/* Paper grain at lush (D-61): a fixed layer over the whole page, blended by --ed-grain-blend (multiply on light, screen on dark, D-99) so it reads on the paper and fades on a saturated fill, and at an opacity that leaves text crisp. It ignores the pointer. The tile is raw desaturated noise, never pushed for contrast, which is what keeps it fine (D-63), and it jumps to a new offset about eight times a second (D-63), which reads as fresh grain. .ed-canvas frames paint their own. */\n'
 	out += block('body::before, .ed-canvas::before', [
 		'content: ""',
 		'position: fixed',
@@ -361,7 +361,7 @@ function baseCss() {
 		'pointer-events: none',
 		'background-image: var(--ed-grain)',
 		'opacity: var(--ed-grain-opacity)',
-		'mix-blend-mode: overlay',
+		'mix-blend-mode: var(--ed-grain-blend)',
 		'animation: var(--ed-grain-motion)',
 	])
 	out +=
@@ -375,7 +375,7 @@ function baseCss() {
 		'border-radius: inherit',
 		'background-image: var(--ed-grain)',
 		'opacity: var(--ed-grain-opacity)',
-		'mix-blend-mode: overlay',
+		'mix-blend-mode: var(--ed-grain-blend)',
 		'animation: var(--ed-grain-motion)',
 	])
 	out += block('.ed-canvas', [

@@ -100,6 +100,20 @@
 	}}
 />
 
+<!-- Nothing set reads as empty: the engine's stand-in (today's date in WebKit) gives way to the format, MM/DD/YYYY in
+     the system's order, until the field is in hand -->
+<Story
+	name="Date unset"
+	args={{ label: 'Until', type: 'date', placeholder: undefined }}
+	play={async ({ canvasElement }) => {
+		const canvas = canvasOf(canvasElement)
+		const input = canvas.getByLabelText('Until')
+		await expect(input).toHaveValue('')
+		await expect(input).toHaveAttribute('data-unset')
+		await expect(canvas.getByText(/YYYY/)).toBeVisible()
+	}}
+/>
+
 <Story
 	name="Large"
 	args={{
