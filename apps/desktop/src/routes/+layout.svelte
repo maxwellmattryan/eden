@@ -308,6 +308,12 @@
 	</div>
 	<ToastHost />
 	<SettingsSheet />
+	{#each manifests as manifest (manifest.id)}
+		{#if manifest.overlay}
+			{@const Overlay = manifest.overlay}
+			<Overlay />
+		{/if}
+	{/each}
 	<CrashScreen />
 </UiKitProvider>
 

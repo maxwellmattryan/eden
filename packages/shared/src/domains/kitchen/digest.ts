@@ -4,6 +4,7 @@
 import { toUri } from '../../data/uri.js'
 import { daysUntil } from '../../dates/index.js'
 import { onDay } from '../../scheduler/rules.js'
+import { isLow } from './quantity.js'
 import { KITCHEN, type StockItem } from './types.js'
 
 /** Dated on or before the day after tomorrow counts as expiring (the mockup's "on or before Friday" on a Wednesday). */
@@ -51,6 +52,30 @@ export function expiringDigest(stock: readonly StockItem[], today: string): Expi
 		first: first.name,
 		...(second ? { second: second.name } : {}),
 		when: whens.size === 1 ? whenOf(daysUntil(first.expiry ?? today, today)) : 'soon',
+	}
+}
+
+/** The payload of `stock.low`: what is at or under its threshold, by name. */
+export interface LowDigest {
+	uris: string[]
+	count: number
+	/** The items the line does not name. */
+	more: number
+	first: string
+	second?: string
+}
+
+/** The digest of what is low, by name, or `null` when nothing is. */
+export function lowDigest(stock: readonly StockItem[]): LowDigest | null {
+	const low = stock.filter((item) => isLow(item)).sort((a, b) => a.name.localeCompare(b.name))
+	const [first, second] = low
+	if (!first) return null
+	return {
+		uris: low.slice(0, MAX_URIS).map((item) => toUri(KITCHEN.stock, item.id)),
+		count: low.length,
+		more: low.length - 1,
+		first: first.name,
+		...(second ? { second: second.name } : {}),
 	}
 }
 

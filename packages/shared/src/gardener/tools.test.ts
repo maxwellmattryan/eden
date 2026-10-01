@@ -27,10 +27,10 @@ import {
 const index = toolIndex(declarations)
 
 describe('the tool index', () => {
-	it('validates, and holds the twenty-two tools', () => {
+	it('validates, and holds the twenty-four tools', () => {
 		expect(validateTools(index)).toEqual([])
-		expect(index).toHaveLength(22)
-		expect(Object.keys(SCHEMAS)).toHaveLength(22)
+		expect(index).toHaveLength(24)
+		expect(Object.keys(SCHEMAS)).toHaveLength(24)
 	})
 
 	it('has a line for every declared domain, and none for another', () => {

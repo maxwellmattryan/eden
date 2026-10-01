@@ -84,16 +84,16 @@ Built-in domains are manifests compiled into the app. An external plugin is the 
 |---|---|
 | `id` | `kitchen` |
 | `displayName` / `subtitle` | Hearth / Food, recipes, pantry, groceries |
-| `resources` | facts `allergy` T2, `dietary-preference` T1, `disliked-ingredient` T0, `cuisine-preference` T0, `household-size` T1; entities `stock-item` T0, `recipe` T0, `grocery-list` T0, `grocery-item` T0, `storage-tip` T0; kinds `shop-day` (event, T0), `haul-photo` (attachment, T1) |
+| `resources` | facts `allergy` T2, `dietary-preference` T1, `disliked-ingredient` T0, `cuisine-preference` T0, `household-size` T1; entities `stock-item` T0, `recipe` T0, `grocery-list` T0, `grocery-item` T0; kinds `shop-day` (event, T0), `haul-photo` (attachment, T1), `item-photo` (attachment, T1) |
 | `reads` | `medical-dietary-restriction`, `favorite-supplement`, `home-area` |
 | `widgets` | expiring-soon (S, M; reads `stock-item`), cook-tonight (M; reads `stock-item`, `recipe`, `allergy`, `medical-dietary-restriction`, `dietary-preference`), grocery-quick-add (S; reads `grocery-list`, `grocery-item`) |
 | `quickActions` | capture-haul, add-to-grocery |
 | `captureSources` | photo, receipt (barcode in Phase 2) |
-| `tools` | suggest-recipes (read, standard), storage-tip (read, light), capture-haul (write-draft, light, needs vision), draft-grocery-list (write-draft, standard), add-stock (write, confirm, plain), plan-week (write-draft, deep, needs tools) |
+| `tools` | suggest-recipes (read, standard), storage-tip (read, light), capture-haul (write-draft, light, needs vision), draft-grocery-list (write-draft, standard), add-stock (write, confirm, plain), import-recipe (write-draft, light, needs vision), save-recipe (write-draft, plain), plan-week (write-draft, deep, needs tools) |
 | `signals` | `stock.expiring`, `stock.low`, `grocery.shop-day` |
-| `notificationKinds` | expiring-digest (daily, in-app; answers `stock.expiring`), low-stock (weekly, in-app), shop-day-reminder (OS, morning of; answers `grocery.shop-day`) |
+| `notificationKinds` | expiring-digest (daily, in-app; answers `stock.expiring`), low-stock (weekly, in-app; answers `stock.low`), shop-day-reminder (OS, morning of; answers `grocery.shop-day`) |
 | `schedules` | morning (daily at 08:00) |
 | `intents` | `kitchen.add-to-grocery` |
 | `deviceCapabilities` | `camera`, `os-notifications` |
 | `palette` | go to Hearth, add to grocery, capture haul, cook tonight, search stock and recipes |
-| `export` | stock, recipes, grocery lists, storage tips |
+| `export` | stock, recipes, grocery lists |

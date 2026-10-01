@@ -22,68 +22,279 @@ export interface StockItem {
 	expiry?: string
 	estimated?: boolean
 	lowStock?: boolean
+	/** A category id from `haulCategories`; its glyph is the row's picture when the item has no photo. */
+	category?: string
 }
 export const stock: StockItem[] = [
-	{ id: 'st-01', name: 'Chicken thighs', qty: '900', unit: 'g', location: 'fridge', expiry: '10-02' },
-	{ id: 'st-02', name: 'Miso paste', qty: '400', unit: 'g', location: 'fridge', expiry: '12-15', estimated: true },
-	{ id: 'st-03', name: 'Eggs', qty: '8', location: 'fridge', expiry: '10-14' },
-	{ id: 'st-04', name: 'Spinach', qty: '200', unit: 'g', location: 'fridge', expiry: '10-01', estimated: true },
-	{ id: 'st-05', name: 'Greek yogurt', qty: '500', unit: 'g', location: 'fridge', expiry: '10-06' },
-	{ id: 'st-06', name: 'Lemons', qty: '3', location: 'fridge', expiry: '10-09', estimated: true },
+	{
+		id: 'st-01',
+		name: 'Chicken thighs',
+		qty: '900',
+		unit: 'g',
+		location: 'fridge',
+		expiry: '10-02',
+		category: 'meat-and-fish',
+	},
+	{
+		id: 'st-02',
+		name: 'Miso paste',
+		qty: '400',
+		unit: 'g',
+		location: 'fridge',
+		expiry: '12-15',
+		estimated: true,
+		category: 'condiments-and-spices',
+	},
+	{ id: 'st-03', name: 'Eggs', qty: '8', location: 'fridge', expiry: '10-14', category: 'dairy-and-eggs' },
+	{
+		id: 'st-04',
+		name: 'Spinach',
+		qty: '200',
+		unit: 'g',
+		location: 'fridge',
+		expiry: '10-01',
+		estimated: true,
+		category: 'produce',
+	},
+	{
+		id: 'st-05',
+		name: 'Greek yogurt',
+		qty: '500',
+		unit: 'g',
+		location: 'fridge',
+		expiry: '10-06',
+		category: 'dairy-and-eggs',
+	},
+	{ id: 'st-06', name: 'Lemons', qty: '3', location: 'fridge', expiry: '10-09', estimated: true, category: 'produce' },
 	{ id: 'st-07', name: 'Tofu', qty: '400', unit: 'g', location: 'fridge', expiry: '10-03' },
-	{ id: 'st-08', name: 'Edamame', qty: '450', unit: 'g', location: 'freezer', expiry: '2027-01', estimated: true },
-	{ id: 'st-09', name: 'Salmon fillets', qty: '2', location: 'freezer', expiry: '11-20', estimated: true },
-	{ id: 'st-10', name: 'Corn tortillas', qty: '12', location: 'freezer', expiry: '12-01', estimated: true },
-	{ id: 'st-11', name: 'Short-grain rice', qty: '2', unit: 'kg', location: 'pantry' },
-	{ id: 'st-12', name: 'Soba', qty: '300', unit: 'g', location: 'pantry' },
-	{ id: 'st-13', name: 'Canned black beans', qty: '2', location: 'pantry' },
-	{ id: 'st-14', name: 'Olive oil', qty: '500', unit: 'ml', location: 'pantry' },
-	{ id: 'st-15', name: 'Soy sauce (low sodium)', qty: '300', unit: 'ml', location: 'pantry' },
-	{ id: 'st-16', name: 'LMNT citrus', qty: '9', unit: 'packets', location: 'pantry', lowStock: true },
-	{ id: 'st-17', name: 'Avocados', qty: '2', location: 'counter', expiry: '10-01', estimated: true },
-	{ id: 'st-18', name: 'Garlic', qty: '1', unit: 'head', location: 'counter' },
-	{ id: 'st-19', name: 'Bananas', qty: '4', location: 'counter', expiry: '10-02', estimated: true },
+	{
+		id: 'st-08',
+		name: 'Edamame',
+		qty: '450',
+		unit: 'g',
+		location: 'freezer',
+		expiry: '2027-01',
+		estimated: true,
+		category: 'frozen',
+	},
+	{
+		id: 'st-09',
+		name: 'Salmon fillets',
+		qty: '2',
+		location: 'freezer',
+		expiry: '11-20',
+		estimated: true,
+		category: 'meat-and-fish',
+	},
+	{
+		id: 'st-10',
+		name: 'Corn tortillas',
+		qty: '12',
+		location: 'freezer',
+		expiry: '12-01',
+		estimated: true,
+		category: 'grains-and-pasta',
+	},
+	{ id: 'st-11', name: 'Short-grain rice', qty: '2', unit: 'kg', location: 'pantry', category: 'grains-and-pasta' },
+	{ id: 'st-12', name: 'Soba', qty: '300', unit: 'g', location: 'pantry', category: 'grains-and-pasta' },
+	{ id: 'st-13', name: 'Canned black beans', qty: '2', location: 'pantry', category: 'canned-and-jarred' },
+	{ id: 'st-14', name: 'Olive oil', qty: '500', unit: 'ml', location: 'pantry', category: 'condiments-and-spices' },
+	{
+		id: 'st-15',
+		name: 'Soy sauce (low sodium)',
+		qty: '300',
+		unit: 'ml',
+		location: 'pantry',
+		category: 'condiments-and-spices',
+	},
+	{
+		id: 'st-16',
+		name: 'LMNT citrus',
+		qty: '9',
+		unit: 'packets',
+		location: 'pantry',
+		lowStock: true,
+		category: 'supplements-and-mixes',
+	},
+	{
+		id: 'st-17',
+		name: 'Avocados',
+		qty: '2',
+		location: 'counter',
+		expiry: '10-01',
+		estimated: true,
+		category: 'produce',
+	},
+	{ id: 'st-18', name: 'Garlic', qty: '1', unit: 'head', location: 'counter', category: 'produce' },
+	{
+		id: 'st-19',
+		name: 'Bananas',
+		qty: '4',
+		location: 'counter',
+		expiry: '10-02',
+		estimated: true,
+		category: 'produce',
+	},
 ]
 
 export interface HaulRow {
 	id: string
 	name: string
-	qty: number | string
+	qty: string
 	unit?: string
 	location: StockLocation
+	/** An ISO date. */
 	expiry?: string
 	estimated?: boolean
-	merge?: string
+	/** A category id from `haulCategories`. */
+	category?: string
+	/** A storage tip worth showing beside the row. */
+	tip?: string
+	/** The stock item the row would merge into, and whether it will. */
+	merge?: { name: string; on: boolean }
 }
-/** The captured haul: photo, 09-29 18:12, provider Anthropic, about 0.6 cents. 11 recognised, 2 merge, 1 was a misread. */
+/** The categories a stock item or a haul row may be filed under: the app's twelve, id and English name. */
+export const haulCategories = [
+	{ id: 'produce', label: 'Produce' },
+	{ id: 'meat-and-fish', label: 'Meat and fish' },
+	{ id: 'dairy-and-eggs', label: 'Dairy and eggs' },
+	{ id: 'bakery', label: 'Bakery' },
+	{ id: 'grains-and-pasta', label: 'Grains and pasta' },
+	{ id: 'canned-and-jarred', label: 'Canned and jarred' },
+	{ id: 'frozen', label: 'Frozen' },
+	{ id: 'snacks', label: 'Snacks' },
+	{ id: 'drinks', label: 'Drinks' },
+	{ id: 'condiments-and-spices', label: 'Condiments and spices' },
+	{ id: 'supplements-and-mixes', label: 'Supplements and mixes' },
+	{ id: 'other', label: 'Other' },
+]
+/**
+ * The captured haul: 09-29 18:12, read by Anthropic's Haiku for about 0.6 cents from a photo of the bags, a photo of
+ * the receipt, the order's PDF and a pasted list. 11 recognised, 2 merge, 1 was a misread. Every row has a category
+ * but the tofu, which the capture could not place; the spinach carries a storage tip.
+ */
 export const haul = {
 	provider: 'Anthropic',
+	model: 'Haiku',
 	cost: '0.6 ¢',
 	capturedAt: '09-29 18:12',
+	sources: [
+		{ key: 'src-1', name: 'haul.jpg', detail: '2.4 MB' },
+		{ key: 'src-2', name: 'receipt.jpg', detail: '840 KB' },
+		{ key: 'src-3', name: 'heb-order.pdf', detail: '1.2 MB' },
+		{ key: 'src-4', name: 'Pasted text', detail: '6 lines' },
+	],
 	rows: [
-		{ id: 'h-01', name: 'Chicken thighs', qty: 900, unit: 'g', location: 'fridge', expiry: '10-02' },
-		{ id: 'h-02', name: 'Eggs', qty: 12, location: 'fridge', expiry: '10-14', merge: 'Eggs' },
+		{
+			id: 'h-01',
+			name: 'Chicken thighs',
+			qty: '900',
+			unit: 'g',
+			location: 'fridge',
+			expiry: '2026-10-02',
+			category: 'meat-and-fish',
+		},
+		{
+			id: 'h-02',
+			name: 'Eggs',
+			qty: '12',
+			location: 'fridge',
+			expiry: '2026-10-14',
+			category: 'dairy-and-eggs',
+			merge: { name: 'Eggs', on: true },
+		},
 		{
 			id: 'h-03',
 			name: 'Spinach',
-			qty: 200,
+			qty: '200',
 			unit: 'g',
 			location: 'fridge',
-			expiry: '10-01',
+			expiry: '2026-10-01',
 			estimated: true,
-			merge: 'Spinach',
+			category: 'produce',
+			tip: 'Wrap in a dry towel inside the bag; it wilts fastest in the door.',
+			merge: { name: 'Spinach', on: true },
 		},
-		{ id: 'h-04', name: 'Greek yogurt', qty: 500, unit: 'g', location: 'fridge', expiry: '10-06' },
-		{ id: 'h-05', name: 'Lemons', qty: 3, location: 'fridge', expiry: '10-09', estimated: true },
-		{ id: 'h-06', name: 'Tofu', qty: 400, unit: 'g', location: 'fridge', expiry: '10-03' },
-		{ id: 'h-07', name: 'Avocados', qty: 2, location: 'counter', expiry: '10-01', estimated: true },
-		{ id: 'h-08', name: 'Bananas', qty: 4, location: 'counter', expiry: '10-02', estimated: true },
-		{ id: 'h-09', name: 'Corn tortillas', qty: 12, location: 'freezer', expiry: '12-01', estimated: true },
-		{ id: 'h-10', name: 'Soy sauce (low sodium)', qty: 300, unit: 'ml', location: 'pantry' },
-		{ id: 'h-11', name: 'Napkins', qty: 1, location: 'pantry' },
+		{
+			id: 'h-04',
+			name: 'Greek yogurt',
+			qty: '500',
+			unit: 'g',
+			location: 'fridge',
+			expiry: '2026-10-06',
+			category: 'dairy-and-eggs',
+		},
+		{
+			id: 'h-05',
+			name: 'Lemons',
+			qty: '3',
+			location: 'fridge',
+			expiry: '2026-10-09',
+			estimated: true,
+			category: 'produce',
+		},
+		{ id: 'h-06', name: 'Tofu', qty: '400', unit: 'g', location: 'fridge', expiry: '2026-10-03' },
+		{
+			id: 'h-07',
+			name: 'Avocados',
+			qty: '2',
+			location: 'counter',
+			expiry: '2026-10-01',
+			estimated: true,
+			category: 'produce',
+		},
+		{
+			id: 'h-08',
+			name: 'Bananas',
+			qty: '4',
+			location: 'counter',
+			expiry: '2026-10-02',
+			estimated: true,
+			category: 'produce',
+		},
+		{
+			id: 'h-09',
+			name: 'Corn tortillas',
+			qty: '12',
+			location: 'freezer',
+			expiry: '2026-12-01',
+			estimated: true,
+			category: 'grains-and-pasta',
+		},
+		{
+			id: 'h-10',
+			name: 'Soy sauce (low sodium)',
+			qty: '300',
+			unit: 'ml',
+			location: 'pantry',
+			category: 'condiments-and-spices',
+		},
+		{ id: 'h-11', name: 'Napkins', qty: '1', location: 'pantry', category: 'other' },
 	] as HaulRow[],
 }
 
+/** One line of a recipe: the amount, the name, and the note that follows a comma. */
+export interface RecipeIngredient {
+	name: string
+	qty: string
+	unit?: string
+	note?: string
+}
+/** A recipe as the Recipes view reads it; `recipes` is a tuple of these. */
+export interface SampleRecipe {
+	id: string
+	name: string
+	serves: number
+	minutes: number
+	tags: readonly string[]
+	inStock: boolean
+	ingredients: readonly RecipeIngredient[]
+	steps: readonly string[]
+	/** A line worth knowing before cooking it: the info button beside its name. */
+	tip?: string
+	/** Where it was read from, when it came from a link. */
+	sourceUrl?: string
+}
 export const recipes = [
 	{
 		id: 'r-01',
@@ -92,10 +303,88 @@ export const recipes = [
 		minutes: 25,
 		tags: ['weeknight', 'low-sodium'],
 		inStock: true,
+		ingredients: [
+			{ name: 'salmon fillets', qty: '2' },
+			{ name: 'miso paste', qty: '2', unit: 'tbsp' },
+			{ name: 'soy sauce', qty: '1', unit: 'tbsp' },
+			{ name: 'spinach', qty: '200', unit: 'g' },
+			{ name: 'garlic', qty: '1', unit: 'clove', note: 'sliced' },
+			{ name: 'short-grain rice', qty: '150', unit: 'g' },
+		],
+		steps: [
+			'Cook the rice.',
+			'Stir the miso and the soy sauce together and brush it over the salmon.',
+			'Roast at 220 °C for 10 to 12 minutes, until the glaze darkens at the edges.',
+			'Wilt the spinach with the garlic in a hot pan and serve under the salmon.',
+		],
+		tip: 'Pat the fillets dry first: the glaze holds and the edges caramelise.',
 	},
-	{ id: 'r-02', name: 'Black bean tacos', serves: 2, minutes: 20, tags: [], inStock: true },
-	{ id: 'r-03', name: 'Soba with tofu and edamame', serves: 2, minutes: 15, tags: [], inStock: true },
-] as const
+	{
+		id: 'r-02',
+		name: 'Black bean tacos',
+		serves: 2,
+		minutes: 20,
+		tags: [],
+		inStock: true,
+		ingredients: [
+			{ name: 'canned black beans', qty: '1' },
+			{ name: 'corn tortillas', qty: '6' },
+			{ name: 'avocados', qty: '1' },
+			{ name: 'limes', qty: '1' },
+			{ name: 'garlic', qty: '1', unit: 'clove' },
+		],
+		steps: [
+			'Warm the beans with the garlic and a splash of their liquid, and crush a few.',
+			'Char the tortillas over a flame or in a dry pan.',
+			'Fill with the beans and sliced avocado, and finish with lime.',
+		],
+	},
+	{
+		id: 'r-03',
+		name: 'Soba with tofu and edamame',
+		serves: 2,
+		minutes: 15,
+		tags: [],
+		inStock: true,
+		ingredients: [
+			{ name: 'soba', qty: '200', unit: 'g' },
+			{ name: 'tofu', qty: '200', unit: 'g', note: 'cubed' },
+			{ name: 'edamame', qty: '150', unit: 'g' },
+			{ name: 'soy sauce', qty: '2', unit: 'tbsp' },
+			{ name: 'ginger', qty: '1', note: 'a thumb, grated' },
+		],
+		steps: [
+			'Boil the soba, adding the edamame for the last two minutes; rinse both cold.',
+			'Brown the tofu in a pan.',
+			'Toss everything with the soy sauce and the ginger.',
+		],
+	},
+] as const satisfies readonly SampleRecipe[]
+
+/**
+ * A recipe on its way in: read from a pasted link and open in the Recipes pane as a draft, not stored until it is
+ * saved there. Everything it asks for is in stock but the dill.
+ */
+export const recipeDraft: Omit<SampleRecipe, 'id' | 'inStock'> & { sourceUrl: string } = {
+	name: 'Lemon-yogurt chicken thighs',
+	serves: 2,
+	minutes: 35,
+	tags: ['weeknight'],
+	ingredients: [
+		{ name: 'chicken thighs', qty: '500', unit: 'g' },
+		{ name: 'Greek yogurt', qty: '150', unit: 'g' },
+		{ name: 'lemons', qty: '1', note: 'zest and juice' },
+		{ name: 'garlic', qty: '2', unit: 'cloves', note: 'grated' },
+		{ name: 'olive oil', qty: '1', unit: 'tbsp' },
+		{ name: 'dill', qty: '1', note: 'a small bunch' },
+	],
+	steps: [
+		'Stir the yogurt, the lemon, the garlic and the oil together and coat the chicken.',
+		'Roast at 220 °C for 25 minutes, until the edges char.',
+		'Rest for five minutes and scatter with the dill.',
+	],
+	sourceUrl: 'https://example.com/recipes/lemon-yogurt-chicken-thighs',
+}
 
 export const grocery = {
 	name: 'H-E-B Saturday',

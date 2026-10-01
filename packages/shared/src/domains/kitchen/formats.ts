@@ -3,6 +3,8 @@
 // translated, so a file reads the same whatever language wrote it.
 import type { BundleExtra } from '../../data/bundle.js'
 import { inline, toCsv, toMarkdown } from '../../data/text.js'
+import { formatIngredient } from './parse.js'
+import { isLow } from './quantity.js'
 import type { KitchenData } from './types.js'
 
 export function kitchenExtras(data: KitchenData): BundleExtra[] {
@@ -15,7 +17,7 @@ export function kitchenExtras(data: KitchenData): BundleExtra[] {
 			item.location,
 			item.expiry,
 			item.estimated,
-			item.lowStock,
+			isLow(item) || undefined,
 			item.category,
 			item.source,
 			item.sourcedAt,
@@ -41,6 +43,14 @@ export function kitchenExtras(data: KitchenData): BundleExtra[] {
 				`- Serves ${recipe.serves}`,
 				`- ${recipe.minutes} minutes`,
 				recipe.tags.length ? `- Tags: ${recipe.tags.map(inline).join(', ')}` : undefined,
+				recipe.sourceUrl ? `- Source: ${recipe.sourceUrl}` : undefined,
+				...(recipe.ingredients.length
+					? ['', '### Ingredients', '', ...recipe.ingredients.map((line) => `- ${inline(formatIngredient(line))}`)]
+					: []),
+				...(recipe.steps.length
+					? ['', '### Steps', '', ...recipe.steps.map((step, index) => `${index + 1}. ${inline(step)}`)]
+					: []),
+				...(recipe.tip ? ['', `Tip: ${inline(recipe.tip)}`] : []),
 			],
 		}))
 	)

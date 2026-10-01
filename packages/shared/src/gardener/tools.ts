@@ -210,8 +210,15 @@ export const SCHEMAS: Readonly<Record<string, { description: string; schema: Jso
 		}),
 	},
 	'kitchen.capture-haul': {
-		description: `Opens a file picker for the owner to choose a photo of their groceries, reads the items from it with a separate model request, and drafts them as stock rows on a card the owner checks and keeps. It takes no input: you can neither pass the photo nor see it. Returns how many rows were drafted, or \`cancelled\` when the owner closed the picker. Use it when the owner wants to add stock from a photo; for items they tell you in words, use \`kitchen_add-stock\`.`,
-		schema: object({}),
+		description: `${SEPARATE} that reads food from the files the owner attached and drafts it as stock rows on a card the owner checks and keeps. With \`mode\` \`haul\` the files are a shop just brought home: photos of the groceries, receipts, an order confirmation as a PDF, a screenshot or text; the rows are added to the stock. With \`mode\` \`stock\` they are photos of the fridge, the freezer, the pantry or the counter as they stand; the rows say what is there now, and an item already in the stock has its quantity set, not added to. It reads the files on the owner’s message, or the last ones they sent: you cannot pass it a file. Returns how many rows were drafted. When nothing was attached it says so: ask the owner to attach the photo or the receipt, or to use Capture a haul or Take stock on the Hearth page. For items they tell you in words, use \`kitchen_add-stock\`.`,
+		schema: object({
+			mode: {
+				type: 'string',
+				enum: ['haul', 'stock'],
+				description:
+					'What the files show: `haul` for what was just bought, `stock` for the shelves as they stand. `haul` when unsaid.',
+			},
+		}),
 	},
 	'kitchen.draft-grocery-list': {
 		description: `${SEPARATE} that drafts a grocery list as a card the owner edits and keeps: what the chosen recipes and the coming days need, less what is in stock and what is already on the list. Returns the drafted \`items\`. Use it when the owner asks what to buy or for a shopping list; to put one named item on the list, use \`log-quick\`.`,
@@ -251,6 +258,41 @@ export const SCHEMAS: Readonly<Record<string, { description: string; schema: Jso
 				},
 			},
 			['items']
+		),
+	},
+	'kitchen.import-recipe': {
+		description: `${SEPARATE} that writes out a recipe the owner brought, as a card that opens it in their recipes to check and save. The recipe is in \`text\` when they pasted it, at \`url\` when they gave a link (the app fetches the page), or in the files on their message when they attached a photo of a page or a card; pass whichever you have, and nothing when it is the files alone. Returns the drafted recipe’s name. It writes down what the source says and invents nothing; to save a dish you suggested yourself, use \`kitchen_save-recipe\`.`,
+		schema: object({
+			text: text('The recipe as the owner pasted it, whole.'),
+			url: text('The link to the recipe’s page, starting with https://.'),
+		}),
+	},
+	'kitchen.save-recipe': {
+		description:
+			'Drafts a recipe you wrote yourself, as a card that opens it in the owner’s recipes to check and save; nothing is stored until they save it. Give the whole recipe: every ingredient on a line of its own with its amount, and the steps in order. A recipe that names one of the owner’s allergens, restrictions or disliked ingredients is refused. Returns the drafted recipe’s name. Use it when the owner asks to keep a dish you suggested or described; for a recipe they pasted, linked or photographed, use `kitchen_import-recipe`.',
+		schema: object(
+			{
+				name: text('The dish.'),
+				serves: integer('How many it serves.'),
+				minutes: integer('How long it takes start to finish, in minutes.'),
+				tags: { type: 'array', items: text(), description: 'Up to three plain tags: weeknight, vegetarian, one pot.' },
+				ingredients: {
+					type: 'array',
+					description: 'Every ingredient, one entry each.',
+					items: object(
+						{
+							name: text('The ingredient alone, without its amount.'),
+							qty: text('The amount alone: 2, 1/2, 200. An empty string when there is none.'),
+							unit: text('The unit of the amount: g, ml, tbsp, cup, clove. Left out for a plain count.'),
+							note: text('How it is prepared: minced, to taste. Left out when there is nothing to say.'),
+						},
+						['name', 'qty']
+					),
+				},
+				steps: { type: 'array', items: text('One step, as a full sentence.'), description: 'The steps, in order.' },
+				tip: text('One sentence that makes the dish go right, when there is one worth giving.'),
+			},
+			['name', 'ingredients', 'steps']
 		),
 	},
 	'kitchen.plan-week': {
@@ -357,7 +399,7 @@ export const SCHEMAS: Readonly<Record<string, { description: string; schema: Jso
  */
 export const DOMAIN_BLURBS: Readonly<Record<string, string>> = {
 	kitchen:
-		'food at home: the stock in the fridge, freezer and pantry with its expiry dates, recipes, the grocery list and storage tips',
+		'food at home: the stock in the fridge, freezer and pantry with its expiry dates, recipes with their ingredients and steps, and the grocery list',
 	toolbench:
 		'making things: ideas and their brainstorms, projects with their next steps and parts lists, code sketches, notes and homelab devices',
 	weather: 'the weather for the owner’s home area: the forecast, the alerts in force, sunrise, sunset and the moon',

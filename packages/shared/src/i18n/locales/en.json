@@ -6,7 +6,8 @@
 		"undo": "Undo",
 		"sampleAdded": "Sample data added.",
 		"close": "Close",
-		"save": "Save"
+		"save": "Save",
+		"cancel": "Cancel"
 	},
 	"shell": {
 		"garden": "Garden",
@@ -46,7 +47,8 @@
 			"activeProjects": "Active projects",
 			"sunAndMoon": "Sun and moon",
 			"dailyLine": "Daily line",
-			"quickLog": "Weight"
+			"quickLog": "Weight",
+			"groceryQuickAdd": "Grocery list"
 		},
 		"empty": {
 			"weatherNow": "Set a home place to see the sky.",
@@ -58,18 +60,20 @@
 			"sunAndMoon": "Set a home place to see the light.",
 			"dailyLine": "Tend what you can reach.",
 			"quickLog": "Log a weight to start the line.",
-			"feed": "Nothing has happened yet."
+			"feed": "Nothing has happened yet.",
+			"groceryQuickAdd": "Add what you need next."
 		},
 		"actions": {
 			"today": "Open Today",
 			"cookTonight": "Cook this",
 			"resurfacedIdea": "Open idea",
 			"activeProjects": "Open projects",
-			"quickLog": "Log weight"
+			"quickLog": "Log weight",
+			"groceryQuickAdd": "Open the list"
 		},
 		"untouched": "{days, plural, one {# day untouched} other {# days untouched}}",
 		"minutes": "{minutes} min",
-		"suggested": "{name} expires tomorrow",
+		"suggested": "Uses up {name}",
 		"sunrise": "Sunrise",
 		"sunset": "Sunset",
 		"goldenHour": "Golden hour",
@@ -107,7 +111,14 @@
 			"groceryAddedMany": "{count, plural, one {# item} other {# items}} added to the list",
 			"ideaBrainstormed": "Brainstormed {title}",
 			"projectPlanned": "{count, plural, one {# step} other {# steps}} planned for {name}",
-			"tasksAdded": "{count, plural, one {# task} other {# tasks}} added to Today"
+			"tasksAdded": "{count, plural, one {# task} other {# tasks}} added to Today",
+			"stockEdited": "{name} edited",
+			"stockRemovedMany": "{count, plural, one {# item} other {# items}} removed from stock",
+			"stockMovedMany": "{count, plural, one {# item} other {# items}} moved to the {location}",
+			"recipeSaved": "{name} saved to recipes",
+			"recipeRemoved": "{name} removed from recipes",
+			"recipeCooked": "Cooked {name}",
+			"stockTaken": "Took stock: {count, plural, one {# item} other {# items}}"
 		},
 		"profile": "What Eden knows"
 	},
@@ -118,8 +129,7 @@
 			"tabs": {
 				"stock": "Stock",
 				"recipes": "Recipes",
-				"grocery": "Grocery",
-				"tips": "Tips"
+				"grocery": "Grocery"
 			},
 			"tabsLabel": "Hearth sections",
 			"saveFailed": "Couldn't save your changes.",
@@ -130,18 +140,74 @@
 				"shopDayReminder": {
 					"title": "Shop day",
 					"line": "{count, plural, =0 {Shop day today} one {Shop day today, with # item on the list} other {Shop day today, with # items on the list}}"
+				},
+				"lowStock": {
+					"line": "{count, plural, =1 {{first} is running low} =2 {{first} and {second} are running low} other {{first} and {more} more are running low}}"
 				}
+			},
+			"categories": {
+				"produce": "Produce",
+				"meat-and-fish": "Meat and fish",
+				"dairy-and-eggs": "Dairy and eggs",
+				"bakery": "Bakery",
+				"grains-and-pasta": "Grains and pasta",
+				"canned-and-jarred": "Canned and jarred",
+				"frozen": "Frozen",
+				"snacks": "Snacks",
+				"drinks": "Drinks",
+				"condiments-and-spices": "Condiments and spices",
+				"supplements-and-mixes": "Supplements and mixes",
+				"other": "Other"
+			},
+			"failure": {
+				"busy": "The Gardener is busy with another request. Try again in a moment.",
+				"no-key": "Add your Anthropic key in Settings, under Gardener, and this can be read.",
+				"unavailable": "No model you have set up can read this. Change models in Settings, under Gardener.",
+				"budget": "This would pass your monthly spending cap. Raise it in Settings, under Gardener.",
+				"network": "The request did not get through. Check the connection and try again.",
+				"refusal": "The model declined to read this.",
+				"max-tokens": "The answer was cut short before it finished. Try fewer files at a time.",
+				"cancelled": "Stopped.",
+				"unreadable": "The answer could not be read. Try again.",
+				"empty": "No grocery items could be read from these. Try a clearer photo, or another file.",
+				"no-files": "Add a photo, a receipt or a list first.",
+				"no-recipe": "No recipe could be read from that. Try the recipe's text, or another photo.",
+				"page-blocked": "That page cannot be read: it is not a public web page, or it is too large.",
+				"page-failed": "The page could not be fetched. Paste the recipe's text instead.",
+				"page-unavailable": "Links are fetched in the installed app. Paste the recipe's text instead.",
+				"not-https": "Only links that start with https are fetched."
+			},
+			"refused": {
+				"type": "{name} is not a kind of file that can be read here{more, plural, =0 {} other {, and # more were left out}}.",
+				"size": "{name} is too large{more, plural, =0 {} other {, and # more were left out}}.",
+				"count": "Ten files at most: {name} was left out{more, plural, =0 {} other {, with # more}}.",
+				"total": "{name} would make the request too large{more, plural, =0 {} other {, and # more were left out}}.",
+				"empty": "{name} is empty{more, plural, =0 {} other {, and # more were left out}}.",
+				"unreadable": "{name} could not be read{more, plural, =0 {} other {, and # more were left out}}."
 			},
 			"capture": {
 				"action": "Capture a haul",
-				"notYet": "Capture arrives with the Gardener."
+				"about": "up to {cost}",
+				"stop": "Stop",
+				"pastedText": "Pasted text",
+				"toast": {
+					"committed": "{count, plural, one {# item} other {# items}} added to stock.",
+					"taken": "{count, plural, one {# item} other {# items}} in stock from your photos."
+				},
+				"takeStock": "Take stock"
 			},
 			"stock": {
 				"add": "Add",
-				"addPlaceholder": "Add to stock",
+				"addPlaceholder": "Add to stock, or paste a product link",
 				"expiring": "Expiring",
 				"lowStock": "Low stock",
-				"sortExpiry": "Sort: expiry",
+				"sortBy": "Sort: {sort}",
+				"sortLabel": "Sort the stock",
+				"sort": {
+					"expiry": "expiry",
+					"name": "name",
+					"added": "newest"
+				},
 				"locations": {
 					"fridge": "Fridge",
 					"freezer": "Freezer",
@@ -154,16 +220,29 @@
 				},
 				"empty": {
 					"title": "Nothing in stock yet",
-					"text": "Capture a haul and it lands here by location, with an estimated expiry on each item."
+					"text": "Take stock from a few photos of your fridge, freezer and pantry, and what is in them lands here by location. After a shop, capture the haul from a photo, a receipt or an order."
 				},
+				"noneMatch": "Nothing in stock matches these filters.",
 				"detail": {
+					"editing": "Edit item",
+					"name": "Name",
 					"quantity": "Quantity",
+					"unit": "Unit",
 					"location": "Location",
 					"expires": "Expires",
 					"category": "Category",
+					"noCategory": "No category",
 					"source": "Source",
 					"threshold": "Low-stock threshold",
-					"tip": "Storage tip"
+					"thresholdHelp": "The item reads as low once it holds no more than this. Leave empty for none.",
+					"tip": "Tip",
+					"tipHelp": "A line worth knowing about storing or handling it. It shows as the info button beside the name.",
+					"tipFor": "A tip for {name}",
+					"choosePicture": "Choose a picture",
+					"removePicture": "Remove the picture",
+					"pictureLink": "Picture from a link",
+					"pictureLinkHelp": "An H-E-B product page, or a picture's own address.",
+					"usePictureLink": "Fetch the picture"
 				},
 				"source": {
 					"manual": "manual",
@@ -171,6 +250,7 @@
 					"sample": "sample"
 				},
 				"actions": {
+					"edit": "Edit",
 					"moveTo": "Move to {location}",
 					"move": "Move",
 					"addToGrocery": "Add to grocery",
@@ -180,8 +260,16 @@
 					"added": "{name} added to stock.",
 					"removed": "{name} removed from stock.",
 					"moved": "{name} moved to the {location}.",
+					"edited": "{name} saved.",
 					"addedToGrocery": "{name} added to the list.",
-					"addedMany": "{count, plural, one {# item} other {# items}} added to stock."
+					"addedMany": "{count, plural, one {# item} other {# items}} added to stock.",
+					"movedMany": "{count, plural, one {# item} other {# items}} moved to the {location}.",
+					"removedMany": "{count, plural, one {# item} other {# items}} removed from stock.",
+					"addedManyToGrocery": "{count, plural, one {# item} other {# items}} added to the list.",
+					"pictureSet": "{name} has a new picture.",
+					"pictureRemoved": "{name}'s picture was removed.",
+					"pictureFailed": "That photo could not be read.",
+					"pictureLinkFailed": "No picture could be fetched from that link."
 				}
 			},
 			"grocery": {
@@ -190,6 +278,8 @@
 				"clearChecked": "Clear checked",
 				"checked": "{checked} of {total} checked",
 				"allChecked": "Everything is checked. Clear the list once you are home.",
+				"anyStore": "Any store",
+				"toBuy": "{count, plural, =0 {Nothing to buy} one {# item to buy} other {# items to buy}}",
 				"empty": {
 					"title": "The list is empty",
 					"text": "Add an item in one line, or send a recipe's missing ingredients here from Recipes.",
@@ -203,6 +293,7 @@
 				"actions": {
 					"check": "Check off",
 					"uncheck": "Uncheck",
+					"edit": "Edit",
 					"delete": "Delete"
 				},
 				"toast": {
@@ -210,19 +301,103 @@
 					"removed": "{name} removed from the list.",
 					"checked": "{name} checked off.",
 					"unchecked": "{name} unchecked.",
-					"cleared": "{count, plural, one {# checked item} other {# checked items}} cleared."
+					"cleared": "{count, plural, one {# checked item} other {# checked items}} cleared.",
+					"edited": "{name} saved.",
+					"listSaved": "The list was saved.",
+					"shopDaySet": "Shop day set. You will be reminded that morning.",
+					"shopDayCleared": "Shop day cleared."
+				},
+				"pane": {
+					"editing": "Edit item",
+					"list": "The list",
+					"name": "Name",
+					"quantity": "Quantity",
+					"store": "Store",
+					"storeHelp": "Left empty, it is bought at {store}.",
+					"note": "Note",
+					"listName": "Name",
+					"listNamePlaceholder": "This week",
+					"defaultStore": "Store",
+					"defaultStoreHelp": "Where the list is bought, unless an item names another store.",
+					"shopDay": "Shop day",
+					"shopTime": "Time",
+					"shopDayHelp": "A reminder arrives on the morning of the shop day.",
+					"clearShopDay": "Clear the shop day"
 				}
 			},
 			"recipes": {
+				"add": "Add a recipe",
 				"empty": {
 					"title": "No recipes yet",
-					"text": "Recipes arrive with the Gardener's suggestions and your own."
-				}
-			},
-			"tips": {
-				"empty": {
-					"title": "No tips yet",
-					"text": "Storage tips gather here, bundled and your own."
+					"text": "Paste a recipe or a link to one, or bring a photo of the page. The Gardener can save a dish it suggests, too."
+				},
+				"usesUp": "Uses up {names}",
+				"minutes": "{minutes} min",
+				"serves": "Serves {count}",
+				"avoided": "names something you avoid",
+				"missingCount": "{count} missing",
+				"allInStock": "in stock",
+				"inStock": "in stock",
+				"missing": "missing",
+				"notEnough": "not enough",
+				"ingredients": "Ingredients",
+				"steps": "Steps",
+				"tipFor": "A tip for {name}",
+				"editing": "Edit recipe",
+				"actions": {
+					"cook": "Cook this",
+					"addMissing": "{count, plural, =0 {Add missing to grocery} other {Add # missing to grocery}}",
+					"edit": "Edit",
+					"delete": "Delete"
+				},
+				"draft": {
+					"title": "New recipe",
+					"note": "Not saved yet. Check it over, then save it.",
+					"discard": "Discard"
+				},
+				"cook": {
+					"title": "Cooking {name}",
+					"text": "This is what cooking takes from the stock. Answer where the recipe's unit cannot be taken from the item's.",
+					"none": "none left",
+					"ask": "{name}: {held} in stock",
+					"leave": "Leave it",
+					"usedUp": "Used it up",
+					"noAmount": "no amount to take",
+					"notInStock": "not in stock",
+					"confirm": "I cooked this"
+				},
+				"toast": {
+					"saved": "{name} saved to recipes.",
+					"edited": "{name} saved.",
+					"removed": "{name} removed from recipes.",
+					"alreadyListed": "What is missing is already on the list.",
+					"missingAdded": "{count, plural, one {# ingredient} other {# ingredients}} added to the list.",
+					"nothingTaken": "Nothing in stock to take for {name}.",
+					"cooked": "Cooked {name}: the stock is updated."
+				},
+				"form": {
+					"name": "Name",
+					"serves": "Serves",
+					"minutes": "Time",
+					"minutesUnit": "min",
+					"ingredients": "Ingredients",
+					"ingredientsHelp": "One to a line, the amount first: 200 g spinach, washed.",
+					"steps": "Steps",
+					"stepsHelp": "One to a line, in order.",
+					"tags": "Tags",
+					"tagsHelp": "Separated by commas: weeknight, one pot.",
+					"tip": "Tip",
+					"source": "Source"
+				},
+				"import": {
+					"title": "Add a recipe",
+					"label": "The recipe, or a link to it",
+					"placeholder": "Paste the recipe's text or a link, or drop a photo of the page",
+					"help": "A photo of a page or a card works too: drop it here, paste it, or choose it.",
+					"linkHelp": "The page is fetched first. When it describes its own recipe, that is read with no model asked.",
+					"choose": "Choose a photo or a file",
+					"reading": "Reading…",
+					"read": "Read"
 				}
 			},
 			"plan": {
@@ -873,7 +1048,9 @@
 				"weatherkit": "Apple WeatherKit",
 				"updater": "Updates",
 				"anthropic": "Anthropic",
-				"vault-ai": "Vault → AI"
+				"vault-ai": "Vault → AI",
+				"web-page": "Web pages you import",
+				"web-image": "Pictures you link"
 			},
 			"never": {
 				"label": "Never automated",
@@ -1096,12 +1273,10 @@
 			"task": "A task to add",
 			"grocery": "{count, plural, one {# item} other {# items}} for the list",
 			"code": "A scaffold to copy",
-			"capture": "{count, plural, one {# item} other {# items}} from the photo",
+			"capture": "{count, plural, one {# item} other {# items}} read from your files",
 			"captureText": "Verify the rows before they become stock.",
-			"captureCost": "sent",
 			"planCommitted": "{count, plural, =0 {Plan added} one {# task added} other {# tasks added}}.",
 			"groceryCommitted": "{count, plural, one {# item} other {# items}} added to the list.",
-			"captureCommitted": "{count, plural, one {# item} other {# items}} added to stock.",
 			"plusGrocery": "and {count, plural, one {# item} other {# items}} for the list",
 			"copy": "Copy",
 			"copied": "Copied",
@@ -1112,7 +1287,10 @@
 			"verify": "Verify",
 			"discard": "Discard",
 			"committed": "Added",
-			"discarded": "Discarded"
+			"discarded": "Discarded",
+			"recipe": "Recipe: {name}",
+			"recipeText": "Open it in Recipes to check it over and save it.",
+			"openRecipe": "Open in Recipes"
 		},
 		"resize": "Resize the Gardener",
 		"allowed": "{id} shared with the Gardener.",

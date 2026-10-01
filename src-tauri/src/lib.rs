@@ -185,6 +185,8 @@ pub fn run() {
             commands::gardener::query_messages,
             commands::gardener::get_policy,
             commands::gardener::set_policy,
+            commands::web::fetch_page,
+            commands::web::fetch_image,
             domains::documents::load_domain_document,
             domains::documents::save_domain_document,
             domains::documents::remove_domain_document,

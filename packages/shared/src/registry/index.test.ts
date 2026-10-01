@@ -47,7 +47,7 @@ describe('the registry', () => {
 		expect(kindsOf('task')).toEqual(['todo', 'checklist', 'routine', 'habit', 'reminder'])
 		expect(kindsOf('event')).toEqual(['local-event', 'shop-day'])
 		expect(kindsOf('place')).toEqual(['home', 'venue'])
-		expect(kindsOf('attachment')).toEqual(['document', 'photo', 'haul-photo', 'render'])
+		expect(kindsOf('attachment')).toEqual(['document', 'photo', 'haul-photo', 'item-photo', 'render'])
 	})
 
 	it('lists what an owner holds', () => {

@@ -21,14 +21,27 @@ const data: KitchenData = {
 			name: 'Rice',
 			qty: '2',
 			location: 'pantry',
-			lowStock: true,
+			threshold: 2,
 			source: 'manual',
 			sourcedAt: '2026-09-29T15:02:11.000Z',
 		},
 	],
 	recipes: [
-		{ id: '3', name: 'Dal', serves: 2, minutes: 35, tags: ['quick', 'one pot'] },
-		{ id: '4', name: 'Plain rice', serves: 4, minutes: 20, tags: [] },
+		{
+			id: '3',
+			name: 'Dal',
+			serves: 2,
+			minutes: 35,
+			tags: ['quick', 'one pot'],
+			ingredients: [
+				{ name: 'red lentils', qty: '200', unit: 'g', note: 'rinsed' },
+				{ name: 'salt', qty: '' },
+			],
+			steps: ['Simmer the lentils.', 'Season.'],
+			sourceUrl: 'https://example.com/dal',
+			tip: 'Better the next day.',
+		},
+		{ id: '4', name: 'Plain rice', serves: 4, minutes: 20, tags: [], ingredients: [], steps: [] },
 	],
 	grocery: {
 		name: 'This week',
@@ -71,7 +84,34 @@ describe('kitchenExtras', () => {
 
 	it('writes the recipes as headings', () => {
 		expect(files['friendly/recipes.md']).toBe(
-			'# Recipes\n\n## Dal\n\n- Serves 2\n- 35 minutes\n- Tags: quick, one pot\n\n## Plain rice\n\n- Serves 4\n- 20 minutes\n'
+			[
+				'# Recipes',
+				'',
+				'## Dal',
+				'',
+				'- Serves 2',
+				'- 35 minutes',
+				'- Tags: quick, one pot',
+				'- Source: https://example.com/dal',
+				'',
+				'### Ingredients',
+				'',
+				'- 200 g red lentils, rinsed',
+				'- salt',
+				'',
+				'### Steps',
+				'',
+				'1. Simmer the lentils.',
+				'2. Season.',
+				'',
+				'Tip: Better the next day.',
+				'',
+				'## Plain rice',
+				'',
+				'- Serves 4',
+				'- 20 minutes',
+				'',
+			].join('\n')
 		)
 	})
 

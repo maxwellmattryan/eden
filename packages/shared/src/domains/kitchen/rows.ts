@@ -35,7 +35,13 @@ export function kitchenRows(source: Partial<KitchenData>, newId: () => string): 
 	const stock = (source.stock ?? []).map((item) => ({ ...item, id: newId() }))
 	for (const { id, ...payload } of stock) ops.push(create(KITCHEN.stock, id, payload satisfies StockPayload))
 
-	const recipes = (source.recipes ?? []).map((recipe) => ({ ...recipe, id: newId() }))
+	// a recipe from before it held its lines takes both lists empty
+	const recipes = (source.recipes ?? []).map((recipe) => ({
+		...recipe,
+		id: newId(),
+		ingredients: recipe.ingredients ?? [],
+		steps: recipe.steps ?? [],
+	}))
 	for (const { id, ...payload } of recipes) ops.push(create(KITCHEN.recipe, id, payload satisfies RecipePayload))
 
 	const { items = [], ...list } = source.grocery ?? EMPTY_LIST
@@ -74,7 +80,12 @@ export function kitchenFromRows(rows: {
 		listId: list?.id,
 		data: {
 			stock: rows.stock.map((row) => ({ ...row.payload, id: row.id })),
-			recipes: rows.recipes.map((row) => ({ ...row.payload, id: row.id })),
+			recipes: rows.recipes.map((row) => ({
+				...row.payload,
+				ingredients: row.payload.ingredients ?? [],
+				steps: row.payload.steps ?? [],
+				id: row.id,
+			})),
 			grocery: list
 				? {
 						...list.payload,

@@ -136,11 +136,11 @@ A resource on the never-automated list (`NEVER_AUTOMATED`, the same seven ids in
 
 ## The egress ledger
 
-`substrate/egress.rs` keeps one row per destination and local day with the count of requests and the bytes out. Bytes out are what Eden hands over: for a WebView request the encoded URL and the body (`requestBytes` in `@eden/shared/egress`), never the headers, which are the platform's and not visible; for WeatherKit the rounded coordinates and the day counts, recorded by `weatherkit_forecast` itself; for the updater its endpoint, which `get_app_info` reads from the build's config as `updaterEndpoint` so the frontend wrapper can count the check. Recording is fire-and-forget from the frontend: a request is not held up, and a ledger that cannot be written is not an error the caller sees.
+`substrate/egress.rs` keeps one row per destination and local day with the count of requests and the bytes out. Bytes out are what Eden hands over: for a WebView request the encoded URL and the body (`requestBytes` in `@eden/shared/egress`), never the headers, which are the platform's and not visible; for WeatherKit the rounded coordinates and the day counts, recorded by `weatherkit_forecast` itself; for the updater its endpoint, which `get_app_info` reads from the build's config as `updaterEndpoint` so the frontend wrapper can count the check; for a page the crate fetches the address of each hop, recorded by `fetch_page` itself (D-88). Recording is fire-and-forget from the frontend: a request is not held up, and a ledger that cannot be written is not an error the caller sees.
 
 The ledger is this device's (D-71): `Workspace::open` sweeps days older than ninety, no bundle carries it and no replace clears it. The destination `vault-ai` is refused by the store and by the schema, and Settings → Privacy draws that row at zero.
 
-A new destination is four edits: the CSP's `connect-src` in `src-tauri/tauri.conf.json`, `DESTINATIONS` in `packages/shared/src/egress/types.ts`, and its label under `settings.privacy.destinations` in `en.json` and `ja.json`. In the browser the engine keeps both the grants and the ledger in its document, so `yarn dev:web` shows the tab as the app does.
+A new destination is four edits: the CSP's `connect-src` in `src-tauri/tauri.conf.json`, `DESTINATIONS` in `packages/shared/src/egress/types.ts`, and its label under `settings.privacy.destinations` in `en.json` and `ja.json`. `web-page` is the one destination with no CSP entry: the crate fetches the page and records it (`fetch_page`, D-88), so the webview still reaches no host but the ones it names. In the browser the engine keeps both the grants and the ledger in its document, so `yarn dev:web` shows the tab as the app does.
 
 ## The profile
 
@@ -199,6 +199,8 @@ Every command is one read or one write of the workspace; a write is one transact
 | `restore_fact` | `id` | the fact, live again; what an undo of a delete calls |
 | `query_facts` | `filter`: `{ types?, owner?, includeExpired?, includeDeleted?, at? }` | the effective set, by type, the owner's own word first |
 | `query_fact_history` | `factId` | what the fact held before each edit, latest first |
+| `fetch_page` | `url` | `{ url, contentType, html }`: the page at an `https` address the owner gave, after its redirects (D-88). It reads the network and not the workspace, and writes only its egress row; `src-tauri/src/commands/web.rs`, wrapped by `fetchPage` in `@eden/shared/api` |
+| `fetch_image` | `url` | the bytes of the picture at an `https` address the owner linked (D-91), as a raw response: a JPEG, a PNG or a WebP of five megabytes at most, under the same checks as `fetch_page`. It writes only its egress row, under `web-image` |
 
 The commands of the scheduler, the signals and the inbox (`declare_schedules`, `set_schedule`, `cancel_schedule`, `take_due_schedules`, `emit_signal`, `query_inbox`, `mark_inbox_read`, `show_notification`) are in `engineering/signals.md`, wrapped by `@eden/shared/scheduler` and `@eden/shared/signals`. The Gardener's (`set_secret`, `has_secret`, `delete_secret`, `gardener_send`, `gardener_cancel`, `record_audit`, `query_audit`, `audit_usage`, `audit_spend`, `create_thread`, `update_thread`, `delete_thread`, `restore_thread`, `query_threads`, `append_message`, `update_message`, `query_messages`, `get_policy`, `set_policy`) are in `engineering/gardener.md`, wrapped by `@eden/shared/gardener`.
 
@@ -210,7 +212,7 @@ These are the substrate API of `product/substrate/primitives.md` (D-33). Notes o
 - **A batch** is a list of operations (`createEntity`, `updateEntity`, `createPrimitive`, `updatePrimitive`, `delete`, `restore`, `link`, `putMirror`, `dropMirror`) applied whole or not at all. `putMirror` (`input`: `{ type, source, externalId, payload, snapshot? }`) creates the mirror those three name or replaces its payload and snapshot, keeping its id and bringing it back if it was deleted; `dropMirror` (`uri`) removes a mirror outright and refuses a row that is not one; both write entities only. With a `marker` it is applied once: the marker is written with the batch, and a batch whose marker is there answers `applied: false`. An attachment has a file and is not written in a batch.
 - **A thread takes its files.** `delete_thread` tombstones the attachments that are `part-of` it at the thread's stamp, and `restore_thread` lifts the ones deleted at that stamp (D-83). The files stay in `attachments/`; nothing sweeps them yet (`engineering/gardener.md`, "Attachments", Handoffs).
 - **There is no optimistic concurrency.** A workspace has one owner and one writer; the row's latest stamp stands.
-- **An error crosses as its message.** The ones the interface tells apart start with a stable code: `not-found`; under `bundle:` the codes `unreadable`, `version`, `hash-mismatch` and `backup`; under `grant:` the codes `never` and `invalid`; under `egress:` and `fact:` the same two; under `schedule:`, `signal:`, `secret:`, `audit:`, `thread:` and `policy:` the code `invalid`; under `gardener:` the codes `no-key` and `network`. `dataErrorCode(error)` reads it.
+- **An error crosses as its message.** The ones the interface tells apart start with a stable code: `not-found`; under `bundle:` the codes `unreadable`, `version`, `hash-mismatch` and `backup`; under `grant:` the codes `never` and `invalid`; under `egress:` and `fact:` the same two; under `schedule:`, `signal:`, `secret:`, `audit:`, `thread:` and `policy:` the code `invalid`; under `gardener:` the codes `no-key` and `network`. `dataErrorCode(error)` reads it. Under `web:` the codes `invalid-url`, `not-https`, `blocked-host`, `too-large`, `not-html`, `not-image`, `too-many-redirects`, `timeout` and `failed`, from `fetch_page` and `fetch_image`, and `unavailable`, which the frontend wrapper answers outside Tauri; `webErrorCode(error)` in `@eden/shared/api` reads those.
 
 ### The seam for signals
 
@@ -248,8 +250,8 @@ SQLite is where the owner's data is; a store is what a page sees of it, in memor
 
 | domain | type | payload |
 |---|---|---|
-| Hearth | `stock-item` | the item; its storage tip stays a line of text |
-| | `recipe` | name, serves, minutes, tags |
+| Hearth | `stock-item` | the item, with its category (one of twelve ids), its low-stock threshold and its tip, a line of text (D-87). Low stock is not stored: `isLow` derives it from the threshold |
+| | `recipe` | name, serves, minutes, tags, `ingredients` (name, qty, unit, note), `steps`, `sourceUrl`, `tip`; a row written before recipes held their lines reads with both lists empty |
 | | `grocery-list` | name, store, shop day; made with the first item put on it |
 | | `grocery-item` | the item, and `listId` |
 | Toolbench | `idea` | the idea with its log and its brainstorm thread, and `projectId` |
@@ -259,7 +261,24 @@ SQLite is where the owner's data is; a store is what a page sees of it, in memor
 | | `alert`, a mirror | the alert, the place it was answered for, and `dismissed` |
 | Today (the shell) | `task`, a primitive | its fields as columns; `recurrence`, `target` and `progress` as JSON the frontend shapes (D-75, below) |
 
-Left as they are, for the issues that own them: storage tips, brainstorm sessions and parts lists as rows of their own, the shop day as an Event, a project's next steps as Tasks, and the home place, which is still a setting.
+A storage tip is a line on its item or its recipe by decision (D-87), not a row waiting for its issue. Left as they are, for the issues that own them: brainstorm sessions and parts lists as rows of their own, the shop day as an Event, a project's next steps as Tasks, and the home place, which is still a setting.
+
+Hearth's rules are pure modules beside its shapes, in `packages/shared/src/domains/kitchen/`, each with its Vitest file beside it:
+
+| module | holds |
+|---|---|
+| `quantity.ts` | amounts: the parser, units by dimension (mass, volume, count), `add`, `subtract` (never below zero), `covers`, `isLow` |
+| `match.ts` | the name as a shopper reads it (`normaliseName`), `mergeTarget` (the same name, the same location, a quantity that can be added), `stockFor` (the stock an ingredient names) |
+| `parse.ts` | the quick-add and the ingredient line parsers |
+| `safety.ts` | the D-25 filter: `forbiddenWords` from the facts, `isSafe`, which fails closed when the profile could not be read and looks for a word's singular too |
+| `capture.ts` | `HaulRow`, `haulRows` (the model's answer as rows), `remerge`, `mergeInto` (quantities added in the item's own unit, the earlier expiry kept) |
+| `sources.ts` | `emlToText` and `htmlToText`, which reduce an email and a saved page to their text before they are sent |
+| `cook.ts` | `ingredientStatus`, `cookPlan`, `cookTonight` |
+| `recipe-import.ts` | `recipeFromJsonLd` (a page's schema.org Recipe, read with no model), `recipeDraft` (the model's answer as a draft) |
+
+A haul is committed as one write (`kitchen.commitHaul` in `apps/desktop/src/lib/domains/kitchen/store.svelte.ts`, D-86): a batch that creates the new items, updates the merged ones and links the stock to any files already stored with a conversation, then `attachBytes` for each photo as a `haul-photo` linked `from` the stock rows. One undo takes back the rows, the merges and the photos. A photo that cannot be stored is logged and does not fail the haul. Taking stock (D-89) is the same write with `mode` `stock`: a matched item's quantity is set, not added to.
+
+An item's picture (D-90) is an Attachment of kind `item-photo`, linked `from` its item, whose row's `thumbnail` is the small image shown; the item's payload names it in `photo`. The store reads them all once (`queryAttachments({ kinds: ['item-photo'] })`) into a map by id. A haul's commit writes each row's picture after the rows; `setStockPhoto` gives an item the owner's own or takes it away, deleting the one it had; deleting an item, alone, in a selection or by cooking it to nothing, deletes its picture in the same write, and the undo restores both. A picture can also come from a link (D-91): `productLink` reads a grocer's product address into a name, a size and the address of its picture with nothing fetched, the crate's `fetch_image` brings the picture's bytes under the checks of `fetch_page`, and `fitPicture` fits it whole on the small square.
 
 ### Sky's mirrors
 

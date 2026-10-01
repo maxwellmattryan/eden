@@ -2,17 +2,26 @@
 // each declared tool does with what the model sends. The model-backed ones hand the runtime a prompt and read the
 // answer back; the plain ones write through the store. Every recipe suggestion passes the local safety filter
 // before it is shown, whatever the model saw (D-25). The rows a delegated request reads come from the pack, built
-// from the tool's declared reads; a prompt names what it wants of them and nothing more.
-import { open } from '@tauri-apps/plugin-dialog'
-import { readFile } from '@tauri-apps/plugin-fs'
+// from the tool's declared reads; a prompt names what it wants of them and nothing more. The tools that read files
+// (`capture-haul`, `import-recipe`) are given the ones on the owner's message, or the ones a page staged for them.
 import { get } from 'svelte/store'
-import type { CaptureRow } from '@eden/ui-kit'
-import { attach, newId } from '@eden/shared/data'
+import { fetchPage } from '@eden/shared/api'
+import { newId } from '@eden/shared/data'
 import { answer, type DraftCard } from '@eden/shared/gardener'
-import { addDays } from '@eden/shared/dates'
-import { LOCATIONS, type StockLocation } from '@eden/shared/domains/kitchen'
+import {
+	CAPTURE_MODES,
+	CATEGORIES,
+	haulRows,
+	isSafe,
+	LOCATIONS,
+	pageText,
+	recipeDraft,
+	recipeFromJsonLd,
+	type CaptureMode,
+	type StockLocation,
+} from '@eden/shared/domains/kitchen'
 import { t } from '@eden/shared/i18n'
-import { queryFacts } from '@eden/shared/profile'
+import { settings } from '@eden/shared/settings'
 import {
 	DRAFTED,
 	int,
@@ -20,9 +29,11 @@ import {
 	str,
 	type ToolContext,
 	type ToolHandler,
-	type ToolImage,
 	type ToolResult,
 } from '$lib/shell/gardener/types'
+import { capture } from './capture.svelte.js'
+import { recipeDrafts } from './recipe-draft.svelte.js'
+import { forbidden } from './safety.svelte.js'
 import { kitchen } from './store.svelte.js'
 
 interface Suggestion {
@@ -33,36 +44,12 @@ interface Suggestion {
 	uses?: string[]
 }
 
-const IMAGE_TYPES: Record<string, ToolImage['mediaType']> = {
-	jpg: 'image/jpeg',
-	jpeg: 'image/jpeg',
-	png: 'image/png',
-	webp: 'image/webp',
-	gif: 'image/gif',
-}
-
-/** What the owner must never be offered: allergens and restrictions, read locally and never sent (D-25). */
-async function forbidden(): Promise<string[]> {
-	try {
-		const facts = await queryFacts({ types: ['allergy', 'medical-dietary-restriction', 'disliked-ingredient'] })
-		return facts.flatMap((fact) => {
-			const value = fact.value as { substance?: string } | string
-			const word = typeof value === 'string' ? value : value?.substance
-			return word ? [word.toLowerCase()] : []
-		})
-	} catch {
-		return []
-	}
-}
-
-/** Drops every suggestion that names a forbidden word anywhere in what it says or uses. */
-function safe(suggestions: Suggestion[], words: string[]): Suggestion[] {
-	if (!words.length) return suggestions
+/** Drops every suggestion that names a forbidden word anywhere in what it says or uses; all of them on `null`. */
+function safe(suggestions: Suggestion[], words: string[] | null): Suggestion[] {
 	const names = (id: string) => kitchen.stockById(id)?.name ?? ''
-	return suggestions.filter((suggestion) => {
-		const text = [suggestion.name, suggestion.why, ...(suggestion.uses ?? []).map(names)].join(' ').toLowerCase()
-		return !words.some((word) => text.includes(word))
-	})
+	return suggestions.filter((suggestion) =>
+		isSafe([suggestion.name, suggestion.why, ...(suggestion.uses ?? []).map(names)], words)
+	)
 }
 
 function location(value: unknown): StockLocation {
@@ -71,35 +58,45 @@ function location(value: unknown): StockLocation {
 		: 'pantry'
 }
 
-async function pickImage(): Promise<ToolImage | undefined> {
-	const path = await open({
-		multiple: false,
-		directory: false,
-		filters: [{ name: 'Images', extensions: Object.keys(IMAGE_TYPES) }],
-	})
-	if (typeof path !== 'string') return undefined
-	const bytes = await readFile(path)
-	const extension = path.split('.').pop()?.toLowerCase() ?? ''
-	const mediaType = IMAGE_TYPES[extension] ?? 'image/jpeg'
-	const digest = await crypto.subtle.digest('SHA-256', bytes)
-	const hash = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
-	const blob = new Blob([bytes], { type: mediaType })
-	const { width, height } = await new Promise<{ width: number; height: number }>((resolve) => {
-		const url = URL.createObjectURL(blob)
-		const image = new Image()
-		image.onload = () => {
-			URL.revokeObjectURL(url)
-			resolve({ width: image.naturalWidth, height: image.naturalHeight })
-		}
-		image.onerror = () => {
-			URL.revokeObjectURL(url)
-			resolve({ width: 0, height: 0 })
-		}
-		image.src = url
-	})
-	let binary = ''
-	for (const byte of bytes) binary += String.fromCharCode(byte)
-	return { data: btoa(binary), mediaType, hash, width, height, path }
+/** What a capture was asked to read: a haul unless the input says the shelves. */
+export function captureMode(input: unknown): CaptureMode {
+	const mode = str(input, 'mode')
+	return (CAPTURE_MODES as readonly string[]).includes(mode ?? '') ? (mode as CaptureMode) : 'haul'
+}
+
+/** The lines both kinds of capture end on: how amounts are written, where an item is in a photo, what to leave out. */
+const captureRules = (today: string) => [
+	`Where an amount is printed, give it as printed. Where you have to estimate one, use ${settings.measurement === 'imperial' ? 'ounces and pounds' : 'grams and millilitres'}, or a plain count for things that are counted.`,
+	'For each item you can see in a photo, say which file it is in (`photo`, counting the files from 1 in the order given) and the box around the item alone in that photo (`box`), so a picture of it can be cut out. Draw the box tight to the item. For an item you read from a receipt, an order or a list and cannot see, `photo` is 0.',
+	`Today is ${today}.`,
+	'When you cannot tell what something is, leave it out: a wrong row costs the owner more than a missing one.',
+]
+
+/** The recipe's shape as a model is held to it: what `import-recipe` answers and what `recipeDraft` reads. */
+const RECIPE_ANSWER = answer.object({
+	name: answer.text('The dish, as the source names it.'),
+	serves: answer.integer('How many it serves; 2 when the source does not say.'),
+	minutes: answer.integer('How long it takes start to finish, in minutes; 0 when the source does not say.'),
+	tags: answer.list(answer.text(), 'Up to three plain tags: weeknight, vegetarian, one pot. Empty when none fit.'),
+	ingredients: answer.list(
+		answer.object({
+			name: answer.text('The ingredient alone: "short-grain rice", without its amount or how it is cut.'),
+			qty: answer.text('The amount alone: 2, 1/2, 200; an empty string when the source gives none.'),
+			unit: answer.text('The unit of the amount: g, ml, tbsp, cup, clove; an empty string for a plain count.'),
+			note: answer.text('How it is prepared or how much is meant: "minced", "to taste"; an empty string otherwise.'),
+		})
+	),
+	steps: answer.list(answer.text('One step, as a full sentence.')),
+	tip: answer.text(
+		'One sentence the source gives, or that any cook would want, that makes the dish go right; an empty string when there is nothing of the kind.'
+	),
+})
+
+/** What a recipe's page says, for the model: the recipe as the page describes it in JSON-LD when it does, else its text. */
+async function pageFor(url: string): Promise<string> {
+	const page = await fetchPage(url)
+	const described = recipeFromJsonLd(page.html, page.url)
+	return described ? JSON.stringify(described) : pageText(page.html)
 }
 
 export const kitchenTools: Record<string, ToolHandler> = {
@@ -133,7 +130,7 @@ export const kitchenTools: Record<string, ToolHandler> = {
 			parse: async (text) => {
 				const parsed = parseJson<{ suggestions?: Suggestion[] }>(text)
 				const all = parsed?.suggestions ?? []
-				const suggestions = safe(all, await forbidden()).map(({ recipeId, ...rest }) =>
+				const suggestions = safe(all, await forbidden.read()).map(({ recipeId, ...rest }) =>
 					recipeId ? { ...rest, recipeId } : rest
 				)
 				// how many the local filter dropped (D-25), so the reply can say some were left out and never which
@@ -175,50 +172,75 @@ export const kitchenTools: Record<string, ToolHandler> = {
 	},
 	'capture-haul': {
 		delegate: {
-			image: () => pickImage(),
+			files: (_input, ctx) => ctx.files,
 			schema: answer.object({
 				rows: answer.list(
 					answer.object({
-						name: answer.text('The item, named as a shopper would name it.'),
-						qty: answer.text('The amount alone: 2, 500, 1.'),
-						unit: answer.text('The unit of the amount: g, ml, bunch, tin; an empty string for a plain count.'),
-						location: answer.oneOf(LOCATIONS, 'Where this kind of food is normally kept.'),
-						daysUntilExpiry: answer.integer(
-							'How many days this kind of food typically keeps from today; 0 when that cannot be estimated.'
+						name: answer.text(
+							'The item, named in full as a shopper would say it: "Greek yogurt", never a receipt’s abbreviation.'
 						),
+						qty: answer.text('The amount alone, as a number: 2, 500, 1.5.'),
+						unit: answer.text(
+							'The unit of the amount: g, kg, ml, l, oz, lb, bunch, can, packets; an empty string for a plain count.'
+						),
+						location: answer.oneOf(LOCATIONS, 'Where this kind of food is normally kept at home.'),
+						category: answer.oneOf(CATEGORIES, 'What kind of thing it is.'),
+						expiryDate: answer.text(
+							'The use-by or best-before date printed on it, as YYYY-MM-DD, when one can be read; an empty string otherwise.'
+						),
+						daysUntilExpiry: answer.integer(
+							'How many days this kind of food typically keeps from today, stored where `location` says; 0 when it keeps for months or cannot be estimated.'
+						),
+						tip: answer.text(
+							'One short sentence on storing or handling it that is worth knowing and not obvious; an empty string when there is nothing of the kind. Most rows have none.'
+						),
+						photo: answer.integer(
+							'Which file the item is seen in, counting from 1 in the order the files are given; 0 when it is not seen in a photo.'
+						),
+						box: answer.object({
+							left: answer.integer(
+								'The left edge of the item, in thousandths of the photo’s width from its left side.'
+							),
+							top: answer.integer('The top edge, in thousandths of the photo’s height from its top.'),
+							right: answer.integer('The right edge, in thousandths of the width from the left side.'),
+							bottom: answer.integer('The bottom edge, in thousandths of the height from the top.'),
+						}),
 					})
 				),
 			}),
-			prompt: () =>
-				[
-					'List every grocery item you can see in this photo, one row each. The owner checks the rows before they are added to their stock.',
-					'When you cannot tell what something is, leave it out: a wrong row costs the owner more than a missing one.',
-				].join('\n'),
-			parse: (text, _input, ctx) => {
-				const parsed = parseJson<{ rows?: Record<string, unknown>[] }>(text)
-				const rows: CaptureRow[] = (parsed?.rows ?? []).flatMap((row) => {
-					const name = str(row, 'name')
-					if (!name) return []
-					const days = typeof row.daysUntilExpiry === 'number' ? Math.round(row.daysUntilExpiry) : undefined
-					return [
-						{
-							id: newId(),
-							name,
-							qty: str(row, 'qty') ?? '1',
-							unit: str(row, 'unit'),
-							location: location(row.location),
-							expiry: days && days > 0 ? addDays(ctx.today, days) : undefined,
-							estimated: days !== undefined && days > 0,
-						},
-					]
-				})
+			prompt: (input, ctx) =>
+				(captureMode(input) === 'stock'
+					? [
+							'These files are photos of the owner’s kitchen as it stands: the inside of the fridge or the freezer, pantry shelves, the counter. List every food, drink, supplement and other kitchen consumable you can see, one row each. The owner checks the rows before they become their stock.',
+							'An item that shows in two photos is one row. Put each item where its photo shows it: what is in the fridge is `fridge`, what is on a pantry shelf is `pantry`, and so on, wherever that kind of food is usually kept.',
+							'Count what you can count and estimate what you cannot: a carton that looks half full is half its size.',
+							'These things were not bought today, so do not guess how long they keep: `daysUntilExpiry` is 0 for every row, and `expiryDate` is filled only where a date can be read on the item.',
+							'Leave out what is not a consumable: containers, appliances, dishes, magnets.',
+							...captureRules(ctx.today),
+						]
+					: [
+							'These files are one grocery haul: photos of the groceries, receipts, an order confirmation or a list, in any mix. List every item that was bought, one row each. The owner checks the rows before they are added to their stock.',
+							'An item that shows in two of the files, on the receipt and in a photo, is one row. A receipt’s or an order’s quantity and weight win over what a photo suggests; a photo says what an abbreviated receipt line is.',
+							'Leave out what is not food, drink, a supplement or another kitchen consumable, and every line that is not an item: totals, tax, discounts, bags, fees, an item that was refunded or not delivered.',
+							...captureRules(ctx.today),
+						]
+				).join('\n'),
+			parse: async (text, input, ctx) => {
+				await kitchen.load()
+				const mode = captureMode(input)
+				const rows = haulRows(parseJson(text), { today: ctx.today, stock: kitchen.data().stock, newId, mode })
 				if (!rows.length)
 					return {
-						output: { error: 'No grocery items could be read from the photo. Tell the owner; they can try another.' },
+						output: { error: 'No grocery items could be read from the files. Tell the owner; they can try others.' },
+						failure: 'empty',
 					}
-				return { output: { status: 'drafted', rows: rows.length, note: DRAFTED }, card: { kind: 'capture', rows } }
+				const sources = (ctx.files?.blocks ?? []).map(({ id, name, mime }) => ({ id, name, mime }))
+				return {
+					output: { status: 'drafted', rows: rows.length, note: DRAFTED },
+					card: { kind: 'capture', mode, rows, ...(sources.length ? { sources } : {}) },
+				}
 			},
-			maxTokens: 2000,
+			maxTokens: 8000,
 		},
 	},
 	'draft-grocery-list': {
@@ -283,6 +305,54 @@ export const kitchenTools: Record<string, ToolHandler> = {
 				output: { added: items.map((item) => ({ id: item.id, name: item.name })) },
 				touched: items.map((item) => `eden://stock-item/${item.id}`),
 			}
+		},
+	},
+	'import-recipe': {
+		delegate: {
+			files: (_input, ctx) => ctx.files,
+			filesOptional: (input) => !!(str(input, 'text') || str(input, 'url')),
+			schema: RECIPE_ANSWER,
+			prompt: async (input) => {
+				const url = str(input, 'url')
+				const text = [str(input, 'text'), url ? await pageFor(url) : undefined].filter(Boolean).join('\n\n')
+				return [
+					'Write out the recipe in what follows, or in the files, as the owner will keep it: its ingredients one line each and its steps in order. The owner checks it before it is saved.',
+					'Keep to the source: its amounts, its units and its order. Do not add an ingredient or a step it does not have, and leave an amount empty where it gives none.',
+					'When there are several recipes, write the first. When there is none, answer an empty name.',
+					text ? `<recipe>\n${text}\n</recipe>` : '',
+				]
+					.filter(Boolean)
+					.join('\n')
+			},
+			parse: (text, input) => {
+				const draft = recipeDraft(parseJson(text))
+				if (!draft)
+					return {
+						output: { error: 'No recipe could be read from that. Tell the owner; they can try another source.' },
+						failure: 'empty',
+					}
+				const url = str(input, 'url')
+				const recipe = url && !draft.sourceUrl ? { ...draft, sourceUrl: url } : draft
+				return { output: { status: 'drafted', name: recipe.name, note: DRAFTED }, card: { kind: 'recipe', recipe } }
+			},
+			maxTokens: 4000,
+		},
+	},
+	'save-recipe': {
+		run: async (input) => {
+			const recipe = recipeDraft(input)
+			if (!recipe)
+				return { output: { error: 'Nothing to save: pass the recipe’s `name`, its `ingredients` and its `steps`.' } }
+			// what the Gardener wrote is a suggestion, and passes the filter like one (D-25)
+			const texts = [recipe.name, ...recipe.tags, ...recipe.ingredients.map((line) => line.name)]
+			if (!isSafe(texts, await forbidden.read()))
+				return {
+					output: {
+						error:
+							'This recipe was not drafted: it names something the owner has said they must not be offered. Do not say which; suggest another dish.',
+					},
+				}
+			return { output: { status: 'drafted', name: recipe.name, note: DRAFTED }, card: { kind: 'recipe', recipe } }
 		},
 	},
 	'plan-week': {
@@ -367,38 +437,35 @@ export const kitchenTools: Record<string, ToolHandler> = {
 	},
 }
 
-/** Hearth's part of a draft's commit: the grocery items, the captured stock with its photo, a plan's shop list. */
+/** Hearth's part of a draft's commit: a drafted grocery list, and the shop list of a plan. */
 export async function kitchenCommitDraft(card: DraftCard): Promise<{ undo: () => void } | undefined> {
 	if (card.kind === 'grocery') return kitchen.addGroceryItems(card.items)
-	if (card.kind === 'plan') return card.grocery?.length ? kitchen.addGroceryItems(card.grocery) : undefined
-	if (card.kind !== 'capture') return undefined
-	const { items, undo } = kitchen.addStockRows(
-		card.rows.map((row) => ({
-			name: row.name,
-			qty: String(row.qty),
-			unit: row.unit,
-			location: row.location,
-			expiry: row.expiry,
-			estimated: row.estimated,
-		})),
-		'capture'
-	)
-	if (card.path && items.length) {
-		// the photo joins the stock it made (D-13); a photo that cannot be attached leaves the rows standing
-		try {
-			await attach({
-				kind: 'haul-photo',
-				path: card.path,
-				links: items.map((item) => ({ uri: `eden://stock-item/${item.id}`, relation: 'from' as const })),
-			})
-		} catch {
-			// nothing to do: the rows are there, the photo is not
-		}
-	}
-	return { undo }
+	if (card.kind === 'plan') return card.grocery?.length ? kitchen.addGroceryItems(card.grocery, 'recipe') : undefined
+	return undefined
 }
 
-/** What Hearth's quick actions write, by id; `capture-haul` is the tool itself, run from the panel. */
+/**
+ * The drafts Hearth opens on a surface of its own, where the owner checks them before anything is stored: a
+ * captured haul on the capture sheet at its rows, a recipe in the Recipes view's detail pane.
+ */
+export function kitchenOpenDraft(
+	card: DraftCard,
+	settle: (state: 'committed' | 'discarded') => void,
+	open: { recipes: () => void }
+): boolean {
+	if (card.kind === 'capture') {
+		void capture.fromDraft(card, settle)
+		return true
+	}
+	if (card.kind === 'recipe') {
+		recipeDrafts.open(card.recipe, settle)
+		open.recipes()
+		return true
+	}
+	return false
+}
+
+/** What Hearth's quick actions write, by id; `capture-haul` is the tool itself, run from the page or the panel. */
 export const kitchenQuickActions = {
 	'add-to-grocery': (value: string) => kitchen.addGrocery(value),
 }

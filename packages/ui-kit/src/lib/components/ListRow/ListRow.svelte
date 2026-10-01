@@ -29,6 +29,8 @@
 		id: string
 		/** The one line, in the platform text style. */
 		primary: string
+		/** A tip about the row, shown as an info button with a tooltip. */
+		hint?: string
 		/** A second line beneath, quieter. */
 		secondary?: string
 		/** Detail chips beneath the primary text. */
@@ -41,6 +43,10 @@
 		metaWarn?: boolean
 		/** A leading glyph. */
 		icon?: IconName
+		/** A small picture of the row's thing, as a URL the page may load; it takes the glyph's place. */
+		thumbnail?: string
+		/** Draws the glyph on a tile the size of a picture, so rows with pictures and rows with glyphs line up. */
+		tile?: boolean
 		/** Crossed out and quiet: a checked-off grocery, a finished task. */
 		done?: boolean
 		/** The row's menu, destructive items last; the ⋯ button, a right-click, a long-press and Shift+F10 open it. */
@@ -108,13 +114,14 @@
 </script>
 
 <script lang="ts">
-	// One row of a list: a leading icon, the primary text with a detail line of chips and badges beneath, trailing
-	// metadata in mono, and a ⋯ button that opens the row's menu. A right-click, a long-press and Shift+F10 (or the
-	// ContextMenu key) open the same menu; Enter or a double-click opens the row. Selection is a mode (D-41): outside
-	// it the row shows no mark and gives up no space; while the list is `selecting` a round mark slides in at the
-	// leading edge and a click or Space toggles the row onto brand-muted. Inside List the row is a grid row with one
-	// gridcell and the list manages its tab stop, and it leaves with a collapse (`collapse` above); on its own it is a
-	// list item and its own tab stop.
+	// One row of a list: a leading icon, the primary text (with an info glyph after it when the row has a `hint`, its
+	// tooltip the hint) and a detail line of chips and badges beneath, trailing metadata in mono, and a ⋯ button that
+	// opens the row's menu. A right-click, a long-press and Shift+F10 (or the ContextMenu key) open the same menu; Enter
+	// or a double-click opens the row. Selection is a mode (D-41): outside it the row shows no mark and gives up no
+	// space; while the list is `selecting` a round mark slides in at the leading edge and a click or Space toggles the
+	// row onto brand-muted. Inside List the row is a grid row with one gridcell and the list manages its tab stop, and
+	// it leaves with a collapse (`collapse` above); on its own it is a list item and its own tab stop. A press on a
+	// button in the row (the hint, the ⋯) never toggles or opens the row.
 	import { tick } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
 	import type { AnchorLike } from '../../internal/anchor.js'
@@ -148,12 +155,15 @@
 	let {
 		id,
 		primary,
+		hint,
 		secondary,
 		chips = [],
 		badges = [],
 		meta,
 		metaWarn = false,
 		icon,
+		thumbnail,
+		tile = false,
 		done = false,
 		actions = [],
 		selecting = false,
@@ -255,9 +265,20 @@
 			</span>
 		</span>
 	{/if}
-	{#if icon}<Icon name={icon} size="sm" class="ed-row-icon" />{/if}
+	{#if thumbnail}
+		<img class="ed-row-thumb" src={thumbnail} alt="" />
+	{:else if icon && tile}
+		<span class="ed-row-thumb ed-row-tile" aria-hidden="true"><Icon name={icon} size="sm" /></span>
+	{:else if icon}
+		<Icon name={icon} size="sm" class="ed-row-icon" />
+	{/if}
 	<span class="ed-row-text">
-		<span class="ed-row-primary">{primary}</span>
+		<span class="ed-row-head">
+			<span class="ed-row-primary">{primary}</span>
+			{#if hint}
+				<IconButton icon="info" size="xs" label={s.about(primary)} tooltip={hint} tabindex={inGrid ? -1 : undefined} />
+			{/if}
+		</span>
 		{#if hasDetail && !compact}
 			<span class="ed-row-detail">
 				{#if secondary}<span class="ed-row-secondary">{secondary}</span>{/if}
@@ -413,6 +434,22 @@
 	.ed-row :global(.ed-row-icon) {
 		color: var(--text-secondary);
 	}
+	/* the row's picture, or its glyph on a tile of the same size: square, and never squeezed by the text */
+	.ed-row-thumb {
+		flex: none;
+		box-sizing: border-box;
+		width: var(--space-8);
+		height: var(--space-8);
+		border: 1px solid var(--stroke-subtle);
+		border-radius: var(--ed-radius-control);
+		object-fit: cover;
+		background: var(--surface-2);
+	}
+	.ed-row-tile {
+		display: inline-grid;
+		place-items: center;
+		color: var(--text-secondary);
+	}
 	.ed-row-text {
 		flex: 1;
 		min-width: 0;
@@ -420,7 +457,18 @@
 		flex-direction: column;
 		gap: 2px;
 	}
+	/* the primary text and the hint glyph right after it; the text gives way, the glyph never does */
+	.ed-row-head {
+		display: flex;
+		align-items: center;
+		gap: var(--space-1);
+		min-width: 0;
+	}
+	.ed-row-head :global(.ed-icon-btn) {
+		flex: none;
+	}
 	.ed-row-primary {
+		min-width: 0;
 		font: var(--ed-t-text);
 		color: var(--text-primary);
 		white-space: nowrap;

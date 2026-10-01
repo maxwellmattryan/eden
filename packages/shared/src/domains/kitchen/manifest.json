@@ -2,7 +2,7 @@
 	"id": "kitchen",
 	"phase": 1,
 	"sidebar": { "group": "domains", "order": 10, "visible": true },
-	"tabs": ["stock", "recipes", "grocery", "tips"],
+	"tabs": ["stock", "recipes", "grocery"],
 	"resources": {
 		"facts": [
 			{ "id": "allergy", "tier": "T2" },
@@ -15,12 +15,12 @@
 			{ "id": "stock-item", "tier": "T0" },
 			{ "id": "recipe", "tier": "T0" },
 			{ "id": "grocery-list", "tier": "T0" },
-			{ "id": "grocery-item", "tier": "T0" },
-			{ "id": "storage-tip", "tier": "T0" }
+			{ "id": "grocery-item", "tier": "T0" }
 		],
 		"kinds": [
 			{ "id": "shop-day", "primitive": "event", "tier": "T0" },
-			{ "id": "haul-photo", "primitive": "attachment", "tier": "T1" }
+			{ "id": "haul-photo", "primitive": "attachment", "tier": "T1" },
+			{ "id": "item-photo", "primitive": "attachment", "tier": "T1" }
 		]
 	},
 	"reads": ["medical-dietary-restriction", "favorite-supplement", "home-area"],
@@ -32,7 +32,7 @@
 			"default": true,
 			"reads": ["stock-item", "recipe", "dietary-preference", "allergy", "medical-dietary-restriction"]
 		},
-		{ "id": "grocery-quick-add", "sizes": ["s"], "reads": ["grocery-list", "grocery-item"], "planned": true }
+		{ "id": "grocery-quick-add", "sizes": ["s"], "reads": ["grocery-list", "grocery-item"] }
 	],
 	"quickActions": [
 		{ "id": "capture-haul", "label": "domains.kitchen.capture.action", "icon": "camera" },
@@ -54,7 +54,7 @@
 				"medical-dietary-restriction"
 			]
 		},
-		{ "id": "storage-tip", "access": "read", "grade": "light", "reads": ["stock-item", "storage-tip"] },
+		{ "id": "storage-tip", "access": "read", "grade": "light", "reads": ["stock-item"] },
 		{ "id": "capture-haul", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] },
 		{
 			"id": "draft-grocery-list",
@@ -63,6 +63,8 @@
 			"reads": ["stock-item", "recipe", "grocery-list", "grocery-item"]
 		},
 		{ "id": "add-stock", "access": "write", "confirm": true, "reads": ["stock-item"] },
+		{ "id": "import-recipe", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] },
+		{ "id": "save-recipe", "access": "write-draft", "reads": ["recipe"] },
 		{
 			"id": "plan-week",
 			"access": "write-draft",
@@ -74,7 +76,7 @@
 	"signals": ["stock.expiring", "stock.low", "grocery.shop-day"],
 	"notificationKinds": [
 		{ "id": "expiring-digest", "channel": "in-app", "cadence": "daily", "signal": "stock.expiring" },
-		{ "id": "low-stock", "channel": "in-app", "cadence": "weekly" },
+		{ "id": "low-stock", "channel": "in-app", "cadence": "weekly", "signal": "stock.low" },
 		{ "id": "shop-day-reminder", "channel": "os", "cadence": "morning-of", "signal": "grocery.shop-day" }
 	],
 	"schedules": [{ "id": "morning", "daily": "08:00" }],
@@ -87,5 +89,5 @@
 		],
 		"search": ["stock-item", "recipe"]
 	},
-	"export": ["stock-item", "recipe", "grocery-list", "grocery-item", "storage-tip"]
+	"export": ["stock-item", "recipe", "grocery-list", "grocery-item"]
 }

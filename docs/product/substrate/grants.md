@@ -74,5 +74,5 @@ Every Gardener request writes an audit entry naming the registry ids read and th
 - **Hearth, suggest recipes.** Declared reads `stock-item`, `recipe`, `dietary-preference`, `disliked-ingredient`, `cuisine-preference`, `allergy`, `medical-dietary-restriction`. The first five are T0–T1 and need nothing. The last two are T2 and were granted in onboarding. Output is filtered locally against allergies regardless.
 - **Sky, rain during my run.** Declared reads `workout-session`, `forecast`, `home-area`. All T0–T1. Runs from any chat under the default grant.
 - **Google Calendar.** Phase 2 grant: `calendar:<id>:read` per selected calendar, standing. Write is a Phase 3 grant, per calendar (OQ-6).
-- **Capture a haul.** Device grant `camera` on this device; a per-request confirm naming the vision provider before the photo is sent (D-29).
+- **Capture a haul.** Tool `capture-haul`, access `write-draft`, so it needs no grant of its own. The sheet names the provider, the model and the estimate, and its Read is the per-request confirm (D-86). A PDF or a text source records a per-request grant on `document`, as a file on a message does (D-82). On the phone, the device grant `camera` on this device (D-29).
 - **A Quick Log of weight.** Tool `log-body-metric`, access `write`, standing grant created the first time the owner uses it; undo instead of a confirm sheet.

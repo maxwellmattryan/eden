@@ -22,7 +22,7 @@ A domain is what it **declares** and what an app **binds** to that.
 | half | where | holds |
 |---|---|---|
 | declaration | `packages/shared/src/domains/<id>/manifest.json` | data only: resources, reads, widgets, quick actions, tools, signals, rules, schedules, intents, palette entries, export sections. The same for every app and for the crate |
-| bindings | `apps/<app>/src/lib/domains/<id>/manifest.ts` | what the data cannot hold: the route, each widget's component and `hasData()`, the live glyph, the store's `load`, `seed`, `reload` and `extras`, and `subscribe`, which binds what the domain hears |
+| bindings | `apps/<app>/src/lib/domains/<id>/manifest.ts` | what the data cannot hold: the route, each widget's component and `hasData()`, the live glyph, the store's `load`, `seed`, `reload` and `extras`, `subscribe`, which binds what the domain hears, the tool handlers, and the surfaces a draft opens on (`openDraft`, `overlay`) |
 
 The declaration is JSON because two languages read it. A JSON import would widen every id to `string`, so the builder writes the declarations out again as `as const` TypeScript, and the types come from that.
 
@@ -118,6 +118,10 @@ Each app has `src/lib/domains/manifest.ts` with `defineDomain(id, bindings)`, wh
 
 `tools` binds a handler to each tool the domain declares and `quickActionHandlers` a store write to each quick action (`engineering/gardener.md`, "Tools"); the domain keeps them in `tools.ts`, which imports its own store and the shell and nothing of another domain.
 
+`commitDraft(card)` is the domain's part of committing a draft its tool left, from the card in the Gardener's panel (a grocery list, a plan's shop list); the substrate's parts, tasks and events, are the shell's. `openDraft(card, settle)` is for a draft the owner checks on a surface of the domain's own instead: it opens the draft there and answers whether it took it, and `settle` is told when the owner keeps or discards it, until which the card stays as it was. Hearth binds it for a `capture` draft, which opens its capture sheet at the rows, and for a `recipe` draft, which opens in its Recipes pane unsaved (D-86).
+
+`overlay` is a component the shell mounts once, over whatever page is open, beside its own sheets. Hearth's capture sheet is one, since a haul is captured from its page, from a drop and from a card in the Gardener's panel. The root layout mounts each enabled domain's overlay and names none of them.
+
 `src/lib/domains/index.ts` lists the enabled domains in the shell's order and exports their `declarations`. Disabling a domain is leaving it out of that list: its sidebar entry, its tiles, its palette entries, its quick actions, its rules and its schedules go, and its rows stay.
 
 ## Composition
@@ -159,8 +163,8 @@ The Gardener's runtime (`engineering/gardener.md`) calls `resolveTool` before ev
 
 | side | path | holds |
 |---|---|---|
-| shared | `packages/shared/src/domains/<id>/` | `manifest.json`, and the modules both apps use: types, row mapping, formats, and what the domain does on its schedules (`signals.ts`) |
-| desktop | `apps/desktop/src/lib/domains/<id>/` | `manifest.ts` (bindings), `store.svelte.ts`, `seed.ts`, `views/`, `widgets/` |
+| shared | `packages/shared/src/domains/<id>/` | `manifest.json`, and the modules both apps use: types, row mapping, formats, what the domain does on its schedules (`signals.ts`), and its pure rules, each with its test beside it (Hearth's are listed in `engineering/data-layer.md`, "A store on rows") |
+| desktop | `apps/desktop/src/lib/domains/<id>/` | `manifest.ts` (bindings), `store.svelte.ts`, `seed.ts`, `tools.ts`, `views/`, `widgets/` |
 | mobile | `apps/mobile/src/lib/domains/<id>/` | `manifest.ts` (bindings), and its surfaces as they are built |
 | Rust | `src-tauri/src/domains/<id>/` | models, services and commands, for a domain that needs the crate |
 

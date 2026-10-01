@@ -133,7 +133,10 @@ mod tests {
         assert!(is_entity_type("recipe"));
         assert!(!is_entity_type("task"));
         assert!(is_kind("event", "shop-day") && !is_kind("task", "shop-day"));
-        assert_eq!(kinds_of("kitchen", "attachment"), ["haul-photo"]);
+        assert_eq!(
+            kinds_of("kitchen", "attachment"),
+            ["haul-photo", "item-photo"]
+        );
         assert!(entity_types_of("toolbench").contains(&"idea"));
         assert!(is_owner("weather") && !is_owner("finance"));
         assert!(is_fact("allergy") && is_fact("medical-dietary-restriction"));

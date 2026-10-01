@@ -84,6 +84,17 @@ export interface DomainBindings<D extends BuiltDomainId> {
 	quickActionHandlers?: Partial<Record<string, QuickActionHandler>>
 	/** The domain's part of committing a draft its tool left; the substrate's parts (tasks, events) are the shell's. */
 	commitDraft?: (card: DraftCard) => Promise<{ undo: () => void } | undefined>
+	/**
+	 * Opens a draft on a surface of the domain's own, where the owner checks it before anything is stored (Hearth's
+	 * capture sheet, its Recipes pane), and answers whether it took the draft. `settle` is told when the owner keeps
+	 * or discards it there; until then the card stays as it was.
+	 */
+	openDraft?: (card: DraftCard, settle: (state: 'committed' | 'discarded') => void) => boolean
+	/**
+	 * A surface the domain shows over whatever page is open: the shell mounts it once, beside its own sheets. Hearth's
+	 * capture sheet is one, since a haul is captured from its page, from a drop and from a card in the Gardener's panel.
+	 */
+	overlay?: Component
 }
 
 /** A quick action's write: the value as typed, the undo back. */

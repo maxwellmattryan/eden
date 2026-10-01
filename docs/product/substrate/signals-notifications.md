@@ -61,7 +61,7 @@ Success is silent. Toasts show errors and offer undo. This is Crate's rule and E
 
 ## Phase 1 signal list
 
-Emitted today: `weather.alert`, `stock.expiring` and `grocery.shop-day`, and `scheduler.fired` to subscribers only; of the substrate's own, `task.created` and `task.completed`, emitted by the frontend per owner action (D-75), with no rule answering them yet. `task.due` stays unemitted, with the rest of the substrate's list (D-73): reminders, the cards and the rule for a task signal, and the feed on signals are the notification center's.
+Emitted today: `weather.alert`, `stock.expiring`, `stock.low` (once a week, from Hearth's morning check) and `grocery.shop-day`, and `scheduler.fired` to subscribers only; of the substrate's own, `task.created` and `task.completed`, emitted by the frontend per owner action (D-75), with no rule answering them yet. `task.due` stays unemitted, with the rest of the substrate's list (D-73): reminders, the cards and the rule for a task signal, and the feed on signals are the notification center's.
 
 | signal | emitter | payload |
 |---|---|---|
@@ -73,7 +73,7 @@ Emitted today: `weather.alert`, `stock.expiring` and `grocery.shop-day`, and `sc
 | `integration.connected`, `integration.disconnected`, `integration.failed` | substrate | integration id, device |
 | `ai.request.completed`, `ai.budget.threshold` | Gardener | audit id; percent |
 | `scheduler.fired` | scheduler | schedule name, when it was due |
-| `stock.expiring`, `stock.low`, `grocery.shop-day` | Hearth | item URIs, how many, the nearest two names, how near; list URI, how many items are left |
+| `stock.expiring`, `stock.low`, `grocery.shop-day` | Hearth | item URIs, how many, the nearest two names, how near; item URIs, how many, the first two names; list URI, how many items are left |
 | `idea.stale`, `project.updated` | Toolbench | idea or project URI |
 | `weather.alert`, `weather.rain-before-plan` | Sky | alert id, severity, event, headline, when it ends; event URI |
 

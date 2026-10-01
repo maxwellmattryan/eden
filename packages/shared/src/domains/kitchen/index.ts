@@ -1,7 +1,16 @@
 // Hearth's shapes and their rows, shared so the pure parts are tested here (`*.test.ts`) and both apps read one
 // definition. The store, the views and the widgets stay in each app.
+export * from './capture.js'
+export * from './cook.js'
 export * from './digest.js'
 export * from './formats.js'
+export * from './match.js'
+export * from './parse.js'
+export * from './product-link.js'
+export * from './quantity.js'
+export * from './recipe-import.js'
 export * from './rows.js'
+export * from './safety.js'
 export * from './signals.js'
+export * from './sources.js'
 export * from './types.js'

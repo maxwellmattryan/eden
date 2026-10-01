@@ -43,7 +43,7 @@ The **+** button and floating button open the Quick Log sheet listing the enable
 
 ## Capture entry points (D-13)
 
-Capture opens from a domain's primary action (Hearth's "capture a haul"), from the Quick Log sheet, from the share sheet on mobile (Phase 2), and from ⌘K **run**. The verification sheet is specified in `design/ux-patterns.md`.
+Capture opens from a domain's primary action (Hearth's "capture a haul"), from files dropped or pasted on that domain's page (D-86), from the Quick Log sheet, from the share sheet on mobile (Phase 2), and from ⌘K **run**. The verification sheet is specified in `design/ux-patterns.md`.
 
 ## Notification center
 

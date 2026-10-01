@@ -35,7 +35,17 @@ const document: KitchenData = {
 			sourcedAt: '2026-09-29T15:02:11.000Z',
 		},
 	],
-	recipes: [{ id: 'r-01', name: 'Dal', serves: 2, minutes: 35, tags: ['quick'] }],
+	recipes: [
+		{
+			id: 'r-01',
+			name: 'Dal',
+			serves: 2,
+			minutes: 35,
+			tags: ['quick'],
+			ingredients: [{ name: 'red lentils', qty: '200', unit: 'g' }],
+			steps: ['Simmer the lentils.'],
+		},
+	],
 	grocery: {
 		name: 'This week',
 		store: 'H-E-B',
@@ -111,6 +121,23 @@ describe('kitchen rows', () => {
 			listId: undefined,
 			ops: [],
 		})
+	})
+
+	it('reads a recipe written before it held its lines with both lists empty', () => {
+		const engine = createEngine(memory())
+		const old = engine.createEntity<RecipePayload>({
+			type: KITCHEN.recipe,
+			payload: { name: 'Plain rice', serves: 4, minutes: 20, tags: [] },
+		})
+		const read = kitchenFromRows({
+			stock: [],
+			recipes: engine.queryEntities<RecipePayload>({ type: KITCHEN.recipe }),
+			lists: [],
+			items: [],
+		})
+		expect(read.data.recipes).toEqual([
+			{ id: old.id, name: 'Plain rice', serves: 4, minutes: 20, tags: [], ingredients: [], steps: [] },
+		])
 	})
 
 	it('leaves alone the items of another list', () => {

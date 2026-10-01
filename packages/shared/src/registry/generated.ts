@@ -247,15 +247,6 @@ export const RESOURCES = [
 		"live": true
 	},
 	{
-		"id": "storage-tip",
-		"category": "entity",
-		"primitive": null,
-		"owner": "kitchen",
-		"tier": "T0",
-		"phase": 1,
-		"live": true
-	},
-	{
 		"id": "shop-day",
 		"category": "kind",
 		"primitive": "event",
@@ -266,6 +257,15 @@ export const RESOURCES = [
 	},
 	{
 		"id": "haul-photo",
+		"category": "kind",
+		"primitive": "attachment",
+		"owner": "kitchen",
+		"tier": "T1",
+		"phase": 1,
+		"live": true
+	},
+	{
+		"id": "item-photo",
 		"category": "kind",
 		"primitive": "attachment",
 		"owner": "kitchen",
@@ -1091,10 +1091,6 @@ export const DECLARATIONS = {
 			{
 				"id": "grocery",
 				"label": "domains.kitchen.tabs.grocery"
-			},
-			{
-				"id": "tips",
-				"label": "domains.kitchen.tabs.tips"
 			}
 		],
 		"resources": [
@@ -1107,9 +1103,9 @@ export const DECLARATIONS = {
 			"recipe",
 			"grocery-list",
 			"grocery-item",
-			"storage-tip",
 			"shop-day",
-			"haul-photo"
+			"haul-photo",
+			"item-photo"
 		],
 		"reads": [
 			"medical-dietary-restriction",
@@ -1154,7 +1150,7 @@ export const DECLARATIONS = {
 					"s"
 				],
 				"default": false,
-				"planned": true,
+				"planned": false,
 				"reads": [
 					"grocery-list",
 					"grocery-item"
@@ -1202,8 +1198,7 @@ export const DECLARATIONS = {
 				"access": "read",
 				"confirm": false,
 				"reads": [
-					"stock-item",
-					"storage-tip"
+					"stock-item"
 				],
 				"grade": "light",
 				"needs": [],
@@ -1246,6 +1241,28 @@ export const DECLARATIONS = {
 				"minContext": null
 			},
 			{
+				"id": "import-recipe",
+				"access": "write-draft",
+				"confirm": false,
+				"reads": [],
+				"grade": "light",
+				"needs": [
+					"vision"
+				],
+				"minContext": null
+			},
+			{
+				"id": "save-recipe",
+				"access": "write-draft",
+				"confirm": false,
+				"reads": [
+					"recipe"
+				],
+				"grade": null,
+				"needs": [],
+				"minContext": null
+			},
+			{
 				"id": "plan-week",
 				"access": "write-draft",
 				"confirm": false,
@@ -1281,7 +1298,7 @@ export const DECLARATIONS = {
 				"channel": "in-app",
 				"cadence": "weekly",
 				"default": true,
-				"signal": null,
+				"signal": "stock.low",
 				"when": null
 			},
 			{
@@ -1334,8 +1351,7 @@ export const DECLARATIONS = {
 			"stock-item",
 			"recipe",
 			"grocery-list",
-			"grocery-item",
-			"storage-tip"
+			"grocery-item"
 		]
 	},
 	"toolbench": {

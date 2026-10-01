@@ -141,7 +141,15 @@ export { default as ConfirmSheet } from './components/ConfirmSheet/ConfirmSheet.
 export { default as QuickLogSheet } from './components/QuickLogSheet/QuickLogSheet.svelte'
 export type { QuickLog, QuickLogKind } from './components/QuickLogSheet/QuickLogSheet.svelte'
 export { default as CaptureSheet } from './components/CaptureSheet/CaptureSheet.svelte'
-export { LOCATIONS, type CaptureLocation, type CaptureRow } from './components/CaptureSheet/CaptureSheet.svelte'
+export {
+	LOCATIONS,
+	type CaptureCategory,
+	type CaptureKind,
+	type CaptureFile,
+	type CaptureLocation,
+	type CapturePhase,
+	type CaptureRow,
+} from './components/CaptureSheet/CaptureSheet.svelte'
 
 // Navigation
 export { default as SidebarItem } from './components/SidebarItem/SidebarItem.svelte'

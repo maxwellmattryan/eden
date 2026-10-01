@@ -142,22 +142,55 @@ export interface UiStrings {
 		origin: string
 	}
 	capture: {
+		/** The sheet's title while the sources are collected and read. */
+		collectTitle: string
+		/** The sheet's title once there are rows to check. */
 		title: string
-		processedBy: (provider: string, cost: string) => string
+		/** The invitation in the empty drop area. */
+		invite: string
+		/** The line under the invitation: the ways in. The second is the phone's, where nothing is dropped. */
+		inviteHint: string
+		inviteHintTouch: string
+		/** The file button's name. */
+		chooseFiles: string
+		/** The accessible name of the sources: the staged files, and their thumbnails beside the rows. */
+		sources: string
+		/** The cost as the provider line says it: "about 0.8 ¢". */
+		estimate: (cost: string) => string
+		/** The provider line once the sources were read; `line` is the provider, the model and the cost. */
+		readBy: (line: string) => string
+		/** The first phase's primary button, and the status while it runs. */
+		read: string
+		reading: string
 		draftRows: string
-		mergesWith: (name: string) => string
+		addRow: string
+		/** The switch on a row that matches a stock item. */
+		mergeWith: (name: string) => string
 		everyRowRemoved: string
 		footer: (created: number, merged: number) => string
 		locations: { fridge: string; freezer: string; pantry: string; counter: string }
-		/** The accessible names of a draft row's editable name and quantity. */
+		/** The accessible names of a draft row's fields; the name and the unit are placeholders too. */
 		rowName: string
 		rowQty: string
+		rowUnit: string
+		rowExpiry: string
+		/** The category chip with nothing chosen and the menu's name; the chip's accessible name with a choice. */
+		category: string
+		categoryNamed: (label: string) => string
 		/** The accessible name of a row's location radio group. */
 		location: (name: string) => string
-		/** The label before a row's expiry. */
-		expires: string
-		/** The thumbnail's alt text. */
-		image: string
+		/** A row with no name yet, where its name is spoken: "Remove this row". */
+		unnamed: string
+		/** The words that differ when the shelves are read as they stand (`kind="stock"`): a match is updated. */
+		stock: {
+			collectTitle: string
+			title: string
+			invite: string
+			inviteHint: string
+			inviteHintTouch: string
+			mergeWith: (name: string) => string
+			footer: (created: number, updated: number) => string
+		}
 	}
 	confirmSheet: { subject: string; resource: string; destination: string; payload: string }
 	quickLog: {
@@ -374,18 +407,40 @@ export const defaultStrings: UiStrings = {
 		origin: 'origin',
 	},
 	capture: {
+		collectTitle: 'Capture a haul',
 		title: 'Verify the haul',
-		processedBy: (provider, cost) => `Processed by ${provider}, about ${cost}`,
+		invite: 'Add photos, a receipt or an order PDF',
+		inviteHint: 'Drop them here, choose files, or paste a list.',
+		inviteHintTouch: 'Choose files, or paste a list.',
+		chooseFiles: 'Choose files',
+		sources: 'Sources',
+		estimate: (cost) => `up to ${cost}`,
+		readBy: (line) => `Read by ${line}`,
+		read: 'Read',
+		reading: 'Reading…',
 		draftRows: 'Draft rows',
-		mergesWith: (name) => `Merges with ${name}`,
+		addRow: 'Add a row',
+		mergeWith: (name) => `Merge with ${name}`,
 		everyRowRemoved: 'Every row was removed. Nothing will be created.',
 		footer: (created, merged) => (merged ? `${created} to create, ${merged} to merge` : `${created} to create`),
 		locations: { fridge: 'Fridge', freezer: 'Freezer', pantry: 'Pantry', counter: 'Counter' },
 		rowName: 'Name',
 		rowQty: 'Quantity',
+		rowUnit: 'Unit',
+		rowExpiry: 'Expiry',
+		category: 'Category',
+		categoryNamed: (label) => `Category: ${label}`,
 		location: (name) => `Location of ${name}`,
-		expires: 'Expires',
-		image: 'The captured image',
+		unnamed: 'this row',
+		stock: {
+			collectTitle: 'Take stock',
+			title: 'Check what was found',
+			invite: 'Add photos of your fridge, freezer, pantry or counter',
+			inviteHint: 'Drop them here or choose files. What is in them becomes your stock.',
+			inviteHintTouch: 'Choose files. What is in them becomes your stock.',
+			mergeWith: (name) => `Update ${name}`,
+			footer: (created, updated) => (updated ? `${created} to create, ${updated} to update` : `${created} to create`),
+		},
 	},
 	confirmSheet: { subject: 'Subject', resource: 'Resource', destination: 'Destination', payload: 'Payload' },
 	quickLog: {

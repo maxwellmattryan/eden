@@ -1,12 +1,12 @@
 <script lang="ts">
 	// A draft the Gardener left for the owner to commit (product/substrate/ai.md, "Surfaces"; D-74): a task, a plan
-	// of tasks and events, a grocery list, code to copy, or a capture to verify. Nothing is stored before the owner
-	// commits; a commit is an ordinary store write with an undo toast (D-12) and settles the card on its message. The
-	// substrate's parts (tasks, events) are written here; a domain's parts go to the domain that drafted them. It is its
-	// own message in the thread: the Gardener's bubble in honey, since this is the Gardener acting (D-40).
-	import { convertFileSrc } from '@tauri-apps/api/core'
-	import { Button, CaptureSheet, GardenerMessage, type CaptureRow } from '@eden/ui-kit'
-	import { isTauri } from '@eden/shared/api'
+	// of tasks and events, a grocery list, code to copy, a capture to verify, or a recipe to check. Nothing is stored
+	// before the owner commits; a commit is an ordinary store write with an undo toast (D-12) and settles the card on
+	// its message. The substrate's parts (tasks, events) are written here; a domain's parts go to the domain that
+	// drafted them, and a draft the domain checks on a surface of its own (a haul on Hearth's capture sheet, a recipe
+	// in its Recipes view) is opened there and settles when the owner keeps or discards it there (D-86). It is its own
+	// message in the thread: the Gardener's bubble in honey, since this is the Gardener acting (D-40).
+	import { Button, GardenerMessage } from '@eden/ui-kit'
 	import { createEvent, deleteRows, type TaskInput } from '@eden/shared/data'
 	import { dateIn, instantAt } from '@eden/shared/dates'
 	import type { DraftCard as Draft, DraftState } from '@eden/shared/gardener'
@@ -15,7 +15,6 @@
 	import { manifestFor } from '$lib/domains'
 	import { tasks } from '../today/store.svelte'
 	import { undoToast } from '../undo'
-	import { gardenerSetup } from './setup.svelte'
 
 	type Props = {
 		draft: Draft
@@ -28,19 +27,16 @@
 
 	let busy = $state(false)
 	let copied = $state(false)
-	let captureOpen = $state(false)
 
 	const title = $derived.by(() => {
 		if (draft.kind === 'task') return $t('gardener.draft.task')
 		if (draft.kind === 'plan') return draft.title
 		if (draft.kind === 'grocery') return $t('gardener.draft.grocery', { values: { count: draft.items.length } })
 		if (draft.kind === 'code') return draft.title ?? $t('gardener.draft.code')
+		if (draft.kind === 'recipe') return $t('gardener.draft.recipe', { values: { name: draft.recipe.name } })
 		return $t('gardener.draft.capture', { values: { count: draft.rows.length } })
 	})
 	const settled = $derived(status !== 'pending')
-	const thumbnail = $derived(
-		draft.kind === 'capture' && draft.path && isTauri() ? convertFileSrc(draft.path) : undefined
-	)
 
 	const DAY = /^\d{4}-\d{2}-\d{2}$/
 	const TIME = /^\d{2}:\d{2}$/
@@ -109,8 +105,9 @@
 				copied = true
 				busy = false
 				return
-			} else if (draft.kind === 'capture') {
-				captureOpen = true
+			} else {
+				// checked on the domain's own surface: the card settles when the owner keeps or discards it there
+				manifestFor(domain)?.openDraft?.(draft, onsettle)
 				busy = false
 				return
 			}
@@ -120,18 +117,19 @@
 		}
 	}
 
-	async function commitCapture(rows: CaptureRow[]) {
-		if (draft.kind !== 'capture') return
-		const undo = await domainCommit({ ...draft, rows })
-		if (undo) undoToast($t('gardener.draft.captureCommitted', { values: { count: rows.length } }), undo)
-		onsettle('committed')
-	}
+	/** The kept rows go back in the draft's shape: a merge is the stock item's name while it is on. */
 </script>
 
 <GardenerMessage
 	tone="honey"
 	name={title}
-	icon={draft.kind === 'code' ? 'copy' : draft.kind === 'capture' ? 'camera' : 'sparkles'}
+	icon={draft.kind === 'code'
+		? 'copy'
+		: draft.kind === 'capture'
+			? 'camera'
+			: draft.kind === 'recipe'
+				? 'cooking-pot'
+				: 'sparkles'}
 >
 	{#if draft.kind === 'task'}
 		<p class="draft-line">
@@ -169,6 +167,11 @@
 		<pre class="draft-code"><code>{draft.code}</code></pre>
 	{:else if draft.kind === 'capture'}
 		<p class="draft-line">{$t('gardener.draft.captureText')}</p>
+	{:else if draft.kind === 'recipe'}
+		<p class="draft-line">{$t('gardener.draft.recipeText')}</p>
+		<p class="draft-quiet">
+			{draft.recipe.ingredients.map((line) => line.name).join(', ')}
+		</p>
 	{/if}
 
 	{#if !settled}
@@ -192,7 +195,9 @@
 							? $t('gardener.draft.createTasks', { values: { count: draft.tasks.length } })
 							: draft.kind === 'grocery'
 								? $t('gardener.draft.addToList')
-								: $t('gardener.draft.verify')}
+								: draft.kind === 'recipe'
+									? $t('gardener.draft.openRecipe')
+									: $t('gardener.draft.verify')}
 					disabled={busy}
 					onclick={commit}
 				/>
@@ -210,17 +215,6 @@
 		</p>
 	{/if}
 </GardenerMessage>
-
-{#if draft.kind === 'capture'}
-	<CaptureSheet
-		bind:open={captureOpen}
-		provider={gardenerSetup.provider.id}
-		cost={$t('gardener.draft.captureCost')}
-		rows={draft.rows}
-		image={thumbnail}
-		oncommit={(rows) => void commitCapture(rows)}
-	/>
-{/if}
 
 <style>
 	.draft-line,

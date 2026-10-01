@@ -11,7 +11,7 @@ updated: 2026-09-30
 
 | built | not yet |
 |---|---|
-| the scheduler with `once`, `daily` and `every`; signals with a key that emits once; rules from the manifests; the inbox rows; the alarm; the runtime in both apps; the refresh coordinator; the desktop bell as a plain list with mark-read; OS notifications on desktop behind the capability grant; Sky's alerts and forecast; Hearth's expiring digest and shop-day reminder; the task signals, emitted by the frontend (D-75) | the substrate's own signals from the changes seam, the two task signals apart; the activity feed on signals; grouping, snooze and clearing in the inbox; rule toggles in Settings; quiet hours and digests; weekly and monthly triggers; the inbox and OS notifications on mobile; background execution on mobile; a measurement of the cadence in a hidden window |
+| the scheduler with `once`, `daily` and `every`; signals with a key that emits once; rules from the manifests; the inbox rows; the alarm; the runtime in both apps; the refresh coordinator; the desktop bell as a plain list with mark-read; OS notifications on desktop behind the capability grant; Sky's alerts and forecast; Hearth's expiring digest, its weekly low-stock card and its shop-day reminder; the task signals, emitted by the frontend (D-75) | the substrate's own signals from the changes seam, the two task signals apart; the activity feed on signals; grouping, snooze and clearing in the inbox; rule toggles in Settings; quiet hours and digests; weekly and monthly triggers; the inbox and OS notifications on mobile; background execution on mobile; a measurement of the cadence in a hidden window |
 
 D-73 records the decisions; this page is how they work.
 
@@ -172,9 +172,10 @@ Each active alert is emitted as `weather.alert` with its id as the key, so it is
 | schedule | on fire | rule |
 |---|---|---|
 | `kitchen.morning`, daily at 08:00 | emits `stock.expiring` when something is dated no later than two days on, keyed by the day | `expiring-digest`, in-app |
+| the same schedule, after the expiring check | emits `stock.low` when something is at or under its low-stock threshold (`lowDigest`), keyed by the Monday of the week, so it is said once a week | `low-stock`, in-app |
 | `kitchen.shop-day`, a one-shot at 08:00 on the list's shop day | emits `grocery.shop-day` if today is still that day, keyed by the list and the day | `shop-day-reminder`, OS |
 
-`ensureShopDay()` sets or cancels the one-shot from the list as it is stored: when the shell starts, and after a seed, its undo and a reload. Nothing in the interface sets a shop day yet, so the reminder is reachable only through the sample data.
+`ensureShopDay()` sets or cancels the one-shot from the list as it is stored: when the shell starts, after a seed, its undo and a reload, and when the owner sets or clears the shop day in the Grocery pane. There is no weekly trigger yet, so `stock.low` rides the daily schedule and its key does the spacing: the first morning of a week on which something is low says so, and the later ones are dropped.
 
 **Tasks** (`packages/shared/src/tasks/signals.ts`, with the pure part, `taskSignal`, in `rules.ts`). The data layer emits nothing for a task (D-75): the crate cannot see a routine's or a habit's completion, which lives in `progress`, and cannot evaluate the rules. So the frontend emits, once the write has landed, one signal per owner action:
 

@@ -4,7 +4,7 @@ status: draft
 summary: The sensitivity tiers T0–T3 and what each allows for storage, sync, AI and export; what never leaves the device; what third parties receive; the owner's controls; a one-screen threat model.
 read-this-if: Anything you are designing touches personal data, an external service, or the Gardener.
 depends-on: [decisions]
-updated: 2026-09-29
+updated: 2026-09-30
 ---
 
 ## Principles (Phase 1)
@@ -35,7 +35,7 @@ Tiers attach to resources in `substrate/registry.md`:
 - T3 content, except through the three audited doors in `substrate/data.md`: share-sheet export after biometric auth, the passphrase-encrypted export bundle, and end-to-end encrypted vault sync from Phase 3.
 - Precise coordinates. AI and weather providers receive city-level coordinates (D-60) unless a precise-location grant exists for that subject.
 - The workspace database itself.
-- A Capture photo, until the owner sees which provider will receive it and confirms in the verification sheet (D-29).
+- A source brought to Capture or to a recipe's import (a photo, a receipt, an order's PDF, an email, pasted text), until the sheet has named the provider that will receive it and the owner has pressed Read (D-86).
 
 ## What the Gardener may never see
 
@@ -49,9 +49,11 @@ Tiers attach to resources in `substrate/registry.md`:
 
 | party | receives | never receives |
 |---|---|---|
-| AI provider (your key) | the context pack after tier exclusion and scrub; a Capture image on confirmation | T3, undeclared resources, precise location, the audit log |
+| AI provider (your key) | the context pack after tier exclusion and scrub; the files the owner attached to a message (D-82); Capture's sources after its Read (D-86) | T3, undeclared resources, precise location, the audit log |
 | sync backend | opaque encrypted blobs, a manifest of sizes and hashes, an account id | plaintext of any tier, mirrors |
 | an integration | the OAuth scopes granted and the request parameters the connector needs (rounded coordinates for weather, a calendar id for Google) | anything from another domain |
+| a web page the owner gave the address of | one request for that page, made by the crate, with no cookie, credential or referrer (D-88); counted in the egress ledger under `web-page` | anything from the workspace |
+| a picture the owner linked for a stock item | one request for that picture, made by the crate under the same checks (D-91); a grocer's product page is never requested, only the picture its address names; counted under `web-image` | anything from the workspace |
 | a plugin (later) | exactly what its manifest declares under the same grants | anything undeclared |
 | crash reporting | nothing; logs stay local and are exported by hand (OQ-10) | |
 

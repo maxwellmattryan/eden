@@ -215,6 +215,10 @@
 		padding: var(--ring-room);
 		margin: calc(-1 * var(--ring-room));
 	}
+	/* A full-height sheet gives its body the height the header and the footer leave, so the footer sits at the foot. */
+	.ed-sheet-full .ed-sheet-body {
+		flex: 1;
+	}
 
 	/* centred: the desktop default */
 	.ed-sheet-center {

@@ -192,19 +192,41 @@ export type DraftCard =
 	| { kind: 'code'; language: string; code: string; title?: string }
 	| {
 			kind: 'capture'
-			/** The recognised rows, as the capture sheet takes them (D-13). */
+			/** What the files were read as: a shop just brought home, or the shelves as they stand (D-89). */
+			mode?: 'haul' | 'stock'
+			/** The rows read from the owner's files, as Hearth's capture sheet takes them (D-13, D-86). */
 			rows: {
 				id: string
 				name: string
-				qty: number | string
+				qty: string
 				unit?: string
 				location: 'fridge' | 'freezer' | 'pantry' | 'counter'
+				/** An ISO date. */
 				expiry?: string
 				estimated?: boolean
-				merge?: string
+				category?: string
+				tip?: string
+				/** The stock item the row would be added to, as the sheet names it, and whether it will be. */
+				merge?: { id: string; name: string; on: boolean }
+				/** The file the item is seen in, counted from 1, and where in it, as fractions of the photo (D-90). */
+				seen?: { file: number; box: { left: number; top: number; right: number; bottom: number } }
 			}[]
-			/** Where the photo is on this device, for the attachment a commit makes; never the image itself. */
-			path?: string
+			/** The files the rows were read from, by their Attachment ids: never a path, never the bytes. */
+			sources?: { id: string; name: string; mime: string }[]
+	  }
+	| {
+			kind: 'recipe'
+			/** A recipe to check before it is saved: it opens in Hearth's Recipes view as a draft. */
+			recipe: {
+				name: string
+				serves: number
+				minutes: number
+				tags: string[]
+				ingredients: { name: string; qty: string; unit?: string; note?: string }[]
+				steps: string[]
+				sourceUrl?: string
+				tip?: string
+			}
 	  }
 
 /**

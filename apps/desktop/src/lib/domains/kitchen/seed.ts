@@ -1,18 +1,14 @@
 // The sample dataset (design/sample-data.md, "Hearth") mapped into the store's shapes. Dates shift with the real
 // calendar so the seeded stock reads as the mockup does: spinach expires tomorrow, the haul came in yesterday.
-import { grocery, haul, recipes, stock } from '@eden/ui-kit/sample-data'
+import { grocery, haul, recipes, stock, type SampleRecipe } from '@eden/ui-kit/sample-data'
 import { shiftSampleDate, shiftSampleDateTime } from '@eden/shared/dates'
 import type { GroceryItem, GroceryOrigin, KitchenData, StockItem } from './store.svelte.js'
 
-const CATEGORY: Partial<Record<string, string>> = {
-	'st-01': 'Meat',
-	'st-04': 'Produce',
-	'st-16': 'Supplements and mixes',
-}
+/** The tips the sample stock carries (D-87): the dataset has the items, the app's sample has what is worth knowing of three. */
 const TIP: Partial<Record<string, string>> = {
 	'st-01': 'Keep on the lowest shelf, and cook or freeze within two days of the date.',
 	'st-04': 'Wrap in a dry towel inside the bag; it wilts fastest in the door.',
-	'st-16': 'Anywhere dry. Nine packets left: the list already has a box.',
+	'st-17': 'Ripen on the counter, then move to the fridge to hold them a few more days.',
 }
 const STORE = 'H-E-B'
 
@@ -37,19 +33,21 @@ export function seedData(): KitchenData {
 			location: item.location,
 			expiry: item.expiry ? shiftSampleDate(item.expiry) : undefined,
 			estimated: item.estimated,
-			lowStock: item.lowStock,
 			threshold: item.lowStock ? 10 : undefined,
-			category: CATEGORY[item.id],
+			category: item.category,
 			tip: TIP[item.id],
 			source: captured.has(item.name) ? 'capture' : 'sample',
 			sourcedAt: capturedAt,
 		})),
-		recipes: recipes.map((recipe) => ({
+		recipes: recipes.map((recipe: SampleRecipe) => ({
 			id: recipe.id,
 			name: recipe.name,
 			serves: recipe.serves,
 			minutes: recipe.minutes,
 			tags: [...recipe.tags],
+			ingredients: recipe.ingredients.map((line) => ({ ...line })),
+			steps: [...recipe.steps],
+			...(recipe.tip ? { tip: recipe.tip } : {}),
 		})),
 		grocery: {
 			name: grocery.name,

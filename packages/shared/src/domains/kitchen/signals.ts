@@ -1,5 +1,6 @@
 // Hearth on the scheduler (product/domains/kitchen.md, "Signals and notifications"; docs/engineering/signals.md). Each
-// morning it reads the stock and, when something is expiring, emits `stock.expiring`, once a day. On the morning of
+// morning it reads the stock and, when something is expiring, emits `stock.expiring`, once a day, and when something
+// is at or under its low-stock threshold, emits `stock.low`, once a week. On the morning of
 // the grocery list's shop day it emits `grocery.shop-day`, once for the list and the day. The rules in the manifest
 // turn the first into an inbox card and the second into a card and an OS notification.
 //
@@ -11,7 +12,8 @@ import { toUri } from '../../data/uri.js'
 import { todayIso } from '../../dates/index.js'
 import { cancelSchedule, setSchedule } from '../../scheduler/client.js'
 import { emit, onSchedule } from '../../signals/runtime.js'
-import { expiringDigest, shopDayMorning } from './digest.js'
+import { weekStartOf } from '../../dates/days.js'
+import { expiringDigest, lowDigest, shopDayMorning } from './digest.js'
 import { KITCHEN, type GroceryItemPayload, type GroceryListPayload, type StockPayload } from './types.js'
 
 /** The repeating schedule the manifest declares. */
@@ -39,6 +41,13 @@ async function emitExpiring(today = todayIso()): Promise<void> {
 	if (digest) await emit('stock.expiring', { ...digest }, { dedupeKey: today })
 }
 
+/** What is low is said once a week: the morning's check emits it under the week's key, and a second one is dropped. */
+async function emitLow(today = todayIso()): Promise<void> {
+	const stock = await queryEntities<StockPayload>({ type: KITCHEN.stock })
+	const digest = lowDigest(stock.map((row) => ({ ...row.payload, id: row.id })))
+	if (digest) await emit('stock.low', { ...digest }, { dedupeKey: weekStartOf(today, 'monday') })
+}
+
 /** A reminder that comes due on another day than the list's shop day (the app was closed, the day was moved) says nothing. */
 async function emitShopDay(today = todayIso()): Promise<void> {
 	const [[list], items] = await Promise.all([
@@ -52,7 +61,13 @@ async function emitShopDay(today = todayIso()): Promise<void> {
 
 /** Binds Hearth to its schedules; the shell calls it once when it starts, and the answer unbinds. */
 export function bindKitchenSignals(): () => void {
-	const stops = [onSchedule(MORNING_SCHEDULE, () => emitExpiring()), onSchedule(SHOP_DAY_SCHEDULE, () => emitShopDay())]
+	const stops = [
+		onSchedule(MORNING_SCHEDULE, async () => {
+			await emitExpiring()
+			await emitLow()
+		}),
+		onSchedule(SHOP_DAY_SCHEDULE, () => emitShopDay()),
+	]
 	void ensureShopDay().catch(() => null)
 	return () => stops.forEach((stop) => stop())
 }

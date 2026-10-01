@@ -64,6 +64,8 @@ describe('the declared tools on the seed', () => {
 			'kitchen.capture-haul': ['light', ['vision']],
 			'kitchen.draft-grocery-list': ['standard', []],
 			'kitchen.add-stock': [null, []],
+			'kitchen.import-recipe': ['light', ['vision']],
+			'kitchen.save-recipe': [null, []],
 			'kitchen.plan-week': ['deep', ['tools']],
 			'toolbench.brainstorm': ['deep', []],
 			'toolbench.critique': ['deep', []],
