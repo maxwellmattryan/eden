@@ -177,6 +177,41 @@ export async function squarePicture(photo: Blob): Promise<string | undefined> {
 	}
 }
 
+/** A recipe's picture is shown across its page: kept at no more than this on its long edge (D-93). */
+const RECIPE_EDGE = 1600
+
+/** A recipe's picture as it is kept: the whole of it, sized for the page, and the small square its row shows. */
+export interface RecipePicture {
+	image: Blob
+	thumbnail: string
+}
+
+/** A picture for a recipe, from a photo the owner chose or one its page showed. HEIC is taken like any other. */
+export async function recipePicture(photo: Blob): Promise<RecipePicture | undefined> {
+	let bitmap: ImageBitmap | undefined
+	try {
+		bitmap = await createImageBitmap(photo)
+		const scale = Math.min(1, RECIPE_EDGE / Math.max(bitmap.width, bitmap.height))
+		const canvas = new OffscreenCanvas(
+			Math.max(1, Math.round(bitmap.width * scale)),
+			Math.max(1, Math.round(bitmap.height * scale))
+		)
+		const context = canvas.getContext('2d')
+		if (!context) return undefined
+		context.fillStyle = '#fff'
+		context.fillRect(0, 0, canvas.width, canvas.height)
+		context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+		const image = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 })
+		const side = Math.min(bitmap.width, bitmap.height)
+		const thumbnail = await pictureOf(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side)
+		return { image, thumbnail }
+	} catch {
+		return undefined
+	} finally {
+		bitmap?.close()
+	}
+}
+
 const asText = (text: string) => new Blob([text.slice(0, TEXT_MAX_BYTES)], { type: 'text/plain' })
 
 /** A file as it will be sent, or why it will not be. */

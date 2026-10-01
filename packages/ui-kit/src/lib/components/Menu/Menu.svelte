@@ -17,6 +17,8 @@
 		shortcut?: string
 		/** Shown at half opacity; arrows and typeahead skip it. */
 		disabled?: boolean
+		/** A submenu: picking the item swaps the menu's rows for these, under a back row; the item itself is never reported. */
+		children?: MenuItem[]
 		/** Called with the item when it is picked, before the menu's own `onselect`. */
 		onselect?: (item: MenuItem) => void
 	}
@@ -45,6 +47,7 @@
 	import { useStrings } from '../../i18n/context.js'
 	import { platformOf } from '../../internal/platform.js'
 	import { roving } from '../../internal/roving.js'
+	import Self from './Menu.svelte'
 	import Popover from '../Popover/Popover.svelte'
 	import Sheet from '../Sheet/Sheet.svelte'
 
@@ -64,6 +67,10 @@
 		/** Called with the picked item, after the item's own onselect: as a popover menu starts to close, once a sheet has closed. */
 		onselect?: (item: MenuItem) => void
 		class?: string
+		/** `right` is a submenu: a flyout beside its parent item, closed by ArrowLeft. Set by a parent menu, not by apps. */
+		side?: 'bottom' | 'right'
+		/** The pointer entered or left the panel; a parent menu keeps a submenu open while it is over it. */
+		onhover?: (inside: boolean) => void
 	}
 	let {
 		items,
@@ -74,11 +81,17 @@
 		presentation = 'auto',
 		onselect,
 		class: className = '',
+		side = 'bottom',
+		onhover,
 	}: Props = $props()
 
 	const s = useStrings()
 	const name = $derived(label ?? s.actions)
-	const ordered = $derived([...items.filter((i) => !i.destructive), ...items.filter((i) => i.destructive)])
+	// A submenu opens as a flyout on hover, click or ArrowRight on a desktop menu, and as the rows of a drill-in on a
+	// sheet (below): `sub` is the drill-in's, `flyItem` and `flyOpen` the flyout's.
+	let sub = $state<MenuItem>()
+	const shown = $derived(sub?.children ?? items)
+	const ordered = $derived([...shown.filter((i) => !i.destructive), ...shown.filter((i) => i.destructive)])
 	const firstDestructive = $derived(ordered.findIndex((i) => i.destructive))
 
 	// The menu has no root of its own (a popover or a sheet), so a hidden probe reads the platform where it renders.
@@ -88,14 +101,54 @@
 		presentation === 'auto' ? (platformOf(probe) === 'mobile' ? 'sheet' : 'menu') : presentation
 	)
 
+	let flyItem = $state<MenuItem>()
+	let flyAnchor = $state<HTMLElement>()
+	let flyOpen = $state(false)
+	let flyTimer: ReturnType<typeof setTimeout> | undefined
+	const FLY_LEAVE_MS = 150
+	function flyCancel() {
+		clearTimeout(flyTimer)
+	}
+	function flyShow(item: MenuItem, button: HTMLElement) {
+		flyCancel()
+		flyItem = item
+		flyAnchor = button
+		flyOpen = true
+	}
+	/** Closes after a beat, so the pointer can cross the gap to the submenu. */
+	function flyHide() {
+		flyCancel()
+		flyTimer = setTimeout(() => (flyOpen = false), FLY_LEAVE_MS)
+	}
+	function onrowenter(item: MenuItem, e: PointerEvent) {
+		if (mode === 'sheet') return
+		if (item.children?.length && !item.disabled) flyShow(item, e.currentTarget as HTMLElement)
+		else if (flyOpen) flyHide()
+	}
+
 	// the pick made on a sheet, held until the sheet has closed
 	let picked: MenuItem | undefined
+
+	let rowEls: Record<string, HTMLElement> = {}
+	const anchorOf = (item: MenuItem) => rowEls[item.id ?? item.label]
+	function rowref(item: MenuItem) {
+		return (el: HTMLElement) => {
+			const key = item.id ?? item.label
+			rowEls[key] = el
+			return () => delete rowEls[key]
+		}
+	}
 
 	function report(item: MenuItem) {
 		item.onselect?.(item)
 		onselect?.(item)
 	}
 	function pick(item: MenuItem) {
+		if (item.children?.length) {
+			if (mode === 'sheet') sub = item
+			else flyShow(item, anchorOf(item))
+			return
+		}
 		if (mode === 'sheet') picked = item
 		else report(item)
 		open = false
@@ -108,8 +161,21 @@
 	// Tab leaves a popover menu: it closes, focus lands on the anchor, and the browser moves on from there.
 	function onkeydown(e: KeyboardEvent) {
 		if (e.key === 'Tab') open = false
+		else if (side === 'right' && e.key === 'ArrowLeft') open = false
+		else if (e.key === 'ArrowRight' && e.target instanceof HTMLElement) {
+			const item = ordered.find((i) => anchorOf(i) === e.target)
+			if (item?.children?.length && !item.disabled) flyShow(item, e.target)
+		}
 	}
 
+	$effect(() => {
+		// effect: imperative DOM. A closed menu starts at its top level the next time.
+		if (!open) {
+			sub = undefined
+			flyCancel()
+			flyOpen = false
+		}
+	})
 	$effect(() => {
 		// effect: imperative DOM. The list takes focus once the panel shows, a microtask after this flush: nothing looks
 		// chosen until the owner presses an arrow, which lands on the first item (ux-patterns.md, "Keyboard and focus").
@@ -122,6 +188,19 @@
 </script>
 
 {#snippet rows()}
+	{#if sub}
+		<button
+			class="ed-menu-item ed-menu-back"
+			type="button"
+			role="menuitem"
+			tabindex="-1"
+			onclick={() => (sub = undefined)}
+		>
+			<Icon name="chevron-left" size={mode === 'sheet' ? 'md' : 'sm'} />
+			<span class="ed-menu-label">{sub.label}</span>
+		</button>
+		<hr class="ed-menu-sep" />
+	{/if}
 	{#each ordered as item, i (item.id ?? item.label)}
 		{#if i === firstDestructive && i > 0}<hr class="ed-menu-sep" />{/if}
 		<button
@@ -132,10 +211,15 @@
 			disabled={item.disabled}
 			aria-disabled={item.disabled ? 'true' : undefined}
 			aria-current={item.checked ? 'true' : undefined}
+			aria-haspopup={item.children?.length ? 'menu' : undefined}
 			onclick={() => pick(item)}
+			onpointerenter={(e) => onrowenter(item, e)}
+			onpointerleave={() => flyOpen && flyItem === item && flyHide()}
+			{@attach rowref(item)}
 		>
 			{#if item.icon}<Icon name={item.icon} size={mode === 'sheet' ? 'md' : 'sm'} />{/if}
 			<span class="ed-menu-label">{item.label}</span>
+			{#if item.children?.length}<Icon name="chevron-right" size={mode === 'sheet' ? 'md' : 'sm'} />{/if}
 			{#if item.checked}<Icon name="check" size={mode === 'sheet' ? 'md' : 'sm'} />{/if}
 			{#if item.shortcut}<kbd class="ed-menu-key" data-tertiary>{item.shortcut}</kbd>{/if}
 		</button>
@@ -158,11 +242,37 @@
 		</div>
 	</Sheet>
 {:else}
-	<Popover bind:open {anchor} {align} role="menu" label={name} {onkeydown}>
+	<Popover
+		bind:open
+		{anchor}
+		{align}
+		side={side === 'right' ? 'right' : 'bottom'}
+		gap={side === 'right' ? 8 : 6}
+		inset={side === 'right' ? 4 : 0}
+		role="menu"
+		label={name}
+		{onkeydown}
+		onpointerenter={() => onhover?.(true)}
+		onpointerleave={() => onhover?.(false)}
+	>
 		<div class={['ed-menu', className]} bind:this={list} tabindex="-1" {@attach roving(() => ROVING)}>
 			{@render rows()}
 		</div>
 	</Popover>
+	{#if flyItem?.children}
+		<Self
+			bind:open={flyOpen}
+			anchor={flyAnchor}
+			side="right"
+			label={flyItem.label}
+			items={flyItem.children}
+			onhover={(inside) => (inside ? flyCancel() : flyHide())}
+			onselect={(item) => {
+				onselect?.(item)
+				open = false
+			}}
+		/>
+	{/if}
 {/if}
 
 <style>
@@ -229,6 +339,9 @@
 	.ed-menu-danger,
 	.ed-menu-danger :global(.ed-icon) {
 		color: var(--danger);
+	}
+	.ed-menu-back {
+		color: var(--text-secondary);
 	}
 	.ed-menu-label {
 		flex: 1;

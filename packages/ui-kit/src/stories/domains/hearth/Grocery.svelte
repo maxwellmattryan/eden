@@ -1,16 +1,18 @@
 <script lang="ts">
 	// Hearth's Grocery view (product/domains/kitchen.md, "Surfaces"): the same header as Stock with the Grocery tab
-	// selected and Add as the primary action, a quick-add line, then the active list grouped by store with its shop-day
-	// Event beside the store's name. Every row carries an origin badge (manual, recipe, low stock); a checked row is
-	// struck through and stays until Clear checked. On desktop the pane on the right is the list itself (its name, the
-	// store its items are bought at unless they say otherwise, its shop day, which sets the morning's reminder) or,
-	// when an item is being edited, that item's fields. On mobile there is no pane: a swipe to the right checks a row
-	// off and a swipe to the left deletes it.
+	// selected and Add as the primary action, a quick-add line that files an item where it was last bought, then one
+	// list per store (D-95), all of them on the page at once. A store's list carries its name, its shop day when it has
+	// one, the count of what is checked, Complete and Edit store as quiet icon buttons, its rows and an add line of its
+	// own. What names no store yet sits in "Any store" beneath them. Every row carries an origin badge (manual, recipe,
+	// low stock); a checked row is struck through and stays until its list is completed. On desktop the pane on the
+	// right is the stores, one store's fields (its name, what it sells, its shop day) or the item being edited. On
+	// mobile there is no pane: a swipe to the right checks a row off and a swipe to the left deletes it.
 	import {
 		Button,
 		Chip,
 		EmptyState,
 		Field,
+		IconButton,
 		List,
 		PageHeader,
 		QuickAdd,
@@ -21,69 +23,109 @@
 	} from '$lib/index.js'
 	import AppFrame from '../_frame/AppFrame.svelte'
 	import SwipeList from '../_frame/SwipeList.svelte'
-	import { grocery, sidebar } from '../../sample-data.js'
+	import { grocery, ranOut, sidebar, type SampleGroceryItem, type SampleGroceryStore } from '../../sample-data.js'
 
-	type Item = (typeof grocery.items)[number]
+	type Item = SampleGroceryItem
+	type Store = SampleGroceryStore
 
 	type Props = {
-		/** Every row checked off: the list is done for the trip. */
+		/** Every row checked off: each list is done for its trip. */
 		allChecked?: boolean
-		/** No items on the list. */
+		/** No items on any list. */
 		empty?: boolean
-		/** The item whose fields are open in the pane, by id; without it the pane is the list's own. */
+		/** No list has a shop day: the chip is gone from every store. */
+		noShopDay?: boolean
+		/** Buy it again (D-92): what ran out, beneath the lists, each a row that opens onto a list. */
+		buyAgain?: boolean
+		onagain?: (row: ListRowData) => void
+		/** The item whose fields are open in the pane, by id. */
 		editing?: string
-		onadd?: (text: string) => void
-		onclear?: () => void
+		/** The store whose fields are open in the pane, by id; with neither, the pane is the stores. */
+		store?: string
+		/** A line added: from the page's own field with no store, from a list's field with that store's id. */
+		onadd?: (text: string, store?: string) => void
+		/** Complete a store's list: what is checked leaves it. Without an id, the unfiled list. */
+		oncomplete?: (store?: string) => void
 		oncheck?: (row: ListRowData) => void
 		ondelete?: (row: ListRowData) => void
 		onopen?: (row: ListRowData) => void
 		onaction?: (item: MenuItem, row: ListRowData) => void
 		/** Save in the pane's item form, with the item's id. */
 		onsave?: (id: string) => void
-		/** Clear the shop day, in the list's pane. */
-		onclearshopday?: () => void
+		/** A store named in the stores pane. */
+		onaddstore?: (name: string) => void
+		/** Save in the pane's store form, with the store's id. */
+		onsavestore?: (id: string) => void
+		ondeletestore?: (id: string) => void
 		onnavigate?: (id: string) => void
 	}
 	let {
 		allChecked = false,
 		empty = false,
+		noShopDay = false,
+		buyAgain = false,
+		onagain,
 		editing,
+		store,
 		onadd,
-		onclear,
+		oncomplete,
 		oncheck,
 		ondelete,
 		onopen,
 		onaction,
 		onsave,
-		onclearshopday,
+		onaddstore,
+		onsavestore,
+		ondeletestore,
 		onnavigate,
 	}: Props = $props()
 
 	const uid = $props.id()
 	const hearth = sidebar.items.find((entry) => entry.id === 'kitchen')!
 	const TABS = ['Stock', 'Recipes', 'Grocery']
-	/** Where the list is bought; an item that names no store of its own sits under it. */
-	const STORE = 'H-E-B'
+	const ANY = 'Any store'
+	const SELLS: Store['sells'] = ['grocery', 'home goods']
+	const title = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
 	const isDone = (item: Item) => allChecked || item.done
+	const storeOf = (item?: Item) => grocery.lists.find((list) => list.id === item?.listId)?.storeId ?? ''
+	const moveTo = (item: Item): MenuItem[] =>
+		[...grocery.stores.map((entry) => ({ id: entry.id, label: entry.name })), { id: '', label: ANY }]
+			.filter((entry) => entry.id !== storeOf(item))
+			.map((entry) => ({ id: `move:${entry.id}`, label: entry.label }))
 	const actionsFor = (item: Item): MenuItem[] => [
 		{ id: 'check', label: isDone(item) ? 'Uncheck' : 'Check off', icon: 'check' },
 		{ id: 'edit', label: 'Edit', icon: 'pencil' },
+		{ id: 'move', label: 'Move to', icon: 'arrow-right', children: moveTo(item) },
 		{ id: 'delete', label: 'Delete', icon: 'trash', destructive: true },
 	]
+	const rowOf = (item: Item): ListRowData => ({
+		id: item.id,
+		primary: item.name,
+		chips: item.qty ? [{ label: item.qty, mono: true }] : [],
+		badges: [{ kind: 'origin' as const, label: item.origin }],
+		done: isDone(item),
+		checkable: true,
+		actions: actionsFor(item),
+	})
 
-	const rows = $derived<ListRowData[]>(
-		empty
-			? []
-			: grocery.items.map((item) => ({
-					id: item.id,
-					primary: item.name,
-					chips: item.qty ? [{ label: item.qty, mono: true }] : [],
-					badges: [{ kind: 'origin' as const, label: item.origin }],
-					done: isDone(item),
-					actions: actionsFor(item),
-				}))
+	// One block per store, in the stores' order, then the unfiled list while it holds anything.
+	const blocks = $derived(
+		[...grocery.stores, undefined]
+			.map((entry) => {
+				const list = grocery.lists.find((candidate) => candidate.storeId === entry?.id)
+				const rows = empty ? [] : grocery.items.filter((item) => item.listId === list?.id).map(rowOf)
+				return {
+					id: entry?.id ?? 'any',
+					storeId: entry?.id,
+					name: entry?.name ?? ANY,
+					shopDay: noShopDay ? undefined : list?.shopDay,
+					rows,
+					checked: rows.filter((row) => row.done).length,
+				}
+			})
+			.filter((block) => block.storeId || block.rows.length)
 	)
-	const checked = $derived(rows.filter((row) => row.done).length)
+	const total = $derived(blocks.reduce((sum, block) => sum + block.rows.length, 0))
 	const headerActions = $derived([
 		{
 			label: 'Add',
@@ -91,14 +133,14 @@
 			variant: empty ? ('secondary' as const) : undefined,
 			onclick: () => onadd?.(''),
 		},
-		{ label: 'Clear checked', disabled: checked === 0, onclick: onclear },
+		{ label: 'Add a store', onclick: () => onaddstore?.('') },
 	])
 
 	// The pane's item form: the fields of the row being edited. A recipe's name after the origin is the item's note.
 	const formOf = (item?: Item) => ({
 		name: item?.name ?? '',
 		qty: item?.qty ?? '',
-		store: '',
+		store: storeOf(item),
 		note: item?.origin.split(':')[1]?.trim() ?? '',
 	})
 	// svelte-ignore state_referenced_locally
@@ -109,13 +151,48 @@
 		if (item.id === 'edit') {
 			form = formOf(grocery.items.find((entry) => entry.id === row.id))
 			current = row.id
+			shown = undefined
 		}
 		onaction?.(item, row)
 	}
 
-	// The list's own fields; the shop day (`Sat 10-03 10:00`) as its date and time fields hold it.
-	const [, shopDate = '', shopTime = ''] = /(\d{2}-\d{2}) (\d{2}:\d{2})/.exec(grocery.shopDay) ?? []
-	let list = $state({ name: grocery.name, store: STORE, date: shopDate && `2026-${shopDate}`, time: shopTime })
+	// The pane's store form; the shop day (`Sat 10-03 10:00`) as its date and time fields hold it.
+	const TODAY = '2026-10-01'
+	const TOMORROW = '2026-10-02'
+	function storeForm(entry?: Store) {
+		const shopDay = noShopDay ? undefined : grocery.lists.find((list) => list.storeId === entry?.id)?.shopDay
+		const [, date = '', time = ''] = /(\d{2}-\d{2}) (\d{2}:\d{2})/.exec(shopDay ?? '') ?? []
+		return { name: entry?.name ?? '', sells: [...(entry?.sells ?? [])], date: date && `2026-${date}`, time }
+	}
+	// svelte-ignore state_referenced_locally
+	let shown = $state(store)
+	let place = $state(storeForm(grocery.stores.find((entry) => entry.id === store)))
+	const opened = $derived(grocery.stores.find((entry) => entry.id === shown))
+	function openStore(id?: string) {
+		if (!id) return
+		place = storeForm(grocery.stores.find((entry) => entry.id === id))
+		shown = id
+		current = undefined
+	}
+	const storeRows = $derived<ListRowData[]>(
+		grocery.stores.map((entry) => ({
+			id: entry.id,
+			primary: entry.name,
+			chips: entry.sells.map((label) => ({ label: title(label) })),
+			actions: [
+				{ id: 'edit-store', label: 'Edit', icon: 'pencil' as const },
+				{ id: 'delete-store', label: 'Delete', icon: 'trash' as const, destructive: true },
+			],
+		}))
+	)
+	function actStore(item: MenuItem, row: ListRowData) {
+		if (item.id === 'edit-store') openStore(row.id)
+		if (item.id === 'delete-store') ondeletestore?.(row.id)
+	}
+	const againTo: MenuItem[] = [
+		...grocery.stores.map((entry) => ({ id: `again:${entry.id}`, label: entry.name })),
+		{ id: 'again:', label: ANY },
+	]
 </script>
 
 <AppFrame current="kitchen" {onnavigate}>
@@ -124,42 +201,91 @@
 			<PageHeader name={hearth.name} subtitle={hearth.subtitle} icon={domainGlyph('kitchen')} actions={headerActions}>
 				{#snippet filters()}
 					<Segmented items={TABS} selected={2} label="Hearth sections" />
-					<Chip label={grocery.name} tone="accent" icon="list" />
 				{/snippet}
 			</PageHeader>
 
 			<div class={['body', { 'body-wide': platform === 'desktop' }]}>
 				<div class="lists">
-					<QuickAdd placeholder="Add to the list" onadd={(text) => onadd?.(text)} />
-					{#if empty}
+					<QuickAdd placeholder="Add an item" onadd={(text) => onadd?.(text)} />
+					{#if total === 0}
 						<EmptyState
-							title="The list is empty"
-							text="Add an item in one line, or send a recipe's missing ingredients here from Recipes."
+							title="Nothing to buy"
+							text="Add an item in one line, mark what ran out in Stock, or send a recipe's missing ingredients here."
 							action={{ label: 'Add an item', icon: 'plus', onclick: () => onadd?.('') }}
 						/>
-					{:else}
-						<section class="store" aria-labelledby="{uid}-store">
+					{/if}
+					{#each blocks as block (block.id)}
+						<section class="store" aria-labelledby="{uid}-{block.id}">
 							<header class="store-head">
-								<h2 class="store-title" id="{uid}-store">{STORE}</h2>
-								<Chip label={grocery.shopDay} icon="calendar" tone="outline" />
-								<span class="store-count">{checked} of {rows.length} checked</span>
+								<h2 class="store-title" id="{uid}-{block.id}">{block.name}</h2>
+								{#if block.shopDay}
+									<Chip
+										label={block.shopDay}
+										icon="calendar"
+										tone="outline"
+										onclick={platform === 'desktop' ? () => openStore(block.storeId) : undefined}
+									/>
+								{/if}
+								<span class="store-tools">
+									{#if block.rows.length}
+										<span class="store-count">{block.checked} of {block.rows.length} checked</span>
+									{/if}
+									<IconButton
+										icon="check-check"
+										size="xs"
+										label="Complete {block.name}"
+										tooltip="Complete: clear what is checked"
+										disabled={block.checked === 0}
+										onclick={() => oncomplete?.(block.storeId)}
+									/>
+									{#if block.storeId && platform === 'desktop'}
+										<IconButton
+											icon="pencil"
+											size="xs"
+											label="Edit {block.name}"
+											tooltip="Edit store"
+											onclick={() => openStore(block.storeId)}
+										/>
+									{/if}
+								</span>
 							</header>
-							{#if checked === rows.length}
-								<p class="voice">Everything is checked. Clear the list once you are home.</p>
+							{#if block.rows.length && block.checked === block.rows.length}
+								<p class="voice">Everything is checked. Complete the list once you are home.</p>
 							{/if}
-							{#if platform === 'desktop'}
-								<List header={grocery.name} count={rows.length} {rows} selectable {onopen} onaction={act} />
-							{:else}
+							{#if block.rows.length && platform === 'desktop'}
+								<List rows={block.rows} onpick={oncheck} oncheck={(row) => oncheck?.(row)} onaction={act} />
+							{:else if block.rows.length}
 								<div class="card">
 									<SwipeList
-										{rows}
+										rows={block.rows}
 										leading={(row) => ({ label: 'Check off', icon: 'check', onaction: () => oncheck?.(row) })}
 										trailing={(row) => ({ label: 'Delete', icon: 'trash', onaction: () => ondelete?.(row) })}
 										{onopen}
 									/>
 								</div>
 							{/if}
+							{#if block.storeId}
+								<QuickAdd placeholder="Add to {block.name}" onadd={(text) => onadd?.(text, block.storeId)} />
+							{/if}
 						</section>
+					{/each}
+					{#if buyAgain && platform === 'desktop'}
+						<List
+							header="Buy it again"
+							count={ranOut.length}
+							rows={ranOut.map((item) => ({
+								id: item.id,
+								primary: item.name,
+								icon: 'package' as const,
+								tile: true,
+								actions: [
+									{ id: 'again', label: 'Add to', icon: 'plus' as const, children: againTo },
+									{ id: 'delete', label: 'Delete', icon: 'trash' as const, destructive: true },
+								],
+							}))}
+							onpick={onagain}
+							onaction={act}
+						/>
 					{/if}
 				</div>
 
@@ -176,13 +302,26 @@
 						>
 							<Field label="Name" bind:value={form.name} />
 							<Field label="Quantity" bind:value={form.qty} mono />
-							<Field label="Store" helper="Left empty, it is bought at {STORE}." bind:value={form.store} />
-							<div class="chips">
-								<Chip
-									label={STORE}
-									tone={form.store === STORE ? 'accent' : 'outline'}
-									onclick={() => (form.store = STORE)}
-								/>
+							<div class="group" role="group" aria-labelledby="{uid}-where">
+								<span class="group-label" id="{uid}-where">Store</span>
+								<div class="chips">
+									{#each grocery.stores as entry (entry.id)}
+										<Chip
+											label={entry.name}
+											selectable
+											selected={form.store === entry.id}
+											tone={form.store === entry.id ? 'accent' : 'outline'}
+											onselect={() => (form.store = entry.id)}
+										/>
+									{/each}
+									<Chip
+										label={ANY}
+										selectable
+										selected={form.store === ''}
+										tone={form.store === '' ? 'accent' : 'outline'}
+										onselect={() => (form.store = '')}
+									/>
+								</div>
 							</div>
 							<Field label="Note" bind:value={form.note} />
 							<div class="pane-actions">
@@ -191,35 +330,65 @@
 							</div>
 						</form>
 					</aside>
-				{:else if platform === 'desktop'}
+				{:else if platform === 'desktop' && opened}
 					<aside class="pane" aria-labelledby="{uid}-pane">
-						<h2 class="pane-title" id="{uid}-pane">The list</h2>
-						<div class="form">
-							<Field label="Name" placeholder="This week" bind:value={list.name} />
-							<Field
-								label="Store"
-								helper="Where the list is bought, unless an item names another store."
-								bind:value={list.store}
-							/>
-							<div class="pair">
-								<Field label="Shop day" type="date" bind:value={list.date} />
-								<Field label="Time" type="time" bind:value={list.time} disabled={!list.date} />
+						<h2 class="pane-title" id="{uid}-pane">Store</h2>
+						<form
+							class="form"
+							onsubmit={(event) => {
+								event.preventDefault()
+								onsavestore?.(opened.id)
+								shown = undefined
+							}}
+						>
+							<Field label="Name" bind:value={place.name} />
+							<div class="group" role="group" aria-labelledby="{uid}-sells">
+								<span class="group-label" id="{uid}-sells">Sells</span>
+								<div class="chips">
+									{#each SELLS as kind (kind)}
+										<Chip
+											label={title(kind)}
+											selectable
+											selected={place.sells.includes(kind)}
+											tone={place.sells.includes(kind) ? 'accent' : 'outline'}
+											onselect={(on) =>
+												(place.sells = on ? [...place.sells, kind] : place.sells.filter((entry) => entry !== kind))}
+										/>
+									{/each}
+								</div>
 							</div>
-							<p class="help">A reminder arrives on the morning of the shop day.</p>
-							{#if list.date}
-								<div class="pane-actions">
-									<Button
-										label="Clear the shop day"
-										variant="quiet"
+							<div class="pair">
+								<Field label="Shop day" type="date" bind:value={place.date} />
+								<Field label="Time" type="time" bind:value={place.time} disabled={!place.date} />
+							</div>
+							<div class="chips">
+								<Chip label="Today" tone="outline" onclick={() => (place.date = TODAY)} />
+								<Chip label="Tomorrow" tone="outline" onclick={() => (place.date = TOMORROW)} />
+								{#if place.date}
+									<Chip
+										label="No shop day"
+										tone="outline"
 										onclick={() => {
-											list.date = ''
-											list.time = ''
-											onclearshopday?.()
+											place.date = ''
+											place.time = ''
 										}}
 									/>
-								</div>
-							{/if}
-						</div>
+								{/if}
+							</div>
+							<p class="help">Optional. With a shop day set, a reminder arrives that morning.</p>
+							<div class="pane-actions">
+								<Button label="Save" variant="primary" type="submit" disabled={!place.name.trim()} />
+								<Button label="Cancel" variant="quiet" onclick={() => (shown = undefined)} />
+								<Button label="Delete store" variant="quiet" icon="trash" onclick={() => ondeletestore?.(opened.id)} />
+							</div>
+						</form>
+					</aside>
+				{:else if platform === 'desktop'}
+					<aside class="pane" aria-labelledby="{uid}-pane">
+						<h2 class="pane-title" id="{uid}-pane">Stores</h2>
+						<List rows={storeRows} onopen={(row) => openStore(row.id)} onaction={actStore} />
+						<QuickAdd placeholder="Add a store" parse={() => []} onadd={(text) => onaddstore?.(text)} />
+						<p class="help">Each store keeps a list of its own. A new item goes where it was last bought.</p>
 					</aside>
 				{/if}
 			</div>
@@ -249,7 +418,7 @@
 		gap: var(--space-4);
 		min-width: 0;
 	}
-	/* One group per store: its name, the shop-day Event beside it, and the count of what is checked */
+	/* One list per store: its name, its shop day when it has one, the count of what is checked and its two actions */
 	.store {
 		display: flex;
 		flex-direction: column;
@@ -267,8 +436,13 @@
 		letter-spacing: var(--ed-t-title-lg-tracking);
 		font-variation-settings: var(--ed-t-title-lg-opsz);
 	}
-	.store-count {
+	.store-tools {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
 		margin-left: auto;
+	}
+	.store-count {
 		font: var(--ed-t-data-sm);
 		letter-spacing: var(--ed-t-data-sm-tracking);
 		font-variant-numeric: tabular-nums;
@@ -292,7 +466,7 @@
 		overflow: hidden;
 	}
 
-	/* The pane: the list's own fields, or the item being edited */
+	/* The pane: the stores, one store's fields, or the item being edited */
 	.pane {
 		display: flex;
 		flex-direction: column;
@@ -326,6 +500,16 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: var(--space-2);
+	}
+	.group {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+	}
+	.group-label {
+		font: var(--ed-t-label);
+		letter-spacing: var(--ed-t-label-tracking);
+		color: var(--text-primary);
 	}
 	.help {
 		margin: 0;

@@ -113,7 +113,7 @@
 		await waitFor(() => expect(tip).toBeVisible())
 		await userEvent.dblClick(about!)
 		await expect(args.onopen).not.toHaveBeenCalled()
-		await userEvent.dblClick(canvas.getAllByText(spinach.name)[0]!)
+		await userEvent.click(canvas.getAllByText(spinach.name)[0]!)
 		await expect(args.onopen).toHaveBeenCalledTimes(1)
 		// in select mode a press on the glyph is not a press on the row
 		await userEvent.click(selecting!)

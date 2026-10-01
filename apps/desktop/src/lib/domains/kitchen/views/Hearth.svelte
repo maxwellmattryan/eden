@@ -13,8 +13,10 @@
 		PageHeader,
 		Segmented,
 		domainGlyph,
+		type IconName,
 		type MenuItem,
 		type PageHeaderAction,
+		type SegmentedItem,
 	} from '@eden/ui-kit'
 	import { t } from '@eden/shared/i18n'
 	import { undoToast } from '$lib/shell/undo'
@@ -34,7 +36,10 @@
 		const requested = page.params.tab ?? ''
 		return (KITCHEN_TABS as readonly string[]).includes(requested) ? (requested as KitchenTab) : 'stock'
 	})
-	const tabItems = $derived(KITCHEN_TABS.map((id) => $t(`domains.kitchen.tabs.${id}`)))
+	const TAB_ICONS: Record<KitchenTab, IconName> = { stock: 'refrigerator', recipes: 'book-open', grocery: 'list' }
+	const tabItems = $derived<SegmentedItem[]>(
+		KITCHEN_TABS.map((id) => ({ label: $t(`domains.kitchen.tabs.${id}`), icon: TAB_ICONS[id] }))
+	)
 	function selectTab(index: number) {
 		void goto(resolve('/kitchen/[[tab]]', { tab: KITCHEN_TABS[index] }), { replaceState: true, noScroll: true })
 	}

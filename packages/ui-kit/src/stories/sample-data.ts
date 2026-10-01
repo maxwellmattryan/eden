@@ -137,6 +137,28 @@ export const stock: StockItem[] = [
 	},
 ]
 
+/** What ran out lately (D-92): kept at nothing, each with the day it ran out, to be bought again. */
+export const ranOut: (StockItem & { outOn: string })[] = [
+	{
+		id: 'st-20',
+		name: 'Whole milk',
+		qty: '0',
+		unit: 'l',
+		location: 'fridge',
+		category: 'dairy-and-eggs',
+		outOn: '09-29',
+	},
+	{
+		id: 'st-21',
+		name: 'Rolled oats',
+		qty: '0',
+		unit: 'g',
+		location: 'pantry',
+		category: 'grains-and-pasta',
+		outOn: '09-27',
+	},
+]
+
 export interface HaulRow {
 	id: string
 	name: string
@@ -386,14 +408,46 @@ export const recipeDraft: Omit<SampleRecipe, 'id' | 'inStock'> & { sourceUrl: st
 	sourceUrl: 'https://example.com/recipes/lemon-yogurt-chicken-thighs',
 }
 
-export const grocery = {
-	name: 'H-E-B Saturday',
-	shopDay: 'Sat 10-03 10:00',
+/** A store Hearth shops at (D-95): its name and what it sells. */
+export interface SampleGroceryStore {
+	id: string
+	name: string
+	sells: ('grocery' | 'home goods')[]
+}
+/** One list per store; the list with no store holds what is not filed yet. The shop day is optional. */
+export interface SampleGroceryList {
+	id: string
+	storeId?: string
+	shopDay?: string
+}
+export interface SampleGroceryItem {
+	id: string
+	listId: string
+	name: string
+	qty: string
+	origin: string
+	done: boolean
+}
+
+/** The one shop day in the sample: H-E-B on Saturday morning. */
+export const groceryShopDay = 'Sat 10-03 10:00'
+
+export const grocery: { stores: SampleGroceryStore[]; lists: SampleGroceryList[]; items: SampleGroceryItem[] } = {
+	stores: [
+		{ id: 'gs-01', name: 'H-E-B', sells: ['grocery'] },
+		{ id: 'gs-02', name: 'Target', sells: ['grocery', 'home goods'] },
+	],
+	lists: [
+		{ id: 'gl-01', storeId: 'gs-01', shopDay: groceryShopDay },
+		{ id: 'gl-02', storeId: 'gs-02' },
+		{ id: 'gl-00' },
+	],
 	items: [
-		{ id: 'g-01', name: 'LMNT citrus', qty: '1 box', origin: 'low stock', done: false },
-		{ id: 'g-02', name: 'Limes', qty: '4', origin: 'recipe', done: false },
-		{ id: 'g-03', name: 'Ginger', qty: '1', origin: 'recipe: soba', done: true },
-		{ id: 'g-04', name: 'Paper towels', qty: '', origin: 'manual', done: false },
+		{ id: 'g-01', listId: 'gl-01', name: 'LMNT citrus', qty: '1 box', origin: 'low stock', done: false },
+		{ id: 'g-02', listId: 'gl-01', name: 'Limes', qty: '4', origin: 'recipe', done: false },
+		{ id: 'g-03', listId: 'gl-01', name: 'Ginger', qty: '1', origin: 'recipe: soba', done: true },
+		{ id: 'g-04', listId: 'gl-02', name: 'Paper towels', qty: '', origin: 'manual', done: false },
+		{ id: 'g-05', listId: 'gl-00', name: 'Coffee filters', qty: '', origin: 'manual', done: false },
 	],
 }
 

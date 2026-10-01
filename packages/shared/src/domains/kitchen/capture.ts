@@ -4,7 +4,7 @@
 // photos, the app decides what merges.
 import { addDays } from '../../dates/days.js'
 import { mergeTarget } from './match.js'
-import { add, formatAmount, parseAmount } from './quantity.js'
+import { add, formatAmount, isOut, parseAmount } from './quantity.js'
 import { CATEGORIES, LOCATIONS, type CaptureMode, type StockItem, type StockLocation } from './types.js'
 
 /** Where an item is in a photo, as fractions of the photo's width and height from its top left corner. */
@@ -120,12 +120,26 @@ export function haulRows(
 /**
  * What a stock item holds once a row has merged into it: the two quantities together in the item's own unit (or,
  * taking stock, the row's quantity alone), the earlier of the two expiries (what was there goes off first), and the
- * row's category and tip where the item had none. `null` when the quantities cannot be added, which `mergeTarget`
- * rules out for a row it matched.
+ * row's category and tip where the item had none. An item that ran out (D-92) has nothing to add to: it comes back
+ * with the row's amount, unit, location and expiry as they are. `null` when the quantities cannot be added, which
+ * `mergeTarget` rules out for a row it matched.
  */
 export function mergeInto(item: StockItem, row: HaulRow, mode: CaptureMode = 'haul'): StockItem | null {
 	const held = parseAmount(item.qty, item.unit)
 	const added = parseAmount(row.qty, row.unit)
+	if (added && isOut(item)) {
+		const { expiry: _was, estimated: _guess, outAt: _outAt, unit: _unit, ...kept } = item
+		return {
+			...kept,
+			qty: row.qty.trim(),
+			...(row.unit?.trim() ? { unit: row.unit.trim() } : {}),
+			location: row.location,
+			...(row.expiry ? { expiry: row.expiry } : {}),
+			...(row.expiry && row.estimated ? { estimated: true } : {}),
+			...(item.category || !row.category ? {} : { category: row.category }),
+			...(item.tip || !row.tip ? {} : { tip: row.tip }),
+		}
+	}
 	// a haul adds to what was there; taking stock says what is there now, in the item's own unit (D-89)
 	const sum = held && added ? add(mode === 'stock' ? { ...held, value: 0 } : held, added) : null
 	if (!sum) return null

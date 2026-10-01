@@ -4,7 +4,7 @@ status: draft
 summary: One consistent fictional dataset for every mockup: an owner, facts, stock by location, a captured haul, recipes, a grocery list, ideas and projects, a calendar week with layers, a weather week, workouts and a weight series, places and listings, daily lines, notifications, feed and audit entries.
 read-this-if: You are drawing a mockup or seeding an empty state with sample data.
 depends-on: [product/domains/README]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## The owner
@@ -50,6 +50,8 @@ The Phase 1 default layout, one list the mockup and the app both read (`gardenLa
 | Pantry | short-grain rice 2 kg, soba 300 g, canned black beans 2, olive oil 500 ml, soy sauce (low sodium) 300 ml, LMNT citrus 9 packets (low-stock threshold 10) |
 | Counter | avocados 2 (10-01 ~), garlic 1 head, bananas 4 (10-02 ~) |
 
+**Ran out** (`ranOut`, D-92; shown only by the stories that ask for it): whole milk, from the fridge, on 09-29; rolled oats, from the pantry, on 09-27.
+
 Each item has a `category` from `haulCategories` (below), whose glyph is its picture until it has a photo: the chicken and the salmon are meat-and-fish; the eggs and the yogurt dairy-and-eggs; the spinach, lemons, avocados, garlic and bananas produce; the edamame frozen; the tortillas, the rice and the soba grains-and-pasta; the black beans canned-and-jarred; the miso, the olive oil and the soy sauce condiments-and-spices; the LMNT supplements-and-mixes; the tofu has none. The Stock mockup gives the chicken, the spinach and the avocados a stand-in photo.
 
 **A captured haul** (09-29 18:12, provider Anthropic, model Haiku, cost estimate 0.6 cents), read from four sources: a photo of the bags (`haul.jpg`, 2.4 MB), a photo of the receipt (`receipt.jpg`, 840 KB), the order's PDF (`heb-order.pdf`, 1.2 MB) and a pasted list of 6 lines. 11 rows recognised, 9 kept, 2 merged (eggs, spinach), 1 corrected (yogurt quantity), 1 removed (a misread "napkins"). Expiries are full dates (chicken 2026-10-02). Categories (`haulCategories`) are the app's twelve, id and English name: `produce` Produce, `meat-and-fish` Meat and fish, `dairy-and-eggs` Dairy and eggs, `bakery` Bakery, `grains-and-pasta` Grains and pasta, `canned-and-jarred` Canned and jarred, `frozen` Frozen, `snacks` Snacks, `drinks` Drinks, `condiments-and-spices` Condiments and spices, `supplements-and-mixes` Supplements and mixes, `other` Other; the chicken is meat-and-fish, the eggs and the yogurt dairy-and-eggs, the spinach, lemons, avocados and bananas produce, the tortillas grains-and-pasta, the soy sauce condiments-and-spices, the napkins other, and the tofu has none. One tip, on the spinach: "Wrap in a dry towel inside the bag; it wilts fastest in the door." A merge names its stock item and says whether it is on (`{ name, on }`); both are on as captured.
@@ -66,7 +68,7 @@ The salmon's tip: "Pat the fillets dry first: the glaze holds and the edges cara
 
 **A recipe on its way in** (`recipeDraft`), read from the link `https://example.com/recipes/lemon-yogurt-chicken-thighs` and not saved yet: Lemon-yogurt chicken thighs (serves 2, 35 min, tag weeknight). Ingredients: 500 g chicken thighs; 150 g Greek yogurt; 1 lemons, zest and juice; 2 cloves garlic, grated; 1 tbsp olive oil; 1 dill, a small bunch (the one thing not in stock). Steps: Stir the yogurt, the lemon, the garlic and the oil together and coat the chicken. / Roast at 220 °C for 25 minutes, until the edges char. / Rest for five minutes and scatter with the dill.
 
-**Grocery list** "H-E-B Saturday": LMNT citrus ×1 box (origin low-stock), limes ×4, ginger ×1 (origin recipe: soba), paper towels (manual). `shop-day` Event Saturday 10-03 10:00.
+**Grocery**, one list per store. Stores: H-E-B (sells grocery) and Target (sells grocery and home goods). H-E-B's list: LMNT citrus ×1 box (origin low-stock), limes ×4, ginger ×1 (origin recipe: soba, checked); its `shop-day` Event is Saturday 10-03 10:00. Target's list: paper towels (manual), no shop day. Not filed to a store yet: coffee filters (manual).
 
 ## Toolbench
 

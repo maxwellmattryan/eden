@@ -49,6 +49,8 @@
 		tile?: boolean
 		/** Crossed out and quiet: a checked-off grocery, a finished task. */
 		done?: boolean
+		/** The row is one to check off: a round checkbox leads it, checked while `done`. */
+		checkable?: boolean
 		/** The row's menu, destructive items last; the ⋯ button, a right-click, a long-press and Shift+F10 open it. */
 		actions?: MenuItem[]
 	}
@@ -116,10 +118,13 @@
 <script lang="ts">
 	// One row of a list: a leading icon, the primary text (with an info glyph after it when the row has a `hint`, its
 	// tooltip the hint) and a detail line of chips and badges beneath, trailing metadata in mono, and a ⋯ button that
-	// opens the row's menu. A right-click, a long-press and Shift+F10 (or the ContextMenu key) open the same menu; Enter
-	// or a double-click opens the row. Selection is a mode (D-41): outside it the row shows no mark and gives up no
-	// space; while the list is `selecting` a round mark slides in at the leading edge and a click or Space toggles the
-	// row onto brand-muted. Inside List the row is a grid row with one gridcell and the list manages its tab stop, and
+	// opens the row's menu. A right-click, a long-press and Shift+F10 (or the ContextMenu key) open the same menu. A
+	// click picks the row (D-94): the caller shows it, and the `current` row sits on brand-muted; a double-click, or
+	// Enter on the current row, opens it, which is the row's main action. With no `onpick` a click opens. A `checkable`
+	// row leads with a round checkbox, checked while `done`, which a press or Space toggles. Selection is a mode
+	// (D-41): outside it the row shows no mark and gives up no space; while the list is `selecting` a round mark slides
+	// in at the leading edge and a click or Space toggles the row onto brand-muted; a Ctrl, Cmd or Shift click outside
+	// the mode is the list's to answer (`onextend`). Inside List the row is a grid row with one gridcell and the list manages its tab stop, and
 	// it leaves with a collapse (`collapse` above); on its own it is a list item and its own tab stop. A press on a
 	// button in the row (the hint, the ⋯) never toggles or opens the row.
 	import { tick } from 'svelte'
@@ -143,8 +148,16 @@
 			compact?: boolean
 			/** Set by List: the row is a grid row (role row, one gridcell) whose tab stop the list manages. Standalone it is a list item. */
 			inGrid?: boolean
-			/** Enter or a double-click. */
+			/** The row is the one the caller is showing: it sits on brand-muted outside select mode. */
+			current?: boolean
+			/** A click, or Enter on a row that is not `current`: the caller shows the row. */
+			onpick?: () => void
+			/** A double-click, or Enter on the `current` row: the row's main action. A click too, when there is no `onpick`. */
 			onopen?: () => void
+			/** A press on the checkbox of a `checkable` row, or Space on the row, with what `done` becomes. */
+			oncheck?: (done: boolean) => void
+			/** Set by List: a Ctrl or Cmd click (`toggle`) or a Shift click (`range`), in select mode or out of it. */
+			onextend?: (how: 'toggle' | 'range') => void
 			/** A pick from the row's menu. */
 			onaction?: (item: MenuItem) => void
 			/** The row toggled in select mode, with its new state. */
@@ -165,12 +178,17 @@
 		thumbnail,
 		tile = false,
 		done = false,
+		checkable = false,
 		actions = [],
 		selecting = false,
 		selected = $bindable(false),
 		compact = false,
 		inGrid = false,
+		current = false,
+		onpick,
 		onopen,
+		oncheck,
+		onextend,
 		onaction,
 		onselect,
 		onleave,
@@ -220,11 +238,19 @@
 	}
 
 	function onclick(e: MouseEvent) {
-		if (!selecting || inside(e.target, CONTROLS)) return
-		toggle()
+		if (inside(e.target, CONTROLS)) return
+		if (onextend && (e.shiftKey || e.metaKey || e.ctrlKey)) onextend(e.shiftKey ? 'range' : 'toggle')
+		else if (selecting) toggle()
+		// the second click of a double-click picks nothing again: the first one did
+		else if (e.detail < 2) (onpick ?? onopen)?.()
+	}
+	/** A Shift click extends the selection: it must not select the text between the two rows. */
+	function onmousedown(e: MouseEvent) {
+		if (onextend && e.shiftKey && !inside(e.target, CONTROLS)) e.preventDefault()
 	}
 	function ondblclick(e: MouseEvent) {
-		if (selecting || inside(e.target, CONTROLS)) return
+		// with no `onpick` the two clicks have opened the row already
+		if (selecting || !onpick || inside(e.target, CONTROLS)) return
 		onopen?.()
 	}
 	function oncontextmenu(e: MouseEvent) {
@@ -235,10 +261,14 @@
 	function onkeydown(e: KeyboardEvent) {
 		if (e.target !== e.currentTarget) return
 		if (e.key === 'Enter') {
-			onopen?.()
+			if (onpick && !current) onpick()
+			else onopen?.()
 		} else if (e.key === ' ' && selecting) {
 			e.preventDefault()
 			toggle()
+		} else if (e.key === ' ' && checkable) {
+			e.preventDefault()
+			oncheck?.(!done)
 		} else if ((e.shiftKey && e.key === 'F10') || e.key === 'ContextMenu') {
 			if (!actions.length) return
 			e.preventDefault()
@@ -264,6 +294,19 @@
 				<Icon name="check" size="sm" />
 			</span>
 		</span>
+	{:else if checkable}
+		<button
+			type="button"
+			class="ed-row-mark ed-row-check"
+			class:ed-row-mark-on={done}
+			role="checkbox"
+			aria-checked={done}
+			aria-label={s.checkOff(primary)}
+			tabindex={inGrid ? -1 : undefined}
+			onclick={() => oncheck?.(!done)}
+		>
+			<Icon name="check" size="sm" />
+		</button>
 	{/if}
 	{#if thumbnail}
 		<img class="ed-row-thumb" src={thumbnail} alt="" />
@@ -321,6 +364,8 @@
 			'ed-row-done': done,
 			'ed-row-selecting': selecting,
 			'ed-row-selected': selecting && selected,
+			'ed-row-current': current && !selecting,
+			'ed-row-pickable': !!(onpick ?? onopen),
 			'ed-row-compact': compact,
 		},
 		className,
@@ -328,8 +373,10 @@
 	role={inGrid ? 'row' : 'listitem'}
 	tabindex={inGrid ? -1 : 0}
 	aria-selected={selecting && inGrid ? selected : undefined}
+	aria-current={current && !selecting ? 'true' : undefined}
 	data-id={id}
 	{onclick}
+	{onmousedown}
 	{ondblclick}
 	{oncontextmenu}
 	{onkeydown}
@@ -375,10 +422,13 @@
 		background: var(--surface-2);
 	}
 	.ed-row-selected,
-	.ed-row-selected:hover {
+	.ed-row-selected:hover,
+	.ed-row-current,
+	.ed-row-current:hover {
 		background: var(--brand-muted);
 	}
-	.ed-row-selecting {
+	.ed-row-selecting,
+	.ed-row-pickable {
 		cursor: pointer;
 	}
 	/* the ring sits inside the row, so the card's clipping and the dividers keep all of it */
@@ -408,6 +458,15 @@
 		transition:
 			background-color var(--ed-duration-micro) var(--ed-ease-out),
 			border-color var(--ed-duration-micro) var(--ed-ease-out);
+	}
+	/* the checkbox of a row to check off: the same mark, as a control of its own */
+	.ed-row-check {
+		padding: 0;
+		cursor: pointer;
+	}
+	.ed-row-check:focus-visible {
+		outline: var(--focus-ring-width) solid var(--brand-primary);
+		outline-offset: 2px;
 	}
 	.ed-row:hover .ed-row-mark {
 		border-color: var(--text-tertiary);

@@ -4,7 +4,7 @@
 	import { expect, fn, waitFor } from 'storybook/test'
 	import { canvasOf } from '../../../storybook/play.js'
 	import { defaultStrings } from '$lib/i18n/strings.js'
-	import { grocery } from '../../../stories/sample-data.js'
+	import { grocery, groceryShopDay } from '../../../stories/sample-data.js'
 	import ToolCard from './ToolCard.svelte'
 
 	const s = defaultStrings
@@ -19,7 +19,7 @@
 		name: 'google-calendar.push',
 		access: 'act-external',
 		text: 'Send the shop-day event to Google “Work”.',
-		payload: `${grocery.name} · ${grocery.shopDay}`,
+		payload: `${grocery.stores[0]!.name} · ${groceryShopDay}`,
 		confirm: 'Send to Google',
 	} as const
 

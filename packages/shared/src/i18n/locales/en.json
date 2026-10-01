@@ -88,6 +88,7 @@
 			"sampleAdded": "Added sample data to {domain}",
 			"stockAdded": "{name} added to stock",
 			"stockRemoved": "{name} removed from stock",
+			"stockRanOut": "{name} ran out",
 			"stockMoved": "{name} moved to the {location}",
 			"groceryAdded": "{name} added to the list",
 			"groceryChecked": "{name} checked off",
@@ -114,6 +115,7 @@
 			"tasksAdded": "{count, plural, one {# task} other {# tasks}} added to Today",
 			"stockEdited": "{name} edited",
 			"stockRemovedMany": "{count, plural, one {# item} other {# items}} removed from stock",
+			"stockRanOutMany": "{count, plural, one {# item} other {# items}} ran out",
 			"stockMovedMany": "{count, plural, one {# item} other {# items}} moved to the {location}",
 			"recipeSaved": "{name} saved to recipes",
 			"recipeRemoved": "{name} removed from recipes",
@@ -201,6 +203,8 @@
 				"addPlaceholder": "Add to stock, or paste a product link",
 				"expiring": "Expiring",
 				"lowStock": "Low stock",
+				"ranOut": "Ran out",
+				"ranOutEmpty": "Nothing has run out lately.",
 				"sortBy": "Sort: {sort}",
 				"sortLabel": "Sort the stock",
 				"sort": {
@@ -216,6 +220,7 @@
 				},
 				"badge": {
 					"lowStock": "low stock",
+					"ranOut": "ran out",
 					"thisWeek": "this week"
 				},
 				"empty": {
@@ -251,7 +256,8 @@
 				},
 				"actions": {
 					"edit": "Edit",
-					"moveTo": "Move to {location}",
+					"moveTo": "Move to",
+					"ranOut": "Ran out",
 					"move": "Move",
 					"addToGrocery": "Add to grocery",
 					"delete": "Delete"
@@ -259,6 +265,9 @@
 				"toast": {
 					"added": "{name} added to stock.",
 					"removed": "{name} removed from stock.",
+					"ranOut": "{name} ran out.",
+					"ranOutMany": "{count, plural, one {# item} other {# items}} ran out.",
+					"back": "{name} is back in stock.",
 					"moved": "{name} moved to the {location}.",
 					"edited": "{name} saved.",
 					"addedToGrocery": "{name} added to the list.",
@@ -276,6 +285,7 @@
 				"add": "Add",
 				"addPlaceholder": "Add to the list",
 				"clearChecked": "Clear checked",
+				"buyAgain": "Buy it again",
 				"checked": "{checked} of {total} checked",
 				"allChecked": "Everything is checked. Clear the list once you are home.",
 				"anyStore": "Any store",
@@ -288,6 +298,7 @@
 				"origin": {
 					"manual": "manual",
 					"recipe": "recipe",
+					"ranOut": "ran out",
 					"lowStock": "low stock"
 				},
 				"actions": {

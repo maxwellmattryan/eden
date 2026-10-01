@@ -2,23 +2,55 @@
 // that makes one. A recipe arrives as pasted text, a link, or a photo of a page or a card, or the Gardener drafts
 // one in a conversation; whichever it was, it opens in the Recipes view's detail pane in edit mode and is stored
 // only when the owner saves it there. A link is fetched by the crate (`fetch_page`, D-88); a page that describes
-// its recipe in schema.org JSON-LD is read here with no model asked.
-import { logError } from '@eden/shared/api'
-import { fetchPage, webErrorCode } from '@eden/shared/api'
-import { pageText, recipeFromJsonLd, type RecipeDraft } from '@eden/shared/domains/kitchen'
+// its recipe in schema.org JSON-LD is read here with no model asked. A draft whose page shows a picture of the dish
+// brings it along (D-93): the picture is fetched when the draft opens, shown on the form, and kept with the recipe
+// unless the owner takes it away or chooses their own.
+import { fetchImage, fetchPage, logError, webErrorCode } from '@eden/shared/api'
+import { pageImage, pageSiteName, pageText, recipeFromJsonLd, type RecipeDraft } from '@eden/shared/domains/kitchen'
 import type { DirectPreview } from '$lib/shell/gardener/runtime.svelte'
 import type { ToolFailure } from '$lib/shell/gardener/types'
-import { StagedSources } from './staging.svelte.js'
+import { recipePicture, StagedSources, type RecipePicture } from './staging.svelte.js'
 
 class RecipeDrafts {
 	/** The recipe being checked: unsaved, shown in the detail pane in edit mode. */
 	current = $state<RecipeDraft | undefined>()
+	/** The picture the draft would be saved with: its page's, or one the owner chose. `$state.raw`: it holds a Blob. */
+	picture = $state.raw<RecipePicture | undefined>()
+	/** The page's picture is on its way. */
+	fetching = $state(false)
 	#settle: ((state: 'committed' | 'discarded') => void) | undefined
+	#turn = 0
 
 	/** Opens a draft; `settle` hears whether it was saved, when it came from a card in a conversation. */
 	open(recipe: RecipeDraft, settle?: (state: 'committed' | 'discarded') => void): void {
 		this.current = recipe
 		this.#settle = settle
+		this.picture = undefined
+		void this.#fetchPicture(recipe.imageUrl)
+	}
+
+	/** The picture the draft's page shows of the dish, fetched by the app under D-91's checks. */
+	async #fetchPicture(url: string | undefined): Promise<void> {
+		const turn = ++this.#turn
+		this.fetching = !!url
+		if (!url) return
+		try {
+			const bytes = await fetchImage(url)
+			const picture = await recipePicture(new Blob([bytes as Uint8Array<ArrayBuffer>]))
+			// the owner may have chosen their own, or let the draft go, while it was on its way
+			if (turn === this.#turn && picture && !this.picture) this.picture = picture
+		} catch (error) {
+			void logError('web', "A recipe's picture could not be fetched", webErrorCode(error)).catch(() => null)
+		} finally {
+			if (turn === this.#turn) this.fetching = false
+		}
+	}
+
+	/** The owner's own picture for the draft, or none. */
+	setPicture(picture: RecipePicture | undefined): void {
+		this.#turn += 1
+		this.fetching = false
+		this.picture = picture
 	}
 
 	saved(): void {
@@ -32,7 +64,10 @@ class RecipeDrafts {
 	}
 
 	#clear(): void {
+		this.#turn += 1
 		this.current = undefined
+		this.picture = undefined
+		this.fetching = false
 		this.#settle = undefined
 	}
 }
@@ -100,12 +135,15 @@ export class RecipeImport {
 		this.failure = undefined
 		let text = this.text.trim()
 		const url = this.link
+		let shown: { imageUrl?: string; sourceName?: string } = {}
 		if (url) {
 			try {
 				const page = await fetchPage(url)
 				const described = recipeFromJsonLd(page.html, page.url)
 				if (described) return this.#done(described)
 				text = pageText(page.html)
+				// a page that does not describe its recipe still says where it shows it, and what it calls itself
+				shown = { imageUrl: pageImage(page.html, page.url), sourceName: pageSiteName(page.html) }
 			} catch (error) {
 				const code = webErrorCode(error)
 				return this.#failed(
@@ -124,7 +162,12 @@ export class RecipeImport {
 		if (!this.open) return undefined
 		if (result.card?.kind === 'recipe') {
 			const recipe = result.card.recipe as RecipeDraft
-			return this.#done(url && !recipe.sourceUrl ? { ...recipe, sourceUrl: url } : recipe)
+			return this.#done({
+				...recipe,
+				...(url && !recipe.sourceUrl ? { sourceUrl: url } : {}),
+				...(shown.sourceName && !recipe.sourceName ? { sourceName: shown.sourceName } : {}),
+				...(shown.imageUrl && !recipe.imageUrl ? { imageUrl: shown.imageUrl } : {}),
+			})
 		}
 		if (result.failure === 'cancelled') {
 			this.phase = 'collect'

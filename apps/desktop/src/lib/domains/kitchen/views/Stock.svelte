@@ -6,7 +6,9 @@
 	// mode (D-41), and what it selects is moved, listed or deleted as one write with one undo. Files dropped or pasted
 	// on the page start a capture with them (D-86). Every item has a picture (D-90): the one cut from its photo or
 	// chosen by the owner, else its category's glyph; and a grocer's product link, in the quick-add line or the edit
-	// pane, brings the grocer's own picture of the product (D-91).
+	// pane, brings the grocer's own picture of the product (D-91). The four lists hold what is there; what ran out
+	// lately has a list of its own at the side, each item kept with its picture to be bought again (D-92), and the
+	// item a click picks opens beneath it (D-94); a double-click does nothing more. The side stays in view while the lists scroll.
 	import {
 		Badge,
 		Button,
@@ -23,6 +25,7 @@
 		Segmented,
 		defaultParse,
 		toast,
+		type IconName,
 		type ListRowData,
 		type MenuItem,
 		type ParsedChip,
@@ -68,16 +71,32 @@
 	const categoryLabel = (category: string) =>
 		(CATEGORIES as readonly string[]).includes(category) ? $t(`domains.kitchen.categories.${category}`) : category
 
+	const LOCATION_ICONS: Record<StockLocation, IconName> = {
+		fridge: 'refrigerator',
+		freezer: 'snowflake',
+		pantry: 'package',
+		counter: 'carrot',
+	}
 	const moveItems = (current?: StockLocation): MenuItem[] =>
 		LOCATIONS.filter((location) => location !== current).map((location) => ({
 			id: `move:${location}`,
-			label: $t('domains.kitchen.stock.actions.moveTo', { values: { location: locationLabel(location) } }),
-			icon: 'arrow-right' as const,
+			label: locationLabel(location),
+			icon: LOCATION_ICONS[location],
 		}))
+	/** The one "Move to" row: the places it can go are its submenu. */
+	const moveMenu = (current: StockLocation): MenuItem => ({
+		id: 'move',
+		label: $t('domains.kitchen.stock.actions.moveTo'),
+		icon: 'arrow-right',
+		children: moveItems(current),
+	})
 	const actionsFor = (item: StockItem): MenuItem[] => [
 		{ id: 'edit', label: $t('domains.kitchen.stock.actions.edit'), icon: 'pencil' },
-		...moveItems(item.location),
+		...(kitchen.out(item) ? [] : [moveMenu(item.location)]),
 		{ id: 'grocery', label: $t('domains.kitchen.stock.actions.addToGrocery'), icon: 'plus' },
+		...(kitchen.out(item)
+			? []
+			: [{ id: 'ranOut', label: $t('domains.kitchen.stock.actions.ranOut'), icon: 'circle-dashed' as const }]),
 		{ id: 'delete', label: $t('domains.kitchen.stock.actions.delete'), icon: 'trash', destructive: true },
 	]
 	const toRow = (item: StockItem): ListRowData => ({
@@ -97,11 +116,31 @@
 		actions: actionsFor(item),
 	})
 
+	/** A row of the Ran out list: where the item was kept, and the day it ran out. */
+	const toOutRow = (item: StockItem): ListRowData => ({
+		id: item.id,
+		primary: item.name,
+		thumbnail: kitchen.photoOf(item),
+		icon: categoryGlyph(item.category),
+		tile: true,
+		hint: item.tip,
+		chips: [{ label: locationLabel(item.location) }],
+		meta: item.outAt ? formatDay(item.outAt.slice(0, 10)) : undefined,
+		actions: actionsFor(item),
+	})
+
 	const sections = $derived(
 		kitchen.sections((item) => (!expiring || kitchen.soon(item)) && (!lowStock || kitchen.low(item)), sort)
 	)
+	/** What ran out lately; the Expiring filter hides it, the Low stock filter keeps what has a threshold. */
+	const ranOut = $derived(expiring ? [] : kitchen.recentlyOut.filter((item) => !lowStock || kitchen.low(item)))
 	let selected = $state<string>()
-	const detail = $derived(kitchen.stock.find((item) => item.id === selected) ?? sections[0]?.items[0])
+	/** The item the pane shows: the one picked, and none until one is. Picking it again puts the pane away. */
+	const detail = $derived(kitchen.stock.find((item) => item.id === selected))
+	function pick(id: string) {
+		if (editing && editing !== id) editing = undefined
+		selected = selected === id && !editing ? undefined : id
+	}
 
 	// The detail pane's edit mode: the item's fields as text, written back as one change.
 	let editing = $state<string>()
@@ -215,7 +254,11 @@
 	}
 
 	function addToGrocery(item: StockItem) {
-		return kitchen.addToGrocery(item.name, '', kitchen.low(item) ? 'low-stock' : 'manual')
+		return kitchen.addToGrocery(
+			item.name,
+			'',
+			kitchen.out(item) ? 'ran-out' : kitchen.low(item) ? 'low-stock' : 'manual'
+		)
 	}
 	function act(action: string, id: string) {
 		const item = kitchen.stock.find((entry) => entry.id === id)
@@ -230,6 +273,10 @@
 		} else if (action === 'grocery') {
 			const { undo } = addToGrocery(item)
 			undoToast($t('domains.kitchen.stock.toast.addedToGrocery', { values: { name: item.name } }), undo)
+		} else if (action === 'ranOut') {
+			const { undo } = kitchen.ranOutStock(id)
+			if (editing === id) editing = undefined
+			undoToast($t('domains.kitchen.stock.toast.ranOut', { values: { name: item.name } }), undo)
 		} else if (action === 'delete') {
 			const { undo } = kitchen.removeStock(id)
 			if (editing === id) editing = undefined
@@ -252,8 +299,11 @@
 	function add(text: string) {
 		const product = productLink(text)
 		if (product) return void addProduct(product)
+		const held = kitchen.stock.length
 		const { item, undo } = kitchen.addStock(text)
-		undoToast($t('domains.kitchen.stock.toast.added', { values: { name: item.name } }), undo)
+		// no more items than before: one that ran out came back (D-92)
+		const key = kitchen.stock.length === held ? 'back' : 'added'
+		undoToast($t(`domains.kitchen.stock.toast.${key}`, { values: { name: item.name } }), undo)
 	}
 	/**
 	 * A product's link in the quick-add line (D-91): the item is added at once under the name its address gives, with
@@ -300,6 +350,11 @@
 		undoToast($t('domains.kitchen.stock.toast.addedManyToGrocery', { values: { count: items.length } }), undo)
 		selecting[from] = false
 	}
+	function ranOutMany(ids: string[], from: StockLocation) {
+		const { count, undo } = kitchen.ranOutStockMany(ids)
+		if (count) undoToast($t('domains.kitchen.stock.toast.ranOutMany', { values: { count } }), undo)
+		selecting[from] = false
+	}
 	function removeMany(ids: string[], from: StockLocation) {
 		const { count, undo } = kitchen.removeStockMany(ids)
 		undoToast($t('domains.kitchen.stock.toast.removedMany', { values: { count } }), undo)
@@ -339,7 +394,7 @@
 			sample={{ onclick: seed }}
 		/>
 	{:else}
-		<div class={['body', { 'body-wide': detail }]}>
+		<div class="body">
 			<div class="lists">
 				<QuickAdd
 					id={quickAddId}
@@ -354,7 +409,8 @@
 						rows={section.items.map(toRow)}
 						selectable
 						bind:selecting={selecting[section.location]}
-						onopen={(row) => (selected = row.id)}
+						current={detail?.id}
+						onpick={(row) => pick(row.id)}
 						{onaction}
 					>
 						{#snippet bulk(ids: string[])}
@@ -379,6 +435,14 @@
 								onclick={() => groceryMany(ids, section.location)}
 							/>
 							<IconButton
+								icon="circle-dashed"
+								size="xs"
+								label={$t('domains.kitchen.stock.actions.ranOut')}
+								tooltip
+								disabled={!ids.length}
+								onclick={() => ranOutMany(ids, section.location)}
+							/>
+							<IconButton
 								icon="trash"
 								size="xs"
 								label={$t('domains.kitchen.stock.actions.delete')}
@@ -390,205 +454,233 @@
 						{/snippet}
 					</List>
 				{/each}
-				{#if !sections.length}
+				{#if !sections.length && !ranOut.length}
 					<p class="voice">{$t('domains.kitchen.stock.noneMatch')}</p>
 				{/if}
 			</div>
 
-			{#if detail && editing === detail.id}
-				<aside class="detail" aria-labelledby="{uid}-detail">
-					<h2 class="detail-title" id="{uid}-detail">{$t('domains.kitchen.stock.detail.editing')}</h2>
-					<form
-						class="form"
-						onsubmit={(event) => {
-							event.preventDefault()
-							save(detail)
-						}}
-					>
-						<div class="picture-row">
-							{@render picture(detail)}
-							<FileButton
-								label={$t('domains.kitchen.stock.detail.choosePicture')}
-								icon="image-plus"
-								accept={PICTURES}
-								multiple={false}
-								tooltip
-								onfiles={(files) => void setPicture(detail, files)}
-							/>
-							{#if detail.photo}
-								<IconButton
-									icon="trash"
-									size="sm"
-									label={$t('domains.kitchen.stock.detail.removePicture')}
-									tooltip
-									onclick={() => removePicture(detail)}
-								/>
-							{/if}
-						</div>
-						<Field
-							label={$t('domains.kitchen.stock.detail.pictureLink')}
-							helper={$t('domains.kitchen.stock.detail.pictureLinkHelp')}
-							placeholder="https://"
-							type="url"
-							bind:value={pictureLink}
-							disabled={fetching}
-							onkeydown={(event: KeyboardEvent) => {
-								if (event.key !== 'Enter') return
+			<div class="side">
+				<List
+					header={$t('domains.kitchen.stock.ranOut')}
+					count={ranOut.length}
+					rows={ranOut.map(toOutRow)}
+					current={detail?.id}
+					onpick={(row) => pick(row.id)}
+					{onaction}
+				>
+					{#if !ranOut.length}
+						<p class="voice none">{$t('domains.kitchen.stock.ranOutEmpty')}</p>
+					{/if}
+				</List>
+				{#if detail && editing === detail.id}
+					<aside class="detail" aria-labelledby="{uid}-detail">
+						<h2 class="detail-title" id="{uid}-detail">{$t('domains.kitchen.stock.detail.editing')}</h2>
+						<form
+							class="form"
+							onsubmit={(event) => {
 								event.preventDefault()
-								void linkPicture(detail)
+								save(detail)
 							}}
 						>
-							{#snippet trailing()}
-								<IconButton
-									icon="arrow-right"
-									size="sm"
-									label={$t('domains.kitchen.stock.detail.usePictureLink')}
+							<div class="picture-row">
+								{@render picture(detail)}
+								<FileButton
+									label={$t('domains.kitchen.stock.detail.choosePicture')}
+									icon="image-plus"
+									accept={PICTURES}
+									multiple={false}
 									tooltip
-									disabled={fetching || !pictureLink.trim()}
-									onclick={() => void linkPicture(detail)}
+									onfiles={(files) => void setPicture(detail, files)}
 								/>
-							{/snippet}
-						</Field>
-						<Field label={$t('domains.kitchen.stock.detail.name')} bind:value={form.name} />
-						<div class="pair">
+								{#if detail.photo}
+									<IconButton
+										icon="trash"
+										size="sm"
+										label={$t('domains.kitchen.stock.detail.removePicture')}
+										tooltip
+										onclick={() => removePicture(detail)}
+									/>
+								{/if}
+							</div>
 							<Field
-								label={$t('domains.kitchen.stock.detail.quantity')}
-								bind:value={form.qty}
+								label={$t('domains.kitchen.stock.detail.pictureLink')}
+								helper={$t('domains.kitchen.stock.detail.pictureLinkHelp')}
+								placeholder="https://"
+								type="url"
+								bind:value={pictureLink}
+								disabled={fetching}
+								onkeydown={(event: KeyboardEvent) => {
+									if (event.key !== 'Enter') return
+									event.preventDefault()
+									void linkPicture(detail)
+								}}
+							>
+								{#snippet trailing()}
+									<IconButton
+										icon="arrow-right"
+										size="sm"
+										label={$t('domains.kitchen.stock.detail.usePictureLink')}
+										tooltip
+										disabled={fetching || !pictureLink.trim()}
+										onclick={() => void linkPicture(detail)}
+									/>
+								{/snippet}
+							</Field>
+							<Field label={$t('domains.kitchen.stock.detail.name')} bind:value={form.name} />
+							<div class="pair">
+								<Field
+									label={$t('domains.kitchen.stock.detail.quantity')}
+									bind:value={form.qty}
+									mono
+									inputmode="decimal"
+								/>
+								<Field label={$t('domains.kitchen.stock.detail.unit')} bind:value={form.unit} />
+							</div>
+							<div class="group">
+								<span class="group-label" id="{uid}-location">{$t('domains.kitchen.stock.detail.location')}</span>
+								<Segmented
+									items={LOCATIONS.map(locationLabel)}
+									selected={LOCATIONS.indexOf(form.location)}
+									label={$t('domains.kitchen.stock.detail.location')}
+									onchange={(index) => (form.location = LOCATIONS[index]!)}
+								/>
+							</div>
+							<Field label={$t('domains.kitchen.stock.detail.expires')} type="date" bind:value={form.expiry} />
+							<div class="group">
+								<span class="group-label">{$t('domains.kitchen.stock.detail.category')}</span>
+								<span class="anchor" bind:this={categoryAnchor}>
+									<Chip
+										label={form.category ? categoryLabel(form.category) : $t('domains.kitchen.stock.detail.noCategory')}
+										tone="outline"
+										icon="chevron-down"
+										aria-haspopup="menu"
+										aria-expanded={categoryOpen}
+										onclick={() => (categoryOpen = !categoryOpen)}
+									/>
+								</span>
+								<Menu
+									bind:open={categoryOpen}
+									anchor={categoryAnchor}
+									align="start"
+									label={$t('domains.kitchen.stock.detail.category')}
+									items={categoryItems}
+									onselect={(item) => (form.category = item.id ?? '')}
+								/>
+							</div>
+							<Field
+								label={$t('domains.kitchen.stock.detail.threshold')}
+								helper={$t('domains.kitchen.stock.detail.thresholdHelp')}
+								bind:value={form.threshold}
 								mono
 								inputmode="decimal"
 							/>
-							<Field label={$t('domains.kitchen.stock.detail.unit')} bind:value={form.unit} />
-						</div>
-						<div class="group">
-							<span class="group-label" id="{uid}-location">{$t('domains.kitchen.stock.detail.location')}</span>
-							<Segmented
-								items={LOCATIONS.map(locationLabel)}
-								selected={LOCATIONS.indexOf(form.location)}
-								label={$t('domains.kitchen.stock.detail.location')}
-								onchange={(index) => (form.location = LOCATIONS[index]!)}
+							<Field
+								label={$t('domains.kitchen.stock.detail.tip')}
+								helper={$t('domains.kitchen.stock.detail.tipHelp')}
+								bind:value={form.tip}
+								multiline
+								rows={2}
 							/>
-						</div>
-						<Field label={$t('domains.kitchen.stock.detail.expires')} type="date" bind:value={form.expiry} />
-						<div class="group">
-							<span class="group-label">{$t('domains.kitchen.stock.detail.category')}</span>
-							<span class="anchor" bind:this={categoryAnchor}>
-								<Chip
-									label={form.category ? categoryLabel(form.category) : $t('domains.kitchen.stock.detail.noCategory')}
-									tone="outline"
-									icon="chevron-down"
-									aria-haspopup="menu"
-									aria-expanded={categoryOpen}
-									onclick={() => (categoryOpen = !categoryOpen)}
+							<div class="detail-actions">
+								<Button label={$t('common.save')} variant="primary" type="submit" disabled={!form.name.trim()} />
+								<Button label={$t('common.cancel')} variant="quiet" onclick={() => (editing = undefined)} />
+							</div>
+						</form>
+					</aside>
+				{:else if detail}
+					<aside class="detail" aria-labelledby="{uid}-detail">
+						<div class="detail-head">
+							{@render picture(detail)}
+							<h2 class="detail-title" id="{uid}-detail">{detail.name}</h2>
+							{#if detail.tip}
+								<IconButton
+									icon="info"
+									size="xs"
+									label={$t('domains.kitchen.stock.detail.tipFor', { values: { name: detail.name } })}
+									tooltip={detail.tip}
 								/>
-							</span>
-							<Menu
-								bind:open={categoryOpen}
-								anchor={categoryAnchor}
-								align="start"
-								label={$t('domains.kitchen.stock.detail.category')}
-								items={categoryItems}
-								onselect={(item) => (form.category = item.id ?? '')}
-							/>
+							{/if}
 						</div>
-						<Field
-							label={$t('domains.kitchen.stock.detail.threshold')}
-							helper={$t('domains.kitchen.stock.detail.thresholdHelp')}
-							bind:value={form.threshold}
-							mono
-							inputmode="decimal"
-						/>
-						<Field
-							label={$t('domains.kitchen.stock.detail.tip')}
-							helper={$t('domains.kitchen.stock.detail.tipHelp')}
-							bind:value={form.tip}
-							multiline
-							rows={2}
-						/>
-						<div class="detail-actions">
-							<Button label={$t('common.save')} variant="primary" type="submit" disabled={!form.name.trim()} />
-							<Button label={$t('common.cancel')} variant="quiet" onclick={() => (editing = undefined)} />
-						</div>
-					</form>
-				</aside>
-			{:else if detail}
-				<aside class="detail" aria-labelledby="{uid}-detail">
-					<div class="detail-head">
-						{@render picture(detail)}
-						<h2 class="detail-title" id="{uid}-detail">{detail.name}</h2>
-						{#if detail.tip}
-							<IconButton
-								icon="info"
-								size="xs"
-								label={$t('domains.kitchen.stock.detail.tipFor', { values: { name: detail.name } })}
-								tooltip={detail.tip}
-							/>
-						{/if}
-					</div>
-					<dl class="fields">
-						<dt>{$t('domains.kitchen.stock.detail.quantity')}</dt>
-						<dd class="mono">
-							{quantity(detail)}
-							{#if kitchen.low(detail)}<Badge kind="warning" label={$t('domains.kitchen.stock.badge.lowStock')} />{/if}
-						</dd>
-						<dt>{$t('domains.kitchen.stock.detail.location')}</dt>
-						<dd><Chip label={locationLabel(detail.location)} /></dd>
-						{#if detail.expiry}
-							<dt>{$t('domains.kitchen.stock.detail.expires')}</dt>
+						<dl class="fields">
+							<dt>{$t('domains.kitchen.stock.detail.quantity')}</dt>
 							<dd class="mono">
-								{formatDay(detail.expiry)}
-								{#if detail.estimated}<Badge kind="estimated" />{/if}
-								{#if kitchen.soon(detail)}<Badge
+								{#if kitchen.out(detail)}
+									<Badge kind="origin" label={$t('domains.kitchen.stock.badge.ranOut')} />
+								{:else}
+									{quantity(detail)}
+								{/if}
+								{#if kitchen.low(detail)}<Badge
 										kind="warning"
-										label={$t('domains.kitchen.stock.badge.thisWeek')}
+										label={$t('domains.kitchen.stock.badge.lowStock')}
 									/>{/if}
 							</dd>
-						{/if}
-						{#if detail.category}
-							<dt>{$t('domains.kitchen.stock.detail.category')}</dt>
-							<dd>{categoryLabel(detail.category)}</dd>
-						{/if}
-						<dt>{$t('domains.kitchen.stock.detail.source')}</dt>
-						<dd>
-							<Badge kind="origin" label={$t(`domains.kitchen.stock.source.${detail.source}`)} />
-							<span class="mono">{formatDayTime(detail.sourcedAt, format)}</span>
-						</dd>
-						{#if detail.threshold !== undefined}
-							<dt>{$t('domains.kitchen.stock.detail.threshold')}</dt>
-							<dd class="mono">{detail.threshold}</dd>
-						{/if}
-					</dl>
-					<div class="detail-actions">
-						<Button label={$t('domains.kitchen.stock.actions.edit')} icon="pencil" onclick={() => edit(detail)} />
-						<Button
-							label={$t('domains.kitchen.stock.actions.addToGrocery')}
-							icon="plus"
-							onclick={() => act('grocery', detail.id)}
-						/>
-						<span class="anchor" bind:this={moveAnchor}>
+							<dt>{$t('domains.kitchen.stock.detail.location')}</dt>
+							<dd><Chip label={locationLabel(detail.location)} /></dd>
+							{#if detail.expiry}
+								<dt>{$t('domains.kitchen.stock.detail.expires')}</dt>
+								<dd class="mono">
+									{formatDay(detail.expiry)}
+									{#if detail.estimated}<Badge kind="estimated" />{/if}
+									{#if kitchen.soon(detail)}<Badge
+											kind="warning"
+											label={$t('domains.kitchen.stock.badge.thisWeek')}
+										/>{/if}
+								</dd>
+							{/if}
+							{#if detail.category}
+								<dt>{$t('domains.kitchen.stock.detail.category')}</dt>
+								<dd>{categoryLabel(detail.category)}</dd>
+							{/if}
+							<dt>{$t('domains.kitchen.stock.detail.source')}</dt>
+							<dd>
+								<Badge kind="origin" label={$t(`domains.kitchen.stock.source.${detail.source}`)} />
+								<span class="mono">{formatDayTime(detail.sourcedAt, format)}</span>
+							</dd>
+							{#if detail.threshold !== undefined}
+								<dt>{$t('domains.kitchen.stock.detail.threshold')}</dt>
+								<dd class="mono">{detail.threshold}</dd>
+							{/if}
+						</dl>
+						<div class="detail-actions">
+							<Button label={$t('domains.kitchen.stock.actions.edit')} icon="pencil" onclick={() => edit(detail)} />
 							<Button
-								label={$t('domains.kitchen.stock.actions.move')}
-								icon="arrow-right"
-								aria-haspopup="menu"
-								aria-expanded={moveOpen}
-								onclick={() => (moveOpen = !moveOpen)}
+								label={$t('domains.kitchen.stock.actions.addToGrocery')}
+								icon="plus"
+								onclick={() => act('grocery', detail.id)}
 							/>
-						</span>
-						<Menu
-							bind:open={moveOpen}
-							anchor={moveAnchor}
-							align="start"
-							label={$t('domains.kitchen.stock.actions.move')}
-							items={moveItems(detail.location)}
-							onselect={(item) => act(item.id ?? '', detail.id)}
-						/>
-						<Button
-							label={$t('domains.kitchen.stock.actions.delete')}
-							variant="quiet"
-							onclick={() => act('delete', detail.id)}
-						/>
-					</div>
-				</aside>
-			{/if}
+							{#if !kitchen.out(detail)}
+								<span class="anchor" bind:this={moveAnchor}>
+									<Button
+										label={$t('domains.kitchen.stock.actions.move')}
+										icon="arrow-right"
+										aria-haspopup="menu"
+										aria-expanded={moveOpen}
+										onclick={() => (moveOpen = !moveOpen)}
+									/>
+								</span>
+								<Menu
+									bind:open={moveOpen}
+									anchor={moveAnchor}
+									align="start"
+									label={$t('domains.kitchen.stock.actions.move')}
+									items={moveItems(detail.location)}
+									onselect={(item) => act(item.id ?? '', detail.id)}
+								/>
+								<Button
+									label={$t('domains.kitchen.stock.actions.ranOut')}
+									icon="circle-dashed"
+									onclick={() => act('ranOut', detail.id)}
+								/>
+							{/if}
+							<Button
+								label={$t('domains.kitchen.stock.actions.delete')}
+								variant="quiet"
+								onclick={() => act('delete', detail.id)}
+							/>
+						</div>
+					</aside>
+				{/if}
+			</div>
 		</div>
 		<Menu
 			bind:open={bulkMoveOpen}
@@ -607,12 +699,25 @@
 	/* The lists on the left and the detail pane on the right */
 	.body {
 		display: grid;
+		grid-template-columns: minmax(0, 1fr) var(--sheet-sm);
+		align-items: start;
 		gap: var(--space-6);
 		padding: 0 var(--ed-gutter);
 	}
-	.body-wide {
-		grid-template-columns: minmax(0, 1fr) var(--sheet-sm);
-		align-items: start;
+	/* the line a list with nothing in it says, inside its card */
+	.none {
+		padding: var(--space-3);
+	}
+	/* The side stays in view while the lists scroll: the open item, and beneath it what ran out (D-92) */
+	.side {
+		position: sticky;
+		top: var(--space-4);
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-4);
+		min-width: 0;
+		max-height: calc(100vh - var(--space-8) * 3);
+		overflow-y: auto;
 	}
 	.lists {
 		display: flex;

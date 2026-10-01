@@ -1,6 +1,6 @@
 // The sample dataset (design/sample-data.md, "Hearth") mapped into the store's shapes. Dates shift with the real
 // calendar so the seeded stock reads as the mockup does: spinach expires tomorrow, the haul came in yesterday.
-import { grocery, haul, recipes, stock, type SampleRecipe } from '@eden/ui-kit/sample-data'
+import { grocery, groceryShopDay, haul, recipes, stock, type SampleRecipe } from '@eden/ui-kit/sample-data'
 import { shiftSampleDate, shiftSampleDateTime } from '@eden/shared/dates'
 import type { GroceryItem, GroceryOrigin, KitchenData, StockItem } from './store.svelte.js'
 
@@ -50,16 +50,22 @@ export function seedData(): KitchenData {
 			...(recipe.tip ? { tip: recipe.tip } : {}),
 		})),
 		grocery: {
-			name: grocery.name,
+			name: '',
 			store: STORE,
-			shopDay: shiftSampleDateTime(grocery.shopDay.replace(/^\w+ /, '')),
-			items: grocery.items.map((item) => ({
-				id: item.id,
-				name: item.name,
-				qty: item.qty,
-				done: item.done,
-				...origin(item.origin),
-			})),
+			shopDay: shiftSampleDateTime(groceryShopDay.replace(/^\w+ /, '')),
+			// the one list of today's shape: an item bought elsewhere names its store, an unfiled one sits under the default
+			items: grocery.items.map((item) => {
+				const storeId = grocery.lists.find((list) => list.id === item.listId)?.storeId
+				const store = grocery.stores.find((entry) => entry.id === storeId)?.name
+				return {
+					id: item.id,
+					name: item.name,
+					qty: item.qty,
+					done: item.done,
+					...(store && store !== STORE ? { store } : {}),
+					...origin(item.origin),
+				}
+			}),
 		},
 	}
 }

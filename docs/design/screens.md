@@ -4,7 +4,7 @@ status: draft
 summary: The screen inventory for mockups: a template per screen, the shell screens, the domain screens, mobile variants, and the priority order for Claude Design.
 read-this-if: You are drawing mockups or checking that a screen covers its states.
 depends-on: [ux-patterns, sample-data, product/substrate/shell]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## Screen template
@@ -39,9 +39,9 @@ Each screen below lists: id, platform, purpose, must show, primary actions, stat
 
 | id | platform | purpose | must show | primary actions | states | sample data |
 |---|---|---|---|---|---|---|
-| `hearth-stock`, mocked as `Domains/Hearth/Stock`, built in `apps/desktop` | both | stock by location | Fridge, Freezer, Pantry, Counter sections, the Expiring and Low stock filters, a sort menu (expiry, name, newest), a picture on every row and in the pane (the item's own, else its category's glyph, D-90), a tip as the info button on a row and in the pane (D-87), the detail pane with its edit mode | capture haul (the button, a drop or a paste), take stock from photos of the shelves (D-89), add, edit, choose or remove a picture, and in select mode move, add to grocery, delete | empty, expiring, low, selecting, editing | the stock table |
+| `hearth-stock`, mocked as `Domains/Hearth/Stock`, built in `apps/desktop` | both | stock by location | Fridge, Freezer, Pantry, Counter sections, Ran out at the side under the open item (D-92), the Expiring and Low stock filters, a sort menu (expiry, name, newest), a picture on every row and in the pane (the item's own, else its category's glyph, D-90), a tip as the info button on a row and in the pane (D-87), the detail pane with its edit mode | capture haul (the button, a drop or a paste), take stock from photos of the shelves (D-89), add, edit, choose or remove a picture, and in select mode move, add to grocery, delete | empty, expiring, low, selecting, editing | the stock table |
 | `hearth-recipes`, mocked as `Domains/Hearth/Recipes`, built in `apps/desktop` | desktop | recipes and cook this | the list in tonight's order, detail with ingredients marked in stock, missing or not enough, a danger badge on a recipe that names something the owner avoids, an unsaved draft in the pane | add a recipe (pasted text, a link, a photo or a file), cook this, add missing to grocery, edit, delete | empty, draft to check, units that do not agree on cook | the three recipes |
-| `hearth-grocery`, mocked as `Domains/Hearth/Grocery`, built in `apps/desktop` | both | the list | grouped by store, check off, origin badges, an item edited in the pane, the list's name, default store and shop day in the pane | add, edit, clear checked, set the shop day, export (later) | empty, all checked | H-E-B Saturday |
+| `hearth-grocery`, mocked as `Domains/Hearth/Grocery`, built in `apps/desktop` | both | the list | grouped by store, check off, origin badges, Buy it again beneath the list (D-92), an item edited in the pane, the list's name, default store and shop day in the pane | add, edit, clear checked, set the shop day, export (later) | empty, all checked | H-E-B Saturday |
 | `toolbench-ideas`, mocked as `Domains/Toolbench/Ideas` (desktop), built in `apps/desktop` | both | the inbox of ideas | status filter, list, detail with log and brainstorm thread | capture, change status | empty | the six ideas, `ideaLog` |
 | `toolbench-projects` | desktop | projects | list, detail with repo, next steps, log | add step | | weather-field, pi-pantry |
 | `toolbench-lab` | desktop | devices | device rows with services and routine status | add device | | the two devices |

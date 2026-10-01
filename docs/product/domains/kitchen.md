@@ -4,7 +4,7 @@ status: draft
 summary: Stock by location, recipes from what you have and from a link, a photo or pasted text, grocery lists, capture a haul from photos, receipts and order confirmations, take stock from photos of the shelves, a picture and a tip on the item, food allergies and supplements. Id `kitchen`, Phase 1.
 read-this-if: You are working on stock, recipes, grocery lists, capture, food allergies or supplements.
 depends-on: [substrate/registry, substrate/primitives, substrate/grants, substrate/tasks, substrate/shell, substrate/ai]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## 1. Purpose
@@ -23,6 +23,7 @@ Hearth keeps track of the food and consumables in the home, helps cook from what
 - MVP: See a storage tip on an item or a recipe when there is one worth knowing, and ask the Gardener for one ("keep ginger in the freezer") (D-87).
 - MVP: Bring a recipe in from a link, a photo, a file or pasted text, or have the Gardener write one, and check it before it is saved.
 - MVP: Keep supplements and mixes such as LMNT packets in stock with a low-stock alert.
+- MVP: See what ran out in one place, and put it back on the grocery list from "Buy it again" (D-92).
 - Later: Plan the week; Hearth drafts shop-day events and a list for it.
 - Later: Use the grocery list on my phone in the store; scan a barcode to add stock.
 - Later: Export the list to a grocery service; have an order's confirmation read from the mailbox, without bringing it as a file.
@@ -31,12 +32,12 @@ Hearth keeps track of the food and consumables in the home, helps cook from what
 
 | entity | key fields | tier | links out |
 |---|---|---|---|
-| `stock-item` | name, qty, unit, `location` (pantry, fridge, freezer, counter), category (one of twelve ids: produce, meat-and-fish, dairy-and-eggs, bakery, grains-and-pasta, canned-and-jarred, frozen, snacks, drinks, condiments-and-spices, supplements-and-mixes, other), purchased, expires, `expiryEstimated`, `source` (manual, capture), low-stock threshold, optional tip (D-87), optional picture (D-90) | T0 | `haul-photo` and `item-photo` attachments |
+| `stock-item` | name, qty, unit, `location` (pantry, fridge, freezer, counter), category (one of twelve ids: produce, meat-and-fish, dairy-and-eggs, bakery, grains-and-pasta, canned-and-jarred, frozen, snacks, drinks, condiments-and-spices, supplements-and-mixes, other), purchased, expires, `expiryEstimated`, `source` (manual, capture), low-stock threshold, optional tip (D-87), optional picture (D-90), `outAt` while it holds nothing (D-92) | T0 | `haul-photo` and `item-photo` attachments |
 | `recipe` | title, ingredients (name, qty, unit, note), steps, time, servings, tags, source URL, optional tip (D-87), optional label nutrition | T0 | stock items it consumed |
 | `grocery-list` | name, default store, shop day, active flag | T0 | `shop-day` Event |
-| `grocery-item` | name, qty, unit, store, aisle, note, `origin` (manual, recipe, low-stock), checked | T0 | recipe, stock item |
+| `grocery-item` | name, qty, unit, store, aisle, note, `origin` (manual, recipe, low-stock, ran-out), checked | T0 | recipe, stock item |
 
-Allergies are facts, not entities. Stock is shown sectioned by location; the location list is fixed to the four values so capture can place items without a picker. Low stock is derived, never stored: an item is low while it has a threshold and holds no more than it, and an item without one is never low. A recipe written before recipes held their lines reads with no ingredients and no steps.
+Allergies are facts, not entities. Stock is shown sectioned by location; the location list is fixed to the four values so capture can place items without a picker. Low stock is derived, never stored: an item is low while it has a threshold and holds no more than it, and an item without one is never low. Ran out is derived the same way, from a quantity of nothing; `outAt` is only its date (D-92). A recipe written before recipes held their lines reads with no ingredients and no steps.
 
 ## 4. Facts
 
@@ -67,9 +68,9 @@ The safety filter fails closed: when the profile cannot be read, nothing is sugg
 
 **Desktop views (Phase 1, built)**: Stock, Recipes and Grocery. There is no Tips view (D-87).
 
-- **Stock**: sections Fridge, Freezer, Pantry, Counter; the Expiring and Low stock filters; a sort menu (expiry, name, newest); quick-add; the detail pane with an edit mode (name, quantity, unit, location, expiry, category, low-stock threshold, tip); select mode with Move, Add to grocery and Delete on the selection, each one write with one undo (D-41). Add to grocery from a low item carries the origin `low-stock`.
+- **Stock**: sections Fridge, Freezer, Pantry, Counter, which hold what is there, and at the side Ran out, what ran out in the last 7 days with where it was kept (D-92); a click on a row opens it in the detail pane under Ran out, and a double-click does nothing more (D-94); the side stays in view while the lists scroll, as Grocery's pane does; the Expiring and Low stock filters; a sort menu (expiry, name, newest); quick-add; the detail pane with an edit mode (name, quantity, unit, location, expiry, category, low-stock threshold, tip); select mode with Move, Add to grocery, Ran out and Delete on the selection, each one write with one undo (D-41). Add to grocery from a low item carries the origin `low-stock`, from one that ran out `ran-out`. Ran out, on a row, in the pane or on a selection, keeps the item at nothing; Delete forgets it.
 - **Recipes**: the list in tonight's order (what uses up expiring stock first, then what misses least, then the quickest) and a detail pane with each ingredient marked in stock, missing or not enough, by local matching; Cook this; Add missing to grocery (origin `recipe`, the recipe's name as the note, skipping what is already on the list); Edit and Delete. A recipe that names something the owner avoids carries a danger badge.
-- **Grocery**: the active list grouped by store (an item's own, else the list's), check off, origin badges, quick-add, Clear checked. An item is edited in the pane (name, quantity, store, note); with no item open the pane shows the list itself: its name, its default store and its shop day, a date and a time.
+- **Grocery**: the active list grouped by store (an item's own, else the list's), a checklist: every row leads with its checkbox and a click on the row checks it off, Edit being in the row's menu (D-94); origin badges, quick-add, Clear checked. Beneath the list, Buy it again: everything that ran out and is not on the list, each put on it by a click on its row (D-92). An item is edited in the pane (name, quantity, store, note); with no item open the pane shows the list itself: its name, its default store and its shop day, a date and a time.
 
 **Capture** opens from the Stock primary action, and from files dropped or pasted on the Stock page.
 
@@ -103,7 +104,7 @@ The same sheet reads photos of the shelves as they stand (D-89): Stock's second 
 
 ### Pictures
 
-Every stock item is shown with a picture (D-90). The model answers a box around each item it sees in a photo; the app cuts the box out in the webview, small, shows it on the row to be checked, and keeps it with the item on commit, unless the item it merges into has a picture already. In the item's pane the owner chooses a picture of their own, pastes a link to one, or takes the picture away. A grocer's product link gives the grocer's picture of the product, in the pane or in the quick-add line, where it also adds the item under the name the link gives (D-91). An item with none shows its category's glyph. A picture goes with its item when the item is deleted, and comes back with the undo.
+Every stock item is shown with a picture (D-90). The model answers a box around each item it sees in a photo; the app cuts the box out in the webview, small, shows it on the row to be checked, and keeps it with the item on commit, unless the item it merges into has a picture already. In the item's pane the owner chooses a picture of their own, pastes a link to one, or takes the picture away. A grocer's product link gives the grocer's picture of the product, in the pane or in the quick-add line, where it also adds the item under the name the link gives (D-91). An item with none shows its category's glyph. A picture goes with its item when the item is deleted, and comes back with the undo; it stays with an item that ran out (D-92).
 
 ### Recipes arrive as drafts
 
@@ -115,7 +116,7 @@ A recipe arrives three ways, and each opens in the Recipes pane as an unsaved dr
 
 ### Cooking decrements stock
 
-"Cook this" subtracts each ingredient's quantity where the units agree, and asks in the pane, "leave it" or "used it up", where they do not. It never drops an item below zero. An item left at zero is removed, unless it has a low-stock threshold: that one stays at zero and reads as low. The whole is one write with one undo.
+"Cook this" subtracts each ingredient's quantity where the units agree, and asks in the pane, "leave it" or "used it up", where they do not. It never drops an item below zero. An item left at zero stays, as run out (D-92); one with a low-stock threshold also reads as low. The whole is one write with one undo.
 
 ## 7. Kinds, signals, notifications, intents
 
@@ -177,6 +178,6 @@ Left for later issues, each where its agent will read it.
 - **How well a box fits its item** has not been seen against the live model. The light grade may draw loose boxes; the per-tool model override (D-74) is the first thing to try, and a box that shows nothing or most of the photo is already dropped.
 - **An item read from a receipt** has no picture until the owner gives it one. Recipes have none.
 - **Product links are H-E-B's alone** (D-91), read from two address forms that are observed, not documented: `productLink` in `packages/shared/src/domains/kitchen/product-link.ts` is where another grocer goes, and where a change at H-E-B is mended. A link gives no store to the item, because a stock item has none; whether it should is an open question with the owner.
-- **"Buy it again", and showing what ran out.** Asked for by the owner and not built. Today an item that is used up leaves Stock, and its picture with it, so nothing remembers it: a product bought again arrives as a new item. The owner wants a list of things to buy again and wants a run-out item to show as such, on its row or in a section at the side; they do not want a catalogue of products kept for its own sake, and "out of stock" is the wrong word for a household. Both want one thing settled first: what remembers an item once it has run out (the row kept at nothing, or the tombstones read as history). It changes the rule that an item cooked to nothing is removed.
+- **What ran out and "Buy it again" (D-92), built on desktop.** Left for later: how consistently the live model names a product from one shop to the next is unknown, and it decides how often a returning item finds the row that ran out; the name-only match in `mergeTarget` (`packages/shared/src/domains/kitchen/match.ts`) is where to loosen or tighten it. The 7 and 90 day windows are constants (`out.ts`), not settings. A `buy-it-again` Garden widget was proposed and not built. The Gardener's context still lists an item that ran out, at a quantity of 0. The Ran out and Buy it again lists have no select mode. An item at nothing from before `outAt` existed has no date: it shows as recent and is never let go. The Storybook mock (`Domains/Hearth/Stock`, story `RanOut`) still draws Ran out beneath the locations and opens the first item in the pane unasked; no mock shows the side staying in view or the pane empty until a row is picked (D-94). The phone's pages show neither list (issues 19 and 27).
 - **A cooked recipe** does not link to the items it consumed, which the entity table's "links out" still asks for.
 - **Not verified in the real app.** None of this has run in the installed Tauri app or against the live API. HEIC decoding in the Tauri webview is assumed.

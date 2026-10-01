@@ -88,6 +88,7 @@
 			"sampleAdded": "{domain}にサンプルデータを追加",
 			"stockAdded": "{name}を在庫に追加",
 			"stockRemoved": "{name}を在庫から削除",
+			"stockRanOut": "{name}を切らした",
 			"stockMoved": "{name}を{location}へ移動",
 			"groceryAdded": "{name}を買い物リストに追加",
 			"groceryChecked": "{name}をチェック",
@@ -114,6 +115,7 @@
 			"tasksAdded": "{count}件のタスクを今日に追加",
 			"stockEdited": "{name}を編集",
 			"stockRemovedMany": "{count}件を在庫から削除",
+			"stockRanOutMany": "{count}件を切らした",
 			"stockMovedMany": "{count}件を{location}に移動",
 			"recipeSaved": "{name}をレシピに保存",
 			"recipeRemoved": "{name}をレシピから削除",
@@ -201,6 +203,8 @@
 				"addPlaceholder": "在庫に追加、または商品のリンクを貼り付け",
 				"expiring": "期限間近",
 				"lowStock": "残りわずか",
+				"ranOut": "切らしたもの",
+				"ranOutEmpty": "最近切らしたものはありません。",
 				"sortBy": "並び順: {sort}",
 				"sortLabel": "在庫の並び順",
 				"sort": {
@@ -216,6 +220,7 @@
 				},
 				"badge": {
 					"lowStock": "残りわずか",
+					"ranOut": "切らした",
 					"thisWeek": "今週"
 				},
 				"empty": {
@@ -251,7 +256,8 @@
 				},
 				"actions": {
 					"edit": "編集",
-					"moveTo": "{location}へ移動",
+					"moveTo": "移動先",
+					"ranOut": "切らした",
 					"move": "移動",
 					"addToGrocery": "買い物リストへ",
 					"delete": "削除"
@@ -259,6 +265,9 @@
 				"toast": {
 					"added": "{name}を在庫に追加しました。",
 					"removed": "{name}を在庫から削除しました。",
+					"ranOut": "{name}を切らしました。",
+					"ranOutMany": "{count}件を切らしました。",
+					"back": "{name}が在庫に戻りました。",
 					"moved": "{name}を{location}へ移動しました。",
 					"edited": "{name}を保存しました。",
 					"addedToGrocery": "{name}を買い物リストに追加しました。",
@@ -276,6 +285,7 @@
 				"add": "追加",
 				"addPlaceholder": "リストに追加",
 				"clearChecked": "チェック済みを整理",
+				"buyAgain": "また買う",
 				"checked": "{total}件中{checked}件チェック済み",
 				"allChecked": "すべてチェック済みです。帰ったらリストを整理しましょう。",
 				"anyStore": "店の指定なし",
@@ -288,6 +298,7 @@
 				"origin": {
 					"manual": "手入力",
 					"recipe": "レシピ",
+					"ranOut": "切らした",
 					"lowStock": "残りわずか"
 				},
 				"actions": {
@@ -1181,6 +1192,7 @@
 	},
 	"uiKit": {
 		"about": "{0}について",
+		"checkOff": "{0}をチェック",
 		"compass": {
 			"north": "北"
 		},

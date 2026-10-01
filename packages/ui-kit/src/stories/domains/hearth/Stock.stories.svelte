@@ -4,7 +4,7 @@
 	import { expect, fn, userEvent, within } from 'storybook/test'
 	import { canvasOf, hasCanvas } from '../../../storybook/play.js'
 	import { defaultStrings } from '$lib/i18n/strings.js'
-	import { sidebar, stock } from '../../sample-data.js'
+	import { ranOut, sidebar, stock } from '../../sample-data.js'
 	import Stock from './Stock.svelte'
 
 	const strings = defaultStrings
@@ -180,5 +180,25 @@
 		for (const button of bulk) await expect(button).toBeEnabled()
 		// the other locations stay out of the mode
 		await expect(canvas.getByRole('grid', { name: 'Pantry' })).not.toHaveAttribute('aria-multiselectable')
+	}}
+/>
+
+<!-- What ran out lately (D-92): the four locations hold what is there, and a fifth list beneath them holds the milk
+     and the oats, each with where it was kept and the day it ran out -->
+<Story
+	name="RanOut"
+	{template}
+	args={{ ranOut: true }}
+	parameters={{ platforms: ['desktop'] }}
+	play={async ({ canvasElement }) => {
+		if (!hasCanvas(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		const grid = canvas.getByRole('grid', { name: 'Ran out' })
+		const rows = within(grid).getAllByRole('row')
+		await expect(rows).toHaveLength(ranOut.length)
+		await expect(rows[0]).toHaveTextContent('Whole milk')
+		await expect(rows[0]).toHaveTextContent('Fridge')
+		// what ran out is not on its shelf's list
+		await expect(within(canvas.getByRole('grid', { name: 'Fridge' })).queryByText('Whole milk')).toBeNull()
 	}}
 />

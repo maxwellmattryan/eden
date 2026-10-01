@@ -6,8 +6,11 @@ import { parseIngredient } from './parse.js'
 import { decodeEntities, htmlToText } from './sources.js'
 import type { Ingredient, Recipe } from './types.js'
 
-/** A recipe before it is a row: everything but the id. */
-export type RecipeDraft = Omit<Recipe, 'id'>
+/**
+ * A recipe before it is a row: everything but the id. It has no picture of its own yet; `imageUrl` is where its
+ * source shows one, which the app fetches for the owner to keep or take away (D-93), and is never stored.
+ */
+export type RecipeDraft = Omit<Recipe, 'id' | 'photo'> & { imageUrl?: string }
 
 /** A string of a page as plain text: tags and entities gone, and no space left before the punctuation a tag sat by. */
 const clean = (value: unknown): string =>
@@ -75,6 +78,67 @@ const tagsOf = (value: unknown): string[] =>
 		.filter((tag) => tag && tag.length <= 24)
 		.slice(0, 5)
 
+/** An `https` address a page names, absolute; nothing for any other kind of address. */
+function httpsAddress(value: string, base?: string): string | undefined {
+	try {
+		const url = new URL(value.trim(), base)
+		return url.protocol === 'https:' ? url.href : undefined
+	} catch {
+		return undefined
+	}
+}
+
+/** The picture of schema.org's `image`: an address, an `ImageObject`, or a list of either, the first that reads. */
+function imageOf(value: unknown, base?: string, depth = 0): string | undefined {
+	if (depth > 3 || !value) return undefined
+	if (typeof value === 'string') return httpsAddress(decodeEntities(value), base)
+	if (Array.isArray(value)) {
+		for (const entry of value) {
+			const found = imageOf(entry, base, depth + 1)
+			if (found) return found
+		}
+		return undefined
+	}
+	if (typeof value === 'object') {
+		const node = value as Record<string, unknown>
+		return imageOf(node.url ?? node.contentUrl, base, depth + 1)
+	}
+	return undefined
+}
+
+/** The names of schema.org's `author` or `publisher`: a string, a `Person` or an `Organization`, or a list of them. */
+function namesOf(value: unknown, depth = 0): string[] {
+	if (depth > 3 || !value) return []
+	if (typeof value === 'string') return clean(value) ? [clean(value)] : []
+	if (Array.isArray(value)) return value.flatMap((entry) => namesOf(entry, depth + 1))
+	if (typeof value === 'object') return namesOf((value as Record<string, unknown>).name, depth + 1)
+	return []
+}
+
+/** A credit as it is kept: one line, of a length a name has. */
+const credit = (names: string[]): string => [...new Set(names)].slice(0, 3).join(', ').slice(0, 120)
+
+/** The `content` of a page's `<meta>` by its `property` or `name`, whichever order its attributes come in. */
+function meta(html: string, key: string): string {
+	for (const [tag] of html.matchAll(/<meta\b[^>]*>/gi)) {
+		const named = /\b(?:property|name)\s*=\s*["']?([^"'\s>]+)/i.exec(tag)?.[1]
+		if (named?.toLowerCase() !== key) continue
+		const content = /\bcontent\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(tag)
+		const value = clean(content?.[1] ?? content?.[2])
+		if (value) return value
+	}
+	return ''
+}
+
+/** The picture a page shows of itself when it is shared (`og:image`): the fallback where its recipe names none. */
+export function pageImage(html: string, url?: string): string | undefined {
+	const named = meta(html, 'og:image:secure_url') || meta(html, 'og:image') || meta(html, 'twitter:image')
+	return named ? httpsAddress(named, url) : undefined
+}
+
+/** What a page calls itself (`og:site_name`). */
+export const pageSiteName = (html: string): string => meta(html, 'og:site_name').slice(0, 120)
+
 /** The recipe a page describes in JSON-LD, or nothing when it describes none with both ingredients and steps. */
 export function recipeFromJsonLd(html: string, url?: string): RecipeDraft | undefined {
 	const scripts = html.matchAll(
@@ -95,6 +159,9 @@ export function recipeFromJsonLd(html: string, url?: string): RecipeDraft | unde
 		if (!name || !lines.length || !made.length) continue
 		const minutes = durationMinutes(node.totalTime) || durationMinutes(node.prepTime) + durationMinutes(node.cookTime)
 		const source = url ?? clean(node.url)
+		const image = imageOf(node.image, source || undefined) ?? pageImage(html, source || undefined)
+		const author = credit(namesOf(node.author))
+		const sourceName = credit(namesOf(node.publisher).slice(0, 1)) || pageSiteName(html)
 		return {
 			name,
 			serves: firstNumber(node.recipeYield) || 2,
@@ -103,6 +170,9 @@ export function recipeFromJsonLd(html: string, url?: string): RecipeDraft | unde
 			ingredients: lines.map(parseIngredient),
 			steps: made,
 			...(source ? { sourceUrl: source } : {}),
+			...(sourceName ? { sourceName } : {}),
+			...(author ? { author } : {}),
+			...(image ? { imageUrl: image } : {}),
 		}
 	}
 	return undefined
@@ -143,6 +213,7 @@ export function recipeDraft(value: unknown): RecipeDraft | undefined {
 		}
 	)
 	if (!ingredients.length) return undefined
+	const image = typeof raw.imageUrl === 'string' ? httpsAddress(raw.imageUrl) : undefined
 	return {
 		name,
 		serves: whole(raw.serves, 2, 99),
@@ -151,6 +222,10 @@ export function recipeDraft(value: unknown): RecipeDraft | undefined {
 		ingredients,
 		steps: steps(raw.steps),
 		...(clean(raw.sourceUrl) ? { sourceUrl: clean(raw.sourceUrl) } : {}),
+		...(clean(raw.sourceName) ? { sourceName: clean(raw.sourceName).slice(0, 120) } : {}),
+		...(clean(raw.author) ? { author: clean(raw.author).slice(0, 120) } : {}),
 		...(clean(raw.tip) ? { tip: clean(raw.tip) } : {}),
+		...(raw.scales === false ? { scales: false } : {}),
+		...(image ? { imageUrl: image } : {}),
 	}
 }

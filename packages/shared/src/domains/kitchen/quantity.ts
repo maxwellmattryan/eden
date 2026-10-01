@@ -177,3 +177,8 @@ export function isLow(item: { qty: string; unit?: string; threshold?: number }):
 	const amount = parseAmount(item.qty, item.unit)
 	return !!amount && amount.value <= item.threshold
 }
+
+/** Ran out (D-92): the item holds nothing. Derived from its quantity, like low stock, never stored. */
+export function isOut(item: { qty: string; unit?: string }): boolean {
+	return parseAmount(item.qty, item.unit)?.value === 0
+}

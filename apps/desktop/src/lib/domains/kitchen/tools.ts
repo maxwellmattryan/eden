@@ -14,6 +14,8 @@ import {
 	haulRows,
 	isSafe,
 	LOCATIONS,
+	pageImage,
+	pageSiteName,
 	pageText,
 	recipeDraft,
 	recipeFromJsonLd,
@@ -90,13 +92,28 @@ const RECIPE_ANSWER = answer.object({
 	tip: answer.text(
 		'One sentence the source gives, or that any cook would want, that makes the dish go right; an empty string when there is nothing of the kind.'
 	),
+	author: answer.text('Who wrote the recipe, as the source credits them; an empty string when it does not say.'),
+	sourceName: answer.text(
+		'What it comes from, by name, when the source shows it: the site, the magazine, the cookbook; an empty string otherwise.'
+	),
 })
+
+/** What a page shows of its recipe beyond its words (D-93): kept from the fetch for the draft the answer becomes. */
+const pagesRead = new Map<string, { imageUrl?: string; sourceName?: string; author?: string }>()
 
 /** What a recipe's page says, for the model: the recipe as the page describes it in JSON-LD when it does, else its text. */
 async function pageFor(url: string): Promise<string> {
 	const page = await fetchPage(url)
 	const described = recipeFromJsonLd(page.html, page.url)
-	return described ? JSON.stringify(described) : pageText(page.html)
+	pagesRead.set(url, {
+		imageUrl: described?.imageUrl ?? pageImage(page.html, page.url),
+		sourceName: described?.sourceName || pageSiteName(page.html) || undefined,
+		author: described?.author,
+	})
+	if (!described) return pageText(page.html)
+	// the picture's address is nothing the model needs
+	const { imageUrl: _imageUrl, ...words } = described
+	return JSON.stringify(words)
 }
 
 export const kitchenTools: Record<string, ToolHandler> = {
@@ -332,7 +349,15 @@ export const kitchenTools: Record<string, ToolHandler> = {
 						failure: 'empty',
 					}
 				const url = str(input, 'url')
-				const recipe = url && !draft.sourceUrl ? { ...draft, sourceUrl: url } : draft
+				const shown = url ? pagesRead.get(url) : undefined
+				if (url) pagesRead.delete(url)
+				const recipe = {
+					...draft,
+					...(url && !draft.sourceUrl ? { sourceUrl: url } : {}),
+					...(shown?.sourceName && !draft.sourceName ? { sourceName: shown.sourceName } : {}),
+					...(shown?.author && !draft.author ? { author: shown.author } : {}),
+					...(shown?.imageUrl ? { imageUrl: shown.imageUrl } : {}),
+				}
 				return { output: { status: 'drafted', name: recipe.name, note: DRAFTED }, card: { kind: 'recipe', recipe } }
 			},
 			maxTokens: 4000,

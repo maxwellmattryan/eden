@@ -28,7 +28,15 @@
 	} from '$lib/index.js'
 	import AppFrame from '../_frame/AppFrame.svelte'
 	import SwipeList from '../_frame/SwipeList.svelte'
-	import { haul, haulCategories, sidebar, stock, type StockItem, type StockLocation } from '../../sample-data.js'
+	import {
+		haul,
+		haulCategories,
+		ranOut as ranOutItems,
+		sidebar,
+		stock,
+		type StockItem,
+		type StockLocation,
+	} from '../../sample-data.js'
 
 	type Sort = 'expiry' | 'name' | 'added'
 	type Bulk = 'move' | 'grocery' | 'delete'
@@ -48,6 +56,8 @@
 		editing?: boolean
 		/** The Fridge in select mode, with its bulk actions in the header. */
 		selecting?: boolean
+		/** What ran out lately, in a list of its own beneath the locations (D-92). */
+		ranOut?: boolean
 		oncapture?: () => void
 		/** Take stock from photos of the shelves: the header's second action and the empty state's own. */
 		ontakestock?: () => void
@@ -73,6 +83,7 @@
 		selected = 'st-01',
 		editing = false,
 		selecting = false,
+		ranOut = false,
 		oncapture,
 		ontakestock,
 		onadd,
@@ -177,6 +188,21 @@
 		meta: item.expiry,
 		metaWarn: soon(item),
 		actions: actionsFor(item),
+	})
+
+	/** A row of the Ran out list: where the item was kept and the day it ran out; its menu puts it on the list. */
+	const toOutRow = (item: (typeof ranOutItems)[number]): ListRowData => ({
+		id: item.id,
+		primary: item.name,
+		icon: glyphOf(item),
+		tile: true,
+		chips: [{ label: locationLabel(item.location) }],
+		meta: item.outOn,
+		actions: [
+			{ id: 'edit', label: 'Edit', icon: 'pencil' },
+			{ id: 'grocery', label: 'Add to grocery', icon: 'plus' },
+			{ id: 'delete', label: 'Delete', icon: 'trash', destructive: true },
+		],
 	})
 
 	// The Sort chip's menu: how each location is ordered.
@@ -380,6 +406,15 @@
 								</section>
 							{/if}
 						{/each}
+						{#if ranOut && platform === 'desktop'}
+							<List
+								header="Ran out"
+								count={ranOutItems.length}
+								rows={ranOutItems.map(toOutRow)}
+								{onopen}
+								onaction={act}
+							/>
+						{/if}
 						{#if !sections.length}
 							<p class="voice">Nothing in stock matches these filters.</p>
 						{/if}

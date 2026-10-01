@@ -22,6 +22,8 @@ export interface UiStrings {
 	selected: (count: number) => string
 	/** The spoken state of a selected row outside a grid, where aria-selected is not allowed. */
 	selectedRow: string
+	/** The name of a row's checkbox: "Check off Limes". */
+	checkOff: (name: string) => string
 	actions: string
 	actionsFor: (name: string) => string
 	remove: (name: string) => string
@@ -306,6 +308,7 @@ export const defaultStrings: UiStrings = {
 	select: 'Select',
 	selected: (count) => `${count} selected`,
 	selectedRow: 'Selected',
+	checkOff: (name) => `Check off ${name}`,
 	actions: 'Actions',
 	actionsFor: (name) => `Actions for ${name}`,
 	remove: (name) => `Remove ${name}`,

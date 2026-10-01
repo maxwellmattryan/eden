@@ -5,14 +5,16 @@ export type AnchorLike = Element | { getBoundingClientRect(): DOMRect; contains?
 
 export interface AnchorOptions {
 	anchor: AnchorLike | null | undefined
-	/** Preferred side; the panel flips when there is no room. */
-	side?: 'top' | 'bottom'
+	/** Preferred side; the panel flips when there is no room. `right` is a flyout beside the anchor (a submenu), top-aligned with it. */
+	side?: 'top' | 'bottom' | 'right'
 	/** Which edge of the anchor the panel lines up with. */
 	align?: 'start' | 'end'
 	/** Space between anchor and panel, in px. */
 	gap?: number
 	/** Minimum distance from the viewport edges, in px. */
 	margin?: number
+	/** For a `right` flyout: how far above the anchor's top the panel starts, in px. */
+	inset?: number
 }
 
 /**
@@ -25,7 +27,7 @@ export interface AnchorOptions {
 export function anchor(get: () => AnchorOptions): Attachment<HTMLElement> {
 	return (el) => {
 		const options = get()
-		const { anchor: target, side = 'bottom', align = 'start', gap = 6, margin = 8 } = options
+		const { anchor: target, side = 'bottom', align = 'start', gap = 6, margin = 8, inset = 0 } = options
 		// The side is chosen once, when the element is first placed against this anchor, and kept while it stays open:
 		// an element that grows afterwards (a row unfolds) never jumps to the other side of its anchor. It takes the
 		// preferred side when it fits there, the other when it fits there, and otherwise the side with more room. The
@@ -36,6 +38,7 @@ export function anchor(get: () => AnchorOptions): Attachment<HTMLElement> {
 		/** Chooses the side if it is not chosen yet, and sets the room there. Never from a resize callback: it may change the element's size. */
 		const fit = () => {
 			if (!target) return
+			if (side === 'right') return
 			const rect = target.getBoundingClientRect()
 			const roomAbove = rect.top - gap - margin
 			const roomBelow = window.innerHeight - rect.bottom - gap - margin
@@ -63,6 +66,17 @@ export function anchor(get: () => AnchorOptions): Attachment<HTMLElement> {
 			el.style.left = `${margin}px`
 			const width = el.offsetWidth
 			const height = el.offsetHeight
+			if (side === 'right') {
+				// beside the anchor, its first row level with the anchor's (the menu's own padding), flipped to the left
+				// when the right is short; the panel takes the height the viewport gives it
+				const flip = rect.right + gap + width > window.innerWidth - margin && rect.left - gap - width >= margin
+				const left = flip ? rect.left - gap - width : Math.min(rect.right + gap, window.innerWidth - width - margin)
+				const top = Math.max(margin, Math.min(rect.top - inset, window.innerHeight - height - margin))
+				el.style.top = `${Math.round(top)}px`
+				el.style.left = `${Math.round(Math.max(margin, left))}px`
+				el.dataset.side = flip ? 'left' : 'right'
+				return
+			}
 			const up = above ?? side === 'top'
 			let left = align === 'end' ? rect.right - width : rect.left
 			left = Math.max(margin, Math.min(left, window.innerWidth - width - margin))

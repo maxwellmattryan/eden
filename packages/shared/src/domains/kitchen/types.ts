@@ -26,6 +26,8 @@ export type StockCategory = (typeof CATEGORIES)[number]
 
 /** The registry id of the Attachment kind an item's picture is kept as (D-90). */
 export const ITEM_PHOTO = 'item-photo'
+/** The registry id of the Attachment kind a recipe's picture is kept as (D-93). */
+export const RECIPE_PHOTO = 'recipe-photo'
 
 /** What a capture reads: a shop just brought home, or the shelves as they stand (D-89). */
 export type CaptureMode = 'haul' | 'stock'
@@ -52,6 +54,8 @@ export interface StockItem {
 	source: StockSource
 	/** When it entered stock, as an ISO timestamp. */
 	sourcedAt: string
+	/** When it ran out, as an ISO timestamp (D-92): set while it holds nothing, gone once it is bought again. */
+	outAt?: string
 }
 
 /** One line of a recipe: what, how much, and what the page said after the comma ("rinsed", "to taste"). */
@@ -73,11 +77,19 @@ export interface Recipe {
 	steps: string[]
 	/** Where it came from, when it came from a page. */
 	sourceUrl?: string
+	/** What it came from, by name (D-93): the site, the magazine, the cookbook. */
+	sourceName?: string
+	/** Who wrote it, as the source credits them (D-93). */
+	author?: string
 	/** A tip worth showing with the recipe (D-87). */
 	tip?: string
+	/** The recipe's picture (D-93): the id of a `recipe-photo` Attachment, whose row holds the small image. */
+	photo?: string
+	/** `false` for a recipe whose amounts do not follow its servings (D-94): a loaf, a cake in one tin. */
+	scales?: boolean
 }
 
-export type GroceryOrigin = 'manual' | 'recipe' | 'low-stock'
+export type GroceryOrigin = 'manual' | 'recipe' | 'low-stock' | 'ran-out'
 
 export interface GroceryItem {
 	id: string

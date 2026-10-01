@@ -104,3 +104,60 @@ describe('a recipe from a page', () => {
 		expect(recipeDraft(null)).toBeUndefined()
 	})
 })
+
+describe('a recipe’s picture and credit', () => {
+	const recipe = {
+		'@type': 'Recipe',
+		name: 'Lemon chicken',
+		recipeIngredient: ['500 g chicken thighs'],
+		recipeInstructions: 'Roast it.',
+	}
+	const withHead = (json: unknown, head: string) =>
+		`<html><head>${head}<script type="application/ld+json">${JSON.stringify(json)}</script></head></html>`
+
+	it('reads the picture, the author and the publisher the recipe names', () => {
+		const draft = recipeFromJsonLd(
+			page({
+				...recipe,
+				image: [{ '@type': 'ImageObject', url: '/img/chicken.jpg' }, 'https://cdn.example.com/other.jpg'],
+				author: [{ '@type': 'Person', name: 'Ada Cook' }],
+				publisher: { '@type': 'Organization', name: 'Example Kitchen' },
+			}),
+			'https://example.com/recipes/chicken'
+		)
+		expect(draft).toMatchObject({
+			imageUrl: 'https://example.com/img/chicken.jpg',
+			author: 'Ada Cook',
+			sourceName: 'Example Kitchen',
+		})
+	})
+
+	it('falls back to what the page says of itself', () => {
+		const draft = recipeFromJsonLd(
+			withHead(
+				recipe,
+				'<meta content="https://example.com/og.jpg?a=1&amp;b=2" property="og:image"><meta property="og:site_name" content="Example Kitchen">'
+			),
+			'https://example.com/recipes/chicken'
+		)
+		expect(draft).toMatchObject({ imageUrl: 'https://example.com/og.jpg?a=1&b=2', sourceName: 'Example Kitchen' })
+		expect(draft?.author).toBeUndefined()
+	})
+
+	it('takes no picture that is not https', () => {
+		const draft = recipeFromJsonLd(page({ ...recipe, image: 'http://example.com/a.jpg' }))
+		expect(draft?.imageUrl).toBeUndefined()
+	})
+
+	it('keeps the credit and the scaling a draft was handed', () => {
+		const draft = recipeDraft({
+			name: 'Loaf',
+			ingredients: ['500 g flour'],
+			steps: ['Bake.'],
+			author: 'Ada Cook',
+			sourceName: 'The Bread Book',
+			scales: false,
+		})
+		expect(draft).toMatchObject({ author: 'Ada Cook', sourceName: 'The Bread Book', scales: false })
+	})
+})

@@ -4,7 +4,7 @@
 // write hands back an undo, so the page can show the undo toast in place of a confirm sheet (D-12); each write also
 // lands in the Garden's activity feed. A change to several rows (a haul, a recipe cooked, a bulk move) is one batch
 // and one undo.
-import { SvelteMap } from 'svelte/reactivity'
+import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import { logError } from '@eden/shared/api'
 import {
 	applyBatch,
@@ -15,6 +15,7 @@ import {
 	newId,
 	queryAttachments,
 	queryEntities,
+	readAttachment,
 	restoreRows,
 	toUri,
 	updateEntity,
@@ -24,19 +25,26 @@ import {
 } from '@eden/shared/data'
 import { nowIso } from '@eden/shared/dates'
 import {
+	buyAgain,
 	EMPTY_LIST,
 	ensureShopDay,
 	expiresSoon,
 	isLow,
+	isOut,
 	ITEM_PHOTO,
 	KITCHEN,
 	kitchenFromRows,
 	kitchenRows,
 	kitchenUris,
+	lapsed,
 	LOCATIONS,
 	mergeInto,
+	mergeTarget,
 	parseGrocery,
 	parseStock,
+	ranOut,
+	RECIPE_PHOTO,
+	recentlyOut,
 	type CaptureMode,
 	type GroceryItem,
 	type GroceryItemPayload,
@@ -90,6 +98,12 @@ export interface HaulImage {
 	height?: number
 }
 
+/** A recipe's picture as it is kept (D-93): the whole of it, sized for the page, and the small square a row shows. */
+export interface RecipeImage {
+	image: Blob
+	thumbnail: string
+}
+
 /** How the stock is ordered within a location. */
 export type StockSort = 'expiry' | 'name' | 'added'
 
@@ -136,6 +150,9 @@ export class KitchenStore {
 	grocery = $state<GroceryList>({ ...EMPTY_LIST })
 	/** The items' pictures (D-90): the small image of each `item-photo` Attachment, by the Attachment's id. */
 	readonly photos = new SvelteMap<string, string>()
+	/** The recipes' pictures in full (D-93), by the Attachment's id: object URLs, read when a recipe is first opened. */
+	readonly #images = new SvelteMap<string, string>()
+	readonly #reading = new SvelteSet<string>()
 
 	/** The row of the grocery list, made with its first item. */
 	#listId: string | undefined
@@ -147,6 +164,10 @@ export class KitchenStore {
 
 	readonly expiring = $derived(this.stock.filter((item) => this.soon(item)).sort(SORTS.expiry))
 	readonly lowItems = $derived(this.stock.filter((item) => isLow(item)))
+	/** What ran out lately (D-92): Stock's own list of it, the newest first. */
+	readonly recentlyOut = $derived(recentlyOut(this.stock, Date.now()))
+	/** "Buy it again": everything that ran out, less what is already on the grocery list. */
+	readonly buyAgain = $derived(buyAgain(this.stock, this.grocery.items))
 	readonly checked = $derived(this.grocery.items.filter((item) => item.done).length)
 	/** The stores the list's items name, with the list's own first: what an item's store may be set to. */
 	readonly stores = $derived(
@@ -170,11 +191,16 @@ export class KitchenStore {
 		return isLow(item)
 	}
 
-	/** The stock in its four sections, sorted, with what never expires last; empty sections dropped. */
+	/** Ran out (D-92): holding nothing. The item stays, to be shown as run out and bought again. */
+	out(item: StockItem): boolean {
+		return isOut(item)
+	}
+
+	/** What is there, in its four sections, sorted, with what never expires last; empty sections dropped. */
 	sections(filter: (item: StockItem) => boolean = () => true, sort: StockSort = 'expiry') {
 		return LOCATIONS.map((location) => ({
 			location,
-			items: this.stock.filter((item) => item.location === location && filter(item)).sort(SORTS[sort]),
+			items: this.stock.filter((item) => item.location === location && !isOut(item) && filter(item)).sort(SORTS[sort]),
 		})).filter((section) => section.items.length)
 	}
 
@@ -192,7 +218,7 @@ export class KitchenStore {
 				queryEntities<GroceryListPayload>({ type: KITCHEN.list }),
 				queryEntities<GroceryItemPayload>({ type: KITCHEN.item }),
 				// the pictures are what the rows are shown with, never what they stand on
-				queryAttachments({ kinds: [ITEM_PHOTO] }).catch(() => []),
+				queryAttachments({ kinds: [ITEM_PHOTO, RECIPE_PHOTO] }).catch(() => []),
 			])
 			this.photos.clear()
 			for (const picture of pictures) if (picture.thumbnail) this.photos.set(picture.id, picture.thumbnail)
@@ -202,6 +228,7 @@ export class KitchenStore {
 			this.grocery = data.grocery
 			this.#listId = listId
 			this.saveFailed = this.#queue.failed
+			this.#letGo()
 		} catch (error) {
 			// nothing was read: say so, and let the retry read again
 			this.#loading = undefined
@@ -209,6 +236,16 @@ export class KitchenStore {
 			await logError('data', 'Could not read the Hearth rows', String(error)).catch(() => null)
 		}
 		this.ready = true
+	}
+
+	/** Lets go of what ran out long ago and was never bought again (D-92), with its picture: quietly, no undo. */
+	#letGo() {
+		const gone = lapsed(this.stock, Date.now())
+		if (!gone.length) return
+		const ids = gone.map((item) => item.id)
+		const uris = [...ids.map((id) => toUri(KITCHEN.stock, id)), ...this.#pictures(ids)]
+		this.stock = this.stock.filter((item) => !ids.includes(item.id))
+		this.#queue.enqueue(() => deleteRows(uris))
 	}
 
 	/** Reads the rows again, after an import changed them under the store. What is waiting to be sent is sent first. */
@@ -238,6 +275,35 @@ export class KitchenStore {
 		await this.#queue.retry()
 	}
 
+	/** A recipe's small picture, for its row; nothing when it has none. */
+	recipeThumb(recipe: Pick<Recipe, 'photo'>): string | undefined {
+		return recipe.photo ? this.photos.get(recipe.photo) : undefined
+	}
+
+	/**
+	 * A recipe's picture for its page: the whole of it once it has been read from the workspace, the small one until
+	 * then and wherever the file is not on this device.
+	 */
+	recipeImage(recipe: Pick<Recipe, 'photo'>): string | undefined {
+		const id = recipe.photo
+		if (!id) return undefined
+		const full = this.#images.get(id)
+		if (full) return full
+		if (!this.#reading.has(id)) {
+			this.#reading.add(id)
+			void readAttachment(id)
+				.then((bytes) => {
+					if (bytes?.length && !this.#images.has(id))
+						this.#images.set(
+							id,
+							URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'image/jpeg' }))
+						)
+				})
+				.catch(() => null)
+		}
+		return this.photos.get(id)
+	}
+
 	recipeById(id: string): Recipe | undefined {
 		return this.recipes.find((recipe) => recipe.id === id)
 	}
@@ -250,14 +316,31 @@ export class KitchenStore {
 
 	addStock(text: string): { item: StockItem; undo: Undo } {
 		const parsed = parseStock(text)
-		return this.addStockItem({ ...parsed, location: parsed.location ?? 'pantry' })
+		return this.addStockItem(parsed)
 	}
 
-	/** Adds one item from its fields: what a quick-add line parses to, and what a product's link names (D-91). */
+	/**
+	 * Adds one item from its fields: what a quick-add line parses to, and what a product's link names (D-91). A name
+	 * that ran out (D-92) brings that item back, with its picture, where it was kept unless the line says where.
+	 */
 	addStockItem(fields: { name: string; qty?: string; unit?: string; location?: StockLocation }): {
 		item: StockItem
 		undo: Undo
 	} {
+		const row = { id: '', name: fields.name, qty: fields.qty || '1', unit: fields.unit, location: 'pantry' as const }
+		const empty = this.stock.filter((entry) => isOut(entry))
+		const held = mergeTarget(row, empty)
+		const back = held
+			? mergeInto($state.snapshot(held), { ...row, location: fields.location ?? held.location })
+			: undefined
+		if (held && back) {
+			const undo = this.#commit(
+				this.#changed<StockItem>('stock', held.id, () => back),
+				'garden.feed.stockAdded',
+				{ name: back.name }
+			)
+			return { item: back, undo }
+		}
 		const item: StockItem = without({
 			id: newId(),
 			name: fields.name,
@@ -501,8 +584,8 @@ export class KitchenStore {
 	updateStock(id: string, patch: StockPatch): { item: StockItem | undefined; undo: Undo } {
 		const item = this.stockById(id)
 		const undo = this.#commit(
-			this.#changed<StockItem>('stock', id, (target) =>
-				without({
+			this.#changed<StockItem>('stock', id, (target) => {
+				const next: StockItem = without({
 					...target,
 					...patch,
 					// a name and a quantity are never cleared: an empty one leaves what was there
@@ -510,11 +593,37 @@ export class KitchenStore {
 					qty: patch.qty?.trim() || target.qty,
 					estimated: 'expiry' in patch && patch.expiry !== target.expiry ? undefined : target.estimated,
 				})
-			),
+				// a quantity set to nothing is running out, and one set above it is the item back (D-92)
+				if (isOut(next)) return ranOut(next, nowIso())
+				const { outAt: _outAt, ...held } = next
+				return held
+			}),
 			'garden.feed.stockEdited',
 			{ name: patch.name ?? item?.name ?? '' }
 		)
 		return { item, undo }
+	}
+
+	/** The item ran out (D-92): it stays, holding nothing, to be bought again. Deleting is what forgets it. */
+	ranOutStock(id: string): { item: StockItem | undefined; undo: Undo } {
+		const item = this.stockById(id)
+		const at = nowIso()
+		const undo = this.#commit(
+			this.#changed<StockItem>('stock', id, (target) => ranOut(target, at)),
+			'garden.feed.stockRanOut',
+			{ name: item?.name ?? '' }
+		)
+		return { item, undo }
+	}
+
+	ranOutStockMany(ids: string[]): { count: number; undo: Undo } {
+		const at = nowIso()
+		const after = this.stock
+			.filter((item) => ids.includes(item.id) && !isOut(item))
+			.map((item) => ranOut($state.snapshot(item), at))
+		if (!after.length) return { count: 0, undo: () => {} }
+		const undo = this.#commit(this.#replaced('stock', after), 'garden.feed.stockRanOutMany', { count: after.length })
+		return { count: after.length, undo }
 	}
 
 	removeStock(id: string): { item: StockItem | undefined; undo: Undo } {
@@ -678,61 +787,154 @@ export class KitchenStore {
 
 	// Recipes
 
-	/** Saves a recipe the owner checked: a draft from a page, a photo, pasted text or the Gardener. */
-	addRecipe(draft: RecipeDraft): { recipe: Recipe; undo: Undo } {
-		const recipe: Recipe = {
+	/** A draft's fields as a recipe keeps them: where its source shows a picture is the draft's alone. */
+	#fields({ imageUrl: _imageUrl, ...draft }: RecipeDraft): Omit<Recipe, 'id'> {
+		return {
 			...without(draft),
 			tags: draft.tags,
 			ingredients: draft.ingredients,
 			steps: draft.steps,
-			id: newId(),
 		}
-		const undo = this.#commit(this.#added('recipes', recipe), 'garden.feed.recipeSaved', { name: recipe.name })
-		return { recipe, undo }
 	}
 
-	updateRecipe(id: string, draft: RecipeDraft): { recipe: Recipe | undefined; undo: Undo } {
-		const recipe = this.recipeById(id)
+	/** Shows a recipe's picture at once, from the bytes in hand: its row's small one, and the whole of it. */
+	#showPicture(id: string, picture: RecipeImage) {
+		this.photos.set(id, picture.thumbnail)
+		this.#images.set(id, URL.createObjectURL(picture.image))
+	}
+
+	#hidePicture(id: string) {
+		const url = this.#images.get(id)
+		if (url) URL.revokeObjectURL(url)
+		this.#images.delete(id)
+		this.photos.delete(id)
+	}
+
+	/** Writes a recipe's picture as its Attachment; a picture that cannot be kept leaves the recipe standing. */
+	async #keepRecipePicture(id: string, recipeId: string, name: string, picture: RecipeImage): Promise<void> {
+		try {
+			await attachBytes(
+				{
+					id,
+					kind: RECIPE_PHOTO,
+					fileName: `${name.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '') || 'recipe'}.jpg`,
+					mime: 'image/jpeg',
+					thumbnail: picture.thumbnail,
+					links: [{ uri: toUri(KITCHEN.recipe, recipeId), relation: 'from' }],
+				},
+				new Uint8Array(await picture.image.arrayBuffer())
+			)
+		} catch (error) {
+			await logError('data', "A recipe's picture could not be kept", String(error)).catch(() => null)
+		}
+	}
+
+	/**
+	 * Saves a recipe the owner checked: a draft from a page, a photo, pasted text or the Gardener, with the picture
+	 * it came with when the owner kept it (D-93). One undo takes back both.
+	 */
+	addRecipe(draft: RecipeDraft, picture?: RecipeImage): { recipe: Recipe; undo: Undo } {
+		const id = newId()
+		const photo = picture ? newId() : undefined
+		const recipe: Recipe = without({ ...this.#fields(draft), photo, id })
+		const added = this.#added('recipes', recipe)
 		const undo = this.#commit(
-			this.#changed<Recipe>('recipes', id, () => ({
-				...without(draft),
-				tags: draft.tags,
-				ingredients: draft.ingredients,
-				steps: draft.steps,
-				id,
-			}))
+			{
+				apply: () => {
+					if (photo && picture) this.#showPicture(photo, picture)
+					added.apply()
+				},
+				revert: () => {
+					added.revert()
+					if (photo) this.#hidePicture(photo)
+				},
+				write: async () => {
+					await added.write()
+					if (photo && picture) await this.#keepRecipePicture(photo, id, recipe.name, picture)
+				},
+				unwrite: async () => {
+					await added.unwrite()
+					if (photo) await deleteRows([photoUri(photo)]).catch(() => null)
+				},
+			},
+			'garden.feed.recipeSaved',
+			{ name: recipe.name }
 		)
 		return { recipe, undo }
 	}
 
+	/** Changes a recipe's fields; its picture is its own change (`setRecipePhoto`) and stays. */
+	updateRecipe(id: string, draft: RecipeDraft): { recipe: Recipe | undefined; undo: Undo } {
+		const recipe = this.recipeById(id)
+		const undo = this.#commit(
+			this.#changed<Recipe>('recipes', id, (target) => without({ ...this.#fields(draft), photo: target.photo, id }))
+		)
+		return { recipe, undo }
+	}
+
+	/**
+	 * Gives a recipe a picture, or takes its picture away (D-93). The one it had is deleted with the change and comes
+	 * back with the undo.
+	 */
+	setRecipePhoto(id: string, picture: RecipeImage | undefined): { recipe: Recipe | undefined; undo: Undo } {
+		const recipe = this.recipeById(id)
+		if (!recipe) return { recipe, undo: () => {} }
+		const before = $state.snapshot(recipe) as Recipe
+		const photo = picture ? newId() : undefined
+		const after: Recipe = without({ ...before, photo })
+		const put = (record: Recipe) => (this.recipes = this.recipes.map((entry) => (entry.id === id ? record : entry)))
+		const undo = this.#commit({
+			apply: () => {
+				if (photo && picture) this.#showPicture(photo, picture)
+				put(after)
+			},
+			revert: () => {
+				put(before)
+				if (photo) this.#hidePicture(photo)
+			},
+			write: async () => {
+				if (photo && picture) await this.#keepRecipePicture(photo, id, before.name, picture)
+				await updateEntity(id, this.#payload('recipes', after))
+				if (before.photo) await deleteRows([photoUri(before.photo)]).catch(() => null)
+			},
+			unwrite: async () => {
+				if (before.photo) await restoreRows([photoUri(before.photo)]).catch(() => null)
+				await updateEntity(id, this.#payload('recipes', before))
+				if (photo) await deleteRows([photoUri(photo)]).catch(() => null)
+			},
+		})
+		return { recipe, undo }
+	}
+
+	/** Deletes a recipe, and its picture with it; both come back with the undo. */
 	removeRecipe(id: string): { recipe: Recipe | undefined; undo: Undo } {
 		const recipe = this.recipeById(id)
-		const undo = this.#commit(this.#removed('recipes', [id]), 'garden.feed.recipeRemoved', {
-			name: recipe?.name ?? '',
-		})
+		const undo = this.#commit(
+			this.#removed('recipes', [id], recipe?.photo ? [photoUri(recipe.photo)] : []),
+			'garden.feed.recipeRemoved',
+			{ name: recipe?.name ?? '' }
+		)
 		return { recipe, undo }
 	}
 
 	/**
 	 * "I cooked this" (kitchen.md, "Cooking decrements stock"): each change sets what an item holds after, in its own
-	 * unit. An item left with nothing is removed, unless it has a low-stock threshold: that one stays at zero, where
-	 * it reads as low and can go on the list. One batch, one undo.
+	 * unit. An item left with nothing stays, as run out (D-92), where it can be bought again. One batch, one undo.
 	 */
 	cookRecipe(id: string, changes: { stockId: string; qty: string }[]): { count: number; undo: Undo } {
 		const recipe = this.recipeById(id)
+		const at = nowIso()
 		const after: StockItem[] = []
-		const gone: string[] = []
 		for (const change of changes) {
 			const item = this.stockById(change.stockId)
 			if (!item) continue
-			const empty = Number(change.qty) === 0
-			if (empty && item.threshold === undefined) gone.push(item.id)
-			else after.push({ ...$state.snapshot(item), qty: change.qty })
+			const next: StockItem = { ...$state.snapshot(item), qty: change.qty }
+			after.push(isOut(next) ? ranOut(next, at) : next)
 		}
-		const undo = this.#commit(this.#replaced('stock', after, gone, this.#pictures(gone)), 'garden.feed.recipeCooked', {
+		const undo = this.#commit(this.#replaced('stock', after), 'garden.feed.recipeCooked', {
 			name: recipe?.name ?? '',
 		})
-		return { count: after.length + gone.length, undo }
+		return { count: after.length, undo }
 	}
 
 	/** Fills the store from the kit's sample dataset; the undo puts back whatever was there. */

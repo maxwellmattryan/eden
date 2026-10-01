@@ -1,15 +1,18 @@
 <script lang="ts">
 	// Hearth's Grocery view (Domains/Hearth/Grocery): a quick-add line, then the active list grouped by store with the
-	// shop day beside each store's name. Every row carries an origin badge (manual, recipe, low stock); a checked row
-	// is struck through and stays until Clear checked. The pane on the right is the list itself (its name, the store
+	// shop day beside each store's name. Every row leads with its checkbox and carries an origin badge (manual, recipe,
+	// low stock, ran out); a checked row is struck through and stays until Clear checked. It is a checklist: a click on a row
+	// or on its checkbox checks it off (D-94), and Edit in the row's menu opens it in the pane. The pane on the right is the list itself (its name, the store
 	// its items are bought at unless they say otherwise, its shop day, which sets the morning's reminder) or, when an
-	// item is being edited, that item's fields.
+	// item is being edited, that item's fields. Beneath the list sits Buy it again (D-92): what ran out, each one a
+	// click from the list.
 	import { Button, Chip, EmptyState, Field, List, QuickAdd, type ListRowData, type MenuItem } from '@eden/ui-kit'
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { undoToast } from '$lib/shell/undo'
 	import { formatEventTime } from '@eden/shared/dates'
-	import { kitchen, type GroceryItem } from '../store.svelte'
+	import { categoryGlyph } from '../words'
+	import { kitchen, type GroceryItem, type StockItem } from '../store.svelte'
 
 	type Props = {
 		/** The id the page's Add action focuses. */
@@ -24,7 +27,8 @@
 	const format = $derived({ lang, clock: settings.clock })
 
 	const originLabel = (item: GroceryItem) => {
-		const origin = $t(`domains.kitchen.grocery.origin.${item.origin === 'low-stock' ? 'lowStock' : item.origin}`)
+		const key = item.origin === 'low-stock' ? 'lowStock' : item.origin === 'ran-out' ? 'ranOut' : item.origin
+		const origin = $t(`domains.kitchen.grocery.origin.${key}`)
 		return item.note ? `${origin}: ${item.note}` : origin
 	}
 	const actionsFor = (item: GroceryItem): MenuItem[] => [
@@ -42,6 +46,7 @@
 		chips: item.qty ? [{ label: item.qty, mono: true }] : [],
 		badges: [{ kind: 'origin' as const, label: originLabel(item) }],
 		done: item.done,
+		checkable: true,
 		actions: actionsFor(item),
 	})
 
@@ -73,6 +78,29 @@
 		if (menuItem.id === 'check') toggle(row.id)
 		else if (menuItem.id === 'edit') edit(row.id)
 		else if (menuItem.id === 'delete') remove(row.id)
+	}
+	// Buy it again: what ran out and is not on the list. Opening a row puts it on; its menu can forget the item.
+	const toAgainRow = (item: StockItem): ListRowData => ({
+		id: item.id,
+		primary: item.name,
+		thumbnail: kitchen.photoOf(item),
+		icon: categoryGlyph(item.category),
+		tile: true,
+		actions: [
+			{ id: 'again', label: $t('domains.kitchen.stock.actions.addToGrocery'), icon: 'plus' },
+			{ id: 'forget', label: $t('domains.kitchen.stock.actions.delete'), icon: 'trash', destructive: true },
+		],
+	})
+	function again(id: string) {
+		const item = kitchen.stockById(id)
+		if (!item) return
+		const { undo } = kitchen.addToGrocery(item.name, '', 'ran-out')
+		undoToast($t('domains.kitchen.grocery.toast.added', { values: { name: item.name } }), undo)
+	}
+	function onagain(menuItem: MenuItem, row: ListRowData) {
+		if (menuItem.id === 'again') return again(row.id)
+		const { item, undo } = kitchen.removeStock(row.id)
+		if (item) undoToast($t('domains.kitchen.stock.toast.removed', { values: { name: item.name } }), undo)
 	}
 	function add(text: string) {
 		const { item, undo } = kitchen.addGrocery(text)
@@ -149,11 +177,22 @@
 						count={group.items.length}
 						rows={group.items.map(toRow)}
 						selectable
-						onopen={(row) => toggle(row.id)}
+						current={editing}
+						onpick={(row) => toggle(row.id)}
+						oncheck={(row) => toggle(row.id)}
 						{onaction}
 					/>
 				</section>
 			{/each}
+		{/if}
+		{#if kitchen.buyAgain.length}
+			<List
+				header={$t('domains.kitchen.grocery.buyAgain')}
+				count={kitchen.buyAgain.length}
+				rows={kitchen.buyAgain.map(toAgainRow)}
+				onpick={(row) => again(row.id)}
+				onaction={onagain}
+			/>
 		{/if}
 	</div>
 
@@ -289,8 +328,10 @@
 		color: var(--text-secondary);
 	}
 
-	/* The pane: the list's own fields, or the item being edited */
+	/* The pane: the list's own fields, or the item being edited; it stays in view while the list scrolls */
 	.pane {
+		position: sticky;
+		top: var(--space-4);
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-4);

@@ -68,6 +68,7 @@ updated: 2026-09-30
 | `shop-day` | kind (event) | T0 | |
 | `haul-photo` | kind (attachment) | T1 | |
 | `item-photo` | kind (attachment) | T1 | a stock item's picture (D-90) |
+| `recipe-photo` | kind (attachment) | T1 | a recipe's picture (D-93) |
 
 ## Toolbench (`toolbench`), Phase 1
 

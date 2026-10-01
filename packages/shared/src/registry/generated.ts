@@ -274,6 +274,15 @@ export const RESOURCES = [
 		"live": true
 	},
 	{
+		"id": "recipe-photo",
+		"category": "kind",
+		"primitive": "attachment",
+		"owner": "kitchen",
+		"tier": "T1",
+		"phase": 1,
+		"live": true
+	},
+	{
 		"id": "skill",
 		"category": "fact",
 		"primitive": null,
@@ -1105,7 +1114,8 @@ export const DECLARATIONS = {
 			"grocery-item",
 			"shop-day",
 			"haul-photo",
-			"item-photo"
+			"item-photo",
+			"recipe-photo"
 		],
 		"reads": [
 			"medical-dietary-restriction",

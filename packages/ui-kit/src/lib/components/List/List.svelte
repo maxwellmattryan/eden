@@ -6,7 +6,11 @@
 </script>
 
 <script lang="ts">
-	// Rows on a card, with a header naming the section and counting it, and a select mode (D-41). "Select" in the
+	// Rows on a card, with a header naming the section and counting it, and a select mode (D-41). A click picks a row
+	// (`onpick`; the caller names the one it shows as `current`, which the list highlights), a double-click or Enter on
+	// the current row opens it, and a Ctrl, Cmd or Shift click on a `selectable` list starts the selection from there
+	// (D-94): Ctrl or Cmd toggles the row, with the current row taken along, Shift takes every row from the last one
+	// toggled to this one. "Select" in the
 	// header (and at the top of every row's menu) turns the mode on: the marks slide in, a click or Space toggles a
 	// row, the header reads "n selected" and offers Done, which leaves the mode and clears the selection; `bulk` puts the
 	// caller's actions on the selection beside that count. Outside the
@@ -39,8 +43,14 @@
 		selectable?: boolean
 		/** Bindable. Select mode, on or off; Done sets it back to false. */
 		selecting?: boolean
-		/** Enter or a double-click on a row. */
+		/** The id of the row the caller is showing; it is highlighted outside select mode. */
+		current?: string
+		/** A click on a row, or Enter on one that is not `current`: the caller shows it. */
+		onpick?: (row: ListRowData) => void
+		/** A double-click on a row, or Enter on the `current` one: its main action. A click too, with no `onpick`. */
 		onopen?: (row: ListRowData) => void
+		/** The checkbox of a `checkable` row, with what `done` becomes. */
+		oncheck?: (row: ListRowData, done: boolean) => void
 		/** A pick from a row's menu (never the list's own "Select" item). */
 		onaction?: (item: MenuItem, row: ListRowData) => void
 		/** The selected ids after every toggle, and [] when Done clears them. */
@@ -58,7 +68,10 @@
 		compact = false,
 		selectable = false,
 		selecting = $bindable(false),
+		current,
+		onpick,
 		onopen,
+		oncheck,
 		onaction,
 		onselect,
 		children,
@@ -93,9 +106,29 @@
 		picked.clear()
 		onselect?.([])
 	}
+	/** The row a Shift click reaches from: the last one toggled. */
+	let from: string | undefined
 	function toggle(row: ListRowData, on: boolean) {
 		if (on) picked.add(row.id)
 		else picked.delete(row.id)
+		from = row.id
+		onselect?.([...selection])
+	}
+	/** A Ctrl, Cmd or Shift click: the selection starts here when the list was not selecting, the current row with it. */
+	function extend(row: ListRowData, how: 'toggle' | 'range') {
+		if (!selecting) {
+			enter()
+			from = undefined
+			if (current && current !== row.id && rows.some((entry) => entry.id === current)) {
+				picked.add(current)
+				from = current
+			}
+		}
+		if (how === 'toggle') return toggle(row, !picked.has(row.id))
+		const ids = rows.map((entry) => entry.id)
+		const start = from && ids.includes(from) ? ids.indexOf(from) : ids.indexOf(row.id)
+		const end = ids.indexOf(row.id)
+		for (const id of ids.slice(Math.min(start, end), Math.max(start, end) + 1)) picked.add(id)
 		onselect?.([...selection])
 	}
 	function actionsFor(row: ListRowData): MenuItem[] {
@@ -160,8 +193,12 @@
 				{compact}
 				{selecting}
 				selected={selection.has(row.id)}
+				current={current === row.id}
 				actions={actionsFor(row)}
-				onopen={() => onopen?.(row)}
+				onpick={onpick ? () => onpick(row) : undefined}
+				onopen={onopen ? () => onopen(row) : undefined}
+				oncheck={(done) => oncheck?.(row, done)}
+				onextend={selectable ? (how) => extend(row, how) : undefined}
 				onaction={(item) => {
 					if (item.id !== selectId) onaction?.(item, row)
 				}}

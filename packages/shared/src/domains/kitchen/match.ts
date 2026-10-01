@@ -2,7 +2,7 @@
 // into (product/domains/kitchen.md, "Capture a haul": the same name and location), and a recipe's ingredient against
 // the stock that covers it. Both read a name the way a shopper would: case, plurals and the words that only describe
 // ("fresh", "large", "(low sodium)") do not make two things of one.
-import { compatible, parseAmount } from './quantity.js'
+import { compatible, isOut, parseAmount } from './quantity.js'
 import type { StockItem, StockLocation } from './types.js'
 
 /** Words that describe a food without making it another food. */
@@ -87,7 +87,8 @@ export function normaliseName(name: string): string {
 
 /**
  * The stock item a captured row would merge into: the same normalised name in the same location, with a quantity
- * the row's can be added to. The first one, as the stock is ordered.
+ * the row's can be added to. The first one, as the stock is ordered. Failing that, an item of that name that ran
+ * out (D-92), wherever it was kept and in whatever unit: nothing of it is left to add to, so the row brings it back.
  */
 export function mergeTarget(
 	row: { name: string; location: StockLocation; qty: string; unit?: string },
@@ -96,11 +97,14 @@ export function mergeTarget(
 	const name = normaliseName(row.name)
 	const amount = parseAmount(row.qty, row.unit)
 	if (!name || !amount) return undefined
-	return stock.find((item) => {
-		if (item.location !== row.location || normaliseName(item.name) !== name) return false
-		const held = parseAmount(item.qty, item.unit)
-		return !!held && compatible(held, amount)
-	})
+	const named = stock.filter((item) => normaliseName(item.name) === name)
+	return (
+		named.find((item) => {
+			if (item.location !== row.location) return false
+			const held = parseAmount(item.qty, item.unit)
+			return !!held && compatible(held, amount)
+		}) ?? named.find((item) => isOut(item))
+	)
 }
 
 /** Sorts after every date, so what never expires comes last. */
@@ -115,13 +119,15 @@ function closes(short: string[], long: string[]): boolean {
 
 /**
  * The stock that covers an ingredient, the soonest to expire first. The names match when they are the same once
- * the cut is left off, or when one is the other with words in front ("baby spinach" covers "spinach").
+ * the cut is left off, or when one is the other with words in front ("baby spinach" covers "spinach"). An item
+ * that ran out covers nothing (D-92).
  */
 export function stockFor(ingredient: string, stock: readonly StockItem[]): StockItem[] {
 	const wanted = words(ingredient).filter((word) => !FORMS.has(word))
 	if (!wanted.length) return []
 	return stock
 		.filter((item) => {
+			if (isOut(item)) return false
 			const held = words(item.name).filter((word) => !FORMS.has(word))
 			return closes(wanted, held) || closes(held, wanted)
 		})
