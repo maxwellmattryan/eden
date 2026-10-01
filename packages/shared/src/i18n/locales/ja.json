@@ -141,7 +141,7 @@
 				},
 				"shopDayReminder": {
 					"title": "買い物の日",
-					"line": "{count, plural, =0 {今日は買い物の日です} other {今日は買い物の日です。リストに#件あります}}"
+					"line": "{count, plural, =0 {今日は{store}で買い物の日です} other {今日は{store}で買い物の日です。リストに#件あります}}"
 				},
 				"lowStock": {
 					"line": "{count, plural, =1 {{first}が残りわずかです} =2 {{first}と{second}が残りわずかです} other {{first}ほか{more}件が残りわずかです}}"
@@ -283,16 +283,15 @@
 			},
 			"grocery": {
 				"add": "追加",
-				"addPlaceholder": "リストに追加",
-				"clearChecked": "チェック済みを整理",
+				"addPlaceholder": "品目を追加",
 				"buyAgain": "また買う",
 				"checked": "{total}件中{checked}件チェック済み",
-				"allChecked": "すべてチェック済みです。帰ったらリストを整理しましょう。",
-				"anyStore": "店の指定なし",
+				"allChecked": "すべてチェック済みです。帰ったらリストを完了しましょう。",
+				"anyStore": "その他",
 				"toBuy": "{count, plural, =0 {買うものはありません} other {あと#件}}",
 				"empty": {
-					"title": "リストは空です",
-					"text": "一行で追加するか、レシピから足りない材料を送ってください。",
+					"title": "買うものはありません",
+					"text": "一行で追加するか、ストックで切らしたものに印を付けるか、レシピから足りない材料を送ってください。",
 					"action": "項目を追加"
 				},
 				"origin": {
@@ -305,6 +304,8 @@
 					"check": "チェック",
 					"uncheck": "チェックを外す",
 					"edit": "編集",
+					"moveTo": "移動",
+					"addTo": "追加先",
 					"delete": "削除"
 				},
 				"toast": {
@@ -312,28 +313,45 @@
 					"removed": "{name}をリストから削除しました。",
 					"checked": "{name}をチェックしました。",
 					"unchecked": "{name}のチェックを外しました。",
-					"cleared": "チェック済み{count}件を整理しました。",
 					"edited": "{name}を保存しました。",
-					"listSaved": "リストを保存しました。",
 					"shopDaySet": "買い物の日を設定しました。当日の朝にお知らせします。",
-					"shopDayCleared": "買い物の日を取り消しました。"
+					"shopDayCleared": "買い物の日を取り消しました。",
+					"addedTo": "{name}を{store}に追加しました。",
+					"moved": "{name}を{store}に移しました。",
+					"completed": "{store}のチェック済み{count}件を整理しました。",
+					"storeAdded": "{store}を追加しました。",
+					"storeExists": "{store}はすでにあります。",
+					"storeSaved": "{store}を保存しました。",
+					"storeRemoved": "{store}を削除しました。リストにあった品目は「その他」にあります。",
+					"shopDaySetLate": "買い物の日を設定しました。"
 				},
 				"pane": {
 					"editing": "品目を編集",
-					"list": "リスト",
 					"name": "名前",
 					"quantity": "数量",
 					"store": "店",
-					"storeHelp": "空欄なら{store}で買います。",
 					"note": "メモ",
-					"listName": "名前",
-					"listNamePlaceholder": "今週",
-					"defaultStore": "店",
-					"defaultStoreHelp": "品目が別の店を指定しない限り、ここで買います。",
+					"editingStore": "店を編集",
+					"sells": "扱うもの",
 					"shopDay": "買い物の日",
 					"shopTime": "時刻",
-					"shopDayHelp": "買い物の日の朝にお知らせが届きます。",
-					"clearShopDay": "買い物の日を取り消す"
+					"shopDayHelp": "任意です。設定すると、当日の朝にお知らせが届きます。",
+					"today": "今日",
+					"tomorrow": "明日",
+					"noShopDay": "買い物の日なし",
+					"deleteStore": "店を削除"
+				},
+				"addTo": "{store}に追加",
+				"addStore": "店を追加",
+				"stores": "店",
+				"storesHelp": "店ごとにリストがあります。新しい品目は、前に買った店のリストに入ります。",
+				"complete": "{store}を完了",
+				"completeHint": "完了：チェック済みを整理",
+				"editStore": "{store}を編集",
+				"editStoreHint": "店を編集",
+				"sells": {
+					"grocery": "食料品",
+					"home-goods": "日用品"
 				}
 			},
 			"recipes": {

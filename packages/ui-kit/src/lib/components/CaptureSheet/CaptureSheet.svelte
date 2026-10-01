@@ -403,6 +403,7 @@
 										<IconButton
 											class="ed-capture-trash"
 											icon="trash"
+											danger
 											label={s.remove(named(row))}
 											size={stacked ? 'md' : 'sm'}
 											onclick={() => removing(() => onremoverow?.(row.id))}

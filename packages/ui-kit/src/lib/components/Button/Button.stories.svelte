@@ -31,11 +31,11 @@
 >
 	{#snippet template(args)}
 		<div class="row">
-			<Button {...args} label="Capture a haul" variant="primary" icon="camera" />
+			<Button {...args} label="Capture a haul" variant="primary" />
 			<Button {...args} label="Add" variant="secondary" />
 			<Button {...args} label="Cook this" variant="quiet" />
 			<Button {...args} label="Delete recipe" variant="danger" />
-			<Button {...args} label="Accept" variant="ai" icon="check" />
+			<Button {...args} label="Accept" variant="ai" />
 			<Button {...args} label="Send to Google" variant="honey" iconRight="arrow-up-right" />
 		</div>
 	{/snippet}
@@ -63,6 +63,17 @@
 <Story name="Icon only" args={{ label: undefined, 'aria-label': 'Quick Log', icon: 'plus', variant: 'primary' }} />
 
 <Story name="Disabled" args={{ label: 'Send to Google', iconRight: 'arrow-up-right', disabled: true }} />
+
+<!-- An action row (D-96): every button carries a leading glyph, and the destructive one is danger, last -->
+<Story name="Action row">
+	{#snippet template(args)}
+		<div class="row">
+			<Button {...args} label="Edit" icon="pencil" />
+			<Button {...args} label="Add to grocery" icon="plus" />
+			<Button {...args} label="Delete" icon="trash" variant="danger" />
+		</div>
+	{/snippet}
+</Story>
 
 <Story name="With icons">
 	{#snippet template(args)}
@@ -95,7 +106,7 @@
 				<section data-relief={relief} style="display: flex; flex-direction: column; gap: var(--space-4)">
 					<h3 class="ed-t-title-sm" style="margin: 0; color: var(--text-secondary)">data-relief="{relief}"</h3>
 					<div style="display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center">
-						<Button label="Capture a haul" variant="primary" icon="camera" />
+						<Button label="Capture a haul" variant="primary" />
 						<Button label="Delete recipe" variant="danger" />
 						<Button label="Ask the Gardener" variant="ai" />
 						<Button label="Create event" variant="honey" />

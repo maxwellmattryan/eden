@@ -1,5 +1,5 @@
 // Hearth's data in formats made for reading, for its bundle (product/substrate/data.md, "Export"): the stock and the
-// grocery list as CSV, the recipes as Markdown. The column names and headings are part of the format and are not
+// grocery lists as CSV, the recipes as Markdown. The column names and headings are part of the format and are not
 // translated, so a file reads the same whatever language wrote it.
 import type { BundleExtra } from '../../data/bundle.js'
 import { inline, toCsv, toMarkdown } from '../../data/text.js'
@@ -23,17 +23,13 @@ export function kitchenExtras(data: KitchenData): BundleExtra[] {
 			item.sourcedAt,
 		])
 	)
+	// an item's store is its list's; one that is not filed yet has none
+	const storeOf = new Map(
+		data.grocery.lists.map((list) => [list.id, data.grocery.stores.find((store) => store.id === list.storeId)?.name])
+	)
 	const grocery = toCsv(
-		['list', 'item', 'quantity', 'store', 'origin', 'note', 'done'],
-		data.grocery.items.map((item) => [
-			data.grocery.name,
-			item.name,
-			item.qty,
-			item.store ?? data.grocery.store,
-			item.origin,
-			item.note,
-			item.done,
-		])
+		['store', 'item', 'quantity', 'origin', 'note', 'done'],
+		data.grocery.items.map((item) => [storeOf.get(item.listId), item.name, item.qty, item.origin, item.note, item.done])
 	)
 	const recipes = toMarkdown(
 		'Recipes',

@@ -131,7 +131,16 @@
 				domain: manifest ? $t(manifest.name) : undefined,
 				unread: !card.read,
 				actions: [
-					...(manifest ? [{ id: 'open', label: $t('shell.inbox.open'), onclick: () => manifest.routes.open() }] : []),
+					...(manifest
+						? [
+								{
+									id: 'open',
+									label: $t('shell.inbox.open'),
+									icon: 'arrow-right' as const,
+									onclick: () => manifest.routes.open(),
+								},
+							]
+						: []),
 					...(inbox.asks === card.id
 						? [
 								{

@@ -4,9 +4,10 @@
 	// Sort chip that opens a menu), a quick-add line, then one List per location (Fridge, Freezer, Pantry, Counter).
 	// Every row leads with the item's picture, or its category's glyph on a tile of the same size (D-90), then
 	// quantities in mono, `estimated` where the capture guessed, a warning where stock is low and the info button
-	// where an item has a tip (D-87). On desktop the selected item opens in a detail pane, which is also where it is
-	// edited, its picture included; a List in select mode (D-41) offers Move, Add to grocery and Delete on what is
-	// selected. On mobile the rows are a SwipeList whose trailing action deletes, and the detail would be a pushed view.
+	// where an item has a tip (D-87). On desktop the selected item opens in a detail pane, and Edit opens its form in a
+	// sheet over the page (D-95), its picture included; a List in select mode (D-41) offers Move, Add to grocery and
+	// Delete on what is selected. On mobile the rows are a SwipeList whose trailing action deletes, and the detail
+	// would be a pushed view.
 	import {
 		Badge,
 		Button,
@@ -21,6 +22,7 @@
 		PageHeader,
 		QuickAdd,
 		Segmented,
+		Sheet,
 		domainGlyph,
 		type IconName,
 		type ListRowData,
@@ -52,7 +54,7 @@
 		empty?: boolean
 		/** The item open in the detail pane on desktop. */
 		selected?: string
-		/** The detail pane in its edit form. */
+		/** The item's form open in its sheet. */
 		editing?: boolean
 		/** The Fridge in select mode, with its bulk actions in the header. */
 		selecting?: boolean
@@ -66,9 +68,9 @@
 		onaction?: (item: MenuItem, row: ListRowData) => void
 		/** A bulk action on what a list in select mode holds; Move names where to. */
 		onbulk?: (action: Bulk, ids: string[], location?: StockLocation) => void
-		/** Save in the pane's edit form, with the item's id. */
+		/** Save in the item's form, with its id. */
 		onsave?: (id: string) => void
-		/** A picture chosen for the item in the pane's form, and the one it had removed. */
+		/** A picture chosen for the item in its form, and the one it had removed. */
 		onpicture?: (id: string, files: File[]) => void
 		onremovepicture?: (id: string) => void
 		ondelete?: (row: ListRowData) => void
@@ -223,7 +225,7 @@
 		})).filter((section) => section.items.length)
 	)
 
-	// The pane: the item that is open, read or in its form.
+	// The pane shows the item that is open; its form is a sheet over the page.
 	// svelte-ignore state_referenced_locally
 	let current = $state(selected)
 	const detail = $derived(stock.find((item) => item.id === current))
@@ -244,10 +246,14 @@
 	})
 	// svelte-ignore state_referenced_locally
 	let inForm = $state(editing)
+	/** The form is drawn from the first time it is opened, and stays while its sheet fades. */
+	// svelte-ignore state_referenced_locally
+	let formed = $state(editing)
 	let form = $state(formOf(stock.find((item) => item.id === selected)))
 	function edit(item: StockItem) {
 		current = item.id
 		form = formOf(item)
+		formed = true
 		inForm = true
 	}
 	const categoryItems = $derived<MenuItem[]>([
@@ -294,7 +300,7 @@
 			onclick: oncapture,
 		},
 		{ label: 'Take stock', icon: 'refrigerator' as const, onclick: ontakestock },
-		{ label: 'Add', onclick: () => onadd?.('') },
+		{ label: 'Add', icon: 'plus' as const, onclick: () => onadd?.('') },
 	])
 </script>
 
@@ -420,97 +426,7 @@
 						{/if}
 					</div>
 
-					{#if platform === 'desktop' && detail && inForm}
-						<aside class="detail" aria-labelledby="{uid}-detail">
-							<h2 class="detail-title" id="{uid}-detail">Edit item</h2>
-							<form
-								class="form"
-								onsubmit={(event) => {
-									event.preventDefault()
-									onsave?.(detail.id)
-									inForm = false
-								}}
-							>
-								<div class="picture-row">
-									{@render picture(detail)}
-									<FileButton
-										label="Choose a picture"
-										icon="image-plus"
-										accept={['image/*']}
-										multiple={false}
-										tooltip
-										onfiles={(files) => onpicture?.(detail.id, files)}
-									/>
-									{#if photos[detail.id]}
-										<IconButton
-											icon="trash"
-											size="sm"
-											label="Remove the picture"
-											tooltip
-											onclick={() => {
-												delete photos[detail.id]
-												onremovepicture?.(detail.id)
-											}}
-										/>
-									{/if}
-								</div>
-								<Field label="Name" bind:value={form.name} />
-								<div class="pair">
-									<Field label="Quantity" bind:value={form.qty} mono inputmode="decimal" />
-									<Field label="Unit" bind:value={form.unit} />
-								</div>
-								<div class="group">
-									<span class="group-label">Location</span>
-									<Segmented
-										items={LOCATIONS.map((location) => location.label)}
-										selected={LOCATIONS.findIndex((location) => location.id === form.location)}
-										label="Location"
-										onchange={(index) => (form.location = LOCATIONS[index]!.id)}
-									/>
-								</div>
-								<Field label="Expires" type="date" bind:value={form.expiry} />
-								<div class="group">
-									<span class="group-label">Category</span>
-									<span class="anchor" bind:this={categoryAnchor}>
-										<Chip
-											label={categoryLabel(form.category) ?? 'No category'}
-											tone="outline"
-											icon="chevron-down"
-											aria-haspopup="menu"
-											aria-expanded={categoryOpen}
-											onclick={() => (categoryOpen = !categoryOpen)}
-										/>
-									</span>
-									<Menu
-										bind:open={categoryOpen}
-										anchor={categoryAnchor}
-										align="start"
-										label="Category"
-										items={categoryItems}
-										onselect={(item) => (form.category = item.id ?? '')}
-									/>
-								</div>
-								<Field
-									label="Low-stock threshold"
-									helper="The item reads as low once it holds no more than this. Leave empty for none."
-									bind:value={form.threshold}
-									mono
-									inputmode="decimal"
-								/>
-								<Field
-									label="Tip"
-									helper="A line worth knowing about storing or handling it. It shows as the info button beside the name."
-									bind:value={form.tip}
-									multiline
-									rows={2}
-								/>
-								<div class="detail-actions">
-									<Button label="Save" variant="primary" type="submit" disabled={!form.name.trim()} />
-									<Button label="Cancel" variant="quiet" onclick={() => (inForm = false)} />
-								</div>
-							</form>
-						</aside>
-					{:else if platform === 'desktop' && detail}
+					{#if platform === 'desktop' && detail}
 						<aside class="detail" aria-labelledby="{uid}-detail">
 							<div class="detail-head">
 								{@render picture(detail)}
@@ -569,11 +485,108 @@
 									items={moveItems(detail.location)}
 									onselect={(item) => onaction?.(item, toRow(detail))}
 								/>
-								<Button label="Delete" variant="quiet" onclick={() => paneAction('delete', detail)} />
+								<Button label="Delete" variant="danger" icon="trash" onclick={() => paneAction('delete', detail)} />
 							</div>
 						</aside>
 					{/if}
 				</div>
+				{#if platform === 'desktop' && detail && formed}
+					<Sheet bind:open={inForm} size="md" labelledby="{uid}-form-title">
+						{#snippet header()}
+							<h2 class="form-title" id="{uid}-form-title">Edit item</h2>
+						{/snippet}
+						<form
+							class="form"
+							id="{uid}-form"
+							onsubmit={(event) => {
+								event.preventDefault()
+								onsave?.(detail.id)
+								inForm = false
+							}}
+						>
+							<div class="picture-row">
+								{@render picture(detail)}
+								<FileButton
+									label="Choose a picture"
+									icon="image-plus"
+									accept={['image/*']}
+									multiple={false}
+									tooltip
+									onfiles={(files) => onpicture?.(detail.id, files)}
+								/>
+								{#if photos[detail.id]}
+									<IconButton
+										icon="trash"
+										size="sm"
+										label="Remove the picture"
+										danger
+										tooltip
+										onclick={() => {
+											delete photos[detail.id]
+											onremovepicture?.(detail.id)
+										}}
+									/>
+								{/if}
+							</div>
+							<Field label="Name" bind:value={form.name} />
+							<div class="pair">
+								<Field label="Quantity" bind:value={form.qty} mono inputmode="decimal" />
+								<Field label="Unit" bind:value={form.unit} />
+							</div>
+							<div class="group">
+								<span class="group-label">Location</span>
+								<Segmented
+									items={LOCATIONS.map((location) => location.label)}
+									selected={LOCATIONS.findIndex((location) => location.id === form.location)}
+									label="Location"
+									onchange={(index) => (form.location = LOCATIONS[index]!.id)}
+								/>
+							</div>
+							<div class="pair">
+								<Field label="Expires" type="date" bind:value={form.expiry} />
+								<div class="group">
+									<span class="group-label">Category</span>
+									<span class="anchor" bind:this={categoryAnchor}>
+										<Chip
+											label={categoryLabel(form.category) ?? 'No category'}
+											tone="outline"
+											icon="chevron-down"
+											aria-haspopup="menu"
+											aria-expanded={categoryOpen}
+											onclick={() => (categoryOpen = !categoryOpen)}
+										/>
+									</span>
+									<Menu
+										bind:open={categoryOpen}
+										anchor={categoryAnchor}
+										align="start"
+										label="Category"
+										items={categoryItems}
+										onselect={(item) => (form.category = item.id ?? '')}
+									/>
+								</div>
+							</div>
+							<Field
+								label="Low-stock threshold"
+								helper="The item reads as low once it holds no more than this. Leave empty for none."
+								bind:value={form.threshold}
+								mono
+								inputmode="decimal"
+							/>
+							<Field
+								label="Tip"
+								helper="A line worth knowing about storing or handling it. It shows as the info button beside the name."
+								bind:value={form.tip}
+								multiline
+								rows={2}
+							/>
+						</form>
+						{#snippet footer()}
+							<Button label="Cancel" variant="quiet" onclick={() => (inForm = false)} />
+							<Button label="Save" variant="primary" type="submit" form="{uid}-form" disabled={!form.name.trim()} />
+						{/snippet}
+					</Sheet>
+				{/if}
 				<Menu
 					bind:open={bulkMoveOpen}
 					anchor={bulkMove?.anchor}
@@ -691,6 +704,12 @@
 		display: flex;
 		align-items: center;
 		gap: var(--space-2);
+	}
+	.form-title {
+		margin: 0;
+		font: var(--ed-t-title);
+		letter-spacing: var(--ed-t-title-tracking);
+		font-variation-settings: var(--ed-t-title-opsz);
 	}
 	.detail-title {
 		margin: 0;

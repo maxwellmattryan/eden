@@ -179,7 +179,6 @@
 			{#if draft.kind === 'code'}
 				<Button
 					variant="honey"
-					icon="copy"
 					label={copied ? $t('gardener.draft.copied') : $t('gardener.draft.copy')}
 					disabled={busy}
 					onclick={commit}
@@ -188,7 +187,6 @@
 			{:else}
 				<Button
 					variant="honey"
-					icon={draft.kind === 'capture' ? 'camera' : 'check'}
 					label={draft.kind === 'task'
 						? $t('gardener.draft.addTask')
 						: draft.kind === 'plan'

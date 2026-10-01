@@ -30,6 +30,7 @@ pub(super) const RESOURCES: &[Resource] = &[
     Resource { id: "household-size", category: Category::Fact, primitive: None, owner: "kitchen", tier: Tier::T1, phase: Some(1) },
     Resource { id: "stock-item", category: Category::Entity, primitive: None, owner: "kitchen", tier: Tier::T0, phase: Some(1) },
     Resource { id: "recipe", category: Category::Entity, primitive: None, owner: "kitchen", tier: Tier::T0, phase: Some(1) },
+    Resource { id: "grocery-store", category: Category::Entity, primitive: None, owner: "kitchen", tier: Tier::T0, phase: Some(1) },
     Resource { id: "grocery-list", category: Category::Entity, primitive: None, owner: "kitchen", tier: Tier::T0, phase: Some(1) },
     Resource { id: "grocery-item", category: Category::Entity, primitive: None, owner: "kitchen", tier: Tier::T0, phase: Some(1) },
     Resource { id: "shop-day", category: Category::Kind, primitive: Some("event"), owner: "kitchen", tier: Tier::T0, phase: Some(1) },

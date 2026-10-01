@@ -377,7 +377,6 @@
 								<Button
 									label="I cooked this"
 									variant="primary"
-									icon="check"
 									onclick={() => {
 										oncooked?.(detail.id)
 										pane = 'view'
@@ -447,7 +446,12 @@
 										)}
 								/>
 								<Button label="Edit" icon="pencil" onclick={() => edit(detail.id)} />
-								<Button label="Delete" variant="quiet" onclick={() => onaction?.(rowActions[1]!, toRow(detail))} />
+								<Button
+									label="Delete"
+									variant="danger"
+									icon="trash"
+									onclick={() => onaction?.(rowActions[1]!, toRow(detail))}
+								/>
 							</div>
 						</aside>
 					{/if}

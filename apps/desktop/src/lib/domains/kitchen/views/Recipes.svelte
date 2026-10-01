@@ -282,7 +282,6 @@
 						<Button
 							label={$t('domains.kitchen.recipes.cook.confirm')}
 							variant="primary"
-							icon="check"
 							onclick={() => cooked(detail)}
 						/>
 						<Button label={$t('common.cancel')} variant="quiet" onclick={() => (mode = 'view')} />
@@ -369,7 +368,8 @@
 						<Button label={$t('domains.kitchen.recipes.actions.edit')} icon="pencil" onclick={() => (mode = 'edit')} />
 						<Button
 							label={$t('domains.kitchen.recipes.actions.delete')}
-							variant="quiet"
+							variant="danger"
+							icon="trash"
 							onclick={() => remove(detail.id)}
 						/>
 					</div>

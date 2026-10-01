@@ -91,36 +91,68 @@ export interface Recipe {
 
 export type GroceryOrigin = 'manual' | 'recipe' | 'low-stock' | 'ran-out'
 
+/** What a store sells: the two kinds of thing Hearth shops for. */
+export const STORE_SELLS = ['grocery', 'home-goods'] as const
+export type StoreSells = (typeof STORE_SELLS)[number]
+
+/** A store Hearth shops at (D-96). Each has a list of its own. */
+export interface GroceryStore {
+	id: string
+	name: string
+	sells: StoreSells[]
+	/** What was last bought here and when: a normalised name to an ISO timestamp. It is what files a new item. */
+	bought?: Record<string, string>
+}
+
+/** One store's list; the list with no store holds what is not filed yet. */
+export interface GroceryList {
+	id: string
+	storeId?: string
+	/** The shop day, as an ISO timestamp; a list has none until the owner sets one. */
+	shopDay?: string
+}
+
+/** An item on a store's list. */
 export interface GroceryItem {
 	id: string
 	name: string
 	qty: string
-	store?: string
+	listId: string
 	origin: GroceryOrigin
 	/** What the origin points at: the recipe's name. */
 	note?: string
 	done: boolean
 }
 
-export interface GroceryList {
-	name: string
-	/** The default store; an item may name its own. */
-	store: string
-	/** The shop-day Event, as an ISO timestamp. */
-	shopDay?: string
+/** Everything Grocery holds: the stores, their lists and the items on them. */
+export interface Grocery {
+	stores: GroceryStore[]
+	lists: GroceryList[]
 	items: GroceryItem[]
+}
+
+/**
+ * The one list of before there was a list per store (D-96), as the old document held it: a name and a default
+ * store, both free text, and items that may name another store.
+ */
+export interface LegacyGrocery {
+	name?: string
+	store?: string
+	shopDay?: string
+	items?: (Omit<GroceryItem, 'listId'> & { store?: string })[]
 }
 
 export interface KitchenData {
 	stock: StockItem[]
 	recipes: Recipe[]
-	grocery: GroceryList
+	grocery: Grocery
 }
 
 /** The registry ids of Hearth's entity types (product/substrate/registry.md). */
 export const KITCHEN = {
 	stock: 'stock-item',
 	recipe: 'recipe',
+	store: 'grocery-store',
 	list: 'grocery-list',
 	item: 'grocery-item',
 } as const satisfies Record<string, EntityTypeId>
@@ -131,6 +163,7 @@ export type RecipePayload = Omit<Recipe, 'id' | 'ingredients' | 'steps'> & {
 	ingredients?: Ingredient[]
 	steps?: string[]
 }
-export type GroceryListPayload = Omit<GroceryList, 'items'>
+export type GroceryStorePayload = Omit<GroceryStore, 'id'>
+export type GroceryListPayload = Omit<GroceryList, 'id'>
 /** A grocery item names the list it is on. */
-export type GroceryItemPayload = Omit<GroceryItem, 'id'> & { listId: string }
+export type GroceryItemPayload = Omit<GroceryItem, 'id'>

@@ -235,7 +235,7 @@
 	{#snippet footer()}
 		<div class="actions">
 			<Button variant="quiet" label="Cancel" />
-			<Button variant="primary" label="Save" icon="check" disabled={!substance.trim()} onclick={onsave} />
+			<Button variant="primary" label="Save" disabled={!substance.trim()} onclick={onsave} />
 		</div>
 	{/snippet}
 </Sheet>

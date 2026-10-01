@@ -17,7 +17,7 @@
 	const hearthJa = sidebarJa.items.find((item) => item.id === 'kitchen')!
 	const actions: PageHeaderAction[] = [
 		{ label: 'Capture a haul', icon: 'camera', onclick: fn() },
-		{ label: 'Add', onclick: fn() },
+		{ label: 'Add', icon: 'plus', onclick: fn() },
 	]
 	const tabs = ['Stock', 'Recipes', 'Grocery']
 

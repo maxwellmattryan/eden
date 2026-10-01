@@ -4,7 +4,7 @@ status: draft
 summary: The signal model, the scheduler, rules that turn signals into notifications or tasks, channels, digests and quiet hours, the notification center, the activity feed, and the toast policy. Built so far (D-73): the scheduler, signals, rules from the manifests, the inbox as a plain list and OS notifications on desktop.
 read-this-if: You are designing anything that tells the owner something happened, or anything that runs on a schedule.
 depends-on: [primitives, grants]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## Signal model (Phase 1)
@@ -73,7 +73,7 @@ Emitted today: `weather.alert`, `stock.expiring`, `stock.low` (once a week, from
 | `integration.connected`, `integration.disconnected`, `integration.failed` | substrate | integration id, device |
 | `ai.request.completed`, `ai.budget.threshold` | Gardener | audit id; percent |
 | `scheduler.fired` | scheduler | schedule name, when it was due |
-| `stock.expiring`, `stock.low`, `grocery.shop-day` | Hearth | item URIs, how many, the nearest two names, how near; item URIs, how many, the first two names; list URI, how many items are left |
+| `stock.expiring`, `stock.low`, `grocery.shop-day` | Hearth | item URIs, how many, the nearest two names, how near; item URIs, how many, the first two names; list URI, how many items are left, the store's name |
 | `idea.stale`, `project.updated` | Toolbench | idea or project URI |
 | `weather.alert`, `weather.rain-before-plan` | Sky | alert id, severity, event, headline, when it ends; event URI |
 

@@ -1,6 +1,6 @@
 <script lang="ts">
 	// The grocery quick-add tile (product/domains/kitchen.md, "Garden widgets"): one line that puts an item on the
-	// list, read as the Grocery view's own line is ("4 limes"), with how many are still to buy beneath. The write is
+	// list of the store it was last bought at, read as the Grocery view's own line is ("4 limes"), with how many are still to buy beneath. The write is
 	// the store's, so it carries the same undo.
 	import { QuickAdd } from '@eden/ui-kit'
 	import { t } from '@eden/shared/i18n'
@@ -10,8 +10,11 @@
 	const open = $derived(kitchen.grocery.items.filter((item) => !item.done).length)
 
 	function add(text: string) {
-		const { item, undo } = kitchen.addGrocery(text)
-		undoToast($t('domains.kitchen.grocery.toast.added', { values: { name: item.name } }), undo)
+		const { item, store, undo } = kitchen.addGrocery(text)
+		const message = store
+			? $t('domains.kitchen.grocery.toast.addedTo', { values: { name: item.name, store: store.name } })
+			: $t('domains.kitchen.grocery.toast.added', { values: { name: item.name } })
+		undoToast(message, undo)
 	}
 </script>
 

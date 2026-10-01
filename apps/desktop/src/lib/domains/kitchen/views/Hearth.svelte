@@ -19,7 +19,6 @@
 		type SegmentedItem,
 	} from '@eden/ui-kit'
 	import { t } from '@eden/shared/i18n'
-	import { undoToast } from '$lib/shell/undo'
 	import { capture } from '../capture.svelte'
 	import { KITCHEN_TABS, type KitchenTab } from '../manifest'
 	import { recipeDrafts, recipeImport } from '../recipe-draft.svelte'
@@ -31,6 +30,7 @@
 
 	const uid = $props.id()
 	const quickAddId = `${uid}-quick-add`
+	const storeAddId = `${uid}-store-add`
 
 	const tab = $derived.by<KitchenTab>(() => {
 		const requested = page.params.tab ?? ''
@@ -58,10 +58,6 @@
 	function focusQuickAdd() {
 		document.getElementById(quickAddId)?.focus()
 	}
-	function clearChecked() {
-		const { count, undo } = kitchen.clearChecked()
-		undoToast($t('domains.kitchen.grocery.toast.cleared', { values: { count } }), undo)
-	}
 
 	const actions = $derived.by<PageHeaderAction[]>(() => {
 		if (tab === 'stock') {
@@ -72,7 +68,7 @@
 					icon: 'refrigerator',
 					onclick: () => capture.start([], 'stock'),
 				},
-				{ label: $t('domains.kitchen.stock.add'), onclick: focusQuickAdd },
+				{ label: $t('domains.kitchen.stock.add'), icon: 'plus', onclick: focusQuickAdd },
 			]
 		}
 		if (tab === 'recipes') {
@@ -85,7 +81,10 @@
 				variant: kitchen.grocery.items.length ? undefined : 'secondary',
 				onclick: focusQuickAdd,
 			},
-			{ label: $t('domains.kitchen.grocery.clearChecked'), disabled: kitchen.checked === 0, onclick: clearChecked },
+			{
+				label: $t('domains.kitchen.grocery.addStore'),
+				onclick: () => document.getElementById(storeAddId)?.focus(),
+			},
 		]
 	})
 </script>
@@ -131,8 +130,6 @@
 					items={sortItems}
 					onselect={(item) => (sort = (item.id as StockSort | undefined) ?? 'expiry')}
 				/>
-			{:else if tab === 'grocery' && kitchen.grocery.name}
-				<Chip label={kitchen.grocery.name} tone="accent" icon="list" />
 			{/if}
 		{/snippet}
 	</PageHeader>
@@ -148,7 +145,7 @@
 	{:else if tab === 'recipes'}
 		<Recipes />
 	{:else}
-		<Grocery {quickAddId} onadd={focusQuickAdd} />
+		<Grocery {quickAddId} {storeAddId} onadd={focusQuickAdd} />
 	{/if}
 </div>
 

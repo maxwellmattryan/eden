@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { newId } from '../../data/ulid.js'
-import { expiresSoon, expiringDigest, MORNING, shopDayMorning, SOON_DAYS } from './digest.js'
+import {
+	expiresSoon,
+	expiringDigest,
+	MORNING,
+	nextShopMorning,
+	reminderMorning,
+	shopDayMorning,
+	SOON_DAYS,
+} from './digest.js'
 import type { StockItem } from './types.js'
 
 const TODAY = '2026-09-30'
@@ -75,5 +83,34 @@ describe("Hearth's digest", () => {
 		expect(shopDayMorning(undefined)).toBeNull()
 		expect(shopDayMorning('Sat 10-03 10:00')).toBeNull()
 		expect(shopDayMorning('2026-02-31T10:00:00')).toBeNull()
+	})
+
+	it('finds the next shop morning among the lists', () => {
+		const lists = [
+			{ shopDay: '2026-10-05T10:00:00' },
+			{},
+			{ shopDay: '2026-10-03' },
+			{ shopDay: '2026-09-29T09:00:00' },
+		]
+		expect(nextShopMorning(lists, TODAY)?.day).toBe('2026-10-03')
+		// Today's counts, until it has been said.
+		const two = [{ shopDay: '2026-10-05' }, { shopDay: TODAY }]
+		expect(nextShopMorning(two, TODAY)?.day).toBe(TODAY)
+		expect(nextShopMorning(two, TODAY, TODAY)?.day).toBe('2026-10-05')
+		expect(nextShopMorning([{ shopDay: '2026-09-29' }], TODAY)).toBeNull()
+		expect(nextShopMorning([], TODAY)).toBeNull()
+	})
+
+	it('has no reminder for a shop day set once its morning had passed', () => {
+		const morning = new Date(2026, 8, 30, 8, 0).getTime()
+		expect(reminderMorning({ shopDay: TODAY, setAt: morning - 60_000 })?.day).toBe(TODAY)
+		expect(reminderMorning({ shopDay: TODAY, setAt: morning + 60_000 })).toBeNull()
+		expect(reminderMorning({ shopDay: TODAY })?.at).toBe(morning)
+		// The one set too late leaves the next list's morning as the reminder.
+		const lists = [
+			{ shopDay: TODAY, setAt: morning + 60_000 },
+			{ shopDay: '2026-10-02', setAt: morning + 60_000 },
+		]
+		expect(nextShopMorning(lists, TODAY)?.day).toBe('2026-10-02')
 	})
 })

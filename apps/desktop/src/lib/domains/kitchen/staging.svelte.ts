@@ -14,7 +14,8 @@ import {
 	TEXT_MAX_BYTES,
 	type AttachmentBlock,
 } from '@eden/shared/gardener'
-import { emlToText, htmlToText } from '@eden/shared/domains/kitchen'
+import { fetchImage, logError, webErrorCode } from '@eden/shared/api'
+import { emlToText, htmlToText, pictureAddress } from '@eden/shared/domains/kitchen'
 import { measure, sizeLabel, toSend } from '$lib/shell/gardener/files'
 import type { ToolFiles } from '$lib/shell/gardener/types'
 
@@ -160,6 +161,22 @@ export async function fitPicture(picture: Blob): Promise<string | undefined> {
 		return undefined
 	} finally {
 		bitmap?.close()
+	}
+}
+
+/**
+ * The picture a pasted link means (D-91), fetched by the app and fitted whole: a grocer's product page gives its own
+ * picture of the product, any other link is taken as the address of a picture.
+ */
+export async function linkedPicture(link: string): Promise<string | undefined> {
+	const address = pictureAddress(link)
+	if (!address) return undefined
+	try {
+		const bytes = await fetchImage(address)
+		return await fitPicture(new Blob([bytes as Uint8Array<ArrayBuffer>]))
+	} catch (error) {
+		void logError('web', 'A picture could not be fetched', webErrorCode(error)).catch(() => null)
+		return undefined
 	}
 }
 

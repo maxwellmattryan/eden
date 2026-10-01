@@ -249,7 +249,6 @@
 								{#if entry.threadId}
 									<Button
 										variant="secondary"
-										icon="sparkles"
 										label={$t('audit.openThread')}
 										onclick={() => entry.threadId && openThread(entry.threadId)}
 									/>

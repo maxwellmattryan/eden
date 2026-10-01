@@ -4,7 +4,7 @@ status: draft
 summary: The single list of every resource a grant, a declared read or an audit entry can name: fact types, entity types and primitive kinds, each with an owner, a tier and a phase.
 read-this-if: You are declaring what an AI tool reads, writing a grant, adding an entity or a kind, or checking who owns a resource.
 depends-on: [privacy]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## Rules
@@ -63,6 +63,7 @@ updated: 2026-09-30
 | `household-size` | fact | T1 | |
 | `stock-item` | entity | T0 | |
 | `recipe` | entity | T0 | |
+| `grocery-store` | entity | T0 | a store Hearth shops at; each has a list of its own |
 | `grocery-list` | entity | T0 | |
 | `grocery-item` | entity | T0 | |
 | `shop-day` | kind (event) | T0 | |

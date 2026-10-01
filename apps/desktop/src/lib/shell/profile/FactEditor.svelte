@@ -262,7 +262,7 @@
 				onclick={leave}
 			/>
 			{#if type}
-				<Button variant="primary" label={$t('profile.editor.save')} icon="check" disabled={!canSave} onclick={save} />
+				<Button variant="primary" label={$t('profile.editor.save')} disabled={!canSave} onclick={save} />
 			{/if}
 		</div>
 	{/snippet}

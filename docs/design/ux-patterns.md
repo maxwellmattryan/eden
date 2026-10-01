@@ -1,10 +1,10 @@
 ---
 title: UX patterns
 status: draft
-summary: The reusable interaction patterns every screen is built from: navigation, page anatomy, lists and cards, forms and quick-add, the Quick Log sheet, the Capture verification sheet, states, confirmation and risk patterns, Gardener surfaces, notifications, widgets, context menus, mobile adaptations, keyboard and focus.
+summary: The reusable interaction patterns every screen is built from: navigation, page anatomy, lists and cards, forms and quick-add, buttons, the Quick Log sheet, the Capture verification sheet, states, confirmation and risk patterns, Gardener surfaces, notifications, widgets, context menus, mobile adaptations, keyboard and focus.
 read-this-if: You are designing a screen or a component and want to reuse what exists.
 depends-on: [visual-language, product/substrate/shell, product/substrate/grants, product/substrate/ai]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## Navigation
@@ -21,7 +21,21 @@ Lists are the default; tables only for numeric data (stock quantities, metrics).
 
 ## Forms and quick-add
 
-Every list has a quick-add field at its top that parses natural language where it can ("2 lb chicken thighs fridge", "dentist thursday 3pm") and shows the parsed fields as chips before saving. Full forms open in the detail pane, never in modals, except on mobile where they are sheets. Required fields are few; defaults are visible.
+Every list has a quick-add field at its top that parses natural language where it can ("2 lb chicken thighs fridge", "dentist thursday 3pm") and shows the parsed fields as chips before saving. A full form, one that edits a whole entity across several fields, opens in a sheet over the page (the kit's `Sheet`: centred on desktop, a bottom sheet on mobile), with Cancel and the primary Save in its footer; Save writes the fields as one change with one undo, and Cancel, Escape and the scrim leave the entity as it was (D-95). The detail pane is for reading the picked item and for its actions, not for its form. Inline inputs stay where they are: the quick-add line, a single field changed in place, a row's own control. Required fields are few; defaults are visible.
+
+## Buttons (D-96)
+
+A destructive action is drawn in danger wherever it appears: the `danger` button, the `danger` icon button, the `destructive` menu item, the trailing swipe. It deletes or overwrites something kept, with or without an undo. It comes last in its row. Cancel, Discard on something not yet kept, and Dismiss are not destructive and stay quiet.
+
+Icons inside labelled buttons go by the group, the buttons of one row: all of them carry a leading icon or none does.
+
+| Group | Icons | Examples |
+| --- | --- | --- |
+| action row: the actions on a record or a page | every button, the glyph the action has in the row's menu | a detail pane (Edit, Add to grocery, Move, Delete), the page header, an inbox card |
+| decision row: the footer of a form, a sheet or a card | none | Save and Cancel, the confirm and Cancel, Accept and Dismiss, Commit and Discard |
+| a button on its own | optional, where it names the thing acted on | Save key, Check for updates, an empty state's action |
+
+A trailing icon is outside the rule, since it says what the press does: a chevron opens a menu, an arrow leaving a box leaves the app.
 
 ## Quick Log sheet (D-12)
 
@@ -45,7 +59,7 @@ A wide sheet in two phases. First it collects the sources: photos, a receipt, an
 
 ## Confirmation and risk patterns
 
-Access levels have badges: `read` shows nothing, `write-draft` shows a pencil, `write` a check, `act-external` an arrow leaving a box in the warning colour. The confirm sheet names the subject, the resource, the destination for external actions, and shows the exact payload; the confirm button repeats the verb ("Create event", "Send to Google"). Undo toasts replace confirms for reversible writes. Never-automated actions are simply absent from the UI.
+Access levels have badges: `read` shows nothing, `write-draft` shows a pencil, `write` a check, `act-external` an arrow leaving a box in the warning colour. The confirm sheet names the subject, the resource, the destination for external actions, and shows the exact payload; the confirm button repeats the verb ("Create event", "Send to Google"), in danger when the write is destructive (D-96). Undo toasts replace confirms for reversible writes. Never-automated actions are simply absent from the UI.
 
 ## Gardener surfaces
 

@@ -4,7 +4,7 @@ status: draft
 summary: The workspace database and everything over it: the SQLCipher file and its key on each platform, the schema and its conventions, the append-only migrations, stamps and ids, the registry, the grant store, the egress ledger, the profile, the tables of the scheduler and of signals, the IPC boundary command by command, the frontend module and its browser fallback, how a store sits on rows, the Today store on the task rows, the export bundle, the import, and how it is tested.
 read-this-if: You are reading or writing the owner's data from Rust or from an app, adding a table, a migration, a command, an entity type or a fact type, moving a store onto rows, or touching export, import or the database key.
 depends-on: [product/substrate/data, product/substrate/primitives, product/substrate/registry, engineering/app-scaffold]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## Where it stands
@@ -252,7 +252,8 @@ SQLite is where the owner's data is; a store is what a page sees of it, in memor
 |---|---|---|
 | Hearth | `stock-item` | the item, with its category (one of twelve ids), its low-stock threshold and its tip, a line of text (D-87). Low stock is not stored: `isLow` derives it from the threshold |
 | | `recipe` | name, serves, minutes, tags, `ingredients` (name, qty, unit, note), `steps`, `sourceUrl`, `tip`; a row written before recipes held their lines reads with both lists empty |
-| | `grocery-list` | name, store, shop day; made with the first item put on it |
+| | `grocery-store` | name, `sells`, and `bought`: what was last bought there, a normalised name to a timestamp (D-97) |
+| | `grocery-list` | `storeId` (none for the list of what is not filed) and an optional shop day; made with the first item put on it, or its first shop day (D-96). A row from before, with a `name` or a `store`, is rewritten when Hearth is read (`groceryUpgrade`) |
 | | `grocery-item` | the item, and `listId` |
 | Toolbench | `idea` | the idea with its log and its brainstorm thread, and `projectId` |
 | | `project` | the project with its next steps and its parts |

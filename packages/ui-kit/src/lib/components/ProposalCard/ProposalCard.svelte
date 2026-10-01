@@ -50,7 +50,7 @@
 </script>
 
 {#snippet choices()}
-	<Button variant="ai" icon="check" label={s.gardener.accept} onclick={() => decide('accepted')} />
+	<Button variant="ai" label={s.gardener.accept} onclick={() => decide('accepted')} />
 	<Button variant="quiet" label={s.dismiss} onclick={() => decide('dismissed')} />
 {/snippet}
 

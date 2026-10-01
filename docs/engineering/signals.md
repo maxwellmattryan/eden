@@ -4,7 +4,7 @@ status: draft
 summary: The scheduler, signals, rules and the inbox as code: the alarm in the crate and the take in the webview, the store and its commands, the rules a manifest declares and the frontend evaluates, the runtime both apps start, the refresh coordinator, the desktop inbox with its OS notifications, the first consumers, and how it is tested.
 read-this-if: You are adding a schedule, a signal, a rule or a mirror that refreshes itself, touching the inbox or an OS notification, or changing when Sky fetches.
 depends-on: [product/substrate/signals-notifications, engineering/data-layer, engineering/domain-module, engineering/app-scaffold]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## Where it stands
@@ -173,9 +173,9 @@ Each active alert is emitted as `weather.alert` with its id as the key, so it is
 |---|---|---|
 | `kitchen.morning`, daily at 08:00 | emits `stock.expiring` when something is dated no later than two days on, keyed by the day | `expiring-digest`, in-app |
 | the same schedule, after the expiring check | emits `stock.low` when something is at or under its low-stock threshold (`lowDigest`), keyed by the Monday of the week, so it is said once a week | `low-stock`, in-app |
-| `kitchen.shop-day`, a one-shot at 08:00 on the list's shop day | emits `grocery.shop-day` if today is still that day, keyed by the list and the day | `shop-day-reminder`, OS |
+| `kitchen.shop-day`, a one-shot at 08:00 on the earliest shop day among the stores' lists (D-98) | emits `grocery.shop-day` for each store's list whose shop day is today, keyed by the list and the day, then sets itself to the next day one falls on | `shop-day-reminder`, OS |
 
-`ensureShopDay()` sets or cancels the one-shot from the list as it is stored: when the shell starts, after a seed, its undo and a reload, and when the owner sets or clears the shop day in the Grocery pane. There is no weekly trigger yet, so `stock.low` rides the daily schedule and its key does the spacing: the first morning of a week on which something is low says so, and the later ones are dropped.
+`ensureShopDay()` sets or cancels the one-shot from the lists as they are stored: when the shell starts, after a seed, its undo and a reload, when the owner sets or clears a shop day in a store's form, completes a list or deletes a store, and after a morning's reminders have been said. A shop day set once its morning has passed has no reminder: a list's row changes only when its shop day or its store does, so its `updatedAt` is when the day was set (`reminderMorning`). There is no weekly trigger yet, so `stock.low` rides the daily schedule and its key does the spacing: the first morning of a week on which something is low says so, and the later ones are dropped.
 
 **Tasks** (`packages/shared/src/tasks/signals.ts`, with the pure part, `taskSignal`, in `rules.ts`). The data layer emits nothing for a task (D-75): the crate cannot see a routine's or a habit's completion, which lives in `progress`, and cannot evaluate the rules. So the frontend emits, once the write has landed, one signal per owner action:
 

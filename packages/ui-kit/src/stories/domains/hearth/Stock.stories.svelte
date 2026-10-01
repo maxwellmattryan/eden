@@ -1,7 +1,7 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
 	import type { ComponentProps } from 'svelte'
-	import { expect, fn, userEvent, within } from 'storybook/test'
+	import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 	import { canvasOf, hasCanvas } from '../../../storybook/play.js'
 	import { defaultStrings } from '$lib/i18n/strings.js'
 	import { ranOut, sidebar, stock } from '../../sample-data.js'
@@ -26,7 +26,7 @@
 			docs: {
 				description: {
 					component:
-						'Hearth’s Stock view (product/domains/kitchen.md), mocked from kit components under D-54. The page header carries Capture a haul as the primary action with Take stock and Add beside it, the domain’s three tabs and the Expiring, Low stock and Sort chips, the last a menu (expiry, name, newest); a quick-add line sits above one List per location (Fridge, Freezer, Pantry, Counter). Every row leads with the item’s picture, or its category’s glyph on a tile of the same size (D-90), then quantities in mono, `estimated` where the capture guessed, a warning where stock is low, the info button where an item has a tip (D-87). On desktop the selected item opens in a detail pane with its picture and its tip beside its name, its fields and the row’s actions, and the pane is where it is edited, picture included; a List in select mode offers Move, Add to grocery and Delete on the selection. On mobile every row sits in a SwipeRow whose trailing action deletes.',
+						'Hearth’s Stock view (product/domains/kitchen.md), mocked from kit components under D-54. The page header carries Capture a haul as the primary action with Take stock and Add beside it, the domain’s three tabs and the Expiring, Low stock and Sort chips, the last a menu (expiry, name, newest); a quick-add line sits above one List per location (Fridge, Freezer, Pantry, Counter). Every row leads with the item’s picture, or its category’s glyph on a tile of the same size (D-90), then quantities in mono, `estimated` where the capture guessed, a warning where stock is low, the info button where an item has a tip (D-87). On desktop the selected item opens in a detail pane with its picture and its tip beside its name, its fields and the row’s actions, and Edit opens its form in a sheet over the page (D-95), picture included; a List in select mode offers Move, Add to grocery and Delete on the selection. On mobile every row sits in a SwipeRow whose trailing action deletes.',
 				},
 			},
 		},
@@ -130,18 +130,19 @@
 <!-- The phone alone: 44 px rows, each in a SwipeRow whose trailing action deletes -->
 <Story name="Mobile" {template} parameters={{ platforms: ['mobile'] }} />
 
-<!-- The pane in its form: the chicken's picture with the buttons that change it, then its name, amount, location, date,
+<!-- The item's form in its sheet (D-95): the chicken's picture with the buttons that change it, then its name, amount, location, date,
      category, threshold and tip; Save writes them as one change -->
 <Story
 	name="Editing"
 	{template}
 	args={{ editing: true }}
-	parameters={{ platforms: ['desktop'] }}
+	parameters={{ platforms: ['desktop'], platformFrame: 'inline' }}
 	play={async ({ canvasElement, args }) => {
 		if (!hasCanvas(canvasElement)) return
-		const canvas = canvasOf(canvasElement)
-		const pane = within(canvas.getByRole('complementary', { name: 'Edit item' }))
-		await expect(pane.getByRole('button', { name: 'Choose a picture' })).toBeVisible()
+		const page = within(canvasElement.ownerDocument.body)
+		const pane = within(await page.findByRole('dialog', { name: 'Edit item' }))
+		// the panel unfurls before its controls can be seen
+		await waitFor(() => expect(pane.getByRole('button', { name: 'Choose a picture' })).toBeVisible())
 		await expect(pane.getByRole('button', { name: 'Remove the picture' })).toBeVisible()
 		await expect(pane.getByRole('textbox', { name: 'Name' })).toHaveValue(chicken.name)
 		await expect(pane.getByRole('textbox', { name: 'Quantity' })).toHaveValue(chicken.qty)

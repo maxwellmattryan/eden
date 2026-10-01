@@ -1,6 +1,6 @@
 // The sample dataset (design/sample-data.md, "Hearth") mapped into the store's shapes. Dates shift with the real
 // calendar so the seeded stock reads as the mockup does: spinach expires tomorrow, the haul came in yesterday.
-import { grocery, groceryShopDay, haul, recipes, stock, type SampleRecipe } from '@eden/ui-kit/sample-data'
+import { grocery, haul, recipes, stock, type SampleRecipe } from '@eden/ui-kit/sample-data'
 import { shiftSampleDate, shiftSampleDateTime } from '@eden/shared/dates'
 import type { GroceryItem, GroceryOrigin, KitchenData, StockItem } from './store.svelte.js'
 
@@ -10,7 +10,6 @@ const TIP: Partial<Record<string, string>> = {
 	'st-04': 'Wrap in a dry towel inside the bag; it wilts fastest in the door.',
 	'st-17': 'Ripen on the counter, then move to the fridge to hold them a few more days.',
 }
-const STORE = 'H-E-B'
 
 function origin(sample: string): Pick<GroceryItem, 'origin' | 'note'> {
 	if (sample === 'low stock') return { origin: 'low-stock' }
@@ -49,23 +48,26 @@ export function seedData(): KitchenData {
 			steps: [...recipe.steps],
 			...(recipe.tip ? { tip: recipe.tip } : {}),
 		})),
+		// the sample's ids stand in until the rows take their own (`kitchenRows`)
 		grocery: {
-			name: '',
-			store: STORE,
-			shopDay: shiftSampleDateTime(groceryShopDay.replace(/^\w+ /, '')),
-			// the one list of today's shape: an item bought elsewhere names its store, an unfiled one sits under the default
-			items: grocery.items.map((item) => {
-				const storeId = grocery.lists.find((list) => list.id === item.listId)?.storeId
-				const store = grocery.stores.find((entry) => entry.id === storeId)?.name
-				return {
-					id: item.id,
-					name: item.name,
-					qty: item.qty,
-					done: item.done,
-					...(store && store !== STORE ? { store } : {}),
-					...origin(item.origin),
-				}
-			}),
+			stores: grocery.stores.map((store) => ({
+				id: store.id,
+				name: store.name,
+				sells: store.sells.map((kind) => (kind === 'home goods' ? 'home-goods' : kind)),
+			})),
+			lists: grocery.lists.map((list) => ({
+				id: list.id,
+				...(list.storeId ? { storeId: list.storeId } : {}),
+				...(list.shopDay ? { shopDay: shiftSampleDateTime(list.shopDay.replace(/^\w+ /, '')) } : {}),
+			})),
+			items: grocery.items.map((item) => ({
+				id: item.id,
+				listId: item.listId,
+				name: item.name,
+				qty: item.qty,
+				done: item.done,
+				...origin(item.origin),
+			})),
 		},
 	}
 }

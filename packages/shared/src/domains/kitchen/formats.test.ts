@@ -44,11 +44,15 @@ const data: KitchenData = {
 		{ id: '4', name: 'Plain rice', serves: 4, minutes: 20, tags: [], ingredients: [], steps: [] },
 	],
 	grocery: {
-		name: 'This week',
-		store: 'H-E-B',
+		stores: [
+			{ id: 's1', name: 'H-E-B', sells: ['grocery'] },
+			{ id: 's2', name: 'Costco', sells: ['grocery', 'home-goods'] },
+		],
+		lists: [{ id: 'l1', storeId: 's1' }, { id: 'l2', storeId: 's2' }, { id: 'l0' }],
 		items: [
-			{ id: '5', name: 'Spinach', qty: '1 bag', origin: 'recipe', note: 'Dal', done: true },
-			{ id: '6', name: 'Oat milk', qty: '2', store: 'Costco', origin: 'manual', done: false },
+			{ id: '5', name: 'Spinach', qty: '1 bag', listId: 'l1', origin: 'recipe', note: 'Dal', done: true },
+			{ id: '6', name: 'Oat milk', qty: '2', listId: 'l2', origin: 'manual', done: false },
+			{ id: '7', name: 'Tape', qty: '', listId: 'l0', origin: 'manual', done: false },
 		],
 	},
 }
@@ -71,12 +75,13 @@ describe('kitchenExtras', () => {
 		)
 	})
 
-	it('writes the grocery list with the store each item is bought at', () => {
+	it('writes the grocery lists with the store each item is on, and none for what is not filed', () => {
 		expect(files['friendly/grocery.csv']).toBe(
 			[
-				'list,item,quantity,store,origin,note,done',
-				'This week,Spinach,1 bag,H-E-B,recipe,Dal,true',
-				'This week,Oat milk,2,Costco,manual,,false',
+				'store,item,quantity,origin,note,done',
+				'H-E-B,Spinach,1 bag,recipe,Dal,true',
+				'Costco,Oat milk,2,manual,,false',
+				',Tape,,manual,,false',
 				'',
 			].join('\r\n')
 		)
@@ -116,7 +121,7 @@ describe('kitchenExtras', () => {
 	})
 
 	it('writes the headers alone for a domain with nothing in it', () => {
-		const empty = kitchenExtras({ stock: [], recipes: [], grocery: { name: '', store: '', items: [] } })
+		const empty = kitchenExtras({ stock: [], recipes: [], grocery: { stores: [], lists: [], items: [] } })
 		expect(empty.map((file) => file.content.split('\n').length)).toEqual([2, 2, 2])
 	})
 })

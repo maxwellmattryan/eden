@@ -1,5 +1,5 @@
-// Hearth's store (product/domains/kitchen.md): stock by location, the recipes and the active grocery list. The rows
-// live in the data layer (`@eden/shared/data`), one per stock item, recipe, list and list item; the store is what
+// Hearth's store (product/domains/kitchen.md): stock by location, the recipes and a grocery list per store. The rows
+// live in the data layer (`@eden/shared/data`), one per stock item, recipe, store, list and list item; the store is what
 // the page sees of them. A write changes the store at once and is sent after, in order (`WriteQueue`), and every
 // write hands back an undo, so the page can show the undo toast in place of a confirm sheet (D-12); each write also
 // lands in the Garden's activity feed. A change to several rows (a haul, a recipe cooked, a bulk move) is one batch
@@ -26,9 +26,11 @@ import {
 import { nowIso } from '@eden/shared/dates'
 import {
 	buyAgain,
-	EMPTY_LIST,
+	emptyGrocery,
 	ensureShopDay,
 	expiresSoon,
+	groceryBlocks,
+	groceryUpgrade,
 	isLow,
 	isOut,
 	ITEM_PHOTO,
@@ -45,12 +47,17 @@ import {
 	ranOut,
 	RECIPE_PHOTO,
 	recentlyOut,
+	remember,
+	storeFor,
 	type CaptureMode,
+	type Grocery,
 	type GroceryItem,
 	type GroceryItemPayload,
 	type GroceryList,
 	type GroceryListPayload,
 	type GroceryOrigin,
+	type GroceryStore,
+	type GroceryStorePayload,
 	type HaulRow,
 	type KitchenData,
 	type Recipe,
@@ -59,15 +66,19 @@ import {
 	type StockItem,
 	type StockLocation,
 	type StockPayload,
+	type StoreSells,
 } from '@eden/shared/domains/kitchen'
 import { feed } from '../../shell/feed.svelte.js'
 import { seedData } from './seed.js'
 
 export { LOCATIONS }
 export type {
+	Grocery,
+	GroceryBlock,
 	GroceryItem,
 	GroceryList,
 	GroceryOrigin,
+	GroceryStore,
 	HaulRow,
 	Ingredient,
 	KitchenData,
@@ -76,6 +87,7 @@ export type {
 	StockItem,
 	StockLocation,
 	StockSource,
+	StoreSells,
 } from '@eden/shared/domains/kitchen'
 
 export type Undo = () => void
@@ -111,7 +123,13 @@ export type StockSort = 'expiry' | 'name' | 'added'
 export type StockPatch = Partial<
 	Pick<StockItem, 'name' | 'qty' | 'unit' | 'location' | 'expiry' | 'category' | 'threshold' | 'tip'>
 >
-export type GroceryPatch = Partial<Pick<GroceryItem, 'name' | 'qty' | 'store' | 'note'>>
+/** What the owner may change of a grocery item; `storeId` moves it to that store's list, `null` to the unfiled one. */
+export type GroceryPatch = Partial<Pick<GroceryItem, 'name' | 'qty' | 'note'>> & { storeId?: string | null }
+/**
+ * Where an added item goes: a store's id puts it on that store's list, `null` on the unfiled one, and nothing files
+ * it where it was last bought (D-97).
+ */
+export type GroceryTarget = string | null | undefined
 
 type ListName = 'stock' | 'grocery' | 'recipes'
 type Kept = StockItem | GroceryItem | Recipe
@@ -147,15 +165,13 @@ export class KitchenStore {
 	saveFailed = $state(false)
 	stock = $state<StockItem[]>([])
 	recipes = $state<Recipe[]>([])
-	grocery = $state<GroceryList>({ ...EMPTY_LIST })
+	grocery = $state<Grocery>(emptyGrocery())
 	/** The items' pictures (D-90): the small image of each `item-photo` Attachment, by the Attachment's id. */
 	readonly photos = new SvelteMap<string, string>()
 	/** The recipes' pictures in full (D-93), by the Attachment's id: object URLs, read when a recipe is first opened. */
 	readonly #images = new SvelteMap<string, string>()
 	readonly #reading = new SvelteSet<string>()
 
-	/** The row of the grocery list, made with its first item. */
-	#listId: string | undefined
 	#loading: Promise<void> | undefined
 	readonly #queue = new WriteQueue(
 		(failed) => (this.saveFailed = failed),
@@ -166,15 +182,10 @@ export class KitchenStore {
 	readonly lowItems = $derived(this.stock.filter((item) => isLow(item)))
 	/** What ran out lately (D-92): Stock's own list of it, the newest first. */
 	readonly recentlyOut = $derived(recentlyOut(this.stock, Date.now()))
-	/** "Buy it again": everything that ran out, less what is already on the grocery list. */
+	/** "Buy it again": everything that ran out, less what is already on a grocery list. */
 	readonly buyAgain = $derived(buyAgain(this.stock, this.grocery.items))
-	readonly checked = $derived(this.grocery.items.filter((item) => item.done).length)
-	/** The stores the list's items name, with the list's own first: what an item's store may be set to. */
-	readonly stores = $derived(
-		[this.grocery.store, ...this.grocery.items.map((item) => item.store ?? '')].filter(
-			(store, index, all) => store && all.indexOf(store) === index
-		)
-	)
+	/** The page's lists (D-96): one per store, then what is not filed while there is any. */
+	readonly blocks = $derived(groceryBlocks(this.grocery))
 
 	/** Expiring, by the rule the morning's digest counts by (`@eden/shared/domains/kitchen`). */
 	soon(item: StockItem): boolean {
@@ -212,21 +223,31 @@ export class KitchenStore {
 	async #read() {
 		try {
 			await importLegacyDocument<KitchenData>(DOCUMENT, (data) => kitchenRows(data, newId).ops)
-			const [stock, recipes, lists, items, pictures] = await Promise.all([
+			const groceryRows = () =>
+				Promise.all([
+					queryEntities<GroceryStorePayload>({ type: KITCHEN.store }),
+					queryEntities<GroceryListPayload>({ type: KITCHEN.list }),
+					queryEntities<GroceryItemPayload>({ type: KITCHEN.item }),
+				])
+			const [stock, recipes, pictures] = await Promise.all([
 				queryEntities<StockPayload>({ type: KITCHEN.stock }),
 				queryEntities<RecipePayload>({ type: KITCHEN.recipe }),
-				queryEntities<GroceryListPayload>({ type: KITCHEN.list }),
-				queryEntities<GroceryItemPayload>({ type: KITCHEN.item }),
 				// the pictures are what the rows are shown with, never what they stand on
 				queryAttachments({ kinds: [ITEM_PHOTO, RECIPE_PHOTO] }).catch(() => []),
 			])
+			// rows from before there was a list per store (D-96) are brought over once, then read again
+			let [stores, lists, items] = await groceryRows()
+			const upgrade = groceryUpgrade({ stores, lists, items }, newId, nowIso())
+			if (upgrade.length) {
+				await applyBatch(upgrade)
+				;[stores, lists, items] = await groceryRows()
+			}
 			this.photos.clear()
 			for (const picture of pictures) if (picture.thumbnail) this.photos.set(picture.id, picture.thumbnail)
-			const { data, listId } = kitchenFromRows({ stock, recipes, lists, items })
+			const data = kitchenFromRows({ stock, recipes, stores, lists, items })
 			this.stock = data.stock
 			this.recipes = data.recipes
 			this.grocery = data.grocery
-			this.#listId = listId
 			this.saveFailed = this.#queue.failed
 			this.#letGo()
 		} catch (error) {
@@ -256,7 +277,7 @@ export class KitchenStore {
 		this.#remind()
 	}
 
-	/** Sets the shop-day reminder again from the list as it is stored, once what is waiting has been sent. */
+	/** Sets the shop-day reminder again from the lists as they are stored, once what is waiting has been sent. */
 	#remind() {
 		void this.#queue
 			.settled()
@@ -667,63 +688,167 @@ export class KitchenStore {
 
 	// Grocery
 
-	addToGrocery(
-		name: string,
-		qty = '',
-		origin: GroceryOrigin = 'manual',
-		note?: string
-	): { item: GroceryItem; undo: Undo } {
-		const item: GroceryItem = without({ id: newId(), name, qty, origin, note, done: false })
-		// an empty quantity is the item's, not a cleared field
-		item.qty = qty
-		const undo = this.#commit(this.#added('grocery', item), 'garden.feed.groceryAdded', { name })
-		return { item, undo }
+	storeById(id: string | undefined): GroceryStore | undefined {
+		return id ? this.grocery.stores.find((store) => store.id === id) : undefined
 	}
 
-	addGrocery(text: string): { item: GroceryItem; undo: Undo } {
-		const parsed = parseGrocery(text)
-		return this.addToGrocery(parsed.name, parsed.qty)
+	/** The store whose list an item is on; none for one that is not filed. */
+	storeOf(item: Pick<GroceryItem, 'listId'> | undefined): GroceryStore | undefined {
+		return this.storeById(this.grocery.lists.find((list) => list.id === item?.listId)?.storeId)
 	}
 
-	/** Puts several items on the grocery list at once: what a drafted list, a plan or a recipe's missing lines commit. */
-	addGroceryItems(
+	/**
+	 * A store's list, or with no store the list of what is not filed. Its row is made with the first thing put on
+	 * it, in a write of its own ahead of that thing's, and stays: an undo takes back the thing, not the list.
+	 */
+	#listFor(storeId: string | undefined): string {
+		const found = this.grocery.lists.find((list) => list.storeId === storeId)
+		if (found) return found.id
+		const list: GroceryList = { id: newId(), ...(storeId ? { storeId } : {}) }
+		this.grocery.lists = [...this.grocery.lists, list]
+		const { id, ...payload } = list
+		this.#queue.enqueue(() => createEntity({ id, type: KITCHEN.list, payload }))
+		return id
+	}
+
+	#showStore(store: GroceryStore | undefined) {
+		if (store) this.grocery.stores = this.grocery.stores.map((entry) => (entry.id === store.id ? store : entry))
+	}
+
+	#showList(list: GroceryList) {
+		this.grocery.lists = this.grocery.lists.map((entry) => (entry.id === list.id ? list : entry))
+	}
+
+	#storeOp(store: GroceryStore | undefined): BatchOp[] {
+		if (!store) return []
+		const { id, ...payload } = store
+		return [{ op: 'updateEntity', id, payload }]
+	}
+
+	#listOp(list: GroceryList): BatchOp {
+		const { id, ...payload } = list
+		return { op: 'updateEntity', id, payload }
+	}
+
+	/**
+	 * Puts rows on the lists as one batch and one undo. A store the owner named takes them all and remembers them;
+	 * with none named, each goes where it was last bought, and what no store remembers is left unfiled.
+	 */
+	#put(
 		rows: { name: string; qty?: string; note?: string }[],
-		origin: GroceryOrigin = 'manual'
+		origin: GroceryOrigin,
+		target: GroceryTarget,
+		feedKey: string,
+		values: Record<string, string | number>
 	): { items: GroceryItem[]; undo: Undo } {
+		const stores = $state.snapshot(this.grocery.stores)
+		const named = typeof target === 'string' ? stores.find((store) => store.id === target) : undefined
+		const storeIdFor = (name: string) => (target === undefined ? storeFor(name, stores)?.id : named?.id)
 		const items: GroceryItem[] = rows.map((row) => ({
 			id: newId(),
 			name: row.name,
 			qty: row.qty ?? '',
+			listId: this.#listFor(storeIdFor(row.name)),
 			origin,
 			...(row.note ? { note: row.note } : {}),
 			done: false,
 		}))
-		if (!items.length) return { items, undo: () => {} }
-		this.#ensureList()
 		const ids = items.map((item) => item.id)
+		const remembered = named
+			? remember(
+					named,
+					rows.map((row) => row.name),
+					nowIso()
+				)
+			: undefined
 		const undo = this.#commit(
 			{
-				apply: () => (this.grocery.items = [...this.grocery.items, ...items]),
-				revert: () => (this.grocery.items = this.grocery.items.filter((entry) => !ids.includes(entry.id))),
-				write: () => applyBatch(items.map((item) => this.#create('grocery', item))),
-				unwrite: () => deleteRows(ids.map((id) => toUri(KITCHEN.item, id))),
+				apply: () => {
+					this.grocery.items = [...this.grocery.items, ...items]
+					this.#showStore(remembered)
+				},
+				revert: () => {
+					this.grocery.items = this.grocery.items.filter((entry) => !ids.includes(entry.id))
+					if (remembered) this.#showStore(named)
+				},
+				write: () => applyBatch([...items.map((item) => this.#create('grocery', item)), ...this.#storeOp(remembered)]),
+				unwrite: () =>
+					applyBatch([
+						...ids.map((id): BatchOp => ({ op: 'delete', uri: toUri(KITCHEN.item, id) })),
+						...(remembered ? this.#storeOp(named) : []),
+					]),
 			},
-			'garden.feed.groceryAddedMany',
-			{ count: items.length }
+			feedKey,
+			values
 		)
 		return { items, undo }
 	}
 
-	updateGrocery(id: string, patch: GroceryPatch): { item: GroceryItem | undefined; undo: Undo } {
-		const item = this.grocery.items.find((entry) => entry.id === id)
-		const undo = this.#commit(
-			this.#changed<GroceryItem>('grocery', id, (target) => ({
-				...without({ ...target, ...patch }),
-				name: patch.name?.trim() || target.name,
-				qty: patch.qty ?? target.qty,
-			}))
-		)
-		return { item, undo }
+	/** Adds one item; the answer names the store whose list it landed on, none when it is not filed. */
+	addToGrocery(
+		name: string,
+		qty = '',
+		origin: GroceryOrigin = 'manual',
+		note?: string,
+		target?: GroceryTarget
+	): { item: GroceryItem; store: GroceryStore | undefined; undo: Undo } {
+		const { items, undo } = this.#put([{ name, qty, note }], origin, target, 'garden.feed.groceryAdded', { name })
+		const item = items[0]!
+		return { item, store: this.storeOf(item), undo }
+	}
+
+	addGrocery(text: string, target?: GroceryTarget): { item: GroceryItem; store: GroceryStore | undefined; undo: Undo } {
+		const parsed = parseGrocery(text)
+		return this.addToGrocery(parsed.name, parsed.qty, 'manual', undefined, target)
+	}
+
+	/** Puts several items on the lists at once: what a drafted list, a plan or a recipe's missing lines commit. */
+	addGroceryItems(
+		rows: { name: string; qty?: string; note?: string }[],
+		origin: GroceryOrigin = 'manual',
+		target?: GroceryTarget
+	): { items: GroceryItem[]; undo: Undo } {
+		if (!rows.length) return { items: [], undo: () => {} }
+		return this.#put(rows, origin, target, 'garden.feed.groceryAddedMany', { count: rows.length })
+	}
+
+	/**
+	 * Changes an item's fields, and with `storeId` in the patch moves it to that store's list, which then remembers
+	 * it: the next one of that name is filed there. One change, one undo.
+	 */
+	updateGrocery(
+		id: string,
+		patch: GroceryPatch
+	): { item: GroceryItem | undefined; store: GroceryStore | undefined; undo: Undo } {
+		const found = this.grocery.items.find((entry) => entry.id === id)
+		if (!found) return { item: undefined, store: undefined, undo: () => {} }
+		const before = $state.snapshot(found)
+		const { storeId, ...fields } = patch
+		const to = this.storeById(storeId ?? undefined)
+		const moving = 'storeId' in patch && to?.id !== this.storeOf(before)?.id
+		const after: GroceryItem = {
+			...without({ ...before, ...fields }),
+			name: fields.name?.trim() || before.name,
+			qty: fields.qty ?? before.qty,
+			listId: moving ? this.#listFor(to?.id) : before.listId,
+		}
+		const named = moving && to ? $state.snapshot(to) : undefined
+		const remembered = named ? remember(named, [after.name], nowIso()) : undefined
+		const put = (record: GroceryItem) =>
+			(this.grocery.items = this.grocery.items.map((entry) => (entry.id === id ? record : entry)))
+		const undo = this.#commit({
+			apply: () => {
+				put(after)
+				this.#showStore(remembered)
+			},
+			revert: () => {
+				put(before)
+				if (remembered) this.#showStore(named)
+			},
+			write: () => applyBatch([this.#update('grocery', after), ...this.#storeOp(remembered)]),
+			unwrite: () => applyBatch([this.#update('grocery', before), ...(remembered ? this.#storeOp(named) : [])]),
+		})
+		return { item: found, store: moving ? to : this.storeOf(before), undo }
 	}
 
 	toggleGrocery(id: string): { item: GroceryItem | undefined; undo: Undo } {
@@ -743,45 +868,171 @@ export class KitchenStore {
 		return { item, undo }
 	}
 
-	clearChecked(): { count: number; undo: Undo } {
-		const checked = this.grocery.items.filter((item) => item.done).map((item) => item.id)
-		const undo = this.#commit(this.#removed('grocery', checked), 'garden.feed.groceryCleared', {
-			count: checked.length,
-		})
-		return { count: checked.length, undo }
+	/**
+	 * Completes a list: the trip is done, so what is checked leaves it, its store remembers having sold those things
+	 * (which is what files the next ones there, D-97), and its shop day, now past, is cleared. What is not checked
+	 * stays for the next trip. One batch, one undo.
+	 */
+	completeList(listId: string): { count: number; undo: Undo } {
+		const list = this.grocery.lists.find((entry) => entry.id === listId)
+		const done = this.grocery.items.filter((item) => item.listId === listId && item.done)
+		if (!list || !done.length) return { count: 0, undo: () => {} }
+		const ids = done.map((item) => item.id)
+		const items = $state.snapshot(this.grocery.items)
+		const listBefore = $state.snapshot(list)
+		const { shopDay, ...listAfter } = listBefore
+		const named = $state.snapshot(this.storeById(list.storeId))
+		const remembered = named
+			? remember(
+					named,
+					done.map((item) => item.name),
+					nowIso()
+				)
+			: undefined
+		const uris = ids.map((id) => toUri(KITCHEN.item, id))
+		const undo = this.#commit(
+			{
+				apply: () => {
+					this.grocery.items = this.grocery.items.filter((entry) => !ids.includes(entry.id))
+					this.#showStore(remembered)
+					this.#showList(listAfter)
+				},
+				revert: () => {
+					this.grocery.items = items
+					this.#showStore(named)
+					this.#showList(listBefore)
+				},
+				write: () =>
+					applyBatch([
+						...uris.map((uri): BatchOp => ({ op: 'delete', uri })),
+						...this.#storeOp(remembered),
+						...(shopDay ? [this.#listOp(listAfter)] : []),
+					]),
+				unwrite: () =>
+					applyBatch([
+						...uris.map((uri): BatchOp => ({ op: 'restore', uri })),
+						...this.#storeOp(named),
+						...(shopDay ? [this.#listOp(listBefore)] : []),
+					]),
+			},
+			'garden.feed.groceryCleared',
+			{ count: ids.length }
+		)
+		if (!shopDay) return { count: ids.length, undo }
+		this.#remind()
+		return {
+			count: ids.length,
+			undo: () => {
+				undo()
+				this.#remind()
+			},
+		}
 	}
 
 	/**
-	 * Changes the list itself: its name, the store its items are bought at unless they say otherwise, its shop day.
-	 * A shop day set or cleared moves the morning's reminder with it (docs/engineering/signals.md).
+	 * Sets or clears a store's shop day (D-98), on its list. The morning's reminder moves with it
+	 * (docs/engineering/signals.md).
 	 */
-	updateList(patch: Partial<Pick<GroceryList, 'name' | 'store' | 'shopDay'>>): Undo {
-		const created = !this.#listId
-		this.#ensureList()
-		const id = this.#listId!
-		const { items: _items, ...before } = $state.snapshot(this.grocery)
-		const after = { ...before, ...patch }
-		const payload = (list: typeof before): GroceryListPayload => ({
-			name: list.name,
-			store: list.store,
-			...(list.shopDay ? { shopDay: list.shopDay } : {}),
-		})
-		const show = (list: typeof before) => {
-			this.grocery.name = list.name
-			this.grocery.store = list.store
-			this.grocery.shopDay = list.shopDay || undefined
-		}
+	setShopDay(storeId: string, shopDay: string | undefined): Undo {
+		const id = this.#listFor(storeId)
+		const before = $state.snapshot(this.grocery.lists.find((list) => list.id === id)!)
+		const { shopDay: _shopDay, ...rest } = before
+		const after: GroceryList = shopDay ? { ...rest, shopDay } : rest
 		const undo = this.#commit({
-			apply: () => show(after),
-			revert: () => show(before),
-			write: () => updateEntity(id, payload(after)),
-			// a list this change made stays, empty of what the change set: its row is what the items name
-			unwrite: () => updateEntity(id, payload(created ? { name: '', store: '' } : before)),
+			apply: () => this.#showList(after),
+			revert: () => this.#showList(before),
+			write: () => applyBatch([this.#listOp(after)]),
+			unwrite: () => applyBatch([this.#listOp(before)]),
 		})
-		if ('shopDay' in patch) this.#remind()
+		this.#remind()
 		return () => {
 			undo()
-			if ('shopDay' in patch) this.#remind()
+			this.#remind()
+		}
+	}
+
+	/** Adds a store, which has a list from then on. A name a store already has, whatever its case, answers that store. */
+	addStore(name: string, sells: StoreSells[] = ['grocery']): { store: GroceryStore; created: boolean; undo: Undo } {
+		const key = name.trim().toLowerCase()
+		const known = this.grocery.stores.find((store) => store.name.trim().toLowerCase() === key)
+		if (known) return { store: known, created: false, undo: () => {} }
+		const store: GroceryStore = { id: newId(), name: name.trim(), sells }
+		const { id, ...payload } = store
+		const uri = toUri(KITCHEN.store, id)
+		const undo = this.#commit({
+			apply: () => (this.grocery.stores = [...this.grocery.stores, store]),
+			revert: () => (this.grocery.stores = this.grocery.stores.filter((entry) => entry.id !== id)),
+			write: () => createEntity({ id, type: KITCHEN.store, payload }),
+			unwrite: () => deleteRows([uri]),
+		})
+		return { store, created: true, undo }
+	}
+
+	/** Changes a store's name or what it sells. Its list and what it remembers are its own and stay. */
+	updateStore(
+		id: string,
+		patch: Partial<Pick<GroceryStore, 'name' | 'sells'>>
+	): { store: GroceryStore | undefined; undo: Undo } {
+		const found = this.storeById(id)
+		if (!found) return { store: undefined, undo: () => {} }
+		const before = $state.snapshot(found)
+		const after: GroceryStore = { ...before, ...patch, name: patch.name?.trim() || before.name }
+		const undo = this.#commit({
+			apply: () => this.#showStore(after),
+			revert: () => this.#showStore(before),
+			write: () => applyBatch(this.#storeOp(after)),
+			unwrite: () => applyBatch(this.#storeOp(before)),
+		})
+		return { store: found, undo }
+	}
+
+	/**
+	 * Deletes a store and its list. What was on the list is not lost: it moves to the unfiled list. The undo brings
+	 * the store back with its list, its shop day and its items.
+	 */
+	removeStore(id: string): { store: GroceryStore | undefined; undo: Undo } {
+		const found = this.storeById(id)
+		if (!found) return { store: undefined, undo: () => {} }
+		const store = $state.snapshot(found)
+		const at = this.grocery.stores.indexOf(found)
+		const list = $state.snapshot(this.grocery.lists.find((entry) => entry.storeId === id))
+		const moved = list ? this.grocery.items.filter((item) => item.listId === list.id).map((item) => item.id) : []
+		const unfiled = moved.length ? this.#listFor(undefined) : ''
+		const move = (from: string, to: string) =>
+			(this.grocery.items = this.grocery.items.map((item) =>
+				moved.includes(item.id) && item.listId === from ? { ...item, listId: to } : item
+			))
+		const moveOps = (to: string): BatchOp[] =>
+			$state
+				.snapshot(this.grocery.items)
+				.filter((item) => moved.includes(item.id))
+				.map((item) => this.#update('grocery', { ...item, listId: to }))
+		const gone = [toUri(KITCHEN.store, id), ...(list ? [toUri(KITCHEN.list, list.id)] : [])]
+		const undo = this.#commit({
+			apply: () => {
+				if (list) move(list.id, unfiled)
+				this.grocery.stores = this.grocery.stores.filter((entry) => entry.id !== id)
+				this.grocery.lists = this.grocery.lists.filter((entry) => entry.id !== list?.id)
+			},
+			revert: () => {
+				this.grocery.stores = [...this.grocery.stores.slice(0, at), store, ...this.grocery.stores.slice(at)]
+				if (list) {
+					this.grocery.lists = [...this.grocery.lists, list]
+					move(unfiled, list.id)
+				}
+			},
+			write: () => applyBatch([...moveOps(unfiled), ...gone.map((uri): BatchOp => ({ op: 'delete', uri }))]),
+			unwrite: () =>
+				applyBatch([...gone.map((uri): BatchOp => ({ op: 'restore', uri })), ...(list ? moveOps(list.id) : [])]),
+		})
+		if (!list?.shopDay) return { store, undo }
+		this.#remind()
+		return {
+			store,
+			undo: () => {
+				undo()
+				this.#remind()
+			},
 		}
 	}
 
@@ -939,21 +1190,20 @@ export class KitchenStore {
 
 	/** Fills the store from the kit's sample dataset; the undo puts back whatever was there. */
 	seed(domainName: string): Undo {
-		const before = { data: this.data(), listId: this.#listId }
+		const before = this.data()
 		const after = kitchenRows(seedData(), newId)
 		const remove = (uris: string[]): BatchOp[] => uris.map((uri) => ({ op: 'delete', uri }))
 		const restore = (uris: string[]): BatchOp[] => uris.map((uri) => ({ op: 'restore', uri }))
-		const old = kitchenUris(before.data, before.listId)
-		const sample = kitchenUris(after.data, after.listId)
-		const show = ({ data, listId }: typeof before) => {
+		const old = kitchenUris(before)
+		const sample = kitchenUris(after.data)
+		const show = (data: KitchenData) => {
 			this.stock = data.stock
 			this.recipes = data.recipes
 			this.grocery = data.grocery
-			this.#listId = listId
 		}
 		const undo = this.#commit(
 			{
-				apply: () => show(after),
+				apply: () => show(after.data),
 				revert: () => show(before),
 				write: () => applyBatch([...remove(old), ...after.ops]),
 				unwrite: () => applyBatch([...remove(sample), ...restore(old)]),
@@ -961,7 +1211,7 @@ export class KitchenStore {
 			'garden.feed.sampleAdded',
 			{ domain: domainName }
 		)
-		// the list was replaced under the reminder, and the undo replaces it again
+		// the lists were replaced under the reminder, and the undo replaces them again
 		this.#remind()
 		return () => {
 			undo()
@@ -974,7 +1224,7 @@ export class KitchenStore {
 		return this.stock.flatMap((item) => (ids.includes(item.id) && item.photo ? [photoUri(item.photo)] : []))
 	}
 
-	/** The list a name stands for: the stock, the recipes, or the items of the grocery list. */
+	/** The list a name stands for: the stock, the recipes, or the items on the grocery lists. */
 	#list(name: ListName): Kept[] {
 		return name === 'stock' ? this.stock : name === 'recipes' ? this.recipes : this.grocery.items
 	}
@@ -985,10 +1235,10 @@ export class KitchenStore {
 		else this.grocery.items = records as GroceryItem[]
 	}
 
-	/** A record's payload: itself without its id, and with its list when it is on one. */
-	#payload(name: ListName, record: Kept): object {
+	/** A record's payload: itself without its id. */
+	#payload(_name: ListName, record: Kept): object {
 		const { id: _id, ...payload } = $state.snapshot(record) as Kept
-		return name === 'grocery' ? { ...payload, listId: this.#listId } : payload
+		return payload
 	}
 
 	#create(name: ListName, record: Kept): BatchOp {
@@ -999,16 +1249,7 @@ export class KitchenStore {
 		return { op: 'updateEntity', id: record.id, payload: this.#payload(name, record) }
 	}
 
-	/** The grocery list's row is made with the first item put on it, in a write of its own ahead of the item's. */
-	#ensureList() {
-		if (this.#listId) return
-		const id = (this.#listId = newId())
-		const { items: _items, ...payload } = this.data().grocery
-		this.#queue.enqueue(() => createEntity({ id, type: KITCHEN.list, payload }))
-	}
-
 	#added(name: ListName, record: Kept): Change {
-		if (name === 'grocery') this.#ensureList()
 		const payload = this.#payload(name, record)
 		const uri = toUri(TYPE[name], record.id)
 		return {

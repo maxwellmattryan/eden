@@ -141,7 +141,7 @@
 				},
 				"shopDayReminder": {
 					"title": "Shop day",
-					"line": "{count, plural, =0 {Shop day today} one {Shop day today, with # item on the list} other {Shop day today, with # items on the list}}"
+					"line": "{count, plural, =0 {Shop day at {store} today} one {Shop day at {store} today, with # item on its list} other {Shop day at {store} today, with # items on its list}}"
 				},
 				"lowStock": {
 					"line": "{count, plural, =1 {{first} is running low} =2 {{first} and {second} are running low} other {{first} and {more} more are running low}}"
@@ -283,16 +283,15 @@
 			},
 			"grocery": {
 				"add": "Add",
-				"addPlaceholder": "Add to the list",
-				"clearChecked": "Clear checked",
+				"addPlaceholder": "Add an item",
 				"buyAgain": "Buy it again",
 				"checked": "{checked} of {total} checked",
-				"allChecked": "Everything is checked. Clear the list once you are home.",
-				"anyStore": "Any store",
+				"allChecked": "Everything is checked. Complete the list once you are home.",
+				"anyStore": "Miscellaneous",
 				"toBuy": "{count, plural, =0 {Nothing to buy} one {# item to buy} other {# items to buy}}",
 				"empty": {
-					"title": "The list is empty",
-					"text": "Add an item in one line, or send a recipe's missing ingredients here from Recipes.",
+					"title": "Nothing to buy",
+					"text": "Add an item in one line, mark what ran out in Stock, or send a recipe's missing ingredients here.",
 					"action": "Add an item"
 				},
 				"origin": {
@@ -305,6 +304,8 @@
 					"check": "Check off",
 					"uncheck": "Uncheck",
 					"edit": "Edit",
+					"moveTo": "Move to",
+					"addTo": "Add to",
 					"delete": "Delete"
 				},
 				"toast": {
@@ -312,28 +313,45 @@
 					"removed": "{name} removed from the list.",
 					"checked": "{name} checked off.",
 					"unchecked": "{name} unchecked.",
-					"cleared": "{count, plural, one {# checked item} other {# checked items}} cleared.",
 					"edited": "{name} saved.",
-					"listSaved": "The list was saved.",
 					"shopDaySet": "Shop day set. You will be reminded that morning.",
-					"shopDayCleared": "Shop day cleared."
+					"shopDayCleared": "Shop day cleared.",
+					"addedTo": "{name} added to {store}.",
+					"moved": "{name} moved to {store}.",
+					"completed": "{count, plural, one {# item} other {# items}} cleared from {store}.",
+					"storeAdded": "{store} added.",
+					"storeExists": "{store} is already a store.",
+					"storeSaved": "{store} saved.",
+					"storeRemoved": "{store} deleted. What was on its list is under Miscellaneous.",
+					"shopDaySetLate": "Shop day set."
 				},
 				"pane": {
 					"editing": "Edit item",
-					"list": "The list",
 					"name": "Name",
 					"quantity": "Quantity",
 					"store": "Store",
-					"storeHelp": "Left empty, it is bought at {store}.",
 					"note": "Note",
-					"listName": "Name",
-					"listNamePlaceholder": "This week",
-					"defaultStore": "Store",
-					"defaultStoreHelp": "Where the list is bought, unless an item names another store.",
+					"editingStore": "Edit store",
+					"sells": "Sells",
 					"shopDay": "Shop day",
 					"shopTime": "Time",
-					"shopDayHelp": "A reminder arrives on the morning of the shop day.",
-					"clearShopDay": "Clear the shop day"
+					"shopDayHelp": "Optional. With a shop day set, a reminder arrives that morning.",
+					"today": "Today",
+					"tomorrow": "Tomorrow",
+					"noShopDay": "No shop day",
+					"deleteStore": "Delete store"
+				},
+				"addTo": "Add to {store}",
+				"addStore": "Add a store",
+				"stores": "Stores",
+				"storesHelp": "Each store keeps a list of its own. A new item goes where it was last bought.",
+				"complete": "Complete {store}",
+				"completeHint": "Complete: clear what is checked",
+				"editStore": "Edit {store}",
+				"editStoreHint": "Edit store",
+				"sells": {
+					"grocery": "Grocery",
+					"home-goods": "Home goods"
 				}
 			},
 			"recipes": {

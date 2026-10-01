@@ -108,7 +108,7 @@
 		<div class="col">
 			<GardenerMessage {...args}>
 				<div class="row">
-					<Button variant="honey" icon="check" label="Add task" onclick={onconfirm} />
+					<Button variant="honey" label="Add task" onclick={onconfirm} />
 					<Button variant="quiet" label="Discard" onclick={oncancel} />
 				</div>
 			</GardenerMessage>

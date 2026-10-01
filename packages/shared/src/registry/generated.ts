@@ -229,6 +229,15 @@ export const RESOURCES = [
 		"live": true
 	},
 	{
+		"id": "grocery-store",
+		"category": "entity",
+		"primitive": null,
+		"owner": "kitchen",
+		"tier": "T0",
+		"phase": 1,
+		"live": true
+	},
+	{
 		"id": "grocery-list",
 		"category": "entity",
 		"primitive": null,
@@ -1110,6 +1119,7 @@ export const DECLARATIONS = {
 			"household-size",
 			"stock-item",
 			"recipe",
+			"grocery-store",
 			"grocery-list",
 			"grocery-item",
 			"shop-day",
@@ -1162,6 +1172,7 @@ export const DECLARATIONS = {
 				"default": false,
 				"planned": false,
 				"reads": [
+					"grocery-store",
 					"grocery-list",
 					"grocery-item"
 				],
@@ -1232,6 +1243,7 @@ export const DECLARATIONS = {
 				"reads": [
 					"stock-item",
 					"recipe",
+					"grocery-store",
 					"grocery-list",
 					"grocery-item"
 				],
@@ -1360,6 +1372,7 @@ export const DECLARATIONS = {
 		"export": [
 			"stock-item",
 			"recipe",
+			"grocery-store",
 			"grocery-list",
 			"grocery-item"
 		]

@@ -18,12 +18,12 @@ Hearth keeps track of the food and consumables in the home, helps cook from what
 - MVP: See each item with a picture: the one cut from its photo, one I chose, or its category's glyph (D-90).
 - MVP: See what is expiring soon and get a recipe that uses it.
 - MVP: Ask what I can cook tonight; nothing suggested contains my allergens or breaks a medical restriction.
-- MVP: Keep a grocery list grouped by store; add an item in one gesture; add a recipe's missing ingredients in one tap.
+- MVP: Keep a grocery list for each store I shop at, groceries and home goods alike (D-96); add an item in one gesture and have it land on the list of the store it was last bought at (D-97); add a recipe's missing ingredients in one tap.
 - MVP: Mark "I cooked this" and have the stock decrement.
 - MVP: See a storage tip on an item or a recipe when there is one worth knowing, and ask the Gardener for one ("keep ginger in the freezer") (D-87).
 - MVP: Bring a recipe in from a link, a photo, a file or pasted text, or have the Gardener write one, and check it before it is saved.
 - MVP: Keep supplements and mixes such as LMNT packets in stock with a low-stock alert.
-- MVP: See what ran out in one place, and put it back on the grocery list from "Buy it again" (D-92).
+- MVP: See what ran out in one place, and put it back on a grocery list from "Buy it again" (D-92).
 - Later: Plan the week; Hearth drafts shop-day events and a list for it.
 - Later: Use the grocery list on my phone in the store; scan a barcode to add stock.
 - Later: Export the list to a grocery service; have an order's confirmation read from the mailbox, without bringing it as a file.
@@ -34,8 +34,9 @@ Hearth keeps track of the food and consumables in the home, helps cook from what
 |---|---|---|---|
 | `stock-item` | name, qty, unit, `location` (pantry, fridge, freezer, counter), category (one of twelve ids: produce, meat-and-fish, dairy-and-eggs, bakery, grains-and-pasta, canned-and-jarred, frozen, snacks, drinks, condiments-and-spices, supplements-and-mixes, other), purchased, expires, `expiryEstimated`, `source` (manual, capture), low-stock threshold, optional tip (D-87), optional picture (D-90), `outAt` while it holds nothing (D-92) | T0 | `haul-photo` and `item-photo` attachments |
 | `recipe` | title, ingredients (name, qty, unit, note), steps, time, servings, tags, source URL, optional tip (D-87), optional label nutrition | T0 | stock items it consumed |
-| `grocery-list` | name, default store, shop day, active flag | T0 | `shop-day` Event |
-| `grocery-item` | name, qty, unit, store, aisle, note, `origin` (manual, recipe, low-stock, ran-out), checked | T0 | recipe, stock item |
+| `grocery-store` | name, what it sells (grocery, home goods), what was last bought there and when (D-97) | T0 | |
+| `grocery-list` | its store (none for the list of what is not filed), an optional shop day (D-98) | T0 | `grocery-store`, `shop-day` Event |
+| `grocery-item` | name, qty, its list, note, `origin` (manual, recipe, low-stock, ran-out), checked | T0 | `grocery-list` |
 
 Allergies are facts, not entities. Stock is shown sectioned by location; the location list is fixed to the four values so capture can place items without a picker. Low stock is derived, never stored: an item is low while it has a threshold and holds no more than it, and an item without one is never low. Ran out is derived the same way, from a quantity of nothing; `outAt` is only its date (D-92). A recipe written before recipes held their lines reads with no ingredients and no steps.
 
@@ -68,9 +69,9 @@ The safety filter fails closed: when the profile cannot be read, nothing is sugg
 
 **Desktop views (Phase 1, built)**: Stock, Recipes and Grocery. There is no Tips view (D-87).
 
-- **Stock**: sections Fridge, Freezer, Pantry, Counter, which hold what is there, and at the side Ran out, what ran out in the last 7 days with where it was kept (D-92); a click on a row opens it in the detail pane under Ran out, and a double-click does nothing more (D-94); the side stays in view while the lists scroll, as Grocery's pane does; the Expiring and Low stock filters; a sort menu (expiry, name, newest); quick-add; the detail pane with an edit mode (name, quantity, unit, location, expiry, category, low-stock threshold, tip); select mode with Move, Add to grocery, Ran out and Delete on the selection, each one write with one undo (D-41). Add to grocery from a low item carries the origin `low-stock`, from one that ran out `ran-out`. Ran out, on a row, in the pane or on a selection, keeps the item at nothing; Delete forgets it.
+- **Stock**: sections Fridge, Freezer, Pantry, Counter, which hold what is there, and at the side Ran out, what ran out in the last 7 days with where it was kept (D-92); a click on a row opens it in the detail pane above Ran out, which fades in as it makes its room, and a double-click does nothing more (D-94); the side stays in view while the lists scroll, as Grocery's pane does; the Expiring and Low stock filters; a sort menu (expiry, name, newest); quick-add; the detail pane, whose Edit opens the item's form in a sheet over the page (D-95: name, quantity, unit, location, expiry, category, low-stock threshold, tip, and its picture); select mode with Move, Add to grocery, Ran out and Delete on the selection, each one write with one undo (D-41). Add to grocery from a low item carries the origin `low-stock`, from one that ran out `ran-out`. Ran out, on a row, in the pane or on a selection, keeps the item at nothing; Delete forgets it.
 - **Recipes**: the list in tonight's order (what uses up expiring stock first, then what misses least, then the quickest) and a detail pane with each ingredient marked in stock, missing or not enough, by local matching; Cook this; Add missing to grocery (origin `recipe`, the recipe's name as the note, skipping what is already on the list); Edit and Delete. A recipe that names something the owner avoids carries a danger badge.
-- **Grocery**: the active list grouped by store (an item's own, else the list's), a checklist: every row leads with its checkbox and a click on the row checks it off, Edit being in the row's menu (D-94); origin badges, quick-add, Clear checked. Beneath the list, Buy it again: everything that ran out and is not on the list, each put on it by a click on its row (D-92). An item is edited in the pane (name, quantity, store, note); with no item open the pane shows the list itself: its name, its default store and its shop day, a date and a time.
+- **Grocery**: one list per store, all on the page at once (D-96): each has its store's name, its shop day when one is set (D-98), the count of what is checked, Complete (clears what is checked) and Edit store as quiet icon buttons, its rows and an add line of its own; what no store has yet sits under Miscellaneous. The page's quick-add line files an item where it was last bought (D-97). Each list is a checklist: every row leads with its checkbox and a click on the row checks it off, Edit and Move to being in the row's menu (D-94); origin badges. Beneath the lists, Buy it again: everything that ran out and is not on a list, each put on the list of the store it was last bought at by a click on its row, or on a named store's from its menu (D-92). The pane shows the stores, with a line that adds one. An item's form (name, quantity, store, note) and a store's (name, what it sells, shop day and time, Delete store) open in a sheet (D-95).
 
 **Capture** opens from the Stock primary action, and from files dropped or pasted on the Stock page.
 
@@ -78,7 +79,7 @@ The safety filter fails closed: when the profile cannot be read, nothing is sugg
 
 **Mobile (Phase 2)**: Grocery list is the primary tab surface; Capture with barcode scanning; Stock read and edit. Hearth on the phone is still its placeholder page.
 
-**Garden widgets** (all built): `expiring-soon` (S, M; reads `stock-item`), `cook-tonight` (M; reads `stock-item`, `recipe`, `dietary-preference`, `allergy`, `medical-dietary-restriction`; computed locally by matching recipes to stock and expiry, with the safety filter, no model call), `grocery-quick-add` (S; reads `grocery-list`, `grocery-item`).
+**Garden widgets** (all built): `expiring-soon` (S, M; reads `stock-item`), `cook-tonight` (M; reads `stock-item`, `recipe`, `dietary-preference`, `allergy`, `medical-dietary-restriction`; computed locally by matching recipes to stock and expiry, with the safety filter, no model call), `grocery-quick-add` (S; reads `grocery-store`, `grocery-list`, `grocery-item`).
 
 **Palette**: go to Hearth, add to grocery, capture haul, cook tonight, search stock and recipes.
 
@@ -122,7 +123,7 @@ A recipe arrives three ways, and each opens in the Recipes pane as an unsaved dr
 
 Kinds: `shop-day` (event, T0), `haul-photo` (attachment, T1), `item-photo` (attachment, T1; an item's picture, D-90).
 
-Signals, all built: `stock.expiring` (daily at 08:00 via the scheduler, when something is dated no later than two days on), `stock.low` (from the same morning check, once a week, when something is at or under its threshold), `grocery.shop-day` (at 08:00 on the list's shop day).
+Signals, all built: `stock.expiring` (daily at 08:00 via the scheduler, when something is dated no later than two days on), `stock.low` (from the same morning check, once a week, when something is at or under its threshold), `grocery.shop-day` (at 08:00 on a store's shop day, once per list; D-98).
 
 | notification | channel | cadence | default |
 |---|---|---|---|
@@ -130,7 +131,7 @@ Signals, all built: `stock.expiring` (daily at 08:00 via the scheduler, when som
 | low stock | in-app | weekly | on |
 | shop-day reminder | OS | morning of the `shop-day` Event | on |
 
-Until the shop day is an Event, the reminder is set from the list's own shop-day field (D-73, `engineering/signals.md`), which the Grocery pane sets.
+Until the shop day is an Event, the reminder is set from each list's own shop-day field (D-73, `engineering/signals.md`), which the store's form sets.
 
 Intents handled: `kitchen.add-to-grocery`. Intents sent: none.
 
@@ -150,11 +151,11 @@ The camera is the phone's, with mobile capture; on desktop a photo arrives as a 
 
 ## 9. Settings
 
-Locations shown; expiry estimation on or off; low-stock thresholds by category; default store; supplements category on or off; a link to the allergen editor in the profile.
+Locations shown; expiry estimation on or off; low-stock thresholds by category; supplements category on or off; a link to the allergen editor in the profile.
 
 ## 10. Non-goals and open questions
 
-Non-goals: calorie or intake tracking (OQ-8), ordering, meal plans against nutrition targets, inventory of anything that is not consumable.
+Non-goals: calorie or intake tracking (OQ-8), ordering, meal plans against nutrition targets, inventory of anything that is not consumable, shopping lists for anything but groceries and home goods (D-96).
 
 Open: none.
 
@@ -169,6 +170,15 @@ Left for later issues, each where its agent will read it.
 - **Mobile capture and the phone's Hearth pages (issues 19 and 27).** The staging and the capture state (`apps/desktop/src/lib/domains/kitchen/staging.svelte.ts` and `capture.svelte.ts`) and `apps/desktop/src/lib/shell/gardener/files.ts` hold nothing that is the desktop's, and move to `@eden/shared` with the phone work. The camera and photo-library permissions are not set. Pasting a list on a phone needs a field, because the collect step has none.
 - **Order emails from Gmail.** Its own issue: a connector that only hands an email's text to `capture-haul`.
 - **The shop day as an Event** (D-23), with the reminder read from it and not from the list's field.
+- **Grocery lists per store (D-96 to D-98), built on desktop.** Left for later, none of it started:
+  - *A route across stores.* Ordering the stores of a trip, by where they are, when they are quiet and what the roads are like, needs each store to be somewhere: a `grocery-store` has no Place yet. Linking it to a `venue` Place (D-23) is the first step, and Meadow's place tooling (OQ-4) is what would find one.
+  - *Assembling a cart at the grocer.* The owner's curbside orders are made on H-E-B's own site and come back as a receipt through capture (D-86). Filling a cart there from a list is the wish; it is ordering, a non-goal today, and H-E-B's pages are not fetched (D-91).
+  - *A weekly grocery day.* A shop day is one date, set by hand. A store with a usual day (every Thursday) would set its own; whether the owner shops by a fixed day or by what has run out is not settled, so use should show it first.
+  - *What was checked going into Stock.* Completing a list clears what was checked and teaches the store; it does not add to Stock. An in-store trip leaves Stock to be told by capture or by hand, which is the friction the owner expects to feel most.
+  - *What a store sells* is recorded and not used: filing goes by what was bought where (`storeFor` in `packages/shared/src/domains/kitchen/filing.ts`), and a new item of an obvious kind (dish soap) could go by `sells` when no store remembers it.
+  - *The Gardener's drafts* carry no store: `draft-grocery-list` and `plan-week` file each item by memory when the card is committed (`tools.ts`).
+  - *The phone.* Grocery on mobile is still the placeholder page; the mock (`Domains/Hearth/Grocery`) shows the lists there with no pane, so a store's form and Move to have no mobile design.
+  - *Not seen in the installed app.* The lists were exercised in the browser build only; the upgrade of old rows (`groceryUpgrade` in `upgrade.ts`) has run against the browser's engine, not the crate's.
 - **Barcode.** Not started.
 - **Keeping a PDF or an email source** would need a new T2 attachment kind; today only photos are kept.
 - **Low-stock thresholds by category.** A threshold is set per item; the setting in section 9 is not built.

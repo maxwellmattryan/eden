@@ -135,6 +135,8 @@
 		const own = row.actions ?? []
 		return selectable && !selecting ? [selectItem, ...own] : own
 	}
+	/** Whether any row ends in a ⋯ button: the header's count then sits over that column. */
+	const menus = $derived(rows.some((row) => actionsFor(row).length > 0))
 	/** The rows of the grid that are staying: those still in `rows`, by id, so a row on its way out is not counted. */
 	function staying(grid: Element): Element[] {
 		const ids = new Set(rows.map((row) => row.id))
@@ -158,16 +160,18 @@
 	}
 </script>
 
-<div class={['ed-list', { 'ed-list-selecting': selecting }, className]} {...rest}>
+<div class={['ed-list', { 'ed-list-selecting': selecting, 'ed-list-menus': menus }, className]} {...rest}>
 	{#if header || count !== undefined || selectable}
 		<div class="ed-list-header">
 			<span class="ed-list-title" id={headerId}>{header}</span>
 			<span class="ed-list-header-right">
-				<span class="ed-list-count" aria-live="polite">{selecting ? s.selected(selection.size) : (count ?? '')}</span>
 				{#if selecting && bulk}{@render bulk([...selection])}{/if}
 				{#if selectable}
-					<Button variant="quiet" label={selecting ? s.done : s.select} onclick={selecting ? leave : enter} />
+					<span class="ed-list-toggle">
+						<Button variant="quiet" label={selecting ? s.done : s.select} onclick={selecting ? leave : enter} />
+					</span>
 				{/if}
+				<span class="ed-list-count" aria-live="polite">{selecting ? s.selected(selection.size) : (count ?? '')}</span>
 			</span>
 		</div>
 	{/if}
@@ -229,7 +233,8 @@
 		gap: var(--space-2);
 		box-sizing: border-box;
 		min-height: var(--ed-control);
-		padding: 0 var(--space-1) 0 var(--space-3);
+		/* the rows' own padding, so the header's right side stands over the rows' columns */
+		padding: 0 var(--space-2) 0 var(--space-3);
 		border-bottom: 1px solid var(--stroke-subtle);
 		color: var(--text-secondary);
 	}
@@ -245,10 +250,26 @@
 	.ed-list-header-right {
 		display: inline-flex;
 		align-items: center;
-		gap: var(--space-2);
+		/* the rows' gap between the meta and the ⋯ button */
+		gap: var(--space-3);
 		flex: none;
 	}
+	/* over a ⋯ column the count is centred on it: a box the width of the rows' sm IconButton, which a longer
+	   "n selected" outgrows toward the leading side */
+	.ed-list-menus .ed-list-count {
+		box-sizing: border-box;
+		min-width: calc(var(--control-height) - var(--space-1));
+		text-align: center;
+	}
+	/* and the Select label ends where the rows' meta ends: the button gives up its trailing padding */
+	.ed-list-menus .ed-list-toggle {
+		margin-inline-end: calc(-1 * var(--ed-btn-pad));
+	}
+	.ed-list-toggle {
+		display: inline-flex;
+	}
 	.ed-list-count {
+		white-space: nowrap;
 		font: var(--ed-t-data-sm);
 		letter-spacing: var(--ed-t-data-sm-tracking);
 		font-variation-settings: var(--ed-t-data-sm-opsz);

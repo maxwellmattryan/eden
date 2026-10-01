@@ -14,6 +14,7 @@
 		"entities": [
 			{ "id": "stock-item", "tier": "T0" },
 			{ "id": "recipe", "tier": "T0" },
+			{ "id": "grocery-store", "tier": "T0" },
 			{ "id": "grocery-list", "tier": "T0" },
 			{ "id": "grocery-item", "tier": "T0" }
 		],
@@ -33,7 +34,7 @@
 			"default": true,
 			"reads": ["stock-item", "recipe", "dietary-preference", "allergy", "medical-dietary-restriction"]
 		},
-		{ "id": "grocery-quick-add", "sizes": ["s"], "reads": ["grocery-list", "grocery-item"] }
+		{ "id": "grocery-quick-add", "sizes": ["s"], "reads": ["grocery-store", "grocery-list", "grocery-item"] }
 	],
 	"quickActions": [
 		{ "id": "capture-haul", "label": "domains.kitchen.capture.action", "icon": "camera" },
@@ -61,7 +62,7 @@
 			"id": "draft-grocery-list",
 			"access": "write-draft",
 			"grade": "standard",
-			"reads": ["stock-item", "recipe", "grocery-list", "grocery-item"]
+			"reads": ["stock-item", "recipe", "grocery-store", "grocery-list", "grocery-item"]
 		},
 		{ "id": "add-stock", "access": "write", "confirm": true, "reads": ["stock-item"] },
 		{ "id": "import-recipe", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] },
@@ -90,5 +91,5 @@
 		],
 		"search": ["stock-item", "recipe"]
 	},
-	"export": ["stock-item", "recipe", "grocery-list", "grocery-item"]
+	"export": ["stock-item", "recipe", "grocery-store", "grocery-list", "grocery-item"]
 }

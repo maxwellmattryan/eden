@@ -408,7 +408,7 @@ export const recipeDraft: Omit<SampleRecipe, 'id' | 'inStock'> & { sourceUrl: st
 	sourceUrl: 'https://example.com/recipes/lemon-yogurt-chicken-thighs',
 }
 
-/** A store Hearth shops at (D-95): its name and what it sells. */
+/** A store Hearth shops at (D-96): its name and what it sells. */
 export interface SampleGroceryStore {
 	id: string
 	name: string

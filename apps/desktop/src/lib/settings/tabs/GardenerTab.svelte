@@ -175,7 +175,7 @@
 			/>
 			{#if gardenerSetup.hasKey}
 				<Button
-					variant="quiet"
+					variant="danger"
 					icon="trash"
 					label={$t('settings.gardener.key.remove')}
 					disabled={keyBusy}

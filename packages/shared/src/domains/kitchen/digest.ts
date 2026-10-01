@@ -91,3 +91,30 @@ export function shopDayMorning(shopDay: string | undefined): { day: string; at: 
 	if (Number.isNaN(midnight.getTime()) || midnight.getDate() !== Number(date)) return null
 	return { day, at: onDay(midnight.getTime(), MORNING) }
 }
+
+/**
+ * The morning a list's reminder is for. A shop day set once its morning had passed has none: the owner has just said
+ * when they are going, and a reminder would only say it back.
+ */
+export function reminderMorning(list: { shopDay?: string; setAt?: number }): { day: string; at: number } | null {
+	const morning = shopDayMorning(list.shopDay)
+	return morning && !(list.setAt !== undefined && list.setAt > morning.at) ? morning : null
+}
+
+/**
+ * The next reminder among the lists: the earliest morning that is today or later, or `null` when no list has one.
+ * With `after`, only a day later than it counts: what the reminder is set to once that day's has been said.
+ */
+export function nextShopMorning(
+	lists: readonly { shopDay?: string; setAt?: number }[],
+	today: string,
+	after?: string
+): { day: string; at: number } | null {
+	let next: { day: string; at: number } | null = null
+	for (const list of lists) {
+		const morning = reminderMorning(list)
+		if (!morning || morning.day < today || (after && morning.day <= after)) continue
+		if (!next || morning.at < next.at) next = morning
+	}
+	return next
+}

@@ -1,7 +1,7 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
 	import type { ComponentProps } from 'svelte'
-	import { expect, fn, userEvent, within } from 'storybook/test'
+	import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 	import { canvasOf, hasCanvas } from '../../../storybook/play.js'
 	import { defaultStrings } from '$lib/i18n/strings.js'
 	import { grocery, groceryShopDay, ranOut, sidebar } from '../../sample-data.js'
@@ -25,7 +25,7 @@
 			docs: {
 				description: {
 					component:
-						'Hearth’s Grocery view (product/domains/kitchen.md), mocked from kit components under D-54. The Stock header with the Grocery tab selected and Add as the primary action, a quick-add line that files an item where it was last bought, then one list per store (D-95), all on the page at once: the store’s name, its shop day when it has one, the count of what is checked, Complete and Edit store as quiet icon buttons, its rows and an add line of its own; what names no store yet sits in Any store. Each row carries an origin badge (manual, recipe, low stock); a checked row is struck through and stays until its list is completed. On desktop the pane on the right is the stores, one store’s fields (its name, what it sells, its optional shop day) or the fields of the item being edited. On mobile there is no pane: a swipe to the right checks a row off and a swipe to the left deletes it.',
+						'Hearth’s Grocery view (product/domains/kitchen.md), mocked from kit components under D-54. The Stock header with the Grocery tab selected and Add as the primary action, a quick-add line that files an item where it was last bought, then one list per store (D-96), all on the page at once: the store’s name, its shop day when it has one, the count of what is checked, Complete and Edit store as quiet icon buttons, its rows and an add line of its own; what names no store yet sits in Miscellaneous. Each row carries an origin badge (manual, recipe, low stock); a checked row is struck through and stays until its list is completed. On desktop the pane on the right is the stores; a store’s form (its name, what it sells, its optional shop day) and an item’s open in a sheet (D-95). On mobile there is no pane: a swipe to the right checks a row off and a swipe to the left deletes it.',
 				},
 			},
 		},
@@ -50,7 +50,7 @@
 	<Grocery {...args} />
 {/snippet}
 
-<!-- Three lists at once: H-E-B with its shop day and the ginger checked, Target, and Any store; on desktop the pane holds the stores -->
+<!-- Three lists at once: H-E-B with its shop day and the ginger checked, Target, and Miscellaneous; on desktop the pane holds the stores -->
 <Story
 	name="Default"
 	{template}
@@ -60,7 +60,7 @@
 		await expect(canvas.getByRole('main')).toBeVisible()
 		await expect(canvas.getByRole('heading', { level: 1, name: hearth.name })).toBeVisible()
 		await expect(canvas.getByRole('tab', { name: 'Grocery' })).toHaveAttribute('aria-selected', 'true')
-		for (const name of ['H-E-B', 'Target', 'Any store']) {
+		for (const name of ['H-E-B', 'Target', 'Miscellaneous']) {
 			await expect(canvas.getByRole('heading', { level: 2, name })).toBeVisible()
 		}
 		await expect(canvas.queryByText('H-E-B Saturday')).toBeNull()
@@ -115,74 +115,79 @@
 		await expect(canvas.getByRole('textbox', { name: 'Add an item' })).toBeVisible()
 		await expect(canvas.getByRole('textbox', { name: 'Add to Target' })).toBeVisible()
 		await expect(canvas.getByRole('button', { name: 'Complete H-E-B' })).toBeDisabled()
-		await expect(canvas.queryByRole('heading', { level: 2, name: 'Any store' })).toBeNull()
+		await expect(canvas.queryByRole('heading', { level: 2, name: 'Miscellaneous' })).toBeNull()
 		await expect(within(canvas.getByRole('region', { name: 'H-E-B' })).queryAllByRole('row')).toHaveLength(0)
 	}}
 />
 
-<!-- No list has a shop day: no chip on any store, and the store's pane offers Today and Tomorrow -->
+<!-- No list has a shop day: no chip on any store, and the store's form offers Today and Tomorrow -->
 <Story
 	name="No shop day"
 	{template}
 	args={{ noShopDay: true, store: 'gs-01' }}
-	parameters={{ platforms: ['desktop'] }}
+	parameters={{ platforms: ['desktop'], platformFrame: 'inline' }}
 	play={async ({ canvasElement }) => {
 		if (!hasCanvas(canvasElement)) return
 		const canvas = canvasOf(canvasElement)
 		await expect(canvas.queryByText(groceryShopDay)).toBeNull()
-		const pane = within(canvas.getByRole('complementary', { name: 'Store' }))
-		await expect(pane.getByLabelText('Shop day')).toHaveValue('')
-		await expect(pane.getByLabelText('Time')).toBeDisabled()
-		await expect(pane.queryByRole('button', { name: 'No shop day' })).toBeNull()
-		await userEvent.click(pane.getByRole('button', { name: 'Tomorrow' }))
-		await expect(pane.getByLabelText('Shop day')).toHaveValue('2026-10-02')
-		await expect(pane.getByRole('button', { name: 'No shop day' })).toBeVisible()
+		const sheet = within(await within(canvasElement.ownerDocument.body).findByRole('dialog', { name: 'Edit store' }))
+		// the panel unfurls before its controls can be seen
+		await waitFor(() => expect(sheet.getByLabelText('Shop day')).toBeVisible())
+		await expect(sheet.getByLabelText('Shop day')).toHaveValue('')
+		await expect(sheet.getByLabelText('Time')).toBeDisabled()
+		await expect(sheet.queryByRole('button', { name: 'No shop day' })).toBeNull()
+		await userEvent.click(sheet.getByRole('button', { name: 'Tomorrow' }))
+		await expect(sheet.getByLabelText('Shop day')).toHaveValue('2026-10-02')
+		await expect(sheet.getByRole('button', { name: 'No shop day' })).toBeVisible()
 	}}
 />
 
-<!-- Edit store on H-E-B: the pane becomes the store's fields, its name, what it sells and its shop day -->
+<!-- Edit store on H-E-B: its form in a sheet (D-95), its name, what it sells and its shop day, with Delete store at the foot -->
 <Story
-	name="Store pane"
+	name="Store form"
 	{template}
 	args={{ store: 'gs-01' }}
-	parameters={{ platforms: ['desktop'] }}
+	parameters={{ platforms: ['desktop'], platformFrame: 'inline' }}
 	play={async ({ canvasElement, args }) => {
 		if (!hasCanvas(canvasElement)) return
-		const canvas = canvasOf(canvasElement)
-		const pane = within(canvas.getByRole('complementary', { name: 'Store' }))
-		await expect(pane.getByRole('textbox', { name: 'Name' })).toHaveValue('H-E-B')
-		await expect(pane.getByRole('button', { name: 'Grocery' })).toHaveAttribute('aria-pressed', 'true')
-		await expect(pane.getByRole('button', { name: 'Home goods' })).toHaveAttribute('aria-pressed', 'false')
-		await expect(pane.getByLabelText('Shop day')).toHaveValue('2026-10-03')
-		await expect(pane.getByLabelText('Time')).toHaveValue('10:00')
-		await userEvent.click(pane.getByRole('button', { name: 'Delete store' }))
+		const sheet = within(await within(canvasElement.ownerDocument.body).findByRole('dialog', { name: 'Edit store' }))
+		await waitFor(() => expect(sheet.getByRole('textbox', { name: 'Name' })).toBeVisible())
+		await expect(sheet.getByRole('textbox', { name: 'Name' })).toHaveValue('H-E-B')
+		await expect(sheet.getByRole('button', { name: 'Grocery' })).toHaveAttribute('aria-pressed', 'true')
+		await expect(sheet.getByRole('button', { name: 'Home goods' })).toHaveAttribute('aria-pressed', 'false')
+		await userEvent.click(sheet.getByRole('button', { name: 'Home goods' }))
+		await expect(sheet.getByRole('button', { name: 'Home goods' })).toHaveAttribute('aria-pressed', 'true')
+		await expect(sheet.getByLabelText('Shop day')).toHaveValue('2026-10-03')
+		await expect(sheet.getByLabelText('Time')).toHaveValue('10:00')
+		await userEvent.click(sheet.getByRole('button', { name: 'Delete store' }))
 		await expect(args.ondeletestore).toHaveBeenCalledWith('gs-01')
-		await expect(canvas.queryByRole('complementary', { name: 'Stores' })).toBeNull()
 	}}
 />
 
-<!-- Edit on the ginger's row: the pane becomes its fields, its store picked among the stores, the recipe it came from as its note -->
+<!-- Edit on the ginger's row: its form in a sheet (D-95), its store picked among the stores, the recipe it came from as its note -->
 <Story
 	name="Editing an item"
 	{template}
 	args={{ editing: 'g-03' }}
-	parameters={{ platforms: ['desktop'] }}
+	parameters={{ platforms: ['desktop'], platformFrame: 'inline' }}
 	play={async ({ canvasElement, args }) => {
 		if (!hasCanvas(canvasElement)) return
-		const canvas = canvasOf(canvasElement)
-		const pane = within(canvas.getByRole('complementary', { name: 'Edit item' }))
-		await expect(pane.getByRole('textbox', { name: 'Name' })).toHaveValue('Ginger')
-		await expect(pane.getByRole('textbox', { name: 'Quantity' })).toHaveValue('1')
-		const where = within(pane.getByRole('group', { name: 'Store' }))
+		const sheet = within(await within(canvasElement.ownerDocument.body).findByRole('dialog', { name: 'Edit item' }))
+		await waitFor(() => expect(sheet.getByRole('textbox', { name: 'Name' })).toBeVisible())
+		await expect(sheet.getByRole('textbox', { name: 'Name' })).toHaveValue('Ginger')
+		await expect(sheet.getByRole('textbox', { name: 'Quantity' })).toHaveValue('1')
+		const where = within(sheet.getByRole('group', { name: 'Store' }))
+		await expect(where.getByRole('button', { name: 'H-E-B' })).toHaveAttribute('aria-pressed', 'true')
+		// the store it is on stays picked when it is clicked again
+		await userEvent.click(where.getByRole('button', { name: 'H-E-B' }))
 		await expect(where.getByRole('button', { name: 'H-E-B' })).toHaveAttribute('aria-pressed', 'true')
 		await userEvent.click(where.getByRole('button', { name: 'Target' }))
 		await expect(where.getByRole('button', { name: 'Target' })).toHaveAttribute('aria-pressed', 'true')
 		await expect(where.getByRole('button', { name: 'H-E-B' })).toHaveAttribute('aria-pressed', 'false')
-		await expect(where.getByRole('button', { name: 'Any store' })).toBeVisible()
-		await expect(pane.getByRole('textbox', { name: 'Note' })).toHaveValue('soba')
-		await expect(pane.getByRole('button', { name: 'Save' })).toBeEnabled()
+		await expect(where.getByRole('button', { name: 'Miscellaneous' })).toBeVisible()
+		await expect(sheet.getByRole('textbox', { name: 'Note' })).toHaveValue('soba')
+		await expect(sheet.getByRole('button', { name: 'Save' })).toBeEnabled()
 		await expect(args.onsave).not.toHaveBeenCalled()
-		await expect(canvas.queryByRole('complementary', { name: 'Stores' })).toBeNull()
 	}}
 />
 

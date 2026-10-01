@@ -27,11 +27,11 @@
 
 	type Props = Omit<HTMLButtonAttributes, 'aria-label'> &
 		Named & {
-			/** primary once per view; danger for destructive confirms; ai and honey only on the Gardener's surfaces. */
+			/** primary once per view; danger for every destructive action (D-96); ai and honey only on the Gardener's surfaces. */
 			variant?: 'primary' | 'secondary' | 'quiet' | 'danger' | 'ai' | 'honey'
 			/** auto follows the platform (--ed-control); md forces the 32 px control, lg the 44 px touch target. */
 			size?: 'md' | 'lg' | 'auto'
-			/** A leading glyph. */
+			/** A leading glyph. Every button of a group carries one, or none does (D-96). */
 			icon?: IconName
 			/** A trailing glyph, for an action that leaves the app. */
 			iconRight?: IconName
