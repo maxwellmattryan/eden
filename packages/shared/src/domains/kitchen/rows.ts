@@ -102,8 +102,9 @@ export function kitchenFromRows(rows: {
 			// a store from before prices holds bare timestamps: they read as entries with no price (D-105)
 			stores: orderStores(
 				rows.stores.map((row) => {
-					const bought = boughtMap(row.payload.bought)
-					return { ...row.payload, ...(bought ? { bought } : {}), id: row.id }
+					const { bought: raw, ...payload } = row.payload
+					const bought = boughtMap(raw)
+					return { ...payload, ...(bought ? { bought } : {}), id: row.id }
 				})
 			),
 			lists: rows.lists.map((row) => ({ ...row.payload, id: row.id })),

@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { createEngine, type EngineStorage } from '../../data/engine.js'
 import { createIdGenerator } from '../../data/ulid.js'
 import { storeFor } from './filing.js'
-import { KITCHEN, type GroceryStorePayload, type GroceryItemPayload, type GroceryListPayload } from './types.js'
+import {
+	KITCHEN,
+	type GroceryStore,
+	type GroceryStorePayload,
+	type GroceryItemPayload,
+	type GroceryListPayload,
+} from './types.js'
 import { groceryUpgrade } from './upgrade.js'
 
 const NOW = '2026-10-01T12:00:00.000Z'
@@ -77,7 +83,7 @@ describe('the grocery rows from before a list per store', () => {
 		item(old, 'Paper towels', { store: 'Costco' })
 		upgrade()
 
-		const stores = read().stores.map((row) => ({ ...row.payload, id: row.id }))
+		const stores = read().stores.map((row) => ({ ...row.payload, id: row.id })) as GroceryStore[]
 		expect(stores[0]!.bought).toEqual({ lime: { at: NOW } })
 		expect(storeFor('paper towel', stores)?.name).toBe('Costco')
 	})

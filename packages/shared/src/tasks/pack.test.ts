@@ -39,7 +39,10 @@ describe('tasksForPack', () => {
 		)
 		expect(PACK_PROGRESS_DAYS).toBe(14)
 		expect(routine).toMatchObject({ kind: 'routine', title: 'Run', streak: 4 })
-		expect(Object.keys((routine as { progress: { days: object } }).progress.days)).toEqual(['2026-09-16', '2026-09-29'])
+		expect(Object.keys((routine as unknown as { progress: { days: object } }).progress.days)).toEqual([
+			'2026-09-16',
+			'2026-09-29',
+		])
 		// the row handed in is not changed
 		expect(Object.keys(days)).toHaveLength(3)
 	})
