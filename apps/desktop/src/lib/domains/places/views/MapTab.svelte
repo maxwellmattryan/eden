@@ -44,6 +44,7 @@
 	import { categoryNamer, vibeNamer } from '../words'
 	import FilterPanel from './FilterPanel.svelte'
 	import FindMore from './FindMore.svelte'
+	import Fold from './Fold.svelte'
 	import HomeCard from './HomeCard.svelte'
 	import PlaceDetail from './PlaceDetail.svelte'
 	import SuggestionDetail from './SuggestionDetail.svelte'
@@ -448,14 +449,9 @@
 				sample={{ onclick: onsample }}
 			/>
 		{:else if rows.length}
-			<List
-				header={$t('domains.places.list.saved')}
-				count={rows.length}
-				{rows}
-				current={picked}
-				onpick={(row) => pick(row.id)}
-				onaction={act}
-			/>
+			<Fold title={$t('domains.places.list.saved')} count={rows.length}>
+				<List headless {rows} current={picked} onpick={(row) => pick(row.id)} onaction={act} />
+			</Fold>
 		{:else if meadow.ready}
 			<EmptyState
 				inline
@@ -466,14 +462,9 @@
 		{#if meadow.search.status === 'searching'}
 			<Skeleton rows={3} icon />
 		{:else if foundRows.length}
-			<List
-				header={$t('domains.places.suggestion.list')}
-				count={foundRows.length}
-				rows={foundRows}
-				current={picked}
-				onpick={(row) => pick(row.id)}
-				onaction={actFound}
-			/>
+			<Fold title={$t('domains.places.suggestion.list')} count={foundRows.length}>
+				<List headless rows={foundRows} current={picked} onpick={(row) => pick(row.id)} onaction={actFound} />
+			</Fold>
 		{/if}
 		{#if meadow.ready}<FindMore />{/if}
 	</div>
@@ -576,6 +567,11 @@
 		margin: calc(var(--space-1) * -1);
 		padding: var(--space-1);
 		overflow-y: auto;
+	}
+	/* A card that clips (a List) has no content minimum in a flex column: left to shrink, it would squash to its two
+	   borders when the column is short. The column scrolls instead. */
+	.side > :global(*) {
+		flex-shrink: 0;
 	}
 	/* The pushed detail and its way back: the picked place in the side column's place, where the map has no room to
 	   carry it */
