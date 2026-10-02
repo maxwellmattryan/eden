@@ -34,6 +34,7 @@
 		tileViews,
 	} from '@eden/shared/shell/garden'
 	import { declarations, manifestFor, manifests } from '$lib/domains'
+	import { chrome } from '$lib/shell/chrome.svelte'
 
 	const lang = $derived($locale ?? 'en')
 	const format = $derived({ lang, clock: settings.clock })
@@ -64,6 +65,8 @@
 				})
 			: undefined
 	)
+	// edit mode is a mode of its own on screen: the floating + stands down while it lasts (D-158)
+	$effect(() => (editing ? chrome.suppressFab() : undefined))
 
 	/** The tiles with what is bound to each; while editing each carries its menu, which is all of edit mode here. */
 	const tiles = $derived(tileViews(layout, catalog, shellTiles, manifestFor, $t, editing ? edits : undefined))
