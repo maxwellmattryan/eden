@@ -16,10 +16,17 @@ fn link_weatherkit() {
     if target_os != "macos" && target_os != "ios" {
         return;
     }
+    // Xcode exports SDKROOT as the iOS SDK when it runs cargo, and SwiftPM would compile Package.swift, a host program,
+    // against it. Tauri clears it the same way for its own Swift plugins (tauri-utils `link_swift_library`).
+    let sdk_root = std::env::var_os("SDKROOT");
+    std::env::remove_var("SDKROOT");
     swift_rs::SwiftLinker::new("13.0")
         .with_ios("16.0")
         .with_package("EdenWeatherKit", "./swift/EdenWeatherKit/")
         .link();
+    if let Some(root) = sdk_root {
+        std::env::set_var("SDKROOT", root);
+    }
     println!("cargo:rustc-link-lib=framework=WeatherKit");
     println!("cargo:rustc-link-lib=framework=CoreLocation");
     // The Swift runtime ships with the system from macOS 12; the binary is told where, or it looks beside itself.
