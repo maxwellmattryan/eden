@@ -110,6 +110,10 @@ export { default as Pagination } from './components/Pagination/Pagination.svelte
 export { default as Widget } from './components/Widget/Widget.svelte'
 export type { WidgetAction, WidgetSize } from './components/Widget/Widget.svelte'
 export { default as WidgetGrid } from './components/WidgetGrid/WidgetGrid.svelte'
+export { default as WidgetRows } from './components/WidgetRows/WidgetRows.svelte'
+export type { WidgetRow } from './components/WidgetRows/WidgetRows.svelte'
+export { default as WidgetCatalog } from './components/WidgetCatalog/WidgetCatalog.svelte'
+export type { WidgetCatalogGroup, WidgetCatalogItem } from './components/WidgetCatalog/WidgetCatalog.svelte'
 export { default as PageHeader } from './components/PageHeader/PageHeader.svelte'
 export type { PageHeaderAction } from './components/PageHeader/PageHeader.svelte'
 

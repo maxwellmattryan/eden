@@ -21,4 +21,5 @@ export function isBuiltDomain(id: string): id is BuiltDomainId {
 }
 
 export * from './compose.js'
+export * from './garden.js'
 export type * from './types.js'

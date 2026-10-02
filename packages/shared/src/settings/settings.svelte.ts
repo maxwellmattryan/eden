@@ -15,6 +15,7 @@ import {
 } from '@eden/ui-kit/tokens'
 import { GRADES } from '../gardener/types.js'
 import { setLanguage as setI18nLanguage } from '../i18n/index.js'
+import { parseLayout, type StoredLayout } from '../manifest/garden.js'
 import {
 	clockFormats,
 	fontSettings,
@@ -54,6 +55,7 @@ export const storage = {
 	gardenerPanelWidth: 'eden:gardener-panel-width',
 	sidebarWidth: 'eden:sidebar-width',
 	sidebarCollapsed: 'eden:sidebar-collapsed',
+	gardenLayout: 'eden:garden-layout',
 } as const
 
 function read(key: string): string | null {
@@ -125,6 +127,8 @@ export class Settings {
 	sidebarWidth = $state<number | null>(null)
 	/** Whether the sidebar is collapsed to its glyphs. */
 	sidebarCollapsed = $state(false)
+	/** The Garden as the owner arranged it on this device (D-156); nothing until they edit it, and it shows its default. */
+	gardenLayout = $state<StoredLayout | undefined>(undefined)
 	/** The theme on <html>: the choice, or what "system" resolves to right now. */
 	resolvedTheme = $state<Theme>('light')
 
@@ -156,6 +160,7 @@ export class Settings {
 		this.gardenerPanelWidth = positiveInt(read(storage.gardenerPanelWidth))
 		this.sidebarWidth = positiveInt(read(storage.sidebarWidth))
 		this.sidebarCollapsed = read(storage.sidebarCollapsed) === 'on'
+		this.gardenLayout = parseLayout(read(storage.gardenLayout))
 		this.resolvedTheme = this.resolveTheme(this.theme)
 		this.apply()
 		if (typeof window !== 'undefined' && window.matchMedia && !this.#media) {
@@ -310,6 +315,12 @@ export class Settings {
 	setSidebarCollapsed(collapsed: boolean) {
 		this.sidebarCollapsed = collapsed
 		write(storage.sidebarCollapsed, collapsed ? 'on' : null)
+	}
+
+	/** Keeps the Garden's layout, or with nothing goes back to the default. */
+	setGardenLayout(layout: StoredLayout | undefined) {
+		this.gardenLayout = layout
+		write(storage.gardenLayout, layout ? JSON.stringify(layout) : null)
 	}
 
 	/** The choices as they are stored, by name: what an export bundle carries. A choice left at its default is absent. */

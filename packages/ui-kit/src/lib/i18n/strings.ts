@@ -318,6 +318,20 @@ export interface UiStrings {
 	widget: {
 		/** The drag handle's name in the Garden's edit mode. */
 		move: (title: string) => string
+		/** The ⋯ button's name on a tile in edit mode, and its menu's. */
+		options: (title: string) => string
+		/** The resize corner's name. */
+		resize: (title: string) => string
+	}
+	widgetCatalog: {
+		/** The sheet's title. */
+		title: string
+		/** The button on a tile that is not on the Garden; its accessible name carries the tile's. */
+		add: string
+		addNamed: (title: string) => string
+		/** In the button's place on a tile that is already there. */
+		added: string
+		done: string
 	}
 	dropzone: {
 		/** The overlay's headline while files are dragged over; 0 when the count is not known. */
@@ -595,6 +609,15 @@ export const defaultStrings: UiStrings = {
 	},
 	widget: {
 		move: (title) => `Move ${title}`,
+		options: (title) => `${title} options`,
+		resize: (title) => `Resize ${title}`,
+	},
+	widgetCatalog: {
+		title: 'Add a tile',
+		add: 'Add',
+		addNamed: (title) => `Add ${title}`,
+		added: 'Added',
+		done: 'Done',
 	},
 	dropzone: {
 		drop: (count) => (count === 1 ? 'Drop 1 file' : count > 1 ? `Drop ${count} files` : 'Drop files'),

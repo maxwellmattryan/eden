@@ -1,8 +1,11 @@
 <script lang="ts">
 	// The Garden (product/substrate/shell.md, "The Garden"), ported from the approved Domains/Garden/Garden story: the
-	// quick-navigation row, the default grid the shell composes from the manifests (`defaultLayout`), and the activity
-	// feed in a column of its own. The tiles compute from their domains' stores; a tile whose domain has nothing to
-	// show keeps its one-line prompt. Edit mode is not built yet, so "Edit layout" shows disabled.
+	// quick-navigation row, the grid the shell composes from the manifests, and the activity feed in a column of its
+	// own. The tiles compute from their domains' stores; a tile whose domain has nothing to show keeps its one-line
+	// prompt. The layout is the owner's on this device (`settings.gardenLayout`, D-156) over the default the shell
+	// declares. Edit mode (D-155) changes it and keeps every change as it is made: a tile is dragged beside another,
+	// moved by its grip's arrow keys or its menu, resized by its corner or its menu among the sizes it declares, and
+	// removed; the catalog adds what is not placed. Remove and Reset can be undone from their toast.
 	import { goto } from '$app/navigation'
 	import { resolve } from '$app/paths'
 	import {
@@ -10,18 +13,36 @@
 		Icon,
 		PageHeader,
 		Widget,
+		WidgetCatalog,
 		WidgetGrid,
 		domainGlyph,
 		type GlyphId,
+		type MenuItem,
+		type PageHeaderAction,
 		type WidgetAction,
+		type WidgetCatalogGroup,
+		type WidgetSize,
 	} from '@eden/ui-kit'
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
-	import { defaultLayout, shell, type LayoutTile } from '@eden/shared/manifest'
+	import {
+		addTile,
+		catalogGroups,
+		gardenCatalog,
+		gardenLayout,
+		moveTile,
+		removeTile,
+		resizeTile,
+		shell,
+		stepTile,
+		type LayoutTile,
+		type StoredLayout,
+	} from '@eden/shared/manifest'
 	import { declarations, manifestFor, manifests, type WidgetBinding } from '$lib/domains'
 	import { feed as activity } from '$lib/shell/feed.svelte'
 	import { undoToast } from '$lib/shell/undo'
 	import { formatDate, formatTime, formatWeekday, nowIso, relativeDay } from '@eden/shared/dates'
+	import { TileDrag } from './tile-drag.svelte'
 	import { shellTiles } from './tiles'
 
 	const lang = $derived($locale ?? 'en')
@@ -39,7 +60,8 @@
 		})),
 	])
 
-	const layout = defaultLayout(declarations, shell)
+	const catalog = gardenCatalog(declarations, shell)
+	const layout = $derived(gardenLayout(declarations, shell, settings.gardenLayout))
 	const bindings: Partial<Record<string, WidgetBinding>> = shellTiles
 
 	/** The name under the tile's title: its domain's, or Today's for the shell's own tile of it. */
@@ -49,9 +71,82 @@
 		return manifest ? $t(manifest.name) : undefined
 	}
 
+	let editing = $state(false)
+	let catalogOpen = $state(false)
+
+	/** Keeps an edit; one that changed nothing answers the layout it was given. */
+	function keep(next: StoredLayout | undefined) {
+		if (next !== settings.gardenLayout) settings.setGardenLayout(next)
+	}
+	const step = (id: string, delta: -1 | 1) => keep(stepTile(settings.gardenLayout, declarations, shell, id, delta))
+	const resize = (id: string, size: WidgetSize) =>
+		keep(resizeTile(settings.gardenLayout, declarations, shell, id, size))
+	function remove(tile: LayoutTile) {
+		const before = settings.gardenLayout
+		keep(removeTile(before, declarations, shell, tile.id))
+		undoToast($t('garden.removed', { values: { title: $t(tile.title) } }), () => settings.setGardenLayout(before))
+	}
+	function reset() {
+		const before = settings.gardenLayout
+		settings.setGardenLayout(undefined)
+		undoToast($t('garden.resetDone'), () => settings.setGardenLayout(before))
+	}
+	function openCatalog() {
+		editing = true
+		catalogOpen = true
+	}
+
+	const drag = new TileDrag({
+		enabled: () => editing,
+		ondrop: (id, target) => {
+			// after a tile is before the one that follows it, the held one aside
+			const rest = layout.filter((tile) => tile.id !== id)
+			const at = target ? rest.findIndex((tile) => tile.id === target.id) : -1
+			const before = !target || at < 0 ? null : (rest[target.side === 'before' ? at : at + 1]?.id ?? null)
+			keep(moveTile(settings.gardenLayout, declarations, shell, id, before))
+		},
+	})
+
+	/** A tile's menu in edit mode: what dragging and the corner do, for the keyboard and for touch (D-106). */
+	function menuOf(tile: LayoutTile, index: number, sizes: readonly WidgetSize[]): MenuItem[] {
+		return [
+			{
+				id: 'earlier',
+				label: $t('garden.moveEarlier'),
+				icon: 'arrow-left',
+				disabled: index === 0,
+				onselect: () => step(tile.id, -1),
+			},
+			{
+				id: 'later',
+				label: $t('garden.moveLater'),
+				icon: 'arrow-right',
+				disabled: index === layout.length - 1,
+				onselect: () => step(tile.id, 1),
+			},
+			...(sizes.length > 1
+				? [
+						{
+							id: 'size',
+							label: $t('garden.size'),
+							icon: 'layout-grid' as const,
+							children: sizes.map((size) => ({
+								id: size,
+								label: $t(`garden.sizes.${size}`),
+								checked: size === tile.size,
+								onselect: () => resize(tile.id, size),
+							})),
+						},
+					]
+				: []),
+			{ id: 'remove', label: $t('garden.remove'), icon: 'x', destructive: true, onselect: () => remove(tile) },
+		]
+	}
+
 	const tiles = $derived(
-		layout.map((tile) => {
+		layout.map((tile, index) => {
 			const bound = manifestFor(tile.owner)?.widgets.find((w) => w.id === tile.id) ?? bindings[tile.id]
+			const sizes = catalog.find((entry) => entry.id === tile.id)?.sizes ?? [tile.size]
 			const body = bound?.hasData?.() ? bound.body : undefined
 			const action: WidgetAction | undefined =
 				body && bound?.action ? { label: $t(bound.action.label), onclick: bound.action.open } : undefined
@@ -64,9 +159,79 @@
 				domain: domainOf(tile),
 				body,
 				action,
+				sizes,
+				menu: editing ? menuOf(tile, index, sizes) : undefined,
 			}
 		})
 	)
+
+	const actions = $derived<PageHeaderAction[]>(
+		editing
+			? [
+					{ id: 'done', label: $t('common.done'), icon: 'check', variant: 'primary', onclick: () => (editing = false) },
+					{ id: 'add', label: $t('garden.add'), icon: 'plus', variant: 'secondary', onclick: openCatalog },
+					...(settings.gardenLayout
+						? [
+								{
+									id: 'reset',
+									label: $t('garden.reset'),
+									icon: 'rotate-ccw',
+									variant: 'danger',
+									onclick: reset,
+								} as const,
+							]
+						: []),
+				]
+			: [
+					{
+						id: 'profile',
+						label: $t('garden.profile'),
+						icon: 'id-card',
+						variant: 'secondary',
+						onclick: () => void goto(resolve('/garden/profile')),
+					},
+					{
+						id: 'edit',
+						label: $t('garden.edit'),
+						icon: 'grip-vertical',
+						variant: 'secondary',
+						onclick: () => (editing = true),
+					},
+				]
+	)
+
+	/** The catalog: every tile by its domain, the shell's own under the Garden's name, with what is placed marked. */
+	const groups = $derived<WidgetCatalogGroup[]>(
+		catalogGroups(
+			catalog,
+			layout.map((tile) => tile.id)
+		).map((group) => {
+			const manifest = manifestFor(group.owner)
+			return {
+				id: group.owner,
+				label: manifest ? $t(manifest.name) : $t('shell.garden'),
+				icon: manifest?.glyph ?? domainGlyph('garden'),
+				items: group.entries.map((entry) => ({
+					id: entry.id,
+					title: $t(entry.title),
+					note: sizesLine(entry.sizes),
+					placed: entry.placed,
+				})),
+			}
+		})
+	)
+	function sizesLine(sizes: readonly WidgetSize[]): string {
+		return sizes
+			.map((size) => $t(`garden.sizes.${size}`))
+			.reduce((first, second) => $t('garden.sizesOr', { values: { first, second } }))
+	}
+
+	/** Escape leaves edit mode, once nothing above the page is there to take it. */
+	function onkeydown(e: KeyboardEvent) {
+		if (!editing || e.key !== 'Escape' || e.defaultPrevented || catalogOpen) return
+		if (document.querySelector('dialog[open], :popover-open')) return
+		editing = false
+	}
 
 	/** No domain has anything yet: the first run, when the feed's column offers the sample data. */
 	const firstRun = $derived(
@@ -97,22 +262,10 @@
 	}
 </script>
 
+<svelte:window {onkeydown} />
+
 <div class="page">
-	<PageHeader
-		name={$t('shell.garden')}
-		{subtitle}
-		icon={domainGlyph('garden')}
-		actions={[
-			{
-				id: 'profile',
-				label: $t('garden.profile'),
-				icon: 'id-card',
-				variant: 'secondary',
-				onclick: () => void goto(resolve('/garden/profile')),
-			},
-			{ id: 'edit', label: $t('garden.edit'), icon: 'grip-vertical', variant: 'secondary', disabled: true },
-		]}
-	/>
+	<PageHeader name={$t('shell.garden')} {subtitle} icon={domainGlyph('garden')} {actions} />
 	<nav class="quick" aria-label={$t('garden.quickNav')}>
 		<ul class="quick-list">
 			{#each quickNav as entry (entry.id)}
@@ -126,16 +279,36 @@
 		</ul>
 	</nav>
 	<div class="content">
-		<WidgetGrid>
-			{#each tiles as { tile, icon, title, empty, domain, body, action } (tile.id)}
-				{@const Body = body}
-				{#if Body}
-					<Widget {title} {icon} {domain} size={tile.size} {action}><Body /></Widget>
-				{:else}
-					<Widget {title} {icon} {domain} size={tile.size} {empty} />
-				{/if}
-			{/each}
-		</WidgetGrid>
+		{#if tiles.length === 0}
+			<EmptyState
+				title={$t('garden.emptyLayout.title')}
+				text={$t('garden.emptyLayout.text')}
+				action={{ label: $t('garden.add'), icon: 'plus', onclick: openCatalog }}
+				motif={false}
+			/>
+		{:else}
+			<WidgetGrid {@attach drag.ground()}>
+				{#each tiles as { tile, icon, title, empty, domain, body, action, sizes, menu } (tile.id)}
+					{@const Body = body}
+					{@const edit = {
+						editing,
+						menu,
+						sizes,
+						dragging: drag.held === tile.id,
+						drop: drag.over?.id === tile.id ? drag.over.side : undefined,
+						onmove: (delta: -1 | 1) => step(tile.id, delta),
+						onresize: (size: WidgetSize) => resize(tile.id, size),
+					}}
+					{#if Body}
+						<Widget {title} {icon} {domain} size={tile.size} {action} {...edit} {@attach drag.tile(tile.id)}>
+							<Body />
+						</Widget>
+					{:else}
+						<Widget {title} {icon} {domain} size={tile.size} {empty} {...edit} {@attach drag.tile(tile.id)} />
+					{/if}
+				{/each}
+			</WidgetGrid>
+		{/if}
 		<aside class="feed" aria-label={$t('garden.activity')}>
 			<div class="feed-inner">
 				<h2 class="feed-title">{$t('garden.activity')}</h2>
@@ -163,6 +336,12 @@
 		</aside>
 	</div>
 </div>
+
+<WidgetCatalog
+	bind:open={catalogOpen}
+	{groups}
+	onadd={(id) => keep(addTile(settings.gardenLayout, declarations, shell, id))}
+/>
 
 <style>
 	.page {

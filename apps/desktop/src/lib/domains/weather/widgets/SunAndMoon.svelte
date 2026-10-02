@@ -3,7 +3,7 @@
 	// clock (D-58), and how old the forecast it is read from is.
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
-	import WidgetRows from '$lib/shell/WidgetRows.svelte'
+	import { WidgetRows } from '@eden/ui-kit'
 	import { formatTime } from '@eden/shared/dates'
 	import { weather } from '@eden/shared/weather'
 	import { updatedLine } from '$lib/domains/weather/updated'

@@ -17,12 +17,13 @@
 </script>
 
 <script lang="ts">
-	// The short rows every widget body shares (the Garden mockup's `.rows`), in one place so the wrapping rule that keeps
-	// a 1×1 tile's rows from overlapping holds for every domain's tiles.
+	// The short rows a Garden tile's body is usually made of, in one place so the wrapping rule that keeps a 1×1 tile's
+	// rows from overlapping holds for every domain's tiles, on the desktop and on the phone. What the rows say is the
+	// app's: the kit only sets them.
 	let { rows }: { rows: WidgetRow[] } = $props()
 </script>
 
-<ul class="rows">
+<ul class="ed-widget-rows rows">
 	{#each rows as row (row.id)}
 		<li class:done={row.done}>
 			<span class="text">

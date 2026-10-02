@@ -1,7 +1,7 @@
 <script lang="ts">
 	// The upcoming-listings tile: what is on in the days ahead, the soonest first; one the owner is going to or
 	// interested in stands out.
-	import WidgetRows from '$lib/shell/WidgetRows.svelte'
+	import { WidgetRows } from '@eden/ui-kit'
 	import { formatDateOf, formatEventTime } from '@eden/shared/dates'
 	import { markOf, meadow } from '@eden/shared/domains/places'
 	import { locale } from '@eden/shared/i18n'
