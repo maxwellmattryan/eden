@@ -2,13 +2,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
 	LAST_PLACE_KEY,
 	bindNavigation,
+	holdBack,
 	isKnownPlace,
 	lastPlace,
 	navigation,
 	rememberPlace,
 	rememberScroll,
+	rememberTabPlace,
 	scrollOf,
 	tabOf,
+	tabPlace,
+	takeBack,
 	type PlaceId,
 } from './index.js'
 
@@ -54,6 +58,47 @@ describe('scroll memory', () => {
 		expect(scrollOf('weather')).toBe(420)
 		rememberScroll('weather', 0)
 		expect(scrollOf('weather')).toBe(0)
+	})
+})
+
+describe('tab places', () => {
+	it('gives nothing for a tab not yet visited and the last pathname for one that was', () => {
+		expect(tabPlace('kitchen')).toBeUndefined()
+		rememberTabPlace('kitchen', '/kitchen/recipes')
+		rememberTabPlace('kitchen', '/kitchen/stock')
+		expect(tabPlace('kitchen')).toBe('/kitchen/stock')
+		expect(tabPlace('weather')).toBeUndefined()
+	})
+})
+
+describe('the back stack', () => {
+	it('answers false with nothing held', () => {
+		expect(takeBack()).toBe(false)
+	})
+
+	it('asks the latest handler first and stops at the one that uses the press', () => {
+		const calls: string[] = []
+		const releaseList = holdBack(() => (calls.push('list'), true))
+		const releaseDetail = holdBack(() => (calls.push('detail'), true))
+		expect(takeBack()).toBe(true)
+		expect(calls).toEqual(['detail'])
+		releaseDetail()
+		expect(takeBack()).toBe(true)
+		expect(calls).toEqual(['detail', 'list'])
+		releaseList()
+		expect(takeBack()).toBe(false)
+	})
+
+	it('passes over a handler that does not use the press, and releases twice without harm', () => {
+		const calls: string[] = []
+		const releaseUnder = holdBack(() => (calls.push('under'), true))
+		const releaseIdle = holdBack(() => (calls.push('idle'), false))
+		expect(takeBack()).toBe(true)
+		expect(calls).toEqual(['idle', 'under'])
+		releaseIdle()
+		releaseIdle()
+		releaseUnder()
+		expect(takeBack()).toBe(false)
 	})
 })
 

@@ -1,5 +1,6 @@
 <script lang="ts">
-	import DomainPage from '$lib/shell/DomainPage.svelte'
+	import { page } from '$app/state'
+	import Gardener from '@eden/shared/shell/gardener/page/Gardener.svelte'
 </script>
 
-<DomainPage id="gardener" shell />
+<Gardener tab={page.params.tab} />

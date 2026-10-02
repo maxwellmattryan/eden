@@ -5,8 +5,8 @@ import { goto } from '$app/navigation'
 import { resolve } from '$app/paths'
 import { defineDomain } from '@eden/shared/domains'
 import { weather } from '@eden/shared/weather'
-import SunAndMoon from './widgets/SunAndMoon.svelte'
-import WeatherNow from './widgets/WeatherNow.svelte'
+import SunAndMoon from '@eden/shared/domains/weather/widgets/SunAndMoon.svelte'
+import WeatherNow from '@eden/shared/domains/weather/widgets/WeatherNow.svelte'
 
 export const weatherManifest = defineDomain('weather', {
 	routes: { path: '/weather', href: resolve('/weather'), open: () => void goto(resolve('/weather')) },

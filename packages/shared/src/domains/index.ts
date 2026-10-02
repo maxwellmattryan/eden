@@ -3,7 +3,6 @@
 export { declarations } from '../manifest/index.js'
 export {
 	defineDomain,
-	widgetsPending,
 	type DomainLogic,
 	type DomainManifest,
 	type DomainRoutes,

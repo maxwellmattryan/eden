@@ -54,6 +54,19 @@ export function scrollOf(tab: string): number {
 	return scrolls.get(tab) ?? 0
 }
 
+/** The pathname each tab was last at, for this session. */
+const tabPlaces = new Map<string, string>()
+
+/** Keeps where a tab is, so the phone's tab bar comes back to it (D-TBD(phone-chrome)). */
+export function rememberTabPlace(tab: string, pathname: string) {
+	tabPlaces.set(tab, pathname)
+}
+
+/** The pathname a tab was last at; undefined for a tab not yet visited, which opens at its root. */
+export function tabPlace(tab: string): string | undefined {
+	return tabPlaces.get(tab)
+}
+
 /** The tab a route belongs to: the first segment of its id, the Garden at the root. */
 export function tabOf(route: { id: string | null } | null | undefined): string {
 	return route?.id?.split('/')[1] || 'garden'

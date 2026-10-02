@@ -32,6 +32,7 @@ export {
 } from './files.js'
 export { type Fields, entries, given, ids, preview, stated, together, unknown, withFields } from './batch.js'
 export { gardenerUi } from './panel-ui.svelte.js'
+export { chat } from './chat.svelte.js'
 export { gardenerSetup } from './setup.svelte.js'
 export { threads } from './threads.svelte.js'
 export { GARDENER_TABS, GARDENER_TAB_ICONS, type GardenerTab } from './page/tabs.js'

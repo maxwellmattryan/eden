@@ -66,6 +66,11 @@
 		"mapHelp": "Click the map to put the pin exactly on your home. The exact point stays on this device.",
 		"mapEmpty": "Find the address, or click the map, to place your home.",
 		"mapFailed": "The map could not start. Find still places your home.",
+		"touch": {
+			"notFound": "Nothing found for that address. Check the town, or tap the map to place your home.",
+			"mapHelp": "Tap the map to put the pin exactly on your home. The exact point stays on this device.",
+			"mapEmpty": "Find the address, or tap the map, to place your home."
+		},
 		"toast": {
 			"changed": "Home changed",
 			"failed": "Home could not be saved."
@@ -94,10 +99,16 @@
 			"offline": "Offline"
 		},
 		"inbox": {
+			"title": "Inbox",
 			"open": "Open",
 			"allow": "Turn on notifications",
+			"denied": "Notifications are turned off for Eden in this device's settings.",
 			"private": "Open Eden to see it.",
-			"yesterday": "yesterday"
+			"yesterday": "yesterday",
+			"empty": {
+				"title": "Nothing new",
+				"text": "What your domains have to tell you arrives here."
+			}
 		},
 		"gardenerNoKey": "No key on this device",
 		"profile": "What Eden knows about me",
@@ -1422,6 +1433,7 @@
 		}
 	},
 	"quickLog": {
+		"title": "Quick Log",
 		"logged": "{value} logged.",
 		"failed": "That could not be saved.",
 		"to": "Goes to {domain}. Enter to save."
@@ -1563,7 +1575,8 @@
 			"upToDate": "{name} is up to date.",
 			"updateAvailable": "{version} is available.",
 			"updateFailed": "Could not check for updates.",
-			"updatesNotAvailable": "Updates are checked from the installed app."
+			"updatesNotAvailable": "Updates are checked from the installed app.",
+			"storeUpdates": "Eden updates through the store it was installed from."
 		},
 		"integrations": {
 			"weatherProvider": "Weather provider",
@@ -1599,6 +1612,7 @@
 			"exportAction": "Export…",
 			"exporting": "Exporting…",
 			"exported": "Exported {count, plural, one {# row} other {# rows}} to {file}.",
+			"kept": "Exported {count, plural, one {# row} other {# rows}}. The archive is in Eden's own folder: {file}.",
 			"import": "Import",
 			"importHelp": "From an archive Eden exported. Nothing changes until you choose how to import it.",
 			"choose": "Choose an archive…",
@@ -1704,6 +1718,14 @@
 				"label": "What Eden knows about me",
 				"help": "Every fact Eden keeps about you, with where it came from and which requests used it. Edit or delete any of them.",
 				"open": "Open"
+			}
+		},
+		"domains": {
+			"pinned": {
+				"label": "Tab bar",
+				"help": "The two domains beside Garden and Today on this device. The rest are under More.",
+				"first": "Third tab",
+				"second": "Fourth tab"
 			}
 		},
 		"placeholder": {
@@ -1867,7 +1889,14 @@
 		"runsInApp": "The Gardener runs in the installed app. This is a scripted reply.",
 		"noKey": {
 			"title": "No key on this device",
-			"text": "Paste your Anthropic API key. It stays in this device's keychain and never leaves it except to sign your requests."
+			"text": "Paste your Anthropic API key. It stays in this device's keychain and never leaves it except to sign your requests.",
+			"openSettings": "Add a key in Settings"
+		},
+		"sheet": {
+			"grade": "Grade: {grade}, {model}",
+			"gradeMenu": "Model grade",
+			"budget": "{spent} of {cap} this month",
+			"spent": "{spent} this month"
 		},
 		"devClamp": "Development build: light and standard run on {model}, deep on {deep}.",
 		"budgetReached": "The monthly budget is reached. Raise it in Settings → Gardener to keep asking.",

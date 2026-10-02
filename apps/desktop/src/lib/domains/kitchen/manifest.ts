@@ -8,9 +8,9 @@ import { defineDomain } from '@eden/shared/domains'
 import { kitchen } from '@eden/shared/domains/kitchen'
 import { declarationOf, type TabId } from '@eden/shared/manifest'
 import HaulCapture from './views/HaulCapture.svelte'
-import CookTonight from './widgets/CookTonight.svelte'
-import ExpiringSoon from './widgets/ExpiringSoon.svelte'
-import GroceryQuickAdd from './widgets/GroceryQuickAdd.svelte'
+import CookTonight from '@eden/shared/domains/kitchen/widgets/CookTonight.svelte'
+import ExpiringSoon from '@eden/shared/domains/kitchen/widgets/ExpiringSoon.svelte'
+import GroceryQuickAdd from '@eden/shared/domains/kitchen/widgets/GroceryQuickAdd.svelte'
 
 export type KitchenTab = TabId<'kitchen'>
 export const KITCHEN_TABS: readonly KitchenTab[] = declarationOf('kitchen').tabs.map((tab) => tab.id)

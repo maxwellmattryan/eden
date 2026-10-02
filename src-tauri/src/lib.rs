@@ -165,6 +165,7 @@ pub fn run() {
             commands::signals::mark_inbox_read,
             commands::signals::withdraw_signal,
             commands::signals::show_notification,
+            commands::signals::request_notification_permission,
             commands::gardener::set_secret,
             commands::gardener::has_secret,
             commands::gardener::delete_secret,

@@ -4,7 +4,7 @@
 //! and the OS notification of a card. `@eden/shared/scheduler` and `@eden/shared/signals` wrap them.
 
 use tauri::{AppHandle, State};
-use tauri_plugin_notification::NotificationExt;
+use tauri_plugin_notification::{NotificationExt, PermissionState};
 
 use crate::error::Result;
 use crate::substrate::scheduler::{self, Declared, Fired};
@@ -84,6 +84,20 @@ pub async fn show_notification(
         Ok(()) => Ok(true),
         Err(e) => {
             log::warn!("An OS notification could not be shown: {e}");
+            Ok(false)
+        }
+    }
+}
+
+/// Asks the system whether Eden may show notifications, which on a phone (iOS, Android 13 and later) raises the
+/// system's own prompt the first time. Answers whether it is allowed: desktop answers yes without a prompt. The shell
+/// asks when the owner turns notifications on, before the capability grant is recorded (D-TBD(phone-chrome)).
+#[tauri::command]
+pub async fn request_notification_permission(app: AppHandle) -> Result<bool> {
+    match app.notification().request_permission() {
+        Ok(state) => Ok(state == PermissionState::Granted),
+        Err(e) => {
+            log::warn!("The notification permission could not be asked: {e}");
             Ok(false)
         }
     }

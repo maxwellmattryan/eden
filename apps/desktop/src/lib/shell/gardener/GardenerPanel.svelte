@@ -9,234 +9,41 @@
 	import { onMount, tick } from 'svelte'
 	import { goto } from '$app/navigation'
 	import { resolve } from '$app/paths'
-	import {
-		Button,
-		Composer,
-		ConfirmSheet,
-		Dropzone,
-		Field,
-		FileButton,
-		FileChip,
-		GardenerMessage,
-		Greeting,
-		IconButton,
-		InlineError,
-		Notice,
-		Sprouting,
-		Thread,
-		toast,
-		type FileCheck,
-	} from '@eden/ui-kit'
-	import { isTauri } from '@eden/shared/api'
-	import { hourOfDay } from '@eden/shared/dates'
-	import {
-		ACCEPT,
-		attachmentForm,
-		gardenerPanelState,
-		greetingKey,
-		LONG_PASTE_CHARS,
-		MAX_FILES,
-		segmentsOf,
-		type MessageBlock,
-	} from '@eden/shared/gardener'
+	import { Button, Composer, ConfirmSheet, Dropzone, Field, FileButton, FileChip, IconButton } from '@eden/ui-kit'
+	import { ACCEPT, attachmentForm, LONG_PASTE_CHARS } from '@eden/shared/gardener'
 	import { t } from '@eden/shared/i18n'
-	import { manifestFor } from '$lib/domains'
 	import { settingsUi } from '@eden/shared/shell/settings'
-	import { grants } from '@eden/shared/shell'
-	import { profile } from '@eden/shared/shell/profile'
-	import { threadAttachments } from '@eden/shared/shell/gardener'
-	import {
-		capByType,
-		checkStaged,
-		measure,
-		measuring,
-		sizeLabel,
-		stagedOf,
-		stagedRules,
-		type StageCheck,
-		type StagedFile,
-	} from '@eden/shared/shell/gardener'
-	import MessageBlocks from './MessageBlocks.svelte'
-	import { gardenerUi } from '@eden/shared/shell/gardener'
-	import { runtime } from '@eden/shared/shell/gardener'
-	import { gardenerSetup } from '@eden/shared/shell/gardener'
-	import ThreadList from './ThreadList.svelte'
-	import { threads } from '@eden/shared/shell/gardener'
+	import { chat, gardenerSetup, gardenerUi, runtime, sizeLabel, threads } from '@eden/shared/shell/gardener'
+	import ChatLog from '@eden/shared/shell/gardener/ChatLog.svelte'
+	import ThreadList from '@eden/shared/shell/gardener/ThreadList.svelte'
 
 	const uid = $props.id()
-	let listOpen = $state(false)
 	let key = $state('')
 	let keyBusy = $state(false)
-	let log = $state<HTMLElement>()
 	let foot = $state<HTMLElement>()
 
-	const domainName = $derived(gardenerUi.domain ? $t(manifestFor(gardenerUi.domain)?.name ?? '') : undefined)
-	const title = $derived(
-		threads.current?.title ??
-			(domainName ? $t('gardener.askInDomain', { values: { domain: domainName } }) : $t('shell.gardener'))
-	)
-	// the thread's last reply carries the eye that says what it read (D-149)
-	const lastReply = $derived(threads.messages.findLast((message) => message.role !== 'owner')?.id)
-	const inApp = isTauri()
-	// the browser answers with a scripted stream, so the composer stays open there
-	const canAsk = $derived((inApp ? gardenerSetup.hasKey : true) && !gardenerSetup.failed)
-	const blocked = $derived(gardenerSetup.percent >= 100 && gardenerSetup.capUsd > 0)
-
-	// An empty conversation opens with a greeting: one of the locale's lines, by the hour and a roll made anew for
-	// each new conversation, with the owner's preferred name when the profile holds one. It waits for the panel to
-	// settle (the latest conversation may be about to open) and for the profile, so it never flashes or changes.
-	let settled = $state(false)
-	let roll = $state(Math.random())
-	const ownerName = $derived.by(() => {
-		const fact = profile.facts.find((entry) => entry.type === 'preferred-name' && !profile.isExpired(entry))
-		return typeof fact?.value === 'string' ? fact.value.trim() || undefined : undefined
-	})
-	const greeting = $derived(
-		$t(greetingKey(hourOfDay(Date.now()), roll, !!ownerName), { values: { name: ownerName ?? '' } })
-	)
-	const greets = $derived(settled && profile.ready && !threads.current && canAsk && !blocked)
+	// What the panel shares with the phone's chat sheet is the session (`chat`) and the log (`ChatLog`); the panel
+	// keeps its own DOM. Files that were just staged put the caret back in the composer.
+	chat.focusComposer = () => foot?.querySelector('textarea')?.focus()
 
 	// The panel reads the threads once it opens, and runs what it was opened to run.
 	$effect(() => {
 		if (!gardenerUi.open) return
-		void gardenerSetup.load()
-		void grants.load()
-		void profile.load()
-		// what the app closed on last time is written to the audit log before anything new is asked
-		void runtime.settleOpen()
-		void threads
-			.load()
-			.then(async () => {
-				// the conversation the panel was left on opens, a new one staying new, and the surface's latest when
-				// none was kept or it is gone; unless the panel was opened to run something
-				if (gardenerUi.pending) return runtime.runPending()
-				if (threads.current) return
-				const kept = gardenerPanelState().thread
-				if (kept === null) return
-				const id = threads.threads.some((entry) => entry.id === kept) ? kept : threads.of(gardenerUi.domain)[0]?.id
-				if (id) await threads.open(id)
-			})
-			.finally(() => (settled = true))
-	})
-	// The Gardener is awaited with nothing yet to show (D-80): the owner's message is being packed, or the reply has
-	// begun and holds no words and no card. One row for both, so the sprout grows on without starting over; once the
-	// reply has something, the bubble takes its place and draws its own sprout between rounds.
-	const waiting = $derived.by(() => {
-		const thread = threads.current?.id
-		if (!thread) return false
-		if (runtime.preparing === thread) return !runtime.pending
-		const last = threads.messages.at(-1)
-		return (
-			runtime.live?.threadId === thread &&
-			runtime.live.messageId === last?.id &&
-			!segmentsOf(last.blocks as MessageBlock[]).length
-		)
-	})
-
-	// The log follows the reply as it streams, while the owner is at its foot: scrolled up to read, they are left
-	// there. Sending a message or opening a thread goes to the foot again. Whether they are at the foot is read
-	// against the height the log had before it grew, at the moment it grows, so a scroll is never raced.
-	const NEAR_FOOT = 32
-	let toFoot = true
-	let lastHeight = 0
-	let shownThread: string | undefined
-	// effect: imperative DOM
-	$effect(() => {
-		void threads.messages.length
-		void threads.messages.at(-1)?.blocks
-		void runtime.streaming
-		void waiting
-		const thread = threads.current?.id
-		if (thread !== shownThread) toFoot = true
-		shownThread = thread
-		if (!log) return
-		const atFoot = log.scrollTop + log.clientHeight >= lastHeight - NEAR_FOOT
-		lastHeight = log.scrollHeight
-		if (!toFoot && !atFoot) return
-		toFoot = false
-		void tick().then(() => {
-			if (!log) return
-			log.scrollTo({ top: log.scrollHeight })
-			lastHeight = log.scrollHeight
-		})
+		chat.load()
 	})
 
 	onMount(() => {
 		if (gardenerUi.open) void gardenerSetup.load()
+		return () => (chat.focusComposer = undefined)
 	})
 
-	// The files waiting on the message. Each is measured (an image's size and thumbnail) while it waits, and the
-	// send waits for that, so what is stored is whole. They belong to the conversation they were added in.
-	let draft = $state('')
-	let staged = $state<StagedFile[]>([])
-	const dropRules = $derived(stagedRules(staged))
 	const ICONS = { image: 'image', pdf: 'file-text', text: 'file-text' } as const
 
-	/** Says why files were left out: one toast, for the first reason, in the app's words. */
-	function refuse(rejected: StageCheck['rejected']) {
-		const first = rejected[0]
-		if (!first) return
-		toast({
-			message: $t(`gardener.attachments.refused.${first.reason}`, {
-				values: { name: first.file.name, max: MAX_FILES },
-			}),
-			error: true,
-		})
-	}
-	function stage(check: StageCheck) {
-		refuse(check.rejected)
-		for (const file of check.accepted) {
-			const entry = stagedOf(file)
-			staged.push(entry)
-			measuring.track(
-				entry.key,
-				measure(file, entry.mime).then((meta) => {
-					const at = staged.find((other) => other.key === entry.key)
-					if (at) Object.assign(at, meta, { busy: false })
-				})
-			)
-		}
-		if (check.accepted.length) foot?.querySelector('textarea')?.focus()
-	}
-	/** A drop came through the zone's own rules; each type's cap is still to be held. */
-	function dropped(accepted: File[], rejected: FileCheck['rejected']) {
-		const capped = capByType(accepted)
-		stage({ accepted: capped.accepted, rejected: [...rejected, ...capped.rejected] })
-	}
-	const picked = (files: File[]) => stage(checkStaged(files, staged))
-	function unstage(key: string) {
-		staged = staged.filter((entry) => entry.key !== key)
-	}
-
-	async function send(text: string) {
-		toFoot = true
-		const files = [...staged]
-		staged = []
-		await measuring.settled(files.map((entry) => entry.key))
-		// the measured entries, not the copies taken before they were
-		if (await runtime.ask(text, files)) return
-		// nothing was sent: the message and its files go back where they were
-		if (files.length) toast({ message: $t('gardener.attachments.failed'), error: true })
-		staged = [...files, ...staged]
-		if (!draft) draft = text
-	}
-	// the files of the open conversation: their thumbnails, and which are gone
-	$effect(() => {
-		void threadAttachments.load(threads.current?.uri)
-	})
 	async function newThread() {
-		threads.close()
-		staged = []
-		roll = Math.random()
-		listOpen = false
+		chat.newThread()
 		// the composer mounts again when the list was open, so focus once it is in the DOM
 		await tick()
 		foot?.querySelector('textarea')?.focus()
-	}
-	async function openThread(id: string) {
-		if (id !== threads.current?.id) staged = []
-		await threads.open(id)
-		listOpen = false
 	}
 	async function saveKey() {
 		if (!key.trim()) return
@@ -251,21 +58,19 @@
 	function openBudgets() {
 		settingsUi.show('gardener')
 	}
-	const placeholder = $derived(
-		domainName ? $t('gardener.askInDomain', { values: { domain: domainName } }) : $t('gardener.askPlaceholder')
-	)
+	const placeholder = $derived(chat.placeholder($t))
 </script>
 
 <!-- what waits on the message: a chip per file, each removable until it is sent -->
 {#snippet stagedChips()}
-	{#each staged as entry (entry.key)}
+	{#each chat.staged as entry (entry.key)}
 		<FileChip
 			name={entry.name}
 			detail={sizeLabel(entry.size)}
 			icon={ICONS[attachmentForm(entry.mime)]}
 			thumbnail={entry.thumbnail}
 			state={entry.busy ? 'busy' : 'ready'}
-			onremove={() => unstage(entry.key)}
+			onremove={() => chat.unstage(entry.key)}
 		/>
 	{/each}
 {/snippet}
@@ -276,24 +81,43 @@
 		label={$t('gardener.attach')}
 		size="sm"
 		accept={ACCEPT}
-		disabled={!canAsk || blocked}
+		disabled={!chat.canAsk || chat.blocked}
 		tooltip
-		onfiles={picked}
+		onfiles={chat.picked}
 	/>
 {/snippet}
 
-<Dropzone class="panel-drop" {...dropRules} disabled={listOpen || !canAsk || blocked} ondrop={dropped}>
+<!-- no key on this device: the panel takes it where it stands -->
+{#snippet keyForm()}
+	<form class="key" onsubmit={(e) => (e.preventDefault(), void saveKey())}>
+		<Field bind:value={key} type="password" mono label={$t('settings.gardener.key.label')} placeholder="sk-ant-…" />
+		<Button
+			type="submit"
+			variant="primary"
+			icon="key-round"
+			label={$t('settings.gardener.key.save')}
+			disabled={keyBusy || !key.trim()}
+		/>
+	</form>
+{/snippet}
+
+<Dropzone
+	class="panel-drop"
+	{...chat.dropRules}
+	disabled={chat.listOpen || !chat.canAsk || chat.blocked}
+	ondrop={chat.dropped}
+>
 	<aside class="panel" aria-labelledby="{uid}-title">
 		<header class="panel-head">
-			<h2 id="{uid}-title" class="panel-title">{title}</h2>
+			<h2 id="{uid}-title" class="panel-title">{chat.title($t)}</h2>
 			<IconButton
 				icon="list"
 				size="sm"
 				label={$t('gardener.threads')}
-				pressed={listOpen}
-				disabled={!listOpen && !threads.of(gardenerUi.domain).length}
+				pressed={chat.listOpen}
+				disabled={!chat.listOpen && !threads.of(gardenerUi.domain).length}
 				tooltip
-				onclick={() => (listOpen = !listOpen)}
+				onclick={() => (chat.listOpen = !chat.listOpen)}
 			/>
 			<IconButton
 				icon="external-link"
@@ -306,71 +130,29 @@
 			<IconButton icon="x" size="sm" label={$t('common.close')} tooltip onclick={() => gardenerUi.hide()} />
 		</header>
 
-		{#if listOpen}
+		{#if chat.listOpen}
 			<div class="panel-list">
 				<ThreadList
 					domain={gardenerUi.domain}
-					onopen={(id) => void openThread(id)}
-					onempty={() => (listOpen = false)}
+					onopen={(id) => void chat.openThread(id)}
+					onempty={() => (chat.listOpen = false)}
 				/>
 			</div>
 		{:else}
-			<div class={['panel-log', greets && 'panel-log-empty']} bind:this={log}>
-				{#if !inApp}
-					<Notice tone="info" title={$t('gardener.runsInApp')} />
-				{:else if gardenerSetup.ready && !gardenerSetup.hasKey}
-					<Notice tone="info" title={$t('gardener.noKey.title')} detail={$t('gardener.noKey.text')} />
-					<form class="key" onsubmit={(e) => (e.preventDefault(), void saveKey())}>
-						<Field
-							bind:value={key}
-							type="password"
-							mono
-							label={$t('settings.gardener.key.label')}
-							placeholder="sk-ant-…"
-						/>
-						<Button
-							type="submit"
-							variant="primary"
-							icon="key-round"
-							label={$t('settings.gardener.key.save')}
-							disabled={keyBusy || !key.trim()}
-						/>
-					</form>
-				{/if}
-				{#if blocked}
-					<Notice
-						tone="warning"
-						title={$t('gardener.budgetReached')}
-						action={{ label: $t('gardener.openBudgets'), onclick: openBudgets }}
-					/>
-				{/if}
-				{#if threads.saveFailed}
-					<InlineError message={$t('gardener.saveFailed')} onretry={() => threads.flushWrites()} live />
-				{/if}
-				{#if threads.current?.tier === 'T2'}
-					<Notice tone="info" icon="lock" title={$t('gardener.lockedThread')} />
-				{/if}
-				{#if greets}<Greeting text={greeting} name={ownerName} />{/if}
-				<Thread label={$t('gardener.conversation')}>
-					{#each threads.messages as message (message.id)}
-						<MessageBlocks {message} last={message.id === lastReply} />
-					{/each}
-					{#if waiting}<GardenerMessage><Sprouting size="md" /></GardenerMessage>{/if}
-				</Thread>
-			</div>
+			<ChatLog nokey={keyForm} onbudgets={openBudgets} />
 			<div class="panel-foot" bind:this={foot}>
 				<Composer
-					bind:value={draft}
+					bind:value={chat.draft}
 					{placeholder}
 					label={placeholder}
-					disabled={!canAsk || blocked}
+					disabled={!chat.canAsk || chat.blocked}
 					busy={runtime.streaming}
-					attachments={staged.length ? stagedChips : undefined}
-					allowEmpty={staged.length > 0}
+					attachments={chat.staged.length ? stagedChips : undefined}
+					allowEmpty={chat.staged.length > 0}
 					longPaste={LONG_PASTE_CHARS}
 					tools={composerTools}
-					onsend={(text) => void send(text)}
-					onfiles={picked}
+					onsend={(text) => void chat.send(text)}
+					onfiles={chat.picked}
 					onstop={() => void runtime.cancel()}
 				/>
 			</div>
@@ -427,36 +209,17 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
-	/* the scrollers are positioned, so what is absolute inside them (a tool card's hidden status word) scrolls with
-	   them and never lays out against the page */
+	/* the list is positioned, so what is absolute inside it scrolls with it and never lays out against the page;
+	   the log (`ChatLog`) is its own scroller in the middle row */
 	.panel-list {
 		position: relative;
 		overflow: auto;
 		grid-row: 2 / 4;
 		padding: var(--space-3);
 	}
-	.panel-log {
-		position: relative;
-		overflow: hidden auto;
-		display: grid;
-		align-content: start;
-		gap: var(--space-3);
-		padding: var(--space-3);
-		overflow-wrap: anywhere;
-	}
-	/* an empty conversation: the greeting takes the space the notices leave and centres in it */
-	.panel-log-empty {
-		display: flex;
-		flex-direction: column;
-	}
 	/* a grid item's min-width is its content's: a long unbroken word would widen the column */
-	.panel-log > :global(*),
 	.panel-foot > :global(*) {
 		min-width: 0;
-	}
-	/* the panel is the measure: the thread fills it so the gutters match on both sides */
-	.panel-log :global(.ed-thread) {
-		max-width: none;
 	}
 	/* the composer floats at the foot in its own box, so no rule parts it from the log */
 	.panel-foot {

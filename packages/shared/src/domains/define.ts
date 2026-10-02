@@ -60,16 +60,6 @@ export interface DomainSurface<D extends BuiltDomainId = BuiltDomainId> {
 	overlay?: Component
 }
 
-/**
- * The widgets of a surface whose bodies are not bound yet: the phone's, until its Garden is built (#19). The tiles
- * are composed from what the domain declares and each shows its prompt. `DomainSurface.widgets` stays exhaustive, so
- * the desktop's bindings are checked as before; this is the one way round it, and it goes when the phone binds its
- * bodies.
- */
-export function widgetsPending<D extends BuiltDomainId>(_id: D): Record<BuiltWidgetId<D>, WidgetBinding> {
-	return {} as Record<BuiltWidgetId<D>, WidgetBinding>
-}
-
 /** What a domain does, the same in both apps: written once, in the domain's `logic.ts`. */
 export interface DomainLogic<D extends BuiltDomainId = BuiltDomainId> {
 	/** The plain, permanent id (`kitchen`): what the registry finds the logic by. */

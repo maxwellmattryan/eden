@@ -74,6 +74,12 @@ describe('tabBar', () => {
 		expect(shell.tabs.more).toEqual({ id: 'more', name: 'shell.more' })
 	})
 
+	it('says which of the pinned entries behind More is a place: the Gardener, and not Settings', () => {
+		const more = tabBar(declarations, shell).more
+		expect(more.find((item) => item.id === 'gardener')).toMatchObject({ kind: 'shell', place: true })
+		expect(more.find((item) => item.id === 'settings')).toMatchObject({ kind: 'shell', place: false })
+	})
+
 	it("pins the owner's two, and no more than two", () => {
 		const bar = tabBar(declarations, shell, ['toolbench', 'weather', 'kitchen'])
 		expect(idsOf(bar.tabs)).toEqual(['garden', 'today', 'toolbench', 'weather'])

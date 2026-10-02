@@ -211,10 +211,10 @@ export interface ShellDeclaration {
 		groups: readonly SidebarGroupId[]
 		entries: readonly ShellEntryDeclaration[]
 		/**
-		 * Pinned at the foot, each with a key of its own (D-77). Settings is an action and never the current item; the
-		 * Gardener is a place on the desktop, where the app gives it its route (D-113), and its key opens its panel.
+		 * Pinned at the foot, each with a key of its own (D-77). `place` says which has a page: Settings is an action
+		 * and never the current item; the Gardener is a place with its route (D-113), and its key opens its panel.
 		 */
-		pinned: readonly { id: string; name: string; subtitle: string; key: string | null }[]
+		pinned: readonly { id: string; name: string; subtitle: string; place: boolean; key: string | null }[]
 	}
 	/** The phone's tab bar (product/substrate/shell.md, "Mobile"). */
 	tabs: {

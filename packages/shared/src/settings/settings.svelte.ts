@@ -16,6 +16,7 @@ import {
 import { GRADES } from '../gardener/types.js'
 import { setLanguage as setI18nLanguage } from '../i18n/index.js'
 import { parseLayout, type StoredLayout } from '../manifest/garden.js'
+import { parsePinned } from '../manifest/pinned.js'
 import {
 	clockFormats,
 	fontSettings,
@@ -56,6 +57,14 @@ export const storage = {
 	sidebarWidth: 'eden:sidebar-width',
 	sidebarCollapsed: 'eden:sidebar-collapsed',
 	gardenLayout: 'eden:garden-layout',
+} as const
+
+/**
+ * What this device keeps for itself (D-TBD(pinned-tabs)): read and written like the rest, and never part of
+ * `snapshot()` or `restore()`, so no bundle carries it and no import changes it.
+ */
+export const deviceStorage = {
+	pinnedTabs: 'eden:pinned-tabs',
 } as const
 
 function read(key: string): string | null {
@@ -129,6 +138,11 @@ export class Settings {
 	sidebarCollapsed = $state(false)
 	/** The Garden as the owner arranged it on this device (D-156); nothing until they edit it, and it shows its default. */
 	gardenLayout = $state<StoredLayout | undefined>(undefined)
+	/**
+	 * The two domains in the phone's tab bar as the owner chose them on this device (D-TBD(pinned-tabs)); nothing
+	 * until they choose, and the bar shows the declared pair. Read through `pinnedPair`, which mends a stale choice.
+	 */
+	pinnedTabs = $state<string[] | undefined>(undefined)
 	/** The theme on <html>: the choice, or what "system" resolves to right now. */
 	resolvedTheme = $state<Theme>('light')
 
@@ -161,6 +175,7 @@ export class Settings {
 		this.sidebarWidth = positiveInt(read(storage.sidebarWidth))
 		this.sidebarCollapsed = read(storage.sidebarCollapsed) === 'on'
 		this.gardenLayout = parseLayout(read(storage.gardenLayout))
+		this.pinnedTabs = parsePinned(read(deviceStorage.pinnedTabs))
 		this.resolvedTheme = this.resolveTheme(this.theme)
 		this.apply()
 		if (typeof window !== 'undefined' && window.matchMedia && !this.#media) {
@@ -321,6 +336,12 @@ export class Settings {
 	setGardenLayout(layout: StoredLayout | undefined) {
 		this.gardenLayout = layout
 		write(storage.gardenLayout, layout ? JSON.stringify(layout) : null)
+	}
+
+	/** Keeps the tab bar's pinned pair on this device, or with nothing goes back to the declared pair. */
+	setPinnedTabs(ids: readonly string[] | undefined) {
+		this.pinnedTabs = ids?.length ? [...ids] : undefined
+		write(deviceStorage.pinnedTabs, this.pinnedTabs ? this.pinnedTabs.join(',') : null)
 	}
 
 	/** The choices as they are stored, by name: what an export bundle carries. A choice left at its default is absent. */

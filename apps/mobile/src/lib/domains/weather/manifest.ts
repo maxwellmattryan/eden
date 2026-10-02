@@ -1,12 +1,18 @@
 // Sky's surface on the phone (product/domains/weather.md, "Mobile"): the one view. What Sky declares is in
 // `@eden/shared/domains/weather/manifest.json`; what it does (its store, the glyph that follows the conditions) is
-// its `logic.ts` there, which `defineDomain` joins to this. The bodies of its Garden tiles are bound when the
-// phone's Garden is built (#19).
+// its `logic.ts` there, which `defineDomain` joins to this. Its two built Garden tiles are the bodies the desktop
+// mounts.
 import { goto } from '$app/navigation'
 import { resolve } from '$app/paths'
-import { defineDomain, widgetsPending } from '@eden/shared/domains'
+import { defineDomain } from '@eden/shared/domains'
+import { weather } from '@eden/shared/weather'
+import SunAndMoon from '@eden/shared/domains/weather/widgets/SunAndMoon.svelte'
+import WeatherNow from '@eden/shared/domains/weather/widgets/WeatherNow.svelte'
 
 export const weatherManifest = defineDomain('weather', {
 	routes: { path: '/weather', href: resolve('/weather'), open: () => void goto(resolve('/weather')) },
-	widgets: widgetsPending('weather'),
+	widgets: {
+		'weather-now': { body: WeatherNow, hasData: () => weather.now !== undefined },
+		'sun-and-moon': { body: SunAndMoon, hasData: () => weather.sun !== undefined },
+	},
 })

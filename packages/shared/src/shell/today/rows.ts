@@ -21,6 +21,13 @@ const action = (id: RowAction, t: Words['t'], icon: MenuItem['icon'], destructiv
 	...(destructive ? { destructive } : {}),
 })
 
+/** What a row's main gesture does (Enter and a double-click on desktop, the leading swipe on the phone). */
+export function primaryAction(item: TodayItem): RowAction {
+	if (item.section === 'habits') return 'log'
+	if (item.section === 'routines' && item.done) return 'reopen'
+	return 'done'
+}
+
 /** The row's menu: what the owner can do with it today. */
 export function actionsFor(item: TodayItem, words: RowWords): MenuItem[] {
 	const { t } = words

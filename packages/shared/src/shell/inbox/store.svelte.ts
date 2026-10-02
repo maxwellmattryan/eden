@@ -6,6 +6,7 @@
 // then its card offers to. From T2 up the notification says which domain has something and not what (the lock screen
 // shows it). Grouping, snooze and the rule toggles are the notification center's.
 import { get } from 'svelte/store'
+import { toast } from '@eden/ui-kit'
 import { logError } from '../../api/index.js'
 import { t, waitLocale } from '../../i18n/index.js'
 import {
@@ -18,6 +19,7 @@ import {
 	onWithdrawn,
 	OS_NOTIFICATIONS,
 	queryInbox,
+	requestNotificationPermission,
 	showNotification,
 	type InboxEntry,
 } from '../../signals/index.js'
@@ -106,8 +108,20 @@ export class InboxStore {
 		await markInboxRead(ids).catch(report('Could not mark the inbox as read'))
 	}
 
-	/** Turns OS notifications on for this device, asked in context by the card that would have been one. */
+	/**
+	 * Turns OS notifications on for this device, asked in context by the card that would have been one. The system is
+	 * asked first (a phone raises its own prompt; desktop answers yes): refused there, no grant is recorded and a
+	 * toast says where to change it (D-TBD(phone-chrome)).
+	 */
 	async allowNotifications(): Promise<void> {
+		const allowed = await requestNotificationPermission().catch((error) => {
+			report('Could not ask for the notification permission')(error)
+			return false
+		})
+		if (!allowed) {
+			toast({ message: get(t)('shell.inbox.denied'), error: true })
+			return
+		}
 		await grants
 			.grant({
 				subject: DEVICE,

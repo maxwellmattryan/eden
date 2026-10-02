@@ -6,8 +6,8 @@ import { resolve } from '$app/paths'
 import { defineDomain } from '@eden/shared/domains'
 import { toolbench } from '@eden/shared/domains/toolbench'
 import { declarationOf, type TabId } from '@eden/shared/manifest'
-import ActiveProjects from './widgets/ActiveProjects.svelte'
-import ResurfacedIdea from './widgets/ResurfacedIdea.svelte'
+import ActiveProjects from '@eden/shared/domains/toolbench/widgets/ActiveProjects.svelte'
+import ResurfacedIdea from '@eden/shared/domains/toolbench/widgets/ResurfacedIdea.svelte'
 
 export type ToolbenchTab = TabId<'toolbench'>
 export const TOOLBENCH_TABS: readonly ToolbenchTab[] = declarationOf('toolbench').tabs.map((tab) => tab.id)

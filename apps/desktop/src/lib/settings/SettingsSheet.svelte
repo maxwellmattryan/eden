@@ -7,14 +7,16 @@
 	import { Icon, Sheet } from '@eden/ui-kit'
 	import { t } from '@eden/shared/i18n'
 	import { settingsTabIcons, settingsTabs, settingsUi, type SettingsTabId } from '@eden/shared/shell/settings'
-	import AboutTab from './tabs/AboutTab.svelte'
-	import AppearanceTab from './tabs/AppearanceTab.svelte'
-	import GardenerTab from './tabs/GardenerTab.svelte'
-	import GeneralTab from './tabs/GeneralTab.svelte'
-	import IntegrationsTab from './tabs/IntegrationsTab.svelte'
-	import PlaceholderTab from './tabs/PlaceholderTab.svelte'
-	import PrivacyTab from './tabs/PrivacyTab.svelte'
-	import SyncTab from './tabs/SyncTab.svelte'
+	import { checkForUpdate } from '@eden/shared/api/updater'
+	import { archiveFiles } from './archive-files'
+	import AboutTab from '@eden/shared/shell/settings/tabs/AboutTab.svelte'
+	import AppearanceTab from '@eden/shared/shell/settings/tabs/AppearanceTab.svelte'
+	import GardenerTab from '@eden/shared/shell/settings/tabs/GardenerTab.svelte'
+	import GeneralTab from '@eden/shared/shell/settings/tabs/GeneralTab.svelte'
+	import IntegrationsTab from '@eden/shared/shell/settings/tabs/IntegrationsTab.svelte'
+	import PlaceholderTab from '@eden/shared/shell/settings/tabs/PlaceholderTab.svelte'
+	import PrivacyTab from '@eden/shared/shell/settings/tabs/PrivacyTab.svelte'
+	import SyncTab from '@eden/shared/shell/settings/tabs/SyncTab.svelte'
 
 	const uid = $props.id()
 	const titleId = `${uid}-title`
@@ -74,9 +76,9 @@
 				{:else if settingsUi.tab === 'integrations'}
 					<IntegrationsTab />
 				{:else if settingsUi.tab === 'sync'}
-					<SyncTab />
+					<SyncTab files={archiveFiles} />
 				{:else if settingsUi.tab === 'about'}
-					<AboutTab />
+					<AboutTab check={checkForUpdate} />
 				{:else}
 					<PlaceholderTab tab={settingsUi.tab} />
 				{/if}

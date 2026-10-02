@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Eden uses the camera when you take a picture of a haul, a receipt, a shelf or a place.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Eden reads the pictures you pick for a capture, an item, a recipe or a place.</string>
+</dict>
+</plist>

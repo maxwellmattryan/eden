@@ -33,18 +33,19 @@
 	import { shell, shortcutPositions, sidebarGroups, type SidebarItem } from '@eden/shared/manifest'
 	import { rememberPlace, rememberScroll, scrollOf, tabOf } from '@eden/shared/navigation'
 	import { coordinator } from '@eden/shared/refresh'
-	import { messageValues, notificationKeys, startSignals } from '@eden/shared/signals'
+	import { startSignals } from '@eden/shared/signals'
 	import { declarations, manifestFor, manifests } from '$lib/domains'
 	import { grants } from '@eden/shared/shell'
-	import { inbox } from '@eden/shared/shell/inbox'
+	import { inbox, inboxItems } from '@eden/shared/shell/inbox'
 	import { profile } from '@eden/shared/shell/profile'
 	import { FORECAST_RESOURCE, weather } from '@eden/shared/weather'
-	import { formatTime, formatWeekday, relativeDay } from '@eden/shared/dates'
+	import { formatTime } from '@eden/shared/dates'
 	import { detectOs, formatShortcut } from '@eden/shared/shortcuts'
 	import { useGlobalErrorHandler } from '@eden/shared/errors/global-handler'
 	import { markSvelteKitReady } from '../hooks.client'
 	import SettingsSheet from '$lib/settings/SettingsSheet.svelte'
-	import ChangeHomeSheet from '$lib/shell/home/ChangeHomeSheet.svelte'
+	import ChangeHomeSheet from '@eden/shared/shell/home/ChangeHomeSheet.svelte'
+	import * as map from '$lib/domains/places/map'
 	import { homeUi } from '@eden/shared/shell/home'
 	import { settingsUi } from '@eden/shared/shell/settings'
 	import QuickLogHost from '@eden/shared/shell/quick-log/QuickLogHost.svelte'
@@ -108,7 +109,7 @@
 			shortcut: item.key ? keys(item.key) : undefined,
 			// the Gardener has a page and becomes the current item on it; Settings is an action
 			href: places[item.id],
-			action: !places[item.id],
+			action: !item.place,
 		}))
 	)
 	const current = $derived(tabOf(page.route))
@@ -125,49 +126,16 @@
 			: undefined
 	)
 
-	// The inbox behind the bell (substrate/signals-notifications.md): each card's line is written here from its
-	// rule's locale key and its signal's payload, so it reads in the current locale. A card opens its domain; the
-	// latest card that would have been an OS notification offers to turn those on while they are off.
-	function arrived(at: number): string {
-		const iso = new Date(at).toISOString()
-		const day = relativeDay(iso)
-		if (day === 'today') return formatTime(at, format)
-		return day === 'yesterday' ? $t('shell.inbox.yesterday') : formatWeekday(iso, format.lang)
-	}
+	// The inbox behind the bell (substrate/signals-notifications.md): each card's line is written from its rule's
+	// locale key and its signal's payload, so it reads in the current locale. A card opens its domain; the latest
+	// card that would have been an OS notification offers to turn those on while they are off. The phone's inbox
+	// sheet draws the same items (`inboxItems`).
 	const notices = $derived<InboxItem[]>(
-		inbox.cards.map((card) => {
-			const keys = notificationKeys(card.rule)
-			const manifest = manifestFor(keys.domain)
-			return {
-				id: card.id,
-				icon: manifest?.glyph,
-				line: $t(keys.line, { values: messageValues(card.payload) }),
-				when: arrived(card.at),
-				domain: manifest ? $t(manifest.name) : undefined,
-				unread: !card.read,
-				actions: [
-					...(manifest
-						? [
-								{
-									id: 'open',
-									label: $t('shell.inbox.open'),
-									icon: 'arrow-right' as const,
-									onclick: () => manifest.routes.open(),
-								},
-							]
-						: []),
-					...(inbox.asks === card.id
-						? [
-								{
-									id: 'allow',
-									label: $t('shell.inbox.allow'),
-									icon: 'bell' as const,
-									onclick: () => void inbox.allowNotifications(),
-								},
-							]
-						: []),
-				],
-			}
+		inboxItems(inbox.cards, {
+			tr: $t,
+			format,
+			asks: inbox.asks,
+			allow: () => void inbox.allowNotifications(),
 		})
 	)
 
@@ -431,7 +399,7 @@
 	<SettingsSheet />
 	<QuickLogHost />
 	{#key homeUi.opened}
-		{#if homeUi.opened}<ChangeHomeSheet />{/if}
+		{#if homeUi.opened}<ChangeHomeSheet {map} />{/if}
 	{/key}
 	{#each manifests as manifest (manifest.id)}
 		{#if manifest.overlay}

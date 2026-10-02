@@ -2142,12 +2142,14 @@ export const SHELL = {
 				"id": "gardener",
 				"name": "shell.gardener",
 				"subtitle": "shell.gardenerSubtitle",
+				"place": true,
 				"key": "G"
 			},
 			{
 				"id": "settings",
 				"name": "shell.settings",
 				"subtitle": "shell.settingsSubtitle",
+				"place": false,
 				"key": ","
 			}
 		]

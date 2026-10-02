@@ -7,8 +7,8 @@ import { defineDomain } from '@eden/shared/domains'
 import { meadow } from '@eden/shared/domains/places'
 import { declarationOf, type TabId } from '@eden/shared/manifest'
 import ImportSheet from './views/ImportSheet.svelte'
-import NearbyFavorites from './widgets/NearbyFavorites.svelte'
-import UpcomingListings from './widgets/UpcomingListings.svelte'
+import NearbyFavorites from '@eden/shared/domains/places/widgets/NearbyFavorites.svelte'
+import UpcomingListings from '@eden/shared/domains/places/widgets/UpcomingListings.svelte'
 
 export type PlacesTab = TabId<'places'>
 export const PLACES_TABS: readonly PlacesTab[] = declarationOf('places').tabs.map((tab) => tab.id)

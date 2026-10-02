@@ -20,16 +20,22 @@
 	} from '@eden/ui-kit'
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
-	import { quintOut } from 'svelte/easing'
 	import { addDays, formatDate } from '@eden/shared/dates'
 	import { parseTask, TODAY_SECTIONS, type Language, type TodayItem, type TodaySection } from '@eden/shared/tasks'
 	import { undoToast } from '@eden/shared/shell'
 	import { quickLogActions, quickLogKey } from '@eden/shared/shell/quick-log'
 	import { runQuickLog } from '@eden/shared/shell/quick-log'
-	import { parsedChips } from '@eden/shared/shell/today'
-	import { rowOf, type RowAction, type RowWords } from '@eden/shared/shell/today'
-	import { seedTasks } from '@eden/shared/shell/today'
-	import { tasks } from '@eden/shared/shell/today'
+	import {
+		parsedChips,
+		primaryAction,
+		rowOf,
+		runRowAction,
+		seedTasks,
+		settle,
+		tasks,
+		type RowAction,
+		type RowWords,
+	} from '@eden/shared/shell/today'
 
 	const uid = $props.id()
 	const lang = $derived<Language>($locale === 'ja' ? 'ja' : 'en')
@@ -68,65 +74,14 @@
 	/** What Enter, a double-click and the first menu item do: done, or a habit's one more. */
 	function open(section: TodaySection, row: ListRowData) {
 		const item = itemOf(section, row)
-		if (!item) return
-		if (section === 'habits') act('log', item)
-		else if (section === 'routines' && item.done) act('reopen', item)
-		else act('done', item)
-	}
-	function act(action: RowAction, item: TodayItem) {
-		const { task } = item
-		const title = task.title
-		if (action === 'done') {
-			const { undo } = tasks.complete(task.id)
-			undoToast($t('today.toast.done', { values: { title } }), undo)
-		} else if (action === 'reopen') {
-			const { undo } = tasks.reopen(task.id)
-			undoToast($t('today.toast.reopened', { values: { title } }), undo)
-		} else if (action === 'later' || action === 'tomorrow' || action === 'nextWeek') {
-			const { undo } = tasks.snooze(task.id, action)
-			const when = $t(`today.actions.${action}`)
-			undoToast($t('today.toast.snoozed', { values: { title, when } }), undo)
-		} else if (action === 'skip') {
-			const { undo } = tasks.skip(task.id)
-			undoToast($t('today.toast.skipped', { values: { title } }), undo)
-		} else if (action === 'log') {
-			const { undo } = tasks.tally(task.id)
-			const tally = item.tally
-			const values = { title, count: (tally?.count ?? 0) + 1, target: tally?.target.count ?? 0 }
-			undoToast($t('today.toast.logged', { values }), undo)
-		} else if (action === 'delete') {
-			const { undo } = tasks.remove(task.id)
-			undoToast($t('today.toast.deleted', { values: { title } }), undo)
-		}
+		if (item) runRowAction(primaryAction(item), item, $t)
 	}
 	function onaction(section: TodaySection, menuItem: MenuItem, row: ListRowData) {
 		const item = itemOf(section, row)
-		if (item) act(menuItem.id as RowAction, item)
+		if (item) runRowAction(menuItem.id as RowAction, item, $t)
 	}
 	function seed() {
 		undoToast($t('common.sampleAdded'), seedTasks($t('shell.today')))
-	}
-	/**
-	 * A section whose last row has gone closes over the settle duration, as the row alone would have (the kit's rows
-	 * collapse), with the gap after it; a zero settle duration, which is reduced motion, fades instead.
-	 */
-	function settle(node: HTMLElement) {
-		const style = getComputedStyle(node)
-		const duration = parseFloat(style.getPropertyValue('--ed-duration-settle')) || 0
-		if (!duration) {
-			return {
-				duration: parseFloat(style.getPropertyValue('--ed-duration-micro')) || 0,
-				css: (t: number) => `opacity: ${t}`,
-			}
-		}
-		const height = node.getBoundingClientRect().height
-		const gap = parseFloat(getComputedStyle(node.parentElement ?? node).rowGap) || 0
-		return {
-			duration,
-			easing: quintOut,
-			css: (t: number) =>
-				`overflow: hidden; height: ${(t * height).toFixed(2)}px; margin-bottom: ${((t - 1) * gap).toFixed(2)}px; opacity: ${t}`,
-		}
 	}
 </script>
 
