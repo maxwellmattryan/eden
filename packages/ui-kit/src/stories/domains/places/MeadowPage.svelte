@@ -7,9 +7,9 @@
 
 	/** A category's glyph, drawn on a tile where a place has no picture. */
 	export const CATEGORY_GLYPHS: Record<PlaceCategory, IconName> = {
-		cafe: 'cup-soda',
-		bar: 'moon',
-		restaurant: 'soup',
+		cafe: 'coffee',
+		bar: 'martini',
+		restaurant: 'utensils',
 		park: 'tree-deciduous',
 		museum: 'palette',
 		venue: 'map-pin',

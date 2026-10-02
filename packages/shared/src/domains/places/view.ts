@@ -2,6 +2,7 @@
 // point; pins that would stand on top of each other at the map's present scale are drawn as one `group` pin with a
 // count, worked out on a grid in screen pixels so it needs no map to test. Home is never grouped, and neither is the
 // pin the page is showing.
+import type { IconName } from '@eden/ui-kit'
 import type { LngLat } from '../../geo/index.js'
 
 export type PinKind = 'saved' | 'suggested' | 'listing' | 'home' | 'group'
@@ -11,6 +12,8 @@ export interface Pin {
 	point: LngLat
 	kind: PinKind
 	label: string
+	/** A saved place's own glyph: its category's. */
+	icon?: IconName
 	/** How many a group stands for, and whose they are. */
 	count?: number
 	members?: string[]

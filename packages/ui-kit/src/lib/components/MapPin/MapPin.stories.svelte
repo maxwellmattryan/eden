@@ -36,6 +36,9 @@
 	}}
 />
 
+<!-- A saved place with its own glyph: what kind of place it is -->
+<Story name="With icon" args={{ icon: 'coffee' }} />
+
 <!-- One the Gardener found, in its green -->
 <Story name="Suggested" args={{ kind: 'suggested', label: meadowSuggestions[0]!.name }} />
 

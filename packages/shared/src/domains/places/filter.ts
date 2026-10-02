@@ -4,6 +4,7 @@
 // left out while it is on, since the page cannot say it is open.
 import { formatAddress } from '../../address/index.js'
 import { haversineKm, type LngLat } from '../../geo/index.js'
+import { readCategory } from './categories.js'
 import { isOpenAt } from './hours.js'
 import { FACETS, type Collection, type CustomVibe, type PlaceFilter, type SavedPlace } from './types.js'
 import { facetOf } from './vibes.js'
@@ -128,7 +129,7 @@ export function asFilter(value: unknown): PlaceFilter {
 	)
 	return {
 		vibes: strings(raw.vibes),
-		categories: strings(raw.categories),
+		categories: strings(raw.categories).map(readCategory),
 		prices,
 		...(typeof raw.maxKm === 'number' && raw.maxKm > 0 ? { maxKm: raw.maxKm } : {}),
 		...(typeof raw.collection === 'string' ? { collection: raw.collection } : {}),

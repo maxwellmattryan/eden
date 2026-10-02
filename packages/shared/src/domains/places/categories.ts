@@ -7,24 +7,28 @@ export const PLACE_CATEGORIES = [
 	'cafe',
 	'restaurant',
 	'bar',
+	'brewery',
 	'park',
 	'museum',
-	'music',
+	'show',
 	'shop',
 	'library',
+	'gym',
 	'venue',
 ] as const
 export type PlaceCategory = (typeof PLACE_CATEGORIES)[number]
 
 export const CATEGORY_GLYPHS: Readonly<Record<PlaceCategory, IconName>> = {
-	cafe: 'cup-soda',
-	restaurant: 'soup',
-	bar: 'moon',
+	cafe: 'coffee',
+	restaurant: 'utensils',
+	bar: 'martini',
+	brewery: 'beer',
 	park: 'tree-deciduous',
 	museum: 'palette',
-	music: 'ticket',
+	show: 'ticket',
 	shop: 'store',
 	library: 'book-open',
+	gym: 'dumbbell',
 	venue: 'map-pin',
 }
 
@@ -32,6 +36,11 @@ export const categoryKey = (category: string) => `domains.places.categories.${ca
 
 export function isCategory(value: unknown): value is PlaceCategory {
 	return typeof value === 'string' && (PLACE_CATEGORIES as readonly string[]).includes(value)
+}
+
+/** A category as it is kept now: `music` was the name of `show` before the two were told apart. */
+export function readCategory(category: string): string {
+	return category === 'music' ? 'show' : category
 }
 
 /** The glyph of a place's category; the plain pin for one with none, or with one Meadow does not know. */
@@ -52,7 +61,7 @@ const OSM: Readonly<Record<string, PlaceCategory>> = {
 	'amenity:pub': 'bar',
 	'amenity:biergarten': 'bar',
 	'amenity:nightclub': 'bar',
-	'craft:brewery': 'bar',
+	'craft:brewery': 'brewery',
 	'leisure:park': 'park',
 	'leisure:garden': 'park',
 	'leisure:nature_reserve': 'park',
@@ -61,10 +70,15 @@ const OSM: Readonly<Record<string, PlaceCategory>> = {
 	'tourism:museum': 'museum',
 	'tourism:gallery': 'museum',
 	'amenity:arts_centre': 'museum',
-	'amenity:theatre': 'music',
-	'amenity:music_venue': 'music',
-	'amenity:cinema': 'music',
+	'amenity:theatre': 'show',
+	'amenity:music_venue': 'show',
+	'amenity:cinema': 'show',
+	'shop:music': 'shop',
 	'amenity:library': 'library',
+	'leisure:fitness_centre': 'gym',
+	'leisure:sports_centre': 'gym',
+	'amenity:gym': 'gym',
+	'sport:climbing': 'gym',
 	'shop:books': 'shop',
 }
 
@@ -82,10 +96,13 @@ export function asCategory(value: unknown): PlaceCategory {
 	const word = typeof value === 'string' ? value.trim().toLowerCase() : ''
 	if (/coffee|caf[eé]|tea/.test(word)) return 'cafe'
 	if (/restaurant|food|diner|eatery|bakery|pizz|taco/.test(word)) return 'restaurant'
-	if (/bar|pub|brew|club|lounge|wine/.test(word)) return 'bar'
+	if (/brew|taproom/.test(word)) return 'brewery'
+	if (/gym|fitness|climbing|yoga|pilates/.test(word)) return 'gym'
+	if (/bar|pub|club|lounge|wine/.test(word)) return 'bar'
 	if (/park|garden|trail|beach|lake/.test(word)) return 'park'
 	if (/museum|gallery|art/.test(word)) return 'museum'
-	if (/music|theat|cinema|venue|concert/.test(word)) return 'music'
+	if (/record|vinyl/.test(word)) return 'shop'
+	if (/show|music|theat|cinema|movie|venue|concert/.test(word)) return 'show'
 	if (/librar/.test(word)) return 'library'
 	if (/shop|store|market|book/.test(word)) return 'shop'
 	return 'venue'

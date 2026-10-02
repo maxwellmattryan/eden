@@ -56,7 +56,9 @@
 	const allPins = $derived<Pin[]>([
 		{ id: 'home', point: meadow.originPin, kind: 'home', label: home.label },
 		...shown.flatMap((place): Pin[] =>
-			place.point ? [{ id: place.id, point: place.point, kind: 'saved', label: place.name }] : []
+			place.point
+				? [{ id: place.id, point: place.point, kind: 'saved', label: place.name, icon: categoryGlyph(place.category) }]
+				: []
 		),
 	])
 	const flat = $derived(

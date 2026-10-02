@@ -1,4 +1,5 @@
 <script module lang="ts">
+	import type { IconName } from '../../icons/icons.js'
 	import type { MapPinKind } from '../MapPin/MapPin.svelte'
 
 	/** A place on the ground, in degrees. */
@@ -14,6 +15,8 @@
 		label: string
 		/** How many places a group stands for. */
 		count?: number
+		/** The pin's own glyph in place of its kind's. */
+		icon?: IconName
 	}
 	/** Where a point falls in the layer, in its own layout pixels from the top left; null when it is not on the ground shown. */
 	export type MapProjection = (point: MapPoint) => { x: number; y: number } | null
@@ -86,6 +89,7 @@
 				kind={pin.kind}
 				label={pin.label}
 				count={pin.count}
+				icon={pin.icon}
 				selected={pin.id === selected}
 				onselect={() => onselect?.(pin.id)}
 			/>

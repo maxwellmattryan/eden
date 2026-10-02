@@ -129,7 +129,13 @@
 
 	const pins = $derived<MapPinData[]>([
 		{ id: 'home', point: meadowHome.point, kind: 'home', label: meadowHome.name },
-		...shown.map((item): MapPinData => ({ id: item.id, point: item.point, kind: 'saved', label: item.name })),
+		...shown.map((item): MapPinData => ({
+			id: item.id,
+			point: item.point,
+			kind: 'saved',
+			label: item.name,
+			icon: CATEGORY_GLYPHS[item.category],
+		})),
 		...found.map((item): MapPinData => ({ id: item.id, point: item.point, kind: 'suggested', label: item.name })),
 	])
 

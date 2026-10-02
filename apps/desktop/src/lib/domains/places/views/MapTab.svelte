@@ -112,7 +112,17 @@
 			label: meadow.area.kind === 'home' ? home.label : meadow.area.label,
 		},
 		...shown.flatMap((entry): Pin[] =>
-			entry.point ? [{ id: entry.id, point: entry.point, kind: 'saved', label: entry.name }] : []
+			entry.point
+				? [
+						{
+							id: entry.id,
+							point: entry.point,
+							kind: 'saved',
+							label: entry.name,
+							icon: categoryGlyph(entry.category),
+						},
+					]
+				: []
 		),
 		...found.flatMap((entry): Pin[] =>
 			entry.candidate.point

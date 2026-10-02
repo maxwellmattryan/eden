@@ -126,7 +126,7 @@ export function researchPrompt(
 	const area = input.area?.trim() || context.area
 	return [
 		`Find up to ${count} places in or near ${area} that fit this: ${discoveryBrief(input, context.custom)}.`,
-		'They are places to go: cafes, restaurants, bars, parks, museums, venues, shops, libraries. Look for ones that are open now as businesses or public places, not ones that have closed for good.',
+		'They are places to go: cafes, restaurants, bars, breweries, parks, museums, theatres and cinemas, shops, libraries, gyms. Look for ones that are open now as businesses or public places, not ones that have closed for good.',
 		'The context holds what the owner eats and avoids, where it is shared: when the place serves food or drink, prefer places that suit it, and say in the notes what a source says on it.',
 		context.exclude.length
 			? `The owner already has these saved, so leave them out: ${context.exclude.slice(0, 60).join('; ')}.`

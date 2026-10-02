@@ -997,11 +997,13 @@
 				"cafe": "Cafe",
 				"restaurant": "Restaurant",
 				"bar": "Bar",
+				"brewery": "Brewery",
 				"park": "Park",
 				"museum": "Museum",
-				"music": "Music and shows",
+				"show": "Show",
 				"shop": "Shop",
 				"library": "Library",
+				"gym": "Gym",
 				"venue": "Place"
 			},
 			"sources": {

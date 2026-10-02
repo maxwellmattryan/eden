@@ -4,7 +4,7 @@ status: draft
 summary: Meadow (places, listings and the map) as code: the map seam and its generated style, the sources that reach outside (discovery, listings, details, the geocoder), the two requests of a search, the details slots, import by paste, listings, outings and the weekly search, what goes into the egress ledger, the phone's read surfaces, how it is tested, what was never run, and the handoffs.
 read-this-if: You are touching the map, a map or detail source, the geocoder, discovery, import, listings or outings, Meadow's store or its views on either app, or adding a keyed provider for places.
 depends-on: [product/domains/places, engineering/domain-module, engineering/data-layer, engineering/gardener, engineering/signals]
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 ## Where it stands
@@ -40,7 +40,7 @@ D-128 to D-136 record the decisions and `product/domains/places.md` what Meadow 
 - **The worker.** Each app's `map.ts` imports `maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url` and the library's stylesheet, and passes the URL as `workerUrl`: under the app's own scheme the library cannot work the address out, and a worker from the app's origin is what the CSP allows. `createSurface` there is what a view calls.
 - **The style is generated** (`style.ts`, `edenMapStyle(palette, lang)`): a MapLibre style over the OpenMapTiles schema with ground, land use, parks, water, roads by class, buildings and labels, no points of interest and no sprite. Tiles come through the host's TileJSON (`TILEJSON`) and label glyphs from the same host (`GLYPHS`, Noto Sans); ideographs are drawn from the system's fonts (`localIdeographFontFamily`). Labels are `name:<lang>`, then `name:latin`, then `name`.
 - **The palette** (`palette.ts`) is thirteen colours mixed from ten tokens (`PALETTE_TOKENS`). `readMapPalette(el)` resolves each token where the element stands by painting one pixel on an `OffscreenCanvas`, since a token may be a `color-mix()`; `mapPalette` is the pure part. The desktop's Map tab reads it again on a theme or accent change and calls `setPalette`, which sets the whole style anew.
-- **Pins** are the kit's `MapPin` in a `PinLayer`, placed by `surface.project` and a `revision` the view bumps on `move`. `drawnPins` (`view.ts`) leaves out what is off the ground shown and, above sixty pins on screen, draws saved places that share a 48 px cell as one `group` pin; home, a suggestion and the picked pin always stand alone.
+- **Pins** are the kit's `MapPin` in a `PinLayer`, placed by `surface.project` and a `revision` the view bumps on `move`. A saved place's pin carries its category's glyph (`categoryGlyph`); one with no category keeps the plain pin. `drawnPins` (`view.ts`) leaves out what is off the ground shown and, above sixty pins on screen, draws saved places that share a 48 px cell as one `group` pin; home, a suggestion and the picked pin always stand alone.
 - **No map.** When the surface rejects, or the device is offline, the pins stand on plain ground by `flatProjection` over `flatFit` of their points, and the credit line says so. Saved places are still found.
 - **The page** (`views/MapTab.svelte`) follows D-129 and D-112: the detail is an `<aside>` over the map's far edge while the page is wide and the map at least 640 px, with `setPadding` keeping the picked pin clear of it, and a pushed view otherwise. Storybook never mounts a map: the mocks draw `StaticGround.svelte`.
 

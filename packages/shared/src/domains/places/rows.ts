@@ -3,6 +3,7 @@
 // change one and take one away, so the store and the sample data make the same rows.
 import { cleanAddress, readAddress, type Address } from '../../address/index.js'
 import { toUri, type BatchOp, type Entity, type PlaceInput, type PlacePatch, type PlaceRow } from '../../data/index.js'
+import { readCategory } from './categories.js'
 import {
 	MEADOW,
 	type Collection,
@@ -128,7 +129,7 @@ export function toSavedPlace(place: PlaceRow, profile?: Entity<PlaceProfilePaylo
 		...(profile ? { profileId: profile.id } : {}),
 		name: place.name,
 		...(has ? { point: { lng: place.lng as number, lat: place.lat as number } } : {}),
-		...(place.category ? { category: place.category } : {}),
+		...(place.category ? { category: readCategory(place.category) } : {}),
 		...(place.phone ? { phone: place.phone } : {}),
 		...(place.url ? { url: place.url } : {}),
 		vibes: Array.isArray(payload?.vibes) ? payload.vibes.filter((vibe) => typeof vibe === 'string') : [],

@@ -997,11 +997,13 @@
 				"cafe": "カフェ",
 				"restaurant": "レストラン",
 				"bar": "バー",
+				"brewery": "ブルワリー",
 				"park": "公園",
 				"museum": "美術館・博物館",
-				"music": "音楽・公演",
+				"show": "映画・公演",
 				"shop": "店",
 				"library": "図書館",
+				"gym": "ジム",
 				"venue": "場所"
 			},
 			"sources": {

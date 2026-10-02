@@ -1373,11 +1373,13 @@
 							"cafe",
 							"restaurant",
 							"bar",
+							"brewery",
 							"park",
 							"museum",
-							"music",
+							"show",
 							"shop",
 							"library",
+							"gym",
 							"venue"
 						]
 					},
