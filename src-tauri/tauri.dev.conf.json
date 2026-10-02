@@ -12,6 +12,16 @@
 		]
 	},
 	"app": {
-		"windows": [{ "title": "Eden [DEV]", "dragDropEnabled": false, "width": 1280, "height": 820, "minWidth": 960, "minHeight": 600, "resizable": true }]
+		"windows": [
+			{
+				"title": "Eden [DEV]",
+				"dragDropEnabled": false,
+				"width": 1280,
+				"height": 820,
+				"minWidth": 960,
+				"minHeight": 600,
+				"resizable": true
+			}
+		]
 	}
 }

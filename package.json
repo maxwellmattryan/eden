@@ -1,6 +1,6 @@
 {
 	"name": "eden",
-	"version": "0.1.0",
+	"version": "0.1.0-staging.1",
 	"private": true,
 	"description": "Eden, a personal digital garden. Apps in apps/* are composed from the packages in packages/*.",
 	"type": "module",
