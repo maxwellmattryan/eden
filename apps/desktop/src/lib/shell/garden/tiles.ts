@@ -1,7 +1,7 @@
 // What the app binds to the Garden tiles the shell declares for itself (`@eden/shared/manifest`, `shell.tiles`): the
 // daily line, neutral until Sanctuary provides it, and the quick log, which draws the first numeric log a domain
 // binds a readout for: none does until Vigor logs a weight, so it keeps its prompt. Today (the tasks substrate) keeps
-// its prompt too. The layout itself comes from `defaultLayout()`; edit mode will make it the owner's.
+// its prompt too. The layout is the owner's (`gardenLayout()` over `settings.gardenLayout`, D-155).
 import type { ShellTileId } from '@eden/shared/manifest'
 import type { WidgetBinding } from '$lib/domains'
 import { get } from 'svelte/store'

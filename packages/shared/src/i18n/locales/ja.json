@@ -105,6 +105,24 @@
 	},
 	"garden": {
 		"edit": "配置を編集",
+		"add": "タイルを追加",
+		"reset": "初期配置に戻す",
+		"removed": "「{title}」を外しました。",
+		"resetDone": "初期配置に戻しました。",
+		"moveEarlier": "前へ移動",
+		"moveLater": "後ろへ移動",
+		"size": "サイズ",
+		"remove": "外す",
+		"sizes": {
+			"s": "小",
+			"m": "ワイド",
+			"l": "大"
+		},
+		"sizesOr": "{first}または{second}",
+		"emptyLayout": {
+			"title": "ガーデンは空です",
+			"text": "タイルはすべてカタログにあります。置きたいものを追加してください。"
+		},
 		"quickNav": "クイックナビゲーション",
 		"activity": "アクティビティ",
 		"widgets": {
@@ -2015,6 +2033,18 @@
 				"mergeWith": "{0}を更新",
 				"footer": "{0} 件を作成、{1} 件を更新"
 			}
+		},
+		"widget": {
+			"move": "「{0}」を移動",
+			"options": "「{0}」のオプション",
+			"resize": "「{0}」のサイズを変更"
+		},
+		"widgetCatalog": {
+			"title": "タイルを追加",
+			"add": "追加",
+			"addNamed": "「{0}」を追加",
+			"added": "追加済み",
+			"done": "完了"
 		},
 		"dropzone": {
 			"drop": "ファイルをドロップ",

@@ -105,6 +105,24 @@
 	},
 	"garden": {
 		"edit": "Edit layout",
+		"add": "Add tile",
+		"reset": "Reset to default",
+		"removed": "{title} removed.",
+		"resetDone": "Layout reset to the default.",
+		"moveEarlier": "Move earlier",
+		"moveLater": "Move later",
+		"size": "Size",
+		"remove": "Remove",
+		"sizes": {
+			"s": "Small",
+			"m": "Wide",
+			"l": "Large"
+		},
+		"sizesOr": "{first} or {second}",
+		"emptyLayout": {
+			"title": "An empty Garden",
+			"text": "Every tile is in the catalog. Add the ones you want here."
+		},
 		"quickNav": "Quick navigation",
 		"activity": "Activity",
 		"widgets": {

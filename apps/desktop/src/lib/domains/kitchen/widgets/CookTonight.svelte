@@ -4,7 +4,7 @@
 	// no model asked: a recipe that names something the owner avoids is never on the tile.
 	import { cookTonight } from '@eden/shared/domains/kitchen'
 	import { t } from '@eden/shared/i18n'
-	import WidgetRows from '$lib/shell/WidgetRows.svelte'
+	import { WidgetRows } from '@eden/ui-kit'
 	import { forbidden } from '../safety.svelte'
 	import { kitchen } from '../store.svelte'
 

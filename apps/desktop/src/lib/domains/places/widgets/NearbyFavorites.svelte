@@ -1,6 +1,6 @@
 <script lang="ts">
 	// The nearby-favorites tile: the favourite places nearest the search area, each with how far it is.
-	import WidgetRows from '$lib/shell/WidgetRows.svelte'
+	import { WidgetRows } from '@eden/ui-kit'
 	import { distanceLabel, meadow } from '@eden/shared/domains/places'
 	import { settings } from '@eden/shared/settings'
 

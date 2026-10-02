@@ -1,7 +1,8 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
-	import { expect, fn } from 'storybook/test'
-	import { canvasOf } from '../../../storybook/play.js'
+	import { expect, fn, waitFor, within } from 'storybook/test'
+	import { canvasOf, hasCanvas } from '../../../storybook/play.js'
+	import type { MenuItem } from '../Menu/Menu.svelte'
 	import { domainGlyph } from '$lib/icons/domain-glyphs.js'
 	import Widget from './Widget.svelte'
 	import WidgetGrid from '../WidgetGrid/WidgetGrid.svelte'
@@ -26,6 +27,13 @@
 	const latest = String(weightSeries.at(-1))
 	const expiring = stock.filter((item) => item.expiry === '10-01' || item.expiry === '10-02')
 	const idle = ideas[3]!
+
+	const remove = fn()
+	const menu: MenuItem[] = [
+		{ id: 'earlier', label: 'Move earlier', icon: 'arrow-left' },
+		{ id: 'later', label: 'Move later', icon: 'arrow-right' },
+		{ id: 'remove', label: 'Remove', icon: 'trash', destructive: true, onselect: remove },
+	]
 
 	const { Story } = defineMeta({
 		title: 'Components/Garden/Widget',
@@ -122,12 +130,29 @@
 	{/snippet}
 </Story>
 
+<!-- Edit mode: the grip moves the tile with the arrow keys, the ⋯ button opens the tile's menu -->
 <Story
 	name="Editing"
-	args={{ editing: true, action: { label: 'Log weight', onclick: fn() } }}
-	play={async ({ canvasElement }) => {
+	parameters={{ platformFrame: 'inline' }}
+	args={{ editing: true, action: { label: 'Log weight', onclick: fn() }, onmove: fn(), menu }}
+	play={async ({ canvasElement, userEvent, args }) => {
 		const canvas = canvasOf(canvasElement)
-		await expect(canvas.getByRole('button', { name: `Move ${weight.label}` })).toBeVisible()
+		remove.mockClear()
+		const desktop = canvasElement.querySelector('.ed-canvas')?.closest('[data-platform]')
+		if (desktop?.getAttribute('data-platform') !== 'mobile') {
+			const grip = canvas.getByRole('button', { name: `Move ${weight.label}` })
+			grip.focus()
+			await userEvent.keyboard('{ArrowRight}')
+			await expect(args.onmove).toHaveBeenLastCalledWith(1)
+			await userEvent.keyboard('{ArrowUp}')
+			await expect(args.onmove).toHaveBeenLastCalledWith(-1)
+		} else {
+			await expect(canvas.queryByRole('button', { name: `Move ${weight.label}` })).toBeNull()
+		}
+		await userEvent.click(canvas.getByRole('button', { name: `${weight.label} options` }))
+		const item = await within(document.body).findByText('Remove')
+		await userEvent.click(item)
+		await waitFor(() => expect(remove).toHaveBeenCalledTimes(1))
 	}}
 >
 	{#snippet template(args)}
@@ -135,7 +160,55 @@
 			<Widget {...args}>
 				<Stat value={latest} unit={weight.unit} />
 			</Widget>
-			<Widget {...args} title={idle.title} icon={domainGlyph('toolbench')} domain={toolbench.name} />
+			<Widget {...args} title={idle.title} icon={domainGlyph('toolbench')} domain={toolbench.name} menu={undefined} />
+		</WidgetGrid>
+	{/snippet}
+</Story>
+
+<!-- A tile with more than one declared size carries a corner on desktop: dragged, or stepped with the arrow keys -->
+<Story
+	name="Editing with sizes"
+	parameters={{ platforms: ['desktop'] }}
+	args={{ editing: true, sizes: ['s', 'm'], onresize: fn(), onmove: fn(), menu }}
+	play={async ({ canvasElement, userEvent, args }) => {
+		if (!hasCanvas(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		const corner = canvas.getByRole('button', { name: `Resize ${weight.label}` })
+		corner.focus()
+		await userEvent.keyboard('{ArrowRight}')
+		await expect(args.onresize).toHaveBeenLastCalledWith('m')
+		await userEvent.keyboard('{ArrowLeft}')
+		await expect(args.onresize).toHaveBeenCalledTimes(1)
+	}}
+>
+	{#snippet template(args)}
+		<WidgetGrid>
+			<Widget {...args}>
+				<Stat value={latest} unit={weight.unit} />
+			</Widget>
+			<Widget {...args} title={idle.title} icon={domainGlyph('toolbench')} domain={toolbench.name} sizes={['s']} />
+		</WidgetGrid>
+	{/snippet}
+</Story>
+
+<!-- While a tile is dragged: the held one dims, and a bar marks the edge it would land on -->
+<Story
+	name="Drop mark"
+	parameters={{ platforms: ['desktop'] }}
+	args={{ editing: true, onmove: fn(), menu }}
+	play={async ({ canvasElement }) => {
+		if (!hasCanvas(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		await expect(canvas.getByRole('region', { name: idle.title })).toHaveAttribute('data-drop', 'before')
+	}}
+>
+	{#snippet template(args)}
+		<WidgetGrid>
+			<Widget {...args} dragging>
+				<Stat value={latest} unit={weight.unit} />
+			</Widget>
+			<Widget {...args} title={idle.title} icon={domainGlyph('toolbench')} domain={toolbench.name} drop="before" />
+			<Widget {...args} title="Sun and moon" icon={domainGlyph('weather')} domain={sky.name} />
 		</WidgetGrid>
 	{/snippet}
 </Story>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	// The active-projects tile: each project's name in mono, its next step beneath, its kind at the end.
-	import WidgetRows from '$lib/shell/WidgetRows.svelte'
+	import { WidgetRows } from '@eden/ui-kit'
 	import { toolbench } from '../store.svelte'
 
 	const rows = $derived(
