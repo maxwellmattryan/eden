@@ -74,8 +74,14 @@
 	/** The controls a click on the row must not toggle, and the overlays a right-click inside must leave alone. */
 	const CONTROLS = 'button, a, input, [role="menu"], dialog'
 	const OVERLAYS = '[role="menu"], dialog'
-	const inside = (target: EventTarget | null, selector: string) =>
-		target instanceof Element && !!target.closest(selector)
+	/**
+	 * Whether the event began in one of the row's own controls or overlays: a match between the target and the row,
+	 * never the row's own ancestors, so a list inside a sheet (a `<dialog>`) still picks and opens.
+	 */
+	function inside(target: EventTarget | null, selector: string, row: Element | undefined): boolean {
+		const hit = target instanceof Element ? target.closest(selector) : null
+		return !!hit && !!row && hit !== row && row.contains(hit)
+	}
 
 	/**
 	 * The mark's slide along the inline axis: its width and the row's gap before the next item open together over the
@@ -285,7 +291,7 @@
 	}
 
 	function onclick(e: MouseEvent) {
-		if (inside(e.target, CONTROLS)) return
+		if (inside(e.target, CONTROLS, root)) return
 		if (onextend && (e.shiftKey || e.metaKey || e.ctrlKey)) onextend(e.shiftKey ? 'range' : 'toggle')
 		else if (selecting) toggle()
 		// the second click of a double-click picks nothing again: the first one did
@@ -293,15 +299,15 @@
 	}
 	/** A Shift click extends the selection: it must not select the text between the two rows. */
 	function onmousedown(e: MouseEvent) {
-		if (onextend && e.shiftKey && !inside(e.target, CONTROLS)) e.preventDefault()
+		if (onextend && e.shiftKey && !inside(e.target, CONTROLS, root)) e.preventDefault()
 	}
 	function ondblclick(e: MouseEvent) {
 		// with no `onpick` the two clicks have opened the row already
-		if (selecting || !onpick || inside(e.target, CONTROLS)) return
+		if (selecting || !onpick || inside(e.target, CONTROLS, root)) return
 		onopen?.()
 	}
 	function oncontextmenu(e: MouseEvent) {
-		if (!menu.length || inside(e.target, OVERLAYS)) return
+		if (!menu.length || inside(e.target, OVERLAYS, root)) return
 		e.preventDefault()
 		openAt(e.clientX, e.clientY)
 	}

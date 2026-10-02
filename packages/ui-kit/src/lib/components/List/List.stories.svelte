@@ -10,6 +10,7 @@
 	import EmptyState from '../EmptyState/EmptyState.svelte'
 	import IconButton from '../IconButton/IconButton.svelte'
 	import type { MenuItem } from '../Menu/Menu.svelte'
+	import Sheet from '../Sheet/Sheet.svelte'
 	import List, { type ListRowData } from './List.svelte'
 
 	const strings = defaultStrings
@@ -504,6 +505,31 @@
 >
 	{#snippet template(args)}
 		<div class="col"><List {...args} count={swiping.length} rows={swiping} {leading} {trailing} /></div>
+	{/snippet}
+</Story>
+
+<!-- A list inside a sheet (the phone's settings drawer): a tap still opens the row. The row ignores clicks that start
+     in its own controls and overlays, never in the dialog that holds the whole list -->
+<Story
+	name="In a sheet"
+	parameters={{ platformFrame: 'inline' }}
+	args={{ selectable: false, onopen: fn() }}
+	play={async ({ args }) => {
+		const dialog = await waitFor(() => {
+			const open = document.querySelector('dialog[open]')
+			if (!(open instanceof HTMLDialogElement)) throw new Error('the sheet is not open yet')
+			return open
+		})
+		const rows = within(dialog).getAllByRole('row')
+		await userEvent.click(rows[1]!)
+		await expect(args.onopen).toHaveBeenCalledWith(bare[1])
+	}}
+>
+	{#snippet template(args)}
+		<Sheet open labelledby="in-a-sheet-title">
+			<h2 id="in-a-sheet-title">Fridge</h2>
+			<List {...args} headless labelledby="in-a-sheet-title" rows={bare} />
+		</Sheet>
 	{/snippet}
 </Story>
 

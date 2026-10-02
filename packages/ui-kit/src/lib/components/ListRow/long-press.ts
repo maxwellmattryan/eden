@@ -32,7 +32,9 @@ export function longPress(get: () => LongPressOptions): Attachment<HTMLElement> 
 		}
 		const onPointerDown = (e: PointerEvent) => {
 			if (e.pointerType === 'mouse' || !e.isPrimary) return
-			if (options.ignore && e.target instanceof Element && e.target.closest(options.ignore)) return
+			// a match between the target and the row: the row's own ancestors (a sheet holding the list) do not count
+			const hit = options.ignore && e.target instanceof Element ? e.target.closest(options.ignore) : null
+			if (hit && hit !== el && el.contains(hit)) return
 			clear()
 			fired = false
 			start = { x: e.clientX, y: e.clientY }
