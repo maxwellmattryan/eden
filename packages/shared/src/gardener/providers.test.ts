@@ -5,6 +5,7 @@ import {
 	ANTHROPIC,
 	ANTHROPIC_SEED,
 	effectiveProvider,
+	effortEdit,
 	gradeMapOf,
 	modelLookup,
 	priceRatio,
@@ -75,6 +76,29 @@ describe('the seed', () => {
 		const { provider } = effectiveProvider(ANTHROPIC_SEED, { models: [{ id: first.id, pricing: { search: 0.02 } }] })
 		expect(provider.serverTools).toEqual(ANTHROPIC_SEED.serverTools)
 		expect(provider.models[0]!.pricing).toMatchObject({ input: 1, search: 0.02 })
+	})
+
+	it('runs the models that reason at medium effort, and sends the light one none (D-146)', () => {
+		expect(ANTHROPIC_SEED.models.map((model) => model.effort)).toEqual([undefined, 'medium', 'medium', 'medium'])
+		expect(seeded('claude-haiku-4-5-20251001').efforts).toBeUndefined()
+		expect(seeded('claude-sonnet-5-5').efforts).toEqual(['low', 'medium', 'high', 'xhigh', 'max'])
+		const haiku = { ...seeded('claude-haiku-4-5-20251001'), effort: 'medium' }
+		expect(validateProvider({ ...ANTHROPIC_SEED, models: [haiku, ...ANTHROPIC_SEED.models.slice(1)] })).toEqual([
+			'anthropic: the model "claude-haiku-4-5-20251001" runs at the effort "medium", which it does not take',
+		])
+		// the owner's level is an edit over the seed, kept beside their other edits and gone where it says the same
+		const priced = { models: [{ id: 'claude-sonnet-5-5', pricing: { input: 3 } }] }
+		const low = effortEdit(ANTHROPIC_SEED, priced, 'claude-sonnet-5-5', 'low')
+		expect(low.models).toEqual([{ id: 'claude-sonnet-5-5', pricing: { input: 3 }, effort: 'low' }])
+		const { provider, refused } = effectiveProvider(ANTHROPIC_SEED, low)
+		expect(refused).toEqual([])
+		expect(provider.models[1]).toMatchObject({ effort: 'low', thinks: true, pricing: { input: 3 } })
+		expect(effortEdit(ANTHROPIC_SEED, low, 'claude-sonnet-5-5', 'medium')).toEqual(priced)
+		expect(effortEdit(ANTHROPIC_SEED, {}, 'claude-opus-5-5', 'medium').models).toEqual([])
+		// a level the model does not take is refused, and the seed's stands
+		const wrong = effectiveProvider(ANTHROPIC_SEED, { models: [{ id: 'claude-opus-5-5', effort: 'turbo' }] })
+		expect(wrong.refused).toHaveLength(1)
+		expect(wrong.provider.models[2]!.effort).toBe('medium')
 	})
 
 	it('maps Haiku, Sonnet and Opus to the three grades, and Fable to none', () => {

@@ -61,6 +61,7 @@ export {
 	ANTHROPIC,
 	ANTHROPIC_SEED,
 	effectiveProvider,
+	effortEdit,
 	gradeMapOf,
 	modelLookup,
 	priceRatio,

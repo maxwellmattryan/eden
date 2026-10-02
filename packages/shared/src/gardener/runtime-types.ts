@@ -24,6 +24,8 @@ export interface GardenerRequest {
 	tools: unknown[]
 	/** A JSON schema the reply is held to (the API's structured output), for a delegated request a handler parses. */
 	outputFormat?: unknown
+	/** The effort the model is asked to work at, as its provider names the level (D-146); left out for a model with none. */
+	effort?: string
 }
 
 export type GardenerEvent =

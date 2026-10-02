@@ -1,7 +1,8 @@
 <script lang="ts">
 	// Settings → Gardener (product/substrate/settings-utilities.md; docs/engineering/gardener.md): the key on this
 	// device, present or absent and never shown back; the provider's map from grade to model, edited over the seed,
-	// a dearer choice than the seed's saying by how much and asking first (`priceRatio`); the per-domain and per-tool
+	// a dearer choice than the seed's saying by how much and asking first (`priceRatio`), and beside each the effort
+	// its model works at, where the model takes one (D-146); the per-domain and per-tool
 	// overrides; the monthly cap and the per-request token cap; this month's spend; the development clamp; and the
 	// ways to the audit log and the tools page.
 	import { onMount } from 'svelte'
@@ -10,6 +11,7 @@
 	import { Button, ConfirmSheet, Field, InlineError, Menu, Notice, type MenuItem } from '@eden/ui-kit'
 	import {
 		ANTHROPIC_SEED,
+		effortEdit,
 		formatUsd,
 		GRADES,
 		priceRatio,
@@ -50,6 +52,13 @@
 
 	const modelItems = $derived<MenuItem[]>(
 		gardenerSetup.provider.models.map((model) => ({ id: model.id, label: model.id }))
+	)
+	const modelOf = (id: string) => gardenerSetup.provider.models.find((model) => model.id === id)
+	const effortName = (level: string) => $t(`settings.gardener.effort.levels.${level}`, { default: level })
+	const effortItems = $derived<MenuItem[]>(
+		menuFor?.id.startsWith('effort:')
+			? (modelOf(menuFor.id.slice(7))?.efforts ?? []).map((level) => ({ id: level, label: effortName(level) }))
+			: []
 	)
 	const overrideItems = $derived<MenuItem[]>([
 		{ id: '', label: $t('settings.gardener.overrides.none'), icon: 'x' },
@@ -108,6 +117,12 @@
 		await gardenerSetup.savePolicy({ edits })
 	}
 
+	/** The effort a model works at, whichever grades it runs: an edit over the seed, gone where it says the same. */
+	async function chooseEffort(modelId: string, effort: string) {
+		if (!modelOf(modelId)?.efforts?.includes(effort)) return
+		await gardenerSetup.savePolicy({ edits: effortEdit(ANTHROPIC_SEED, gardenerSetup.policy.edits, modelId, effort) })
+	}
+
 	async function chooseOverride(kind: 'tool' | 'domain', id: string, modelId: string) {
 		const ref: ModelRef | undefined = modelId ? { provider: gardenerSetup.provider.id, model: modelId } : undefined
 		const overrides = {
@@ -125,6 +140,7 @@
 		menuOpen = false
 		if (!target || item.id === undefined) return
 		if (target.id.startsWith('grade:')) void chooseGrade(target.id.slice(6) as ModelGrade, item.id)
+		else if (target.id.startsWith('effort:')) void chooseEffort(target.id.slice(7), item.id)
 		else if (target.id.startsWith('tool:')) void chooseOverride('tool', target.id.slice(5), item.id)
 		else if (target.id.startsWith('domain:')) void chooseOverride('domain', target.id.slice(7), item.id)
 	}
@@ -193,7 +209,8 @@
 	<dl class="grades">
 		{#each GRADES as grade (grade)}
 			<dt>{$t(`settings.gardener.grades.${grade}`)}</dt>
-			<dd>
+			{@const model = modelOf(gardenerSetup.provider.grades[grade])}
+			<dd class="row">
 				<Button
 					variant="secondary"
 					iconRight="chevron-down"
@@ -201,6 +218,18 @@
 					disabled={gardenerSetup.clamped}
 					onclick={(e) => openMenu(`grade:${grade}`, e)}
 				/>
+				{#if model?.efforts?.length}
+					<Button
+						variant="quiet"
+						iconRight="chevron-down"
+						label={model.effort
+							? $t('settings.gardener.effort.at', { values: { level: effortName(model.effort) } })
+							: $t('settings.gardener.effort.unset')}
+						onclick={(e) => openMenu(`effort:${model.id}`, e)}
+					/>
+				{:else}
+					<span class="quiet">{$t('settings.gardener.effort.none')}</span>
+				{/if}
 			</dd>
 		{/each}
 	</dl>
@@ -269,10 +298,16 @@
 </SettingsRow>
 
 <Menu
-	items={menuFor?.id.startsWith('grade:') ? modelItems : overrideItems}
+	items={menuFor?.id.startsWith('grade:')
+		? modelItems
+		: menuFor?.id.startsWith('effort:')
+			? effortItems
+			: overrideItems}
 	bind:open={menuOpen}
 	anchor={menuFor?.anchor}
-	label={$t('settings.gardener.grades.label')}
+	label={menuFor?.id.startsWith('effort:')
+		? $t('settings.gardener.effort.label')
+		: $t('settings.gardener.grades.label')}
 	onselect={pick}
 />
 
@@ -320,6 +355,7 @@
 	}
 	.grades dd {
 		margin: 0;
+		align-items: center;
 	}
 	.tool {
 		font: var(--ed-t-data-sm);

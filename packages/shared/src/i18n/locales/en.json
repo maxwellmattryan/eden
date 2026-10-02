@@ -1683,10 +1683,17 @@
 			},
 			"grades": {
 				"label": "Models by grade",
-				"help": "Which model runs each grade of work (D-74). Light parses and extracts, standard summarises and drafts, deep reasons and plans.",
+				"help": "Which model runs each grade of work (D-74). Light parses and extracts, standard summarises and drafts, deep reasons and plans. Beside each is the effort its model works at, where the model takes one (D-146): lower spends fewer tokens.",
 				"light": "Light",
 				"standard": "Standard",
 				"deep": "Deep"
+			},
+			"effort": {
+				"label": "Effort",
+				"at": "{level} effort",
+				"unset": "Provider’s default effort",
+				"none": "No effort setting",
+				"levels": { "low": "Low", "medium": "Medium", "high": "High", "xhigh": "Extra high", "max": "Max" }
 			},
 			"overrides": {
 				"label": "Overrides",

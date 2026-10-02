@@ -139,8 +139,8 @@ export function meadowExtras(data: MeadowData, vibeName: (id: string) => string 
 		}))
 	)
 	return [
-		{ path: 'places/places.csv', content: csv },
-		{ path: 'places/places.md', content: places },
-		{ path: 'places/collections.md', content: collections },
+		{ path: 'friendly/places.csv', content: csv },
+		{ path: 'friendly/places.md', content: places },
+		{ path: 'friendly/collections.md', content: collections },
 	]
 }

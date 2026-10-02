@@ -19,13 +19,16 @@ export const ANTHROPIC: ProviderId = 'anthropic'
 const EVERY_FLAG: readonly ModelFlag[] = ['tools', 'vision', 'search']
 /** What the provider charges for one web search: ten dollars a thousand (D-132), on top of the tokens. */
 const SEARCH_FEE = 0.01
+/** The effort levels the provider's reasoning models take, lowest first (`output_config.effort`). */
+const EFFORTS: readonly string[] = ['low', 'medium', 'high', 'xhigh', 'max']
 
 /**
  * Anthropic's models, from the provider's docs on 2026-09-30: dated ids wherever one exists, and the pricing per
  * million tokens. Fable is listed for the owner to choose and mapped to no grade: it costs two and a half times Opus.
  * No row prices a cache write: it is the five-minute one, the only kind the pack asks for, at a quarter over the
  * row's input price, so an input price the owner edits carries it along (D-116). Every row prices a web search,
- * which the provider charges for by the search (D-132).
+ * which the provider charges for by the search (D-132). The three that reason take an effort and are seeded at
+ * `medium` (D-146); the light model has no such dial and refuses the field, so its row lists no level.
  */
 export const ANTHROPIC_SEED: ProviderRow = {
 	id: ANTHROPIC,
@@ -42,6 +45,8 @@ export const ANTHROPIC_SEED: ProviderRow = {
 			contextTokens: 1_000_000,
 			pricing: { input: 2, output: 10, cacheRead: 0.2, search: SEARCH_FEE },
 			thinks: true,
+			efforts: EFFORTS,
+			effort: 'medium',
 		},
 		{
 			id: 'claude-opus-5-5',
@@ -49,6 +54,8 @@ export const ANTHROPIC_SEED: ProviderRow = {
 			contextTokens: 1_000_000,
 			pricing: { input: 4, output: 20, cacheRead: 0.2, search: SEARCH_FEE },
 			thinks: true,
+			efforts: EFFORTS,
+			effort: 'medium',
 		},
 		{
 			id: 'claude-fable-5-1',
@@ -56,6 +63,8 @@ export const ANTHROPIC_SEED: ProviderRow = {
 			contextTokens: 1_000_000,
 			pricing: { input: 10, output: 50, cacheRead: 0.25, search: SEARCH_FEE },
 			thinks: true,
+			efforts: EFFORTS,
+			effort: 'medium',
 		},
 	],
 	grades: { light: 'claude-haiku-4-5-20251001', standard: 'claude-sonnet-5-5', deep: 'claude-opus-5-5' },
@@ -111,6 +120,13 @@ function modelProblems(provider: ProviderId, row: ModelEdit): string[] {
 	const search = row.pricing?.search
 	if (search !== undefined && !(typeof search === 'number' && Number.isFinite(search) && search >= 0))
 		problems.push(`${what} costs ${JSON.stringify(search)} per search; a number, zero or more`)
+	// a row with no levels is sent no effort; one with levels may name the one it runs at
+	const efforts = row.efforts ?? []
+	if (!Array.isArray(efforts) || efforts.some((level) => typeof level !== 'string' || !level))
+		problems.push(`${what} lists effort levels that are not names`)
+	else if (new Set(efforts).size !== efforts.length) problems.push(`${what} lists an effort level twice`)
+	if (row.effort !== undefined && !efforts.includes(row.effort))
+		problems.push(`${what} runs at the effort ${JSON.stringify(row.effort)}, which it does not take`)
 	return problems
 }
 
@@ -157,6 +173,8 @@ export function effectiveProvider(
 					contextTokens: edit.contextTokens ?? listed.contextTokens,
 					pricing: { ...listed.pricing, ...edit.pricing },
 					...(listed.thinks ? { thinks: true } : {}),
+					...(listed.efforts ? { efforts: listed.efforts } : {}),
+					...((edit.effort ?? listed.effort) ? { effort: edit.effort ?? listed.effort } : {}),
 				}
 			: edit
 		const problems = modelProblems(seed.id, row)
@@ -175,6 +193,18 @@ export function effectiveProvider(
 		provider: { id: seed.id, models, grades, ...(seed.serverTools ? { serverTools: seed.serverTools } : {}) },
 		refused,
 	}
+}
+
+/**
+ * The owner's edits with one model set to run at an effort (D-146): the edit is dropped where it says what the seed
+ * says, so the overlay stays sparse.
+ */
+export function effortEdit(seed: ProviderRow, edits: ProviderEdits, model: string, effort: string): ProviderEdits {
+	const others = (edits.models ?? []).filter((edit) => edit.id !== model)
+	const { effort: _, ...rest } = (edits.models ?? []).find((edit) => edit.id === model) ?? { id: model }
+	const seeded = seed.models.find((row) => row.id === model)?.effort
+	const edit: ModelEdit = seeded === effort ? rest : { ...rest, effort }
+	return { ...edits, models: Object.keys(edit).length > 1 ? [...others, edit] : others }
 }
 
 /**

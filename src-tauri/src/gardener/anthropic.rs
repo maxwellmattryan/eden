@@ -1,7 +1,7 @@
 //! The Anthropic adapter (docs/engineering/gardener.md, "The provider call"; D-76): one streaming Messages request
 //! and the translation of its server-sent events into the Gardener's own. The request crosses as the frontend built
-//! it, with the API's names; nothing is added but `stream`, and `output_config` around a schema the reply is held to,
-//! and neither `thinking` nor `tool_choice` is ever sent. A tool the provider runs on its own side (web search,
+//! it, with the API's names; nothing is added but `stream`, and `output_config` around a schema the reply is held to
+//! and the effort the model is asked to work at (D-146), and neither `thinking` nor `tool_choice` is ever sent. A tool the provider runs on its own side (web search,
 //! D-132) is in `tools` like any other; what it did comes back as blocks of its own, which are handed over whole
 //! when they close, and the searches it made are counted in the closing usage.
 //!
@@ -39,7 +39,10 @@ pub fn body(request: &GardenerRequest) -> Value {
         body["tools"] = Value::Array(request.tools.clone());
     }
     if let Some(schema) = &request.output_format {
-        body["output_config"] = json!({ "format": { "type": "json_schema", "schema": schema } });
+        body["output_config"]["format"] = json!({ "type": "json_schema", "schema": schema });
+    }
+    if let Some(effort) = &request.effort {
+        body["output_config"]["effort"] = json!(effort);
     }
     body
 }
@@ -488,6 +491,7 @@ mod tests {
             messages: vec![json!({ "role": "user", "content": "Dinner?" })],
             tools: Vec::new(),
             output_format: None,
+            effort: None,
         }
     }
 
@@ -845,6 +849,17 @@ mod tests {
         assert_eq!(
             body(&request)["output_config"],
             json!({ "format": { "type": "json_schema", "schema": { "type": "object" } } })
+        );
+        request.effort = Some("medium".into());
+        assert_eq!(body(&request)["output_config"]["effort"], "medium");
+        assert_eq!(
+            body(&request)["output_config"]["format"]["type"],
+            "json_schema"
+        );
+        request.output_format = None;
+        assert_eq!(
+            body(&request)["output_config"],
+            json!({ "effort": "medium" })
         );
         request.tools = vec![json!({ "name": "kitchen_plan" })];
         assert_eq!(body(&request)["tools"][0]["name"], "kitchen_plan");

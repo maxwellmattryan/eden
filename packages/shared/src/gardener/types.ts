@@ -51,6 +51,13 @@ export interface ModelRow {
 	 * limit: a request to it is given room for both.
 	 */
 	thinks?: boolean
+	/**
+	 * The effort levels it takes, as the provider's API names them, lowest first (D-146). A model with none is sent
+	 * no effort: not every model of every provider has the dial, and one without it refuses the field.
+	 */
+	efforts?: readonly string[]
+	/** The level a request to it is sent at, one of `efforts`; the provider's own default when a row has none. */
+	effort?: string
 }
 
 export interface ProviderRow {
@@ -93,6 +100,8 @@ export interface ModelEdit {
 	contextTokens?: number
 	pricing?: Partial<Pricing>
 	thinks?: boolean
+	efforts?: readonly string[]
+	effort?: string
 }
 
 /** What a model lacks that a tool needs: one of its flags, or the context size. */

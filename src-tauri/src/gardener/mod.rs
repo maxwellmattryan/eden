@@ -32,6 +32,10 @@ pub struct GardenerRequest {
     /// A JSON schema the reply is held to: the API's structured output, for a request whose answer a handler parses.
     #[serde(default)]
     pub output_format: Option<Value>,
+    /// The effort the model is asked to work at, as the provider names the level (D-146); a model with no such dial
+    /// is sent none.
+    #[serde(default)]
+    pub effort: Option<String>,
 }
 
 /// What the stream is made of, as the frontend receives it.

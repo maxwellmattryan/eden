@@ -427,6 +427,7 @@ export class GardenerRuntime {
 					system: pack.system,
 					messages,
 					tools: pack.tools,
+					...(model.effort ? { effort: model.effort } : {}),
 				}
 				const outcome = await this.#stream(request, reply.id, counted)
 				usage = sum(usage, outcome.usage)
@@ -1004,6 +1005,7 @@ export class GardenerRuntime {
 			messages: pack.messages,
 			tools: [],
 			...(delegate.schema ? { outputFormat: delegate.schema } : {}),
+			...(model.effort ? { effort: model.effort } : {}),
 		}
 		const estimated: Usage = { tokensIn: inputTokens, tokensOut: 0, cacheRead: 0 }
 		unsettled.open({ ...audit, ...estimated, costUsd: estimateCost(estimated, model.pricing) })
@@ -1136,6 +1138,7 @@ export class GardenerRuntime {
 					...(location && Object.keys(location).length ? { user_location: { type: 'approximate', ...location } } : {}),
 				},
 			],
+			...(model.effort ? { effort: model.effort } : {}),
 		}
 		const estimated: Usage = { tokensIn: inputTokens, tokensOut: 0, cacheRead: 0 }
 		unsettled.open({ ...audit, ...estimated, costUsd: estimateCost(estimated, model.pricing) })

@@ -4,7 +4,7 @@ status: draft
 summary: The Gardener v0 as code: the key in the OS keychain, the Anthropic adapter in the crate and the events it streams, the context pack and its order, the scrub, the tool registry and the handlers an app binds, estimates and budgets, the audit log and the paged query over it, the usage rollup, the Gardener's page, threads as rows, the policy row, the development clamp to the light model, the browser fallback, and how it is tested.
 read-this-if: You are sending a request to a model, adding or changing a tool or its handler, touching the panel, the Gardener's page, the audit log, usage, budgets, the key, or a thread.
 depends-on: [product/substrate/ai.md, product/substrate/grants, engineering/domain-module, engineering/data-layer]
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 ## Where it stands
@@ -46,7 +46,7 @@ The Anthropic key is `anthropic-api-key`. Three commands touch the store (`set_s
 
 ## The request
 
-The webview builds the whole request and the crate adds only the key. `gardener_send(request, onEvent)` takes `{ id, model, maxTokens, system, messages, tools, outputFormat? }` (`tools` goes out as given, a tool the provider runs itself among them; `outputFormat` is a JSON schema the reply is held to, sent as the API's `output_config.format`; a delegated request's alone), records the egress (`anthropic`, the URL and the body's bytes; D-71) and POSTs to the Messages API with `stream: true`. The stream comes back over a Tauri channel as events:
+The webview builds the whole request and the crate adds only the key. `gardener_send(request, onEvent)` takes `{ id, model, maxTokens, system, messages, tools, outputFormat?, effort? }` (`tools` goes out as given, a tool the provider runs itself among them; `outputFormat` is a JSON schema the reply is held to, sent as the API's `output_config.format`; a delegated request's alone; `effort` is the level the model is asked to work at, sent as `output_config.effort`), records the egress (`anthropic`, the URL and the body's bytes; D-71) and POSTs to the Messages API with `stream: true`. The stream comes back over a Tauri channel as events:
 
 | event | carries |
 |---|---|
@@ -59,7 +59,7 @@ The webview builds the whole request and the crate adds only the key. `gardener_
 | `stop` | the reason (`end_turn`, `tool_use`, `max_tokens`, `refusal`, `cancelled`) and the refusal's category |
 | `error` | the provider's status and message, or a network failure mid-stream |
 
-`gardener_cancel(requestId)` aborts a stream. The adapter never sends `thinking` (the current models decide for themselves) nor `tool_choice` (a forced choice is refused by the current models). A model that reasons returns its reasoning as blocks, and the API wants them back unchanged while a request continues: the runtime keeps each `thinking` event in its place among the reply's blocks and sends it back with the tool results of that request, and keeps it nowhere else (never on the thread row, never in a later request). That reasoning counts toward `max_tokens`, so a model the seed marks `thinks` is given room for it on top: 4096 more for the conversation, 2048 more for a delegated request, and the estimate is made from the same figure. A model the owner adds carries no mark and gets none; a 400 is shown as the provider wrote it, which is how Fable's retention requirement reaches the owner. No key on this device is `gardener:no-key` before anything is sent.
+`gardener_cancel(requestId)` aborts a stream. The adapter never sends `thinking` (the current models decide for themselves) nor `tool_choice` (a forced choice is refused by the current models). A model that reasons returns its reasoning as blocks, and the API wants them back unchanged while a request continues: the runtime keeps each `thinking` event in its place among the reply's blocks and sends it back with the tool results of that request, and keeps it nowhere else (never on the thread row, never in a later request). That reasoning counts toward `max_tokens`, so a model the seed marks `thinks` is given room for it on top: 4096 more for the conversation, 2048 more for a delegated request, and the estimate is made from the same figure. A model the owner adds carries no mark and gets none; a 400 is shown as the provider wrote it, which is how Fable's retention requirement reaches the owner. Effort is a dial of the model's row (D-146): `efforts` lists the levels it takes as the provider names them, `effort` is the one every request to it is sent at (the conversation, a delegated request and a research request alike), and a row with no levels is sent none, since a model without the dial refuses the field. The seed runs the three models that reason at `medium` and lists no level for the light one; the owner's level is a `ProviderEdits` model edit (`effortEdit`), chosen beside the grade in Settings → Gardener, and one the model does not take is refused like any other edit. The room for reasoning is the same at every level. Changing a model's effort makes the provider's cache of a running conversation cold once. No key on this device is `gardener:no-key` before anything is sent.
 
 ## The loop
 
