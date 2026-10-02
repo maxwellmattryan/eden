@@ -4,7 +4,7 @@ status: draft
 summary: The domain manifest and the resource registry as code: the manifest.json a domain declares itself in, the builder that checks it and generates the registry for TypeScript and Rust, the bindings an app adds, the functions the shell composes itself with, model grades and the resolution of a tool to a model, where a domain's code lives, and how isolation is enforced.
 read-this-if: You are adding or changing a domain, a registry row, a widget, a quick action, an intent, a palette entry or a tool's grade, or anything in the shell that lists domains, or sending a request to a model.
 depends-on: [product/substrate/domain-manifest, product/substrate/registry, product/substrate/shell, engineering/app-scaffold, engineering/data-layer]
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 ## What this covers
@@ -47,7 +47,7 @@ All under `packages/shared/src/`, hand-edited and formatted by Prettier:
 | `resources` | consumed | `facts`, `entities`, `kinds`, each row an `id` and a `tier`; a kind names its `primitive` |
 | `reads` | consumed | the resources of other owners it consumes |
 | `widgets` | consumed | `id`, `sizes` (the default first), `default`, `reads`, and `planned` for a tile the domain's doc names and nobody has built |
-| `quickActions` | consumed | `id`, `label`, `icon` |
+| `quickActions` | consumed | `id`, `label`, `icon`, `kind` (`text`, `number`, `check`, or `launch`, which opens a surface and takes no value), `keyword` (the locale key of the word a one-liner names it by), and optionally `placeholder` (a locale key) and, on a number, `unit` (D-145) |
 | `intents` | consumed | each `<id>.<action>` (D-33) |
 | `palette` | consumed | `entries` that **run** a quick action or an intent, and `search`, the types of its own the palette searches. Going to the domain and to each tab is implied |
 | `export` | consumed | the types of its own in its export |
@@ -83,7 +83,7 @@ Each error names the file and the id.
 4. A read that is not in the registry, in `reads`, a widget, a tool or a shell tile; a read of another domain's resource that `reads` does not declare; an `export` or `palette.search` id the domain does not own.
 5. A read of a T3 resource, anywhere (D-14, D-31).
 6. An intent that is not `<id>.<action>`; a tool access outside `read`, `write-draft`, `write`.
-7. A widget id used twice, by domains or by the shell; a quick action or a tool id used twice in a domain; a sidebar order used twice in a group.
+7. A widget id used twice, by domains or by the shell; a quick action or a tool id used twice in a domain; a sidebar order used twice in a group. A quick action with no `kind` or one it does not know, with no `keyword`, with a `unit` when it is not a number, or with a `placeholder` when it is a launch; a palette entry that **log**s a launch.
 8. A default widget the Garden's default layout does not place, and a layout id nothing declares.
 9. A locale key missing from `en.json` or `ja.json`, for anything that is not planned; an icon the kit does not list.
 10. A planned field, and a field it does not know.
@@ -140,6 +140,10 @@ Each app has `src/lib/domains/manifest.ts` with `defineDomain(id, bindings)`, wh
 | `paletteIndex(declarations, shell)` | the **go** and **run** entries, and the types each domain lets the palette search | the command palette |
 | `quickActions(declarations)` | the Quick Log's entries | Quick Log |
 | `handlerOf(declarations, intent)` | the domain that handles an intent, or nothing when it is disabled | intent routing |
+
+Quick Log on desktop is `apps/desktop/src/lib/shell/quick-log.ts` (D-145): `quickLogEntries` makes the kit's tabs from the declarations and from the readouts a domain binds (`quickActionReadouts`), `saveQuickLog` runs a field's handler (`quickActionHandlers`) on the domain's loaded store and shows the undo toast, or runs a launch (`quickActionLaunchers`), and `quick-log-ui.svelte.ts` holds the one sheet, which `QuickLogHost.svelte` mounts. The parser of a one-liner is pure, in `@eden/shared/quick-log`.
+
+Handoff, for the palette (#23): the **log** verb is `logLine(line)` in `shell/quick-log.ts`, which parses "log grocery oat milk" against the actions' keywords, labels and, for a domain with one field, its name, and saves; it answers `false` when the line names nothing, which the palette should say. **run** on a `quick-action` target is `runQuickLog('<domain>.<action>')` in `shell/quick-log-ui.svelte.ts`: a launch opens its surface (Hearth's capture), a field opens the sheet on its tab. No manifest declares a `log` entry yet; one that does must name a field, never a launch.
 
 Handoff, for the palette (#23): Meadow declares the intent `places.open` and a `go` entry for it (`domains.places.open`), and nothing dispatches either yet. `paletteIndex` already answers the entry; running it is the palette's, through `handlerOf`.
 

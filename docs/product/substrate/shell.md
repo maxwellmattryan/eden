@@ -4,7 +4,7 @@ status: draft
 summary: The frame everything sits in: layout regions, the sidebar, the Garden dashboard and its widgets, the command palette, navigation history and the back affordance, the status bar, Quick Log surfaces, the notification center, mobile structure, keyboard model and global states.
 read-this-if: You are designing navigation, layout, the dashboard, or anything that appears on every screen.
 depends-on: [domain-manifest, tasks, signals-notifications]
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 ## Layout regions
@@ -39,7 +39,7 @@ The grade switch is the kit's `StatusBarGardener` with `grades` and `onchangegra
 
 ## Quick Log surfaces (D-12)
 
-The **+** button and floating button open the Quick Log sheet listing the enabled domains' quick actions. ⌘K's **log** verb parses a one-liner. The Today view shows a Quick Log strip. The Garden has a quick-log widget with a sparkline for numeric logs (weight). Every quick log is a `write` with undo and an activity-feed entry, never a confirm sheet.
+The **+** button and floating button open the Quick Log sheet listing the enabled domains' quick actions. ⌘K's **log** verb parses a one-liner. The Today view shows a Quick Log strip. The Garden has a quick-log widget with a sparkline for numeric logs (weight). Every quick log is a `write` with undo and an activity-feed entry, never a confirm sheet. Built on desktop (D-145): the **+**, the sheet under ⌘⇧L and Today's strip. Not built: the palette's **log** (issue 23, handed off in `engineering/domain-module.md`), the phone's floating button and sheet (issue 19, handed off in `domains/kitchen.md`), and a numeric log, so the Garden's widget keeps its prompt until Vigor logs a weight (issue 6, `domains/fitness.md`).
 
 ## Capture entry points (D-13)
 

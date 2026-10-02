@@ -31,6 +31,7 @@
 		"./dates": "./src/dates/index.ts",
 		"./recurrence": "./src/recurrence/index.ts",
 		"./tasks": "./src/tasks/index.ts",
+		"./quick-log": "./src/quick-log/index.ts",
 		"./shortcuts": "./src/shortcuts/index.ts",
 		"./navigation": "./src/navigation/index.ts",
 		"./weather": "./src/weather/index.ts",

@@ -61,11 +61,22 @@ export interface WidgetDeclaration {
 	empty: string
 }
 
+/** What a quick action is in the Quick Log sheet: a field of one of three kinds, or the way into a surface. */
+export type QuickActionKind = 'text' | 'number' | 'check' | 'launch'
+
 /** A Quick Log entry (D-12). */
 export interface QuickActionDeclaration {
 	id: string
 	label: string
 	icon: string
+	/** `launch` opens a surface of the domain's own and takes no value (Hearth's capture, D-13). */
+	kind: QuickActionKind
+	/** The locale key of the word a one-liner names the action by: "grocery" in "log grocery oat milk". */
+	keyword: string
+	/** The locale key of the field's placeholder. */
+	placeholder?: string
+	/** A number's unit, as written beside the field. */
+	unit?: string
 }
 
 /**

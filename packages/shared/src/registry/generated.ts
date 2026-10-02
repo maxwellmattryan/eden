@@ -1221,12 +1221,17 @@ export const DECLARATIONS = {
 			{
 				"id": "capture-haul",
 				"label": "domains.kitchen.capture.action",
-				"icon": "camera"
+				"icon": "camera",
+				"kind": "launch",
+				"keyword": "domains.kitchen.capture.keyword"
 			},
 			{
 				"id": "add-to-grocery",
 				"label": "domains.kitchen.grocery.add",
-				"icon": "plus"
+				"icon": "plus",
+				"kind": "text",
+				"keyword": "domains.kitchen.grocery.keyword",
+				"placeholder": "domains.kitchen.grocery.addPlaceholder"
 			}
 		],
 		"captureSources": [
@@ -1570,7 +1575,10 @@ export const DECLARATIONS = {
 			{
 				"id": "capture-idea",
 				"label": "domains.toolbench.ideas.capture",
-				"icon": "lightbulb"
+				"icon": "lightbulb",
+				"kind": "text",
+				"keyword": "domains.toolbench.ideas.keyword",
+				"placeholder": "domains.toolbench.ideas.addPlaceholder"
 			}
 		],
 		"captureSources": [],

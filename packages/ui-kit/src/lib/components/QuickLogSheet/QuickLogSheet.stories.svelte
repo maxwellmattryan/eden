@@ -7,10 +7,18 @@
 	import Button from '../Button/Button.svelte'
 	import { ideas, quickLogs } from '../../../stories/sample-data.js'
 
-	// The three sample logs with their tab glyphs: weight (number), the supplement dose (check), a note (text).
+	// The sample logs with their tab glyphs: weight (number), the supplement dose (check), a note (text), and the
+	// haul (launch).
 	const weight: QuickLog = { ...quickLogs[0]!, icon: 'leaf' }
 	const supplement: QuickLog = { ...quickLogs[1]!, icon: 'pill' }
 	const note: QuickLog = { ...quickLogs[2]!, icon: 'pencil', helper: 'Goes to Toolbench as an idea.' }
+	const haul: QuickLog = {
+		id: 'haul',
+		label: 'Capture a haul',
+		icon: 'camera',
+		kind: 'launch',
+		helper: 'Photos and receipts, read into stock.',
+	}
 	const logs = [weight, supplement, note]
 	const idea = ideas[3].title
 	const trigger = 'Open Quick Log'
@@ -86,6 +94,21 @@
 		await expect(canvas.getByRole('button', { name: option })).toHaveAttribute('aria-pressed', 'true')
 		await userEvent.click(canvas.getByRole('button', { name: 'Took it' }))
 		await expect(args.onsave).toHaveBeenCalledWith(supplement, option)
+		await waitFor(() => expect(dialog).not.toBeVisible())
+	}}
+/>
+
+<!-- No field: the button hands the caller the launch, and the sheet closes for what it opens -->
+<Story
+	name="Launch"
+	args={{ logs: [haul], onsave: fn() }}
+	{template}
+	play={async ({ canvasElement, args }) => {
+		const canvas = canvasOf(canvasElement)
+		await userEvent.click(canvas.getByRole('button', { name: trigger }))
+		const dialog = await canvas.findByRole('dialog', { name: title })
+		await userEvent.click(canvas.getByRole('button', { name: 'Open' }))
+		await expect(args.onsave).toHaveBeenCalledWith(haul, '')
 		await waitFor(() => expect(dialog).not.toBeVisible())
 	}}
 />

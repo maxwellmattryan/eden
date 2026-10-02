@@ -1,9 +1,12 @@
 <script module lang="ts">
 	import type { IconName } from '../../icons/icons.js'
 
-	export type QuickLogKind = 'number' | 'text' | 'check'
+	export type QuickLogKind = 'number' | 'text' | 'check' | 'launch'
 
-	/** One quick action: a numeric log with a unit and a trend, a one-line text, or a check with options. */
+	/**
+	 * One quick action: a numeric log with a unit and a trend, a one-line text, a check with options, or a launch,
+	 * which has no field and opens a surface of the caller's (the Capture sheet, D-13).
+	 */
 	export interface QuickLog {
 		id: string
 		/** The tab and the field's label. */
@@ -14,7 +17,7 @@
 		/** number: the unit, as a mono chip inside the field. */
 		unit?: string
 		placeholder?: string
-		/** text: one line beneath the field; "Enter to save" when omitted. */
+		/** text: one line beneath the field; "Enter to save" when omitted. launch: the sentence that says what opens. */
 		helper?: string
 		/** check: the options, as selectable chips. A single option starts selected. */
 		options?: string[]
@@ -41,6 +44,7 @@
 	// numeric log, and Enter to save. With more than one log the logs are tabs across the top. Each tab keeps its own
 	// draft, keyed by the log's id, so switching away and back loses nothing; a save clears that draft and, unless the
 	// panel is embedded (the status bar's popover), closes the sheet. The caller writes with undo and shows the toast.
+	// A launch saves nothing: its button calls `onsave` with an empty value and the caller opens what it names.
 	import type { HTMLAttributes } from 'svelte/elements'
 	import { useStrings } from '../../i18n/context.js'
 	import Button from '../Button/Button.svelte'
@@ -80,7 +84,7 @@
 	// oninput writes it, so a tab switch simply reads another key.
 	let drafts = $state<Record<string, string>>({})
 	const value = $derived(log ? (drafts[log.id] ?? initialValue(log)) : '')
-	const canSave = $derived(value.trim().length > 0)
+	const canSave = $derived(log?.kind === 'launch' || value.trim().length > 0)
 	const labelId = `${uid}-label`
 
 	function setDraft(next: string) {
@@ -137,6 +141,11 @@
 					oninput={input}
 					onkeydown={keydown}
 				/>
+			{:else if log.kind === 'launch'}
+				<div class="ed-quicklog-check">
+					<span class="ed-quicklog-label">{log.label}</span>
+					{#if log.helper}<p class="ed-quicklog-last">{log.helper}</p>{/if}
+				</div>
 			{:else}
 				<div class="ed-quicklog-check" role="group" aria-labelledby={labelId}>
 					<span class="ed-quicklog-label" id={labelId}>{log.label}</span>
@@ -159,7 +168,7 @@
 
 {#snippet actions()}
 	<Button
-		label={log?.kind === 'check' ? s.quickLog.tookIt : s.save}
+		label={log?.kind === 'check' ? s.quickLog.tookIt : log?.kind === 'launch' ? s.quickLog.open : s.save}
 		variant="primary"
 		disabled={!canSave}
 		onclick={save}

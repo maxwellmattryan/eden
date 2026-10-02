@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { build, parseRegistryDoc } from './core.mjs'
 
 const messages = {
-	domains: { kitchen: { name: 'Hearth', subtitle: 'Food', tabs: { stock: 'Stock' }, add: 'Add' } },
+	domains: { kitchen: { name: 'Hearth', subtitle: 'Food', tabs: { stock: 'Stock' }, add: 'Add', word: 'Stock' } },
 	garden: {
 		widgets: { expiringSoon: 'Expiring soon', today: 'Today' },
 		empty: { expiringSoon: 'Nothing expiring.', today: 'Nothing due.' },
@@ -28,7 +28,9 @@ const manifest = () => ({
 	},
 	reads: ['favorite-supplement'],
 	widgets: [{ id: 'expiring-soon', sizes: ['s', 'm'], default: true, reads: ['stock-item'] }],
-	quickActions: [{ id: 'add-stock', label: 'domains.kitchen.add', icon: 'plus' }],
+	quickActions: [
+		{ id: 'add-stock', label: 'domains.kitchen.add', icon: 'plus', kind: 'text', keyword: 'domains.kitchen.word' },
+	],
 	tools: [{ id: 'suggest', access: 'read', reads: ['stock-item', 'favorite-supplement', 'task'] }],
 	signals: ['stock.low'],
 	intents: ['kitchen.add-to-grocery'],
@@ -243,6 +245,33 @@ describe('build', () => {
 		})
 		expect(errors).toContainEqual(expect.stringMatching(/the intent "toolbench\.open-idea" is not "kitchen\.<action>"/))
 		expect(errors).toContainEqual(expect.stringMatching(/"export" names "task", which the domain does not own/))
+	})
+
+	it('refuses a quick action of no kind, without a keyword, or with what its kind does not have', () => {
+		const action = (given) => kitchen(given).quickActions[0]
+		expect(errorsOf((given) => delete action(given).kind)).toContainEqual(
+			expect.stringMatching(/the quick action "add-stock" has the kind undefined; one of text, number, check, launch/)
+		)
+		expect(errorsOf((given) => delete action(given).keyword)).toContainEqual(
+			expect.stringMatching(/the quick action "add-stock"'s keyword: undefined is not a locale key/)
+		)
+		expect(errorsOf((given) => (action(given).unit = 'kg'))).toContainEqual(
+			expect.stringMatching(/has a unit, which only a number has/)
+		)
+		expect(
+			errorsOf((given) => Object.assign(action(given), { kind: 'launch', placeholder: 'domains.kitchen.add' }))
+		).toContainEqual(expect.stringMatching(/has a placeholder, and a launch has no field/))
+		expect(errorsOf((given) => Object.assign(action(given), { kind: 'number', unit: 'kg' }))).toEqual([])
+	})
+
+	it('refuses a palette entry that logs a launch', () => {
+		const errors = errorsOf((given) => {
+			kitchen(given).quickActions[0].kind = 'launch'
+			kitchen(given).palette.entries = [{ verb: 'log', quickAction: 'add-stock' }]
+		})
+		expect(errors).toEqual([
+			'kitchen/manifest.json: a palette entry logs the quick action "add-stock", which is a launch and takes no value',
+		])
 	})
 
 	it('refuses a planned field and a field it does not know', () => {

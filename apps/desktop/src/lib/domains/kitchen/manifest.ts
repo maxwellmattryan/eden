@@ -15,6 +15,7 @@ import { resolve } from '$app/paths'
 import { t } from '@eden/shared/i18n'
 import { declarationOf, type TabId } from '@eden/shared/manifest'
 import { defineDomain } from '../manifest.js'
+import { capture } from './capture.svelte.js'
 import { kitchen } from './store.svelte.js'
 import { kitchenCommitDraft, kitchenOpenDraft, kitchenQuickActions, kitchenTools } from './tools.js'
 import HaulCapture from './views/HaulCapture.svelte'
@@ -72,6 +73,7 @@ export const kitchenManifest = defineDomain('kitchen', {
 	pack: { [KITCHEN.store]: storeForPack },
 	labels: { [KITCHEN.list]: listLabel },
 	quickActionHandlers: kitchenQuickActions,
+	quickActionLaunchers: { 'capture-haul': () => capture.start() },
 	commitDraft: kitchenCommitDraft,
 	openDraft: (card, settle) => kitchenOpenDraft(card, settle, { recipes: openRecipes }),
 	overlay: HaulCapture,

@@ -24,6 +24,8 @@ const CAPTURE_SOURCES = ['photo', 'receipt', 'barcode', 'share-sheet']
 const DEVICE_CAPABILITIES = ['camera', 'location-precise', 'os-notifications', 'healthkit']
 const CHANNELS = ['in-app', 'os']
 const VERBS = ['go', 'create', 'ask', 'log', 'run']
+/** What a quick action is in the Quick Log sheet (D-12): a field of one of three kinds, or the way into a surface. */
+const QUICK_ACTION_KINDS = ['text', 'number', 'check', 'launch']
 const SIDEBAR_GROUPS = ['shell', 'domains']
 
 /** The fields a manifest has today, and the ones the manifest doc names that no Phase 1 domain consumes. */
@@ -351,9 +353,26 @@ export function build(sources) {
 			else if (quickActions.some((other) => other.id === action.id))
 				fail(file, `the quick action "${action.id}" is declared twice`)
 			else {
-				localeKey(file, `the quick action "${action.id}"`, action.label)
-				icon(file, `the quick action "${action.id}"`, action.icon)
-				quickActions.push({ id: action.id, label: action.label, icon: action.icon })
+				const what = `the quick action "${action.id}"`
+				localeKey(file, what, action.label)
+				icon(file, what, action.icon)
+				if (!QUICK_ACTION_KINDS.includes(action.kind))
+					fail(file, `${what} has the kind ${JSON.stringify(action.kind)}; one of ${QUICK_ACTION_KINDS.join(', ')}`)
+				localeKey(file, `${what}'s keyword`, action.keyword)
+				if (action.placeholder !== undefined) localeKey(file, `${what}'s placeholder`, action.placeholder)
+				if (action.unit !== undefined && (action.kind !== 'number' || typeof action.unit !== 'string' || !action.unit))
+					fail(file, `${what} has a unit, which only a number has, as a word`)
+				if (action.kind === 'launch' && action.placeholder !== undefined)
+					fail(file, `${what} has a placeholder, and a launch has no field`)
+				quickActions.push({
+					id: action.id,
+					label: action.label,
+					icon: action.icon,
+					kind: action.kind,
+					keyword: action.keyword,
+					...(action.placeholder !== undefined ? { placeholder: action.placeholder } : {}),
+					...(action.unit !== undefined ? { unit: action.unit } : {}),
+				})
 			}
 		}
 
@@ -487,6 +506,8 @@ export function build(sources) {
 				const action = quickActions.find((other) => other.id === entry.quickAction)
 				if (!action)
 					fail(file, `a palette entry names the quick action "${entry.quickAction}", which the domain does not declare`)
+				else if (entry.verb === 'log' && action.kind === 'launch')
+					fail(file, `a palette entry logs the quick action "${action.id}", which is a launch and takes no value`)
 				else
 					entries.push({
 						id: `${domain}.${action.id}`,

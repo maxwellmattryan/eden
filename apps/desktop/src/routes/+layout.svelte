@@ -45,6 +45,9 @@
 	import ChangeHomeSheet from '$lib/shell/home/ChangeHomeSheet.svelte'
 	import { homeUi } from '$lib/shell/home/home-ui.svelte'
 	import { settingsUi } from '$lib/settings/settings-ui.svelte'
+	import QuickLogHost from '$lib/shell/QuickLogHost.svelte'
+	import { quickLogEntries, saveQuickLog } from '$lib/shell/quick-log'
+	import { quickLogUi } from '$lib/shell/quick-log-ui.svelte'
 	import ResizeHandle from '$lib/shell/ResizeHandle.svelte'
 	import GardenerDock from '$lib/shell/gardener/GardenerDock.svelte'
 	import { gardenerUi } from '$lib/shell/gardener/panel-ui.svelte'
@@ -287,9 +290,20 @@
 			: undefined
 	)
 
-	// ⌘, opens Settings; ⌘G the Gardener; ⌘B collapses the sidebar; ⌘1 to ⌘9 go to the sidebar positions (shell.md, keyboard model).
+	/** The status bar's + and the sheet show the same entries: the enabled domains' quick actions (D-12). */
+	const quickLogs = $derived(quickLogEntries($t))
+
+	// ⌘, opens Settings; ⌘G the Gardener; ⌘B collapses the sidebar; ⌘⇧L opens Quick Log; ⌘1 to ⌘9 go to the sidebar
+	// positions (shell.md, keyboard model).
 	function onkeydown(e: KeyboardEvent) {
-		if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return
+		if (!(e.metaKey || e.ctrlKey) || e.altKey) return
+		if (e.shiftKey) {
+			if (e.key === 'l' || e.key === 'L') {
+				e.preventDefault()
+				quickLogUi.show()
+			}
+			return
+		}
 		if (e.key === ',') {
 			e.preventDefault()
 			settingsUi.show()
@@ -406,12 +420,14 @@
 			gardener={gardenerChip}
 			notice={clampNotice}
 			inbox={notices}
-			logs={[]}
+			logs={quickLogs}
+			onlog={(log, value) => void saveQuickLog(log.id, value)}
 			oninboxclose={() => void inbox.markRead()}
 		/>
 	</div>
 	<ToastHost />
 	<SettingsSheet />
+	<QuickLogHost />
 	{#key homeUi.opened}
 		{#if homeUi.opened}<ChangeHomeSheet />{/if}
 	{/key}

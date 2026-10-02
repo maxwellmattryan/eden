@@ -243,6 +243,8 @@ export interface UiStrings {
 		title: string
 		quickActions: string
 		tookIt: string
+		/** The primary button of a launch, which opens a surface and saves nothing. */
+		open: string
 		last: (value: string, when: string) => string
 		/** The sparkline's legend. */
 		series: string
@@ -536,6 +538,7 @@ export const defaultStrings: UiStrings = {
 		title: 'Quick Log',
 		quickActions: 'Quick actions',
 		tookIt: 'Took it',
+		open: 'Open',
 		last: (value, when) => `Last ${value}, ${when}`,
 		series: 'Recent values',
 	},

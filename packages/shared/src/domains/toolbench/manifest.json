@@ -27,7 +27,16 @@
 		{ "id": "recent-renders", "sizes": ["m"], "reads": ["sketch", "render"], "planned": true },
 		{ "id": "lab-status", "sizes": ["s"], "reads": ["device"], "planned": true }
 	],
-	"quickActions": [{ "id": "capture-idea", "label": "domains.toolbench.ideas.capture", "icon": "lightbulb" }],
+	"quickActions": [
+		{
+			"id": "capture-idea",
+			"label": "domains.toolbench.ideas.capture",
+			"icon": "lightbulb",
+			"kind": "text",
+			"keyword": "domains.toolbench.ideas.keyword",
+			"placeholder": "domains.toolbench.ideas.addPlaceholder"
+		}
+	],
 	"captureSources": [],
 	"tools": [
 		{

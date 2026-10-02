@@ -4,7 +4,7 @@ status: draft
 summary: Everything settled (D-n) and everything open (OQ-n), with ids the other docs cite. Entries are never deleted; a superseded decision stays with a note.
 read-this-if: You are about to make a design choice, or a doc cites an id you need to resolve.
 depends-on: []
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 ## How to use this doc
@@ -160,6 +160,7 @@ Cite ids; never restate. To settle an open question, add a `D-n` entry and mark 
 | D-142 | The exact home stays on the device, and Sky keeps its key (amends the home handoff of D-85). The home pin and the distances from home use the exact point; the map opens on the rounded one and everything sent is rounded, as before (D-60). Sky's mirrors stay keyed by the home's rounded coordinates, since a forecast is for that point: a home moved within it keeps its rows, one moved out of it is fetched anew. They take neither the Place's id nor an `at` link. |
 | D-143 | Changing home is one sheet with three ways in: the home pin in Meadow (its card), Sky's location menu and Settings > General. The sheet is the shell's: a name, the address form, Find, and a map whose click moves the pin; Save is one write with one undo, and the forecast, the distances and `home-area` follow it. Sky's search by city name (Open-Meteo Geocoding) is retired: it could only put home at a town's centre. The phone has no way to change home yet (OQ-25). |
 | D-144 | A place's picture is chosen as D-110 chooses a recipe's (extends D-110 to Meadow, within D-135). The place's form carries the same control: one button whose menu is From a file and From a link, the link's panel on the button, and a picture file dropped on the form or pasted while it is open. A link is the picture's own address or the page it is on, fetched by the crate as an address the owner typed (D-135) and counted under `web-image` and `web-page`; the link is not kept, only the picture. On a saved place it is its own write with its own undo; on the blank form it waits and is written with the place (D-133). The control and the link's fetch are shared code, not Hearth's: `PictureInput` and `PictureDrop` in the desktop app's components, `linkedSizedPicture` in the shared package. A grocer's product link still means its picture only in Hearth (D-91). |
+| D-145 | A quick action says what it is (carries out D-12, and D-13's way into Quick Log). Its manifest entry has a `kind`: `text`, `number` or `check`, which are a field in the Quick Log sheet, or `launch`, which has no field and opens a surface of its domain's own. Capture is a launch: Hearth's `capture-haul` opens the capture sheet from the Quick Log sheet, the status bar's **+**, Today's strip and the palette's **run**, so the verification sheet stays the only place a capture is committed. An entry also has a `keyword`, the word a one-liner names it by ("log grocery oat milk"), an optional `placeholder`, and a `unit` on a number. A field's value goes to the handler the app binds, which writes with an undo and records the feed's line; the last value and the recent ones of a number come from a readout the domain binds, never from the manifest. The sheet's tab is the keyword. An action the app has bound nothing to is offered nowhere. |
 
 ## Open questions
 

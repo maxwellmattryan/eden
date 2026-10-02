@@ -29,6 +29,7 @@ export type {
 	DomainRoute,
 	QuickAction,
 	QuickActionHandler,
+	QuickLogReadout,
 	WidgetBinding,
 	WidgetDeclaration,
 } from './manifest.js'

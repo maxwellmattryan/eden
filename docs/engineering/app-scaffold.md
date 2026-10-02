@@ -4,7 +4,7 @@ status: draft
 summary: The two apps and the crate they share: the workspace layout, what each package owns, the platform features, the commands, the domain module on each side, where its data lives, the pre-paint mechanism, and the placeholder identifier.
 read-this-if: You are building anything under apps/*, packages/shared or src-tauri, or wiring a domain into the shell.
 depends-on: [engineering/ui-kit, product/substrate/shell, product/substrate/settings-utilities]
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 ## Layout
@@ -81,7 +81,7 @@ A desktop domain module is laid out as:
 | `views/` | the page and its tabs, ported from the approved mockup |
 | `widgets/` | the Garden tile bodies, on `src/lib/shell/WidgetRows.svelte` |
 
-The Garden and the activity feed are the shell's, in `src/lib/shell/garden/` and `src/lib/shell/feed.svelte.ts`: every folder under `domains/` is a domain, and a domain never imports another.
+The Garden and the activity feed are the shell's, in `src/lib/shell/garden/` and `src/lib/shell/feed.svelte.ts`, and so is Quick Log, in `src/lib/shell/quick-log.ts` (`engineering/domain-module.md`): every folder under `domains/` is a domain, and a domain never imports another.
 
 **Narrow pages (D-112).** The desktop shell's `<main>` is a size container named `page`; a view lays itself out for a narrow column inside `@container page (max-width: 48rem)`, each use marked `/* narrow page */` since a container condition cannot read a custom property. The shell tightens `--ed-gutter` there for every page at once. A pushed view is CSS: the view puts `body-open` on its body while a thing is picked, the narrow rule hides the list or the detail accordingly, and a `BackButton` that only a narrow page renders clears the pick; `showPushed` (`apps/desktop/src/lib/shell/pushed.ts`) brings that arrow into view after a pick. A sheet opened from a page is still inside the container in the DOM, so a narrow rule must not reach a sheet's own layout. Handoff: the mobile shell's `<main>` is not yet a `page` container; when the mobile domain views are built from these, make it one so they get the narrow layouts. Meadow's phone views did not wait on it: they are the phone's own (`apps/mobile/src/lib/domains/places/views/`), laid out for the phone and not the desktop's views made narrow.
 

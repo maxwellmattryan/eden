@@ -301,6 +301,7 @@
 			},
 			"capture": {
 				"action": "買い物を撮る",
+				"keyword": "取り込み",
 				"about": "最大{cost}",
 				"stop": "中止",
 				"pastedText": "貼り付けたテキスト",
@@ -406,6 +407,7 @@
 			},
 			"grocery": {
 				"add": "追加",
+				"keyword": "買い物リスト",
 				"addPlaceholder": "品目を追加",
 				"buyAgain": "また買う",
 				"buyAgainNone": "また買うものはありません。",
@@ -650,6 +652,7 @@
 			"saveFailed": "変更を保存できませんでした。",
 			"ideas": {
 				"capture": "アイデアを記録",
+				"keyword": "アイデア",
 				"addPlaceholder": "アイデアを記録",
 				"list": "アイデア",
 				"status": {
@@ -1377,6 +1380,11 @@
 			"back": "戻る",
 			"single": "プロフィールにひとつだけ。既にあるものを開きます。"
 		}
+	},
+	"quickLog": {
+		"logged": "{value}を記録しました。",
+		"failed": "保存できませんでした。",
+		"to": "{domain}に入ります。Enterで保存。"
 	},
 	"today": {
 		"addPlaceholder": "タスク、ルーティン、習慣を追加",

@@ -301,6 +301,7 @@
 			},
 			"capture": {
 				"action": "Capture a haul",
+				"keyword": "Haul",
 				"about": "up to {cost}",
 				"stop": "Stop",
 				"pastedText": "Pasted text",
@@ -406,6 +407,7 @@
 			},
 			"grocery": {
 				"add": "Add",
+				"keyword": "Grocery",
 				"addPlaceholder": "Add an item",
 				"buyAgain": "Buy it again",
 				"buyAgainNone": "Nothing to buy again.",
@@ -650,6 +652,7 @@
 			"saveFailed": "Couldn't save your changes.",
 			"ideas": {
 				"capture": "Capture an idea",
+				"keyword": "Idea",
 				"addPlaceholder": "Capture an idea",
 				"list": "Ideas",
 				"status": {
@@ -1377,6 +1380,11 @@
 			"back": "Back",
 			"single": "One per profile; opens the one you have."
 		}
+	},
+	"quickLog": {
+		"logged": "{value} logged.",
+		"failed": "That could not be saved.",
+		"to": "Goes to {domain}. Enter to save."
 	},
 	"today": {
 		"addPlaceholder": "Add a task, a routine or a habit",
