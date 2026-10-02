@@ -218,6 +218,9 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           UPDATER: ${{ steps.signing.outputs.updater }}
+          # Git Bash puts its own MSYS perl ahead of GITHUB_PATH, and that perl lacks the modules OpenSSL's Configure
+          # needs; openssl-src reads this instead of looking perl up on PATH.
+          OPENSSL_SRC_PERL: C:\Strawberry\perl\bin\perl.exe
         run: |
           OVERRIDE='{}'
           [[ "$UPDATER" == "true" ]] || OVERRIDE='{"bundle":{"createUpdaterArtifacts":false}}'
