@@ -1953,6 +1953,7 @@
 			"ofCap": "of ${cap} · {percent}%",
 			"estimate": "Estimates from the prices in Settings, counted on this device. The provider bills what it measured.",
 			"spend": "Spend",
+			"cachedShare": "{percent}% of what was sent over this stretch was read from the provider's cache, at about a tenth of the price.",
 			"periodsLabel": "Spend by",
 			"periods": { "day": "Day", "week": "Week", "month": "Month", "year": "Year" },
 			"chart": "Spend by {period} from {from} to {to}, in US dollars, stacked by grade",

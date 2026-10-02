@@ -21,6 +21,7 @@ export {
 	sentBytes,
 	sentSize,
 } from './attachments.js'
+export { withBreakpoint } from './cache.js'
 export * from './client.js'
 export * from './audit-page.js'
 export * from './audit-params.js'
@@ -40,6 +41,8 @@ export { holdsPage, linksOf, normalLink, READ_PAGE, resolveLink, untrusted } fro
 export { openRequests, OPEN_REQUESTS_KEY, type OpenRequests } from './open-requests.js'
 export {
 	buildPack,
+	READ_ROWS_CHARS,
+	readRows,
 	WINDOW,
 	type Pack,
 	type PackAttachment,
@@ -47,6 +50,8 @@ export {
 	type PackReaders,
 	type PackRequest,
 	type PackRow,
+	type ReadRowsRequest,
+	type ReadRowsResult,
 	type SystemBlock,
 } from './pack.js'
 export {

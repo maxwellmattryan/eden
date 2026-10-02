@@ -49,6 +49,7 @@ import {
 	scrubValue,
 	STANDING_ON_CONFIRM,
 	SUBSTRATE,
+	withBreakpoint,
 	type AttachmentBlock,
 } from '@eden/shared/gardener'
 import { locale, t } from '@eden/shared/i18n'
@@ -115,6 +116,9 @@ interface Usage {
 	searches?: number
 }
 
+/** Every registry id a conversation may read: the union of what the tools declared, each once (D-31). */
+const REACH: readonly string[] = [...new Set(everyTool.flatMap((tool) => tool.declaration.reads))]
+
 /** A tool that searches the web, by its domain and id: what it answers is a page's words (D-132). */
 const searchesWeb = (domain: string, tool: string) =>
 	everyTool.some(
@@ -177,15 +181,6 @@ export class GardenerRuntime {
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- a plain set: nothing reads it reactively
 	#pageRead = new Set<string>()
 
-	/** The latest can-see block of the current thread: what the chip shows. */
-	readonly canSee = $derived.by(() => {
-		for (let i = threads.messages.length - 1; i >= 0; i -= 1) {
-			const block = (threads.messages[i]?.blocks as MessageBlock[]).find((entry) => entry.kind === 'can-see')
-			if (block) return block
-		}
-		return undefined
-	})
-
 	#context(requestId: string, thread: Thread | undefined, domain?: string): ToolContext {
 		const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
 		return {
@@ -199,6 +194,7 @@ export class GardenerRuntime {
 			undo: undoToast,
 			focus: thread ? gardenerUi.focus : [],
 			links: [],
+			reach: REACH,
 		}
 	}
 
@@ -292,7 +288,10 @@ export class GardenerRuntime {
 		}
 	}
 
-	/** The pack of a message in the conversation: every tool in reach and what each declared it reads. */
+	/**
+	 * The pack of a message in the conversation: every tool, and of what they declared they read, the little that
+	 * goes up front and an index of the rest, which `read-rows` answers (D-148).
+	 */
 	#chatPack(
 		prior: Message[],
 		message: string,
@@ -303,15 +302,15 @@ export class GardenerRuntime {
 		ctx: ToolContext,
 		from: PackReaders
 	): Promise<Pack> {
-		const reach = toolsFor(everyTool, gardenerUi.domain)
 		return buildPack(
 			{
-				reads: reach.flatMap((tool) => tool.declaration.reads).filter((id, i, all) => all.indexOf(id) === i),
+				reads: [...REACH],
 				focus: gardenerUi.focus,
 				thread: prior,
 				message,
 				attachments,
-				tools: reach,
+				// the same list in the same order whatever panel asks, so the provider's cache holds (D-147)
+				tools: toolsFor(everyTool),
 				model,
 				outputReserve: maxTokens,
 				tokenCap: requestTokenCap(gardenerSetup.policy, model),
@@ -319,6 +318,7 @@ export class GardenerRuntime {
 				now: Date.now(),
 				zone: ctx.zone ?? 'UTC',
 				lang: ctx.lang,
+				domain: gardenerUi.domain,
 				domainName: gardenerUi.domain ? get(t)(`domains.${gardenerUi.domain}.name`) : undefined,
 				domains: enabledDomains(),
 				grade,
@@ -326,26 +326,6 @@ export class GardenerRuntime {
 			},
 			from
 		)
-	}
-
-	/**
-	 * What the next message would carry, read now: the "can see" chip opens on this, so it shows the workspace as it
-	 * stands and not as the last request found it (the audit log keeps what each request read). Nothing is sent and
-	 * no file's bytes are read; nothing when no model can answer.
-	 */
-	async canSeeNext(): Promise<CanSeeBlock | undefined> {
-		const prior = [...threads.messages]
-		const needs = hasVisual(prior, []) ? (['tools', 'vision'] as const) : (['tools'] as const)
-		const resolution = resolveGrade(gardenerSetup.grade, needs, gardenerSetup.map, gardenerSetup.models)
-		if (resolution.kind !== 'model') return undefined
-		const model = gardenerSetup.models({ provider: resolution.provider, model: resolution.model })
-		if (!model) return undefined
-		const maxTokens = OUTPUT_RESERVE + (model.thinks ? THINKING_ROOM.chat : 0)
-		const ctx = this.#context('', threads.current)
-		// an earlier file still in reach is counted by name alone
-		const counted: PackReaders = { ...readers, attachment: async () => ({ kind: 'text', text: '' }) }
-		const pack = await this.#chatPack(prior, '', [], model, maxTokens, resolution.grade, ctx, counted)
-		return canSeeOf(pack)
 	}
 
 	/** Answers the owner's message, the thread's last: one request, one reply, one audit entry. */
@@ -425,7 +405,9 @@ export class GardenerRuntime {
 					model: resolution.model,
 					maxTokens,
 					system: pack.system,
-					messages,
+					// the breakpoint moves to the end each round, so the next one reads all of this from the cache; the
+					// pack's own, on the settled history, stay where they are (D-147)
+					messages: withBreakpoint(messages, pack.messages.length - 1),
 					tools: pack.tools,
 					...(model.effort ? { effort: model.effort } : {}),
 				}
@@ -462,12 +444,24 @@ export class GardenerRuntime {
 					const { result, record } = await this.#runCall(call, reply.id, ctx)
 					audit.tools.push(record)
 					if (record.grantId) audit.grants.push(record.grantId)
-					if (result.touched) audit.entities.push(...result.touched)
+					if (result.touched) audit.entities.push(...result.touched.filter((uri) => !audit.entities.includes(uri)))
+					// rows a tool read are the request's as the pack's are: on its entry, on the reply's eye, in the
+					// thread's tier (D-148)
+					if (result.reads?.length) {
+						audit.reads = mergeReads(audit.reads, result.reads)
+						for (const grant of result.grants ?? []) if (!audit.grants.includes(grant)) audit.grants.push(grant)
+						if (result.tier) threads.raiseTier(thread.id, result.tier)
+						const reads = audit.reads
+						threads.patch(reply.id, (blocks) =>
+							blocks.map((block) => (block.kind === 'can-see' ? { ...block, ...seenOf(reads) } : block))
+						)
+					}
+					// what a tool answers leaves the device as the rows do: scrubbed (D-26); text goes as it is
+					const answered = scrubValue(result.output)
 					results.push({
 						type: 'tool_result',
 						tool_use_id: call.id,
-						// what a tool answers leaves the device as the rows do: scrubbed (D-26)
-						content: JSON.stringify(scrubValue(result.output)),
+						content: typeof answered === 'string' ? answered : JSON.stringify(answered),
 						is_error: typeof result.output === 'object' && result.output !== null && 'error' in result.output,
 					})
 				}
@@ -1331,7 +1325,6 @@ export class GardenerRuntime {
 	}
 }
 
-/** The rows behind each id of the chip, from the audit's reads. */
 /** The error a tool's output carries, when it is one: what the model is told with `is_error`. */
 function errorOf(output: unknown): string | undefined {
 	if (typeof output !== 'object' || output === null || !('error' in output)) return undefined
@@ -1377,20 +1370,41 @@ function textOf(message: Message | undefined): string {
 		.trim()
 }
 
-function rowsOf(pack: Pack): Record<string, string[]> {
-	return Object.fromEntries(pack.reads.map((read) => [read.id, read.rows]))
+/** The reads with more joined to them: one entry an id, its rows each once, in the order they were first read. */
+function mergeReads(reads: readonly AuditRead[], more: readonly AuditRead[]): AuditRead[] {
+	const merged = reads.map((read) => ({ ...read, rows: [...read.rows] }))
+	for (const read of more) {
+		const known = merged.find((entry) => entry.id === read.id)
+		if (!known) {
+			merged.push({ ...read, rows: [...read.rows] })
+			continue
+		}
+		for (const row of read.rows) if (!known.rows.includes(row)) known.rows.push(row)
+		known.count = known.rows.length
+	}
+	return merged
+}
+
+/** What a can-see block shows of the reads: each id with its count, and the rows behind it. */
+function seenOf(reads: readonly AuditRead[]): Pick<CanSeeBlock, 'items' | 'rows'> {
+	return {
+		items: reads.map((read) => ({ id: read.id, count: read.count })),
+		rows: Object.fromEntries(reads.map((read) => [read.id, read.rows])),
+	}
 }
 
 export type CanSeeBlock = Extract<MessageBlock, { kind: 'can-see' }>
 
-/** The can-see block of a pack: the ids read with their counts and rows, what was kept out and what was cut. */
+/**
+ * The can-see block of a pack: the ids sent up front with their counts and rows, what is kept out and what was cut.
+ * The rows the reply's tools read join it as they are read, so the eye under a reply lists exactly what it read.
+ */
 function canSeeOf(pack: Pack): CanSeeBlock {
 	return {
 		kind: 'can-see',
-		items: pack.canSee,
+		...seenOf(pack.reads),
 		locked: pack.locked,
 		trimmed: pack.trimmed,
-		rows: rowsOf(pack),
 		...(pack.attached.length ? { attachments: pack.attached } : {}),
 	}
 }

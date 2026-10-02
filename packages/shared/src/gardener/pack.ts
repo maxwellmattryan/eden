@@ -1,8 +1,12 @@
 // The context pack (docs/product/substrate/ai.md, "Declared reads and the context pack"): what one request is given,
 // assembled in order within the model's budget from the declared reads. The grants gate each T2 read, a T3 read
-// never passes, every string is scrubbed (the rows, the thread and the message), a mirrored row is marked untrusted,
-// and trimming drops the oldest entity rows first and says which. Pure over the readers it is handed, so the tests run it on fixtures and the apps on the
-// data layer; the "can see" chip is drawn from what it answers, so the chip is literal.
+// never passes, every string is scrubbed (the rows, the thread and the message), a mirrored row is marked untrusted.
+// A tool's own request carries every row it declared, trimmed oldest first to fit. A conversation carries little
+// (D-148): the facts the substrate owns and those of the domain it was opened in, the rows it was opened on, and an
+// index of every other id in reach with its count; `readRows` answers the rest on demand, through the same gate and
+// the same writer. The system prompt is one stable block and the clock rides with the newest message, so the
+// provider's cache holds from one message to the next (D-147). Pure over the readers it is handed, so the tests run
+// it on fixtures and the apps on the data layer.
 // The files the owner attached to their messages ride with the turns they belong to (D-82): the pack counts them
 // without their bytes, lets go of the oldest when the request would be too large, and only then asks the reader for
 // what is sent of each. A text file is sent as text, scrubbed like the message.
@@ -14,10 +18,12 @@ import { resource, type Resource } from '../registry/index.js'
 import { tasksForPack } from '../tasks/pack.js'
 import { REQUEST_MAX_BYTES } from './attachment-limits.js'
 import { attachmentKind, attachmentTokens, auditOf, sentBytes } from './attachments.js'
+import { marked } from './cache.js'
 import { persona } from './persona.js'
+import { sentRow, TABLE_MIN_ROWS, writeSection } from './rows.js'
 import type { AttachmentBlock, AuditAttachment, AuditRead, Message, MessageBlock, ThreadTier } from './runtime-types.js'
 import { scrub, scrubValue } from './scrub.js'
-import { DOMAIN_BLURBS, toApiTool, type GardenerTool } from './tools.js'
+import { DOMAIN_BLURBS, SUBSTRATE, toApiTool, type GardenerTool } from './tools.js'
 import type { ModelRow } from './types.js'
 
 /** What the pack needs of a row, whatever its type: the rest is serialised as it comes. */
@@ -66,6 +72,8 @@ export interface PackRequest {
 	now: number
 	zone: string
 	lang: 'en' | 'ja'
+	/** The domain the conversation was opened in, by its id: its facts go up front (D-148). */
+	domain?: string
 	domainName?: string
 	/** The enabled domains, each by its id and the name the owner knows. */
 	domains?: { id: string; name: string }[]
@@ -86,7 +94,10 @@ export interface SystemBlock {
 
 export interface Pack {
 	system: SystemBlock[]
-	/** API messages: the prior thread as user and assistant turns, then the owner's message with the context. */
+	/**
+	 * API messages: the prior thread as user and assistant turns, then the owner's message, which opens with the
+	 * clock, the rows sent whole and, in a conversation, the index of what `read-rows` answers.
+	 */
 	messages: unknown[]
 	tools: unknown[]
 	canSee: { id: string; count: number }[]
@@ -112,9 +123,6 @@ export const WINDOW = { back: 7, ahead: 14 } as const
 const TIERS: ThreadTier[] = ['T0', 'T1', 'T2']
 const rank = (tier: string) => Math.max(0, TIERS.indexOf(tier as ThreadTier))
 
-/** The fields a row is sent without: what only the store needs. */
-const OMITTED = ['uri', 'links', 'snapshot', 'deletedAt', 'createdAt', 'mirror', 'source', 'externalId']
-
 interface Section {
 	id: string
 	tier: ThreadTier
@@ -122,15 +130,8 @@ interface Section {
 	facts: boolean
 	rows: PackRow[]
 	pinned: Set<string>
-}
-
-function line(row: PackRow): string {
-	const compact: Record<string, unknown> = {}
-	for (const [key, value] of Object.entries(row)) {
-		if (!OMITTED.includes(key) && value !== null && value !== undefined) compact[key] = value
-	}
-	const json = JSON.stringify(scrubValue(compact))
-	return row.mirror ? `<untrusted source="${row.source ?? ''}">${json}</untrusted>` : json
+	/** Written as a JSON object a line and not as a table; settled before any row is trimmed, so trimming only shrinks it. */
+	lines?: boolean
 }
 
 const tokensOf = (text: string) => Math.ceil(text.length / 4)
@@ -230,9 +231,13 @@ function turnsOf(message: Message, full: boolean): Turn[] {
 			const settled = block.state === 'done' || block.state === 'failed' || block.state === 'cancelled'
 			const card = cards.get(call.id)
 			const output = card && isObject(call.output) ? { ...call.output, card } : call.output
+			// a result that is text already (rows as `read-rows` writes them) is replayed as it was sent
+			const replayed = scrubValue(output)
 			let content =
 				settled && output !== undefined
-					? JSON.stringify(scrubValue(output))
+					? typeof replayed === 'string'
+						? replayed
+						: JSON.stringify(replayed)
 					: settled && call.error
 						? JSON.stringify({ error: scrub(call.error).text })
 						: INTERRUPTED
@@ -255,18 +260,36 @@ function tierOfRow(row: PackRow): string | undefined {
 	return typeof kind === 'string' ? resource(kind)?.tier : undefined
 }
 
-export async function buildPack(request: PackRequest, readers: PackReaders): Promise<Pack> {
-	const locked: string[] = []
+/** What gates and shapes a read, whoever asks for it: the pack building a request, or `read-rows` answering one. */
+interface Gate {
+	/** The grant subject: the provider. */
+	subject: string
+	now: number
+	zone: string
+	/** Every task, as a delegated request's tool works from them; a conversation's are trimmed. */
+	wholeTasks: boolean
+	/** URIs put first in their section and never left out. */
+	focus: ReadonlySet<string>
+}
+
+/**
+ * The reader of one registry id's rows as a model may be given them (`readSection`): the tier gate and the grant
+ * check, the domain's own projection through the readers, the tasks trimmed for a conversation, the primitives in
+ * their window, the newest first with what the conversation is about ahead of them. One reader asks for each grant
+ * once and keeps the grants that allowed a read.
+ */
+function sectionReader(gate: Gate, readers: PackReaders) {
 	const grants: string[] = []
-	const focus = new Set(request.focus ?? [])
 	const granted = new Map<string, boolean>()
+	const from = new Date(gate.now - WINDOW.back * DAY_MS).toISOString()
+	const to = new Date(gate.now + WINDOW.ahead * DAY_MS).toISOString()
 
 	/** Whether a T2 id may be read now; asked once per id. */
 	async function allowed(id: string): Promise<boolean> {
 		const known = granted.get(id)
 		if (known !== undefined) return known
 		const decision = await readers.check({
-			subject: request.subject,
+			subject: gate.subject,
 			resource: id,
 			resourceType: 'registry',
 			access: 'read',
@@ -275,22 +298,6 @@ export async function buildPack(request: PackRequest, readers: PackReaders): Pro
 		granted.set(id, decision.allowed)
 		return decision.allowed
 	}
-
-	// The ids that pass the gate, in the order declared, each once.
-	const passed: Resource[] = []
-	for (const id of [...new Set(request.reads)]) {
-		const row = resource(id)
-		if (!row) throw new DataError('gardener:invalid', `not a registry id: ${JSON.stringify(id)}`)
-		if (row.tier === 'T3') throw new DataError('gardener:never', `${id} is T3 and never leaves`)
-		if (row.tier === 'T2' && !(await allowed(id))) {
-			locked.push(id)
-			continue
-		}
-		passed.push(row)
-	}
-
-	const from = new Date(request.now - WINDOW.back * DAY_MS).toISOString()
-	const to = new Date(request.now + WINDOW.ahead * DAY_MS).toISOString()
 
 	/** The rows of a by-kind primitive that may be sent: T2 kinds under a grant, T3 kinds never. */
 	async function gated(rows: PackRow[]): Promise<PackRow[]> {
@@ -315,20 +322,15 @@ export async function buildPack(request: PackRequest, readers: PackReaders): Pro
 		if (primitive !== 'task')
 			return [...(await readers.primitives(primitive, { ...(kinds ? { kinds } : {}), from, to }))]
 		const rows = await readers.primitives(primitive, kinds ? { kinds } : {})
-		return request.mode === 'delegated' || request.mode === 'research'
-			? [...rows]
-			: tasksForPack(rows, request.now, request.zone, focus)
+		return gate.wholeTasks ? [...rows] : tasksForPack(rows, gate.now, gate.zone, gate.focus)
 	}
 
-	const factIds = passed.filter((row) => row.category === 'fact').map((row) => row.id)
-	const facts = factIds.length ? await readers.facts(factIds) : []
-
-	const sections: Section[] = []
-	for (const row of passed) {
+	/** One id's section. The id has passed the gate; `facts` are the ones already read, when the caller read many. */
+	async function read(row: Resource, facts?: Fact[]): Promise<Section> {
 		let rows: PackRow[]
 		let tier: ThreadTier = row.tier === 'T2' ? 'T2' : row.tier === 'T0' ? 'T0' : 'T1'
 		if (row.category === 'fact') {
-			rows = sortFacts(facts.filter((fact) => fact.type === row.id))
+			rows = sortFacts((facts ?? (await readers.facts([row.id]))).filter((fact) => fact.type === row.id))
 		} else if (row.category === 'entity') {
 			rows = [...(await readers.entities(row.id))].sort(byNewest)
 		} else if (row.category === 'kind' && row.primitive && row.primitive !== 'attachment') {
@@ -344,26 +346,183 @@ export async function buildPack(request: PackRequest, readers: PackReaders): Pro
 		} else {
 			rows = []
 		}
-		const pinned = new Set(rows.filter((item) => focus.has(item.uri)).map((item) => item.uri))
+		const pinned = new Set(rows.filter((item) => gate.focus.has(item.uri)).map((item) => item.uri))
 		rows = [...rows.filter((item) => pinned.has(item.uri)), ...rows.filter((item) => !pinned.has(item.uri))]
-		sections.push({ id: row.id, tier, facts: row.category === 'fact', rows, pinned })
+		return { id: row.id, tier, facts: row.category === 'fact', rows, pinned }
 	}
+
+	return { allowed, read, grants }
+}
+
+/** A `read-rows` answer longer than this, with no `ids` asked for, is the rows' ids and names instead. */
+export const READ_ROWS_CHARS = 12_000
+
+export interface ReadRowsRequest {
+	/** The registry id asked for. */
+	type: string
+	/** The rows wanted, by `id`; every row when left out. */
+	ids?: string[]
+	/** The registry ids the conversation may read: the union of what its tools declared. */
+	reach: readonly string[]
+	subject: string
+	now: number
+	zone: string
+	/** What a row is called where it holds no name of its own (a grocery list by its store). */
+	label?: (type: string, row: PackRow) => Promise<string | undefined> | string | undefined
+}
+
+export interface ReadRowsResult {
+	/** The section as the pack would have written it, or the rows' ids and names when it is too long to send whole. */
+	text?: string
+	/** Why nothing was read, in words the model can act on. */
+	error?: string
+	/** The id the owner has not shared, when that is why. */
+	locked?: string
+	/** What was read, for the audit entry and the reply's eye; nothing when only names were listed. */
+	read?: AuditRead
+	/** The URIs of the entity and primitive rows sent. */
+	entities: string[]
+	grants: string[]
+	tier: ThreadTier
+}
+
+const NAME_KEYS = ['name', 'title', 'label'] as const
+
+/**
+ * What `read-rows` answers (D-148): one registry id's rows, read and written exactly as the pack writes a section,
+ * so the tier gate, the grant check, the scrub, the domain's projection (D-101) and the untrusted wrap hold on this
+ * path as they do up front. An id outside the conversation's reach, a T3 id and a T2 id with no grant are refused.
+ */
+export async function readRows(request: ReadRowsRequest, readers: PackReaders): Promise<ReadRowsResult> {
+	const none = { entities: [], grants: [], tier: 'T0' as ThreadTier }
+	const row = resource(request.type)
+	if (!row || !request.reach.includes(request.type))
+		return {
+			...none,
+			error: `${JSON.stringify(request.type)} is not a type you can read. \`type\` is one of the ids in the index of the newest message.`,
+		}
+	if (row.tier === 'T3') return { ...none, error: `${row.id} is never shared with a model.` }
+	const ids = [...new Set(request.ids ?? [])]
+	const primitive = row.category === 'kind' ? (row.primitive ?? row.id) : row.id
+	const reader = sectionReader(
+		{
+			subject: request.subject,
+			now: request.now,
+			zone: request.zone,
+			wholeTasks: false,
+			// a row asked for by its id is never trimmed away
+			focus: new Set(ids.map((id) => `eden://${primitive}/${id}`)),
+		},
+		readers
+	)
+	if (row.tier === 'T2' && !(await reader.allowed(row.id)))
+		return {
+			...none,
+			locked: row.id,
+			error: `${row.id} is locked: the owner has not shared it with you. Say so; they can allow it from the eye under this reply.`,
+		}
+	const section = await reader.read(row)
+	const found = ids.length ? section.rows.filter((item) => ids.includes(item.id)) : section.rows
+	const missing = ids.filter((id) => !found.some((item) => item.id === id))
+	const whole = writeSection(row.id, found, section.facts ? { lines: true } : {})
+	const notes = missing.length
+		? `\n\nNo row of ${row.id} in reach has the id ${missing.map((id) => JSON.stringify(id)).join(', ')}.`
+		: ''
+	if (!ids.length && whole.length > READ_ROWS_CHARS) {
+		const named = await Promise.all(
+			found.map(async (item) => {
+				const sent = sentRow(item)
+				const own = await request.label?.(row.id, item)
+				const name = own ?? NAME_KEYS.map((key) => sent[key]).find((value) => typeof value === 'string')
+				return {
+					id: item.id,
+					...(typeof name === 'string' ? { name } : {}),
+					// a mirrored row's name was written outside Eden as surely as the row was
+					...(item.mirror ? { mirror: true, source: item.source } : {}),
+				}
+			})
+		)
+		return {
+			...none,
+			grants: reader.grants,
+			text: `${writeSection(row.id, named, {
+				note: 'too many to send whole, so each row is its `id` and its name: call again with `ids` for the rows you need',
+			})}`,
+		}
+	}
+	return {
+		text: `${whole}${notes}`,
+		read: { id: row.id, count: found.length, rows: found.map((item) => item.id) },
+		entities: section.facts ? [] : found.map((item) => item.uri),
+		grants: reader.grants,
+		tier: found.length ? section.tier : 'T0',
+	}
+}
+
+export async function buildPack(request: PackRequest, readers: PackReaders): Promise<Pack> {
+	const locked: string[] = []
+	const focus = new Set(request.focus ?? [])
+	// A conversation sends an index and reads rows on demand (D-148); a tool's own request has no tools to fetch
+	// with, so it carries everything it declared.
+	const onDemand = (request.mode ?? 'chat') === 'chat'
+	const reader = sectionReader(
+		{ subject: request.subject, now: request.now, zone: request.zone, wholeTasks: !onDemand, focus },
+		readers
+	)
+	const { grants } = reader
+
+	// The ids that pass the gate, in the order declared, each once.
+	const passed: Resource[] = []
+	for (const id of [...new Set(request.reads)]) {
+		const row = resource(id)
+		if (!row) throw new DataError('gardener:invalid', `not a registry id: ${JSON.stringify(id)}`)
+		if (row.tier === 'T3') throw new DataError('gardener:never', `${id} is T3 and never leaves`)
+		if (row.tier === 'T2' && !(await reader.allowed(id))) {
+			locked.push(id)
+			continue
+		}
+		passed.push(row)
+	}
+
+	const factIds = passed.filter((row) => row.category === 'fact').map((row) => row.id)
+	const facts = factIds.length ? await readers.facts(factIds) : []
+
+	const reached: Section[] = []
+	for (const row of passed) reached.push(await reader.read(row, facts))
+
+	// What goes up front. A tool's request: every section. A conversation: the facts the substrate owns and the ones
+	// of the domain it was opened in, whole, and the rows it was opened on; every other id is a line of the index.
+	const upFront = (section: Section) => {
+		const owner = resource(section.id)?.owner
+		return section.facts && (owner === SUBSTRATE || (!!request.domain && owner === request.domain))
+	}
+	const sections: Section[] = onDemand
+		? reached.flatMap((section) => {
+				if (upFront(section)) return [section]
+				const about = section.rows.filter((row) => section.pinned.has(row.uri))
+				return about.length ? [{ ...section, rows: about }] : []
+			})
+		: reached
+	const indexed = onDemand ? reached.filter((section) => !upFront(section)) : []
+	// a fact is one object a line, and so are the few rows a conversation was opened on
+	for (const section of sections) section.lines = section.facts || onDemand || section.rows.length < TABLE_MIN_ROWS
 
 	// The thread as exchanges (one stored message's turns each, so trimming never parts a call from its answer), and
 	// the owner's message. The last reply keeps its results whole; an earlier one's long results are left out.
 	const lastReply = [...request.thread].reverse().find((message) => message.role !== 'owner')
 	let exchanges = request.thread
-		.map((message) => turnsOf(message, message === lastReply))
-		.filter((turns) => turns.length > 0)
+		.map((message) => ({ reply: message.role !== 'owner', turns: turnsOf(message, message === lastReply) }))
+		.filter((exchange) => exchange.turns.length > 0)
+	const threadTurns = () => exchanges.flatMap((exchange) => exchange.turns)
 	// a file is counted by its own estimate, not by the few characters of the part that stands for it
 	const sizeOf = (turn: Turn) =>
 		typeof turn.content === 'string' ? turn.content : JSON.stringify(turn.content.filter((part) => !fileOf(part)))
 	const attached = request.attachments ?? []
 	const filesTokens = (blocks: AttachmentBlock[]) => blocks.reduce((sum, block) => sum + attachmentTokens(block), 0)
-	const earlier = () => exchanges.flat().flatMap(filesOf)
+	const earlier = () => threadTurns().flatMap(filesOf)
 	/** Lets go of the files on the oldest turn that still has any; false when no earlier turn has one. */
 	const dropFiles = () => {
-		const turn = exchanges.flat().find((entry) => filesOf(entry).length)
+		const turn = threadTurns().find((entry) => filesOf(entry).length)
 		if (!turn || typeof turn.content === 'string') return false
 		turn.content = turn.content.map((part) => {
 			const block = fileOf(part)
@@ -394,15 +553,26 @@ export async function buildPack(request: PackRequest, readers: PackReaders): Pro
 	const context = () => {
 		const rows = sections
 			.filter((section) => section.rows.length)
-			.map((section) => [`## ${section.id} (${section.rows.length} rows)`, ...section.rows.map(line)].join('\n'))
+			.map((section) => writeSection(section.id, section.rows, { lines: section.lines }))
 			.join('\n\n')
 		return rows ? `<context>\n${rows}\n</context>` : ''
 	}
+	// every other id in reach, by its owner, with how many rows it has now; a locked one says so
+	const index = () => {
+		if (!onDemand) return ''
+		const lines = [
+			...indexed.map((section) => `- ${section.id} (${resource(section.id)?.owner}): ${section.rows.length} rows`),
+			...locked.map((id) => `- ${id} (${resource(id)?.owner}): locked`),
+		]
+		return lines.length ? `<index>\n${lines.join('\n')}\n</index>` : ''
+	}
+	// What the newest message opens with: the clock and where the conversation is, the rows sent whole, the index.
+	// None of it is in the system prompt, which is therefore the same from one message to the next (D-147).
+	const head = () => [volatile(), context(), index()].filter(Boolean).join('\n\n')
 	const estimate = () =>
 		tokensOf(stable) +
-		tokensOf(volatile()) +
-		tokensOf(context()) +
-		exchanges.flat().reduce((sum, turn) => sum + tokensOf(sizeOf(turn)), 0) +
+		tokensOf(head()) +
+		threadTurns().reduce((sum, turn) => sum + tokensOf(sizeOf(turn)), 0) +
 		filesTokens(earlier()) +
 		tokensOf(message) +
 		filesTokens(attached)
@@ -434,8 +604,17 @@ export async function buildPack(request: PackRequest, readers: PackReaders): Pro
 		if (!trimmed.includes('thread')) trimmed.push('thread')
 	}
 
-	const contextText = context()
-	const turns = exchanges.flat()
+	const headText = head()
+	const turns = threadTurns()
+	// The settled history (D-147): everything ahead of the last reply is sent the same way next time, so it ends on
+	// a cache breakpoint, and so does everything ahead of the reply before it, which is where the last request left
+	// its own. The last reply is not behind one: its long results are whole now and left out next time.
+	const settled = new Set<Turn>()
+	const replies = exchanges.flatMap((exchange, at) => (exchange.reply ? [at] : []))
+	for (const at of replies.slice(-2)) {
+		const before = exchanges[at - 1]?.turns.at(-1)
+		if (before) settled.add(before)
+	}
 	// the API's first turn is the owner's: a thread that opens on a reply (a tool run from a button) says so
 	if (turns[0]?.role === 'assistant') turns.unshift({ role: 'user', content: RAN_FROM_APP })
 	// Only now are the files read: the ones still to be sent, each once.
@@ -446,37 +625,37 @@ export async function buildPack(request: PackRequest, readers: PackReaders): Pro
 	}
 	const filePart = (block: AttachmentBlock) => fileBlock(block, sent.get(block.id))
 	const last = [
-		...(contextText ? [{ type: 'text', text: contextText }] : []),
+		{ type: 'text', text: headText },
 		...attached.map(filePart),
 		// a message of files alone has no words to send
 		...(message || !attached.length ? [{ type: 'text', text: message }] : []),
 	]
 	const messages: unknown[] = [
-		...turns.map((turn) => ({
-			role: turn.role,
-			content:
-				typeof turn.content === 'string'
-					? turn.content
-					: turn.content.map((part) => {
-							const block = fileOf(part)
-							return block ? filePart(block) : part
-						}),
-		})),
-		{ role: 'user', content: contextText || attached.length ? last : message },
+		...turns.map((turn) => {
+			const sentTurn = {
+				role: turn.role,
+				content:
+					typeof turn.content === 'string'
+						? turn.content
+						: turn.content.map((part) => {
+								const block = fileOf(part)
+								return block ? filePart(block) : part
+							}),
+			}
+			return settled.has(turn) ? marked(sentTurn) : sentTurn
+		}),
+		{ role: 'user', content: last },
 	]
 	const included = sections.filter((section) => section.rows.length)
 	// a file raises the tier as a row of its kind would: a photo is T1, a document T2
-	const reached = carried.filter((block) => sent.get(block.id))
-	const fileTiers = reached.map((block): ThreadTier => (attachmentKind(block.mime) === 'document' ? 'T2' : 'T1'))
+	const reachedFiles = carried.filter((block) => sent.get(block.id))
+	const fileTiers = reachedFiles.map((block): ThreadTier => (attachmentKind(block.mime) === 'document' ? 'T2' : 'T1'))
 	const tier = [...included.map((section) => section.tier), ...fileTiers].reduce<ThreadTier>(
 		(highest, next) => (rank(next) > rank(highest) ? next : highest),
 		'T0'
 	)
 	return {
-		system: [
-			{ type: 'text', text: stable, cache_control: { type: 'ephemeral' } },
-			{ type: 'text', text: volatile() },
-		],
+		system: [{ type: 'text', text: stable, cache_control: { type: 'ephemeral' } }],
 		messages,
 		tools: request.tools.map(toApiTool),
 		canSee: canSee(),
@@ -491,7 +670,7 @@ export async function buildPack(request: PackRequest, readers: PackReaders): Pro
 		grants,
 		estimatedInputTokens: estimate(),
 		tier,
-		attachments: reached.map(auditOf),
-		attached: reached.map((block) => block.name),
+		attachments: reachedFiles.map(auditOf),
+		attached: reachedFiles.map((block) => block.name),
 	}
 }

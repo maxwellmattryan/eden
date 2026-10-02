@@ -31,10 +31,10 @@ import {
 const index = toolIndex(declarations)
 
 describe('the tool index', () => {
-	it('validates, and holds the thirty-five tools', () => {
+	it('validates, and holds the thirty-six tools', () => {
 		expect(validateTools(index)).toEqual([])
-		expect(index).toHaveLength(35)
-		expect(Object.keys(SCHEMAS)).toHaveLength(35)
+		expect(index).toHaveLength(36)
+		expect(Object.keys(SCHEMAS)).toHaveLength(36)
 	})
 
 	it('declares Meadow’s searching tools as needing a model that searches, and its writes as strict (D-132)', () => {
@@ -128,6 +128,7 @@ describe('the tool index', () => {
 			'propose-fact': null,
 			'forget-fact': null,
 			'read-page': null,
+			'read-rows': null,
 		})
 		const facts = RESOURCES.filter((row) => row.category === 'fact' && row.live).map((row) => row.id)
 		expect(SUBSTRATE_TOOLS.find((tool) => tool.id === 'what-you-know-about-me')?.reads).toEqual(facts)
@@ -244,19 +245,18 @@ describe('the tool index', () => {
 		expect(strict.reduce((sum, entry) => sum + optionalCount(entry.schema), 0)).toBeLessThanOrEqual(OPTIONAL_LIMIT)
 	})
 
-	it("orders a surface's tools: the domain's, the substrate's, the rest", () => {
-		const domains = toolsFor(index, 'toolbench').map((tool) => tool.domain)
-		const first = domains.indexOf('toolbench')
-		const last = domains.lastIndexOf('toolbench')
-		expect(first).toBe(0)
-		expect(domains.slice(last + 1, last + 1 + SUBSTRATE_TOOLS.length)).toEqual(
-			Array<string>(SUBSTRATE_TOOLS.length).fill(SUBSTRATE)
-		)
-		expect(
-			toolsFor(index)
-				.map((tool) => tool.domain)
-				.slice(0, SUBSTRATE_TOOLS.length)
-		).toEqual(Array<string>(SUBSTRATE_TOOLS.length).fill(SUBSTRATE))
+	it('orders the tools by wire name, the same for every panel, so the request’s first bytes never move (D-147)', () => {
+		const names = toolsFor(index).map((tool) => tool.wireName)
+		expect(names).toEqual([...names].sort())
+		expect(names).toHaveLength(index.length)
+		expect(toolsFor([...index].reverse()).map((tool) => tool.wireName)).toEqual(names)
+	})
+
+	it('declares `read-rows` as a plain read with no read of its own (D-148)', () => {
+		const tool = parseWireName('read-rows', index)!
+		expect(tool.declaration).toMatchObject({ access: 'read', confirm: false, grade: null, reads: [] })
+		expect(tool.schema.required).toEqual(['type'])
+		expect(isStrict(tool)).toBe(false)
 	})
 
 	it('names what is wrong with an index', () => {

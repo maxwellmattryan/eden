@@ -6,10 +6,11 @@
 // nothing more; `usage-summary` sums the Gardener's own usage from the rollup and reads nothing else (D-121);
 // `log-quick` dispatches to a domain's quick action; `propose-fact` leaves a proposal card (D-72, D-76) and
 // `forget-fact` removes a fact; `read-page` fetches a page the owner gave, or one they confirm, and answers its
-// text marked as written outside Eden.
+// text marked as written outside Eden; `read-rows` answers the rows of one registry id in the conversation's reach,
+// through the pack's own gate and writer (D-148).
 import { get } from 'svelte/store'
 import { fetchPage, htmlToText, pageTitle, webErrorCode } from '@eden/shared/api'
-import { newId, queryEvents, type EventRow } from '@eden/shared/data'
+import { newId, queryEvents, type Entity, type EventRow } from '@eden/shared/data'
 import { t } from '@eden/shared/i18n'
 import { checkGrant } from '@eden/shared/grants'
 import { formatValue, isLiveFact, queryFacts, validateValue, type Fact, type FactProposal } from '@eden/shared/profile'
@@ -19,17 +20,20 @@ import { settings } from '@eden/shared/settings'
 import { isTime, parseTarget, repeatOf, type DraftTask, type Task, type TaskEdit } from '@eden/shared/tasks'
 import { temperature, weather } from '@eden/shared/weather'
 import { declarations } from '$lib/domains'
+import { manifests } from '../../domains/index.js'
 import { profile } from '../profile/store.svelte.js'
 import { runQuickAction } from '../quick-log.js'
 import { tasks } from '../today/store.svelte.js'
 import {
 	agenda,
 	AGENDA_DAYS,
+	agendaText,
 	agendaWindow,
 	factShapeWords,
 	normalLink,
 	PROPOSABLE_FACTS,
 	queryUsage,
+	readRows,
 	resolveLink,
 	untrusted,
 	USAGE_GROUPS,
@@ -37,6 +41,7 @@ import {
 	type UsageGroup,
 } from '@eden/shared/gardener'
 import { entries, given, ids, preview, together, unknown, withFields } from './batch.js'
+import { readers } from './readers.js'
 import { gardenerSetup } from './setup.svelte.js'
 import { DRAFTED, GRANT_SUBJECT, int, num, str, type ToolHandler, type ToolResult } from './types.js'
 
@@ -106,7 +111,7 @@ const factName = (fact: Fact) => get(t)(`profile.facts.${fact.type}`)
 const factValue = (fact: Fact) => formatValue(fact.type, fact.value, (key) => get(t)(key))
 const noFact = (id: string | undefined) =>
 	failed(
-		`No fact has the id ${JSON.stringify(id ?? '')}. A fact's id is the \`id\` of its row in the context. Nothing was changed.`
+		`No fact has the id ${JSON.stringify(id ?? '')}. A fact's id is the \`id\` of its row, from the context or \`read-rows\`. Nothing was changed.`
 	)
 /** Why a fact the substrate derives is not the Gardener's to change, and where the owner changes it. */
 const derived = (fact: Fact) =>
@@ -322,9 +327,10 @@ export const substrateTools: Record<string, ToolHandler> = {
 			await tasks.load()
 			// a calendar that cannot be read is said, never passed off as an empty one
 			const events = await eventsBetween(agendaWindow(first, days)).catch(() => undefined)
+			// answered as text, in the pack's own row format, so a week costs its values and not its field names (D-151)
 			return {
-				output: {
-					...agenda({
+				output: agendaText(
+					agenda({
 						tasks: tasks.tasks,
 						events: events ?? [],
 						first,
@@ -334,8 +340,8 @@ export const substrateTools: Record<string, ToolHandler> = {
 						weekStart: settings.weekStart,
 						...(await sky()),
 					}),
-					...(events ? {} : { note: 'The calendar could not be read, so the events are missing from every day.' }),
-				},
+					events ? undefined : 'The calendar could not be read, so the events are missing from every day.'
+				),
 			}
 		},
 	},
@@ -504,6 +510,33 @@ export const substrateTools: Record<string, ToolHandler> = {
 			const value = factValue(fact)
 			ctx.undo(get(t)('gardener.toast.forgotten', { values: { name } }), profile.remove(fact.id, name))
 			return { output: { forgotten: true, type: fact.type, value }, touched: [`eden://fact/${fact.id}`] }
+		},
+	},
+	'read-rows': {
+		run: async (input, ctx) => {
+			const type = str(input, 'type') ?? ''
+			const result = await readRows(
+				{
+					type,
+					ids: ids(input, 'ids'),
+					reach: ctx.reach,
+					subject: GRANT_SUBJECT,
+					now: Date.now(),
+					zone: ctx.zone ?? 'UTC',
+					// a type whose rows hold no name is called as its domain says, where only names are answered
+					label: (id, row) =>
+						manifests.find((manifest) => manifest.labels?.[id])?.labels?.[id]?.(row as unknown as Entity<object>),
+				},
+				readers
+			)
+			if (result.text === undefined) return failed(result.error ?? 'Nothing was read.')
+			return {
+				output: result.text,
+				touched: result.entities,
+				reads: result.read ? [result.read] : [],
+				grants: result.grants,
+				tier: result.tier,
+			}
 		},
 	},
 	'read-page': {

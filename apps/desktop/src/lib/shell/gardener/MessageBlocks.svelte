@@ -1,7 +1,8 @@
 <script lang="ts">
 	// One message of a thread as the panel shows it: a bubble that holds, in the order they happened, what was said,
 	// the tool cards with their confirm, the proposal cards and any error (docs/design/ux-patterns.md, "Gardener
-	// surfaces"); reads in a row fold into one line. A draft is its own message after the bubble, in honey. The can-see block is the chip row's, not the bubble's. A reply is drawn as Markdown; under each message is when it
+	// surfaces"); reads in a row fold into one line. A draft is its own message after the bubble, in honey. The can-see
+	// block is the eye's: under the thread's last reply, beside its copy glyph, it lists what that reply read (D-149). A reply is drawn as Markdown; under each message is when it
 	// was sent or received and a glyph that copies its words. A tool the Gardener ran as its own request is a note in
 	// the thread, not a bubble.
 	import {
@@ -38,13 +39,18 @@
 	import { undoToast } from '../undo'
 	import { threadAttachments } from './attachments.svelte'
 	import DraftCard from './DraftCard.svelte'
+	import ReplyEye from './ReplyEye.svelte'
 	import { sizeLabel } from './files'
 	import ToolAbout from './ToolAbout.svelte'
 	import { handlerOf, toolByWireName } from './handlers'
 	import { runtime } from './runtime.svelte'
 
-	type Props = { message: Message }
-	let { message }: Props = $props()
+	type Props = {
+		message: Message
+		/** The thread's last reply: the eye that says what it read sits in its foot. */
+		last?: boolean
+	}
+	let { message, last = false }: Props = $props()
 
 	const blocks = $derived(message.blocks as MessageBlock[])
 	const text = $derived(
@@ -52,6 +58,7 @@
 			.filter((block) => block.kind === 'text' && block.text.trim())
 			.map((block) => (block as { text: string }).text)
 	)
+	const canSee = $derived(last ? blocks.find((block) => block.kind === 'can-see') : undefined)
 	// the files the owner attached: each block names its Attachment row, which has the thumbnail (D-83)
 	const files = $derived(message.role === 'owner' ? attachmentsOf(blocks) : [])
 	const FILE_ICONS = { image: 'image', pdf: 'file-text', text: 'file-text' } as const
@@ -142,7 +149,8 @@
 		info = { anchor, block }
 		infoOpen = true
 	}
-	const json = (value: unknown) => JSON.stringify(value, null, 1)
+	// a result that is text already (rows, an agenda) is shown as it was sent
+	const json = (value: unknown) => (typeof value === 'string' ? value : JSON.stringify(value, null, 1))
 	// what a card shows of its call: the handler's own words for it where it has them, else the input as it was sent
 	const payload = (block: ToolBlock) => {
 		const tool = toolByWireName(block.call.name)
@@ -153,6 +161,11 @@
 		return json && json !== '{}' ? json : undefined
 	}
 </script>
+
+<!-- what this reply read: the rows sent with the message and the ones its tools fetched -->
+{#snippet eye()}
+	{#if canSee?.kind === 'can-see'}<ReplyEye block={canSee} />{/if}
+{/snippet}
 
 {#snippet toolCard(block: ToolBlock, index: number)}
 	<ToolCard
@@ -190,7 +203,12 @@
 		</GardenerMessage>
 	{/if}
 {:else if segments.length || interrupted}
-	<GardenerMessage {time} oncopy={copy} class={leaving ? 'reply-leaving' : undefined}>
+	<GardenerMessage
+		{time}
+		oncopy={copy}
+		actions={canSee ? eye : undefined}
+		class={leaving ? 'reply-leaving' : undefined}
+	>
 		{#each segments as segment (`${segment.kind}-${segment.index}`)}
 			{#if segment.kind === 'text'}
 				<Markdown source={segment.text} voice onlink={(href) => void openExternal(href)} />

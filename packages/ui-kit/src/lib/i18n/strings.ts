@@ -88,11 +88,11 @@ export interface UiStrings {
 		dismissedNotStored: string
 		cancelledNothingChanged: string
 		confirmed: (verb: string) => string
-		/** The eye button at the composer's foot. */
+		/** The eye button under a reply: what that reply read. */
 		canSee: string
 		/** The title of the panel the button opens. */
 		canSeeTitle: string
-		/** The panel's first section: the ids with rows to read. */
+		/** The panel's first section: the ids whose rows the reply read. */
 		inThisRequest: string
 		/** The spoken sentence beside a locked row when the app cannot ask for the grant. */
 		locked: (id: string) => string
@@ -418,9 +418,9 @@ export const defaultStrings: UiStrings = {
 		dismissedNotStored: 'Dismissed. Not stored.',
 		cancelledNothingChanged: 'Cancelled. Nothing was changed.',
 		confirmed: (verb) => `${verb}. Done.`,
-		canSee: 'Can see',
-		canSeeTitle: 'What the Gardener can see',
-		inThisRequest: 'In your next message',
+		canSee: 'What this reply read',
+		canSeeTitle: 'What the Gardener read',
+		inThisRequest: 'For this reply',
 		locked: (id) => `${id}, not shared: needs your grant`,
 		canSeeSummary: (facts, types) => `${facts} facts across ${types} types`,
 		notShared: (count) => `${count} not shared`,

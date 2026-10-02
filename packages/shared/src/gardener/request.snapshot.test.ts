@@ -3,9 +3,17 @@
 // change, and read the diff.
 import { describe, expect, it } from 'vitest'
 import { declarations } from '../manifest/index.js'
-import { buildPack, type PackReaders } from './pack.js'
+import { buildPack, type Pack, type PackReaders } from './pack.js'
 import { ANTHROPIC_SEED } from './providers.js'
 import { toApiTool, toolIndex, toolsFor } from './tools.js'
+
+/** The system prompt, then what the newest message opens with: the clock, the rows sent whole and the index. */
+function written(pack: Pack): string {
+	const last = pack.messages.at(-1) as { content: { text: string }[] }
+	return [...pack.system.map((block) => block.text), last.content[0]!.text].join(
+		'\n\n--- the system prompt ends; the newest message opens with ---\n\n'
+	)
+}
 
 const NAMES: Record<string, string> = { kitchen: 'Hearth', toolbench: 'Toolbench', weather: 'Sky', places: 'Meadow' }
 
@@ -23,7 +31,7 @@ describe('what a request carries', () => {
 				reads: ['stock-item', 'recipe', 'task', 'allergy'],
 				thread: [],
 				message: 'What can I cook tonight?',
-				tools: toolsFor(toolIndex(declarations), 'kitchen'),
+				tools: toolsFor(toolIndex(declarations)),
 				model: ANTHROPIC_SEED.models[1]!,
 				outputReserve: 4096,
 				tokenCap: null,
@@ -31,6 +39,7 @@ describe('what a request carries', () => {
 				now: Date.UTC(2026, 8, 30, 14, 40),
 				zone: 'America/Chicago',
 				lang: 'en',
+				domain: 'kitchen',
 				domainName: 'Hearth',
 				domains: declarations.map((domain) => ({ id: domain.id, name: NAMES[domain.id] ?? domain.id })),
 				grade: 'standard',
@@ -38,7 +47,7 @@ describe('what a request carries', () => {
 			},
 			empty
 		)
-		const text = pack.system.map((block) => block.text).join('\n\n--- not cached below ---\n\n')
+		const text = written(pack)
 		await expect(`${text}\n`).toMatchFileSnapshot('./__snapshots__/system-prompt.chat.txt')
 	})
 
@@ -63,7 +72,7 @@ describe('what a request carries', () => {
 			},
 			empty
 		)
-		const text = pack.system.map((block) => block.text).join('\n\n--- not cached below ---\n\n')
+		const text = written(pack)
 		await expect(`${text}\n`).toMatchFileSnapshot('./__snapshots__/system-prompt.delegated.txt')
 	})
 
@@ -87,7 +96,7 @@ describe('what a request carries', () => {
 			},
 			empty
 		)
-		const text = pack.system.map((block) => block.text).join('\n\n--- not cached below ---\n\n')
+		const text = written(pack)
 		await expect(`${text}\n`).toMatchFileSnapshot('./__snapshots__/system-prompt.research.txt')
 	})
 

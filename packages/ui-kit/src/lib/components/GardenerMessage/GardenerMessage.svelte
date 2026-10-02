@@ -6,7 +6,8 @@
 	// children (tool and proposal cards) follow the text inside the same bubble. With `markdown` a reply's text is
 	// drawn as Markdown; the owner's words never are. The words select. Under the bubble, when the app gives a `time`
 	// or an `oncopy`, a quiet foot says when the message was sent or received and carries a copy glyph that turns to a
-	// check for two seconds once the app has copied. `tone="honey"` is the Gardener acting rather than speaking (D-40):
+	// check for two seconds once the app has copied; `actions` puts the app's own quiet glyphs after it (the eye that
+	// says what a reply read). `tone="honey"` is the Gardener acting rather than speaking (D-40):
 	// a draft it left for the owner to commit, as its own message with its own `name` and `icon` for a header.
 	import type { Snippet } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
@@ -39,6 +40,8 @@
 		oncopy?: () => void | Promise<void>
 		/** What follows the text inside the bubble: tool cards, proposal cards. */
 		children?: Snippet
+		/** Quiet glyphs in the foot, after the copy glyph: xs IconButtons, each with its tooltip. */
+		actions?: Snippet
 	}
 	let {
 		text,
@@ -51,6 +54,7 @@
 		time,
 		oncopy,
 		children,
+		actions,
 		class: className = '',
 		...rest
 	}: Props = $props()
@@ -93,7 +97,7 @@
 		{/if}
 		{@render children?.()}
 	</div>
-	{#if time || oncopy}
+	{#if time || oncopy || actions}
 		<div class="ed-msg-foot">
 			{#if time}<span class="ed-msg-time">{owner ? s.gardener.sentAt(time) : s.gardener.receivedAt(time)}</span>{/if}
 			{#if oncopy}
@@ -105,6 +109,7 @@
 					onclick={() => void copy()}
 				/>
 			{/if}
+			{@render actions?.()}
 		</div>
 	{/if}
 </article>

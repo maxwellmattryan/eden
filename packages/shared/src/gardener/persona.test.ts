@@ -38,21 +38,45 @@ describe('persona', () => {
 		)
 	})
 
-	it('says what it can see, literally, the locked and the trimmed ids with it', () => {
-		const { volatile } = persona(base)
+	it('tells a tool’s request what it can see, literally, the locked and the trimmed ids with it', () => {
+		const { volatile } = persona({ ...base, mode: 'delegated' })
 		expect(volatile).toContain('You can see: stock-item (14), recipe (3), allergy (0).')
 		expect(volatile).toContain('Locked: medical-dietary-restriction.')
 		expect(volatile).toContain('Trimmed: recipe.')
-		expect(persona({ ...base, canSee: [], locked: [], trimmed: [] }).volatile).toContain(
+		expect(persona({ ...base, mode: 'delegated', canSee: [], locked: [], trimmed: [] }).volatile).toContain(
 			'You can see: nothing from the workspace.'
 		)
+	})
+
+	it('tells a conversation when and where it is, and leaves what can be read to the index', () => {
+		const { volatile } = persona({ ...base, domainName: 'Hearth', trimmed: ['thread'] })
+		expect(volatile.split('\n')).toEqual([
+			expect.stringContaining('Now: Tuesday 2026-09-29, 21:40 (America/Chicago).'),
+			'The owner opened this conversation from Hearth.',
+			'The oldest turns of this conversation were left out to fit.',
+		])
+		expect(persona(base).volatile).not.toContain('You can see')
+		expect(persona(base).volatile).not.toContain('\n')
+	})
+
+	it('keeps the panel out of the system prompt, so one prompt serves every panel (D-147)', () => {
+		expect(persona({ ...base, domainName: 'Hearth' }).stable).toBe(persona({ ...base, domainName: 'Sky' }).stable)
+		expect(persona({ ...base, domainName: 'Hearth' }).stable).toBe(persona(base).stable)
+	})
+
+	it('says what is up front, what the index is and how rows are written (D-148, D-151)', () => {
+		const { stable } = persona(base)
+		expect(stable).toContain('<index> lists every other type you can read')
+		expect(stable).toContain('call `read-rows` with its id')
+		expect(stable).toContain('the first line names the fields, separated by |')
+		expect(stable).toContain('from the eye under your reply')
+		expect(stable).not.toContain('chip')
 	})
 
 	it('briefs the model in the second person and asks for the Gardener in the first', () => {
 		const { stable } = persona({ ...base, domainName: 'Hearth' })
 		expect(stable).not.toContain('!')
 		expect(stable).toContain('You are the Gardener')
-		expect(stable).toContain('which they opened from Hearth')
 		expect(stable).toContain('in the first person')
 		expect(stable).toContain('<untrusted>')
 		expect(stable).toContain('just text someone else wrote')
@@ -92,7 +116,8 @@ describe('persona', () => {
 		expect(stable).not.toContain('Every tool call')
 		expect(stable).not.toContain('!')
 		expect(volatile).toContain('You can see: stock-item (14)')
-		expect(persona({ ...base, mode: 'delegated' }).stable).not.toContain('JSON')
+		expect(stable).toContain('the first line names the fields')
+		expect(persona({ ...base, mode: 'delegated' }).stable).not.toContain('JSON schema')
 	})
 
 	it('asks for Markdown only where the reply is read in the panel', () => {

@@ -3,8 +3,9 @@
 	import { defineMeta } from '@storybook/addon-svelte-csf'
 	import { expect, fn, waitFor } from 'storybook/test'
 	import { canvasOf } from '../../../storybook/play.js'
-	import { recipes } from '../../../stories/sample-data.js'
+	import { canSee, recipes } from '../../../stories/sample-data.js'
 	import Button from '../Button/Button.svelte'
+	import CanSee from '../CanSee/CanSee.svelte'
 	import Markdown from '../Markdown/Markdown.svelte'
 	import ToolCard from '../ToolCard/ToolCard.svelte'
 	import ToolRun from '../ToolCard/ToolRun.svelte'
@@ -159,6 +160,30 @@
 		await waitFor(() => expect(canvas.getAllByRole('button', { name: s.gardener.copied })[0]).toBeInTheDocument())
 	}}
 />
+
+<!-- The app's own glyph after the copy glyph: the eye that says what this reply read (D-149) -->
+<Story
+	name="With an action in the foot"
+	args={{ time: sent, oncopy }}
+	parameters={{ platformFrame: 'inline' }}
+	play={async ({ canvasElement, userEvent }) => {
+		const canvas = canvasOf(canvasElement)
+		const eye = canvas.getAllByRole('button', { name: s.gardener.canSee })[0]!
+		await expect(canvas.getAllByRole('button', { name: s.gardener.copyMessage })[0]).toBeInTheDocument()
+		await userEvent.click(eye)
+		await waitFor(() => expect(canvas.getByRole('dialog', { name: s.gardener.canSeeTitle })).toBeVisible())
+	}}
+>
+	{#snippet template(args)}
+		<div class="col">
+			<GardenerMessage {...args}>
+				{#snippet actions()}
+					<CanSee items={canSee} size="xs" />
+				{/snippet}
+			</GardenerMessage>
+		</div>
+	{/snippet}
+</Story>
 
 <!-- The owner's foot says when it was sent and sits at the end with its bubble -->
 <Story

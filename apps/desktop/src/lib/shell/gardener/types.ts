@@ -2,7 +2,15 @@
 // tool in its manifest, the substrate keeps its own in `substrate-tools.ts`, and the loop calls them by wire name.
 // A plain or a write tool runs here and answers the model; a model-backed one hands the runtime a prompt and reads
 // the answer back, since the request itself is the runtime's (D-74: its own single request, its own audit entry).
-import type { AttachmentBlock, DraftCard, JsonSchema, ModelGrade, PackAttachment } from '@eden/shared/gardener'
+import type {
+	AttachmentBlock,
+	AuditRead,
+	DraftCard,
+	JsonSchema,
+	ModelGrade,
+	PackAttachment,
+	ThreadTier,
+} from '@eden/shared/gardener'
 import type { FactProposal } from '@eden/shared/profile'
 
 /**
@@ -59,6 +67,8 @@ export interface ToolContext {
 	files?: ToolFiles
 	/** The `https` addresses the owner wrote in this conversation: the ones `read-page` fetches without asking. */
 	links: string[]
+	/** The registry ids the conversation may read, the union of what its tools declared: what `read-rows` answers. */
+	reach: readonly string[]
 	/**
 	 * What the tool's research request found (D-132), there for its `prompt` and its `parse`: the notes, which are
 	 * untrusted text, and the addresses the searches returned, which are the only ones the tool may use.
@@ -81,6 +91,7 @@ export interface Research {
 
 /** What a tool answers: what the model reads, the card the panel shows, the rows it touched (for the audit). */
 export interface ToolResult {
+	/** An object, sent as JSON; or text, sent as it is (rows as the pack writes them). */
 	output: unknown
 	card?: DraftCard
 	touched?: string[]
@@ -88,6 +99,12 @@ export interface ToolResult {
 	proposal?: FactProposal
 	/** Why nothing was answered, when nothing was. */
 	failure?: ToolFailure
+	/** The rows a read tool sent, by registry id: they join the request's audit entry and the reply's eye (D-148). */
+	reads?: AuditRead[]
+	/** The grants those reads were allowed by. */
+	grants?: string[]
+	/** The highest tier among them, which the thread rises to. */
+	tier?: ThreadTier
 }
 
 /** A model-backed tool: what it asks the model, and what it makes of the answer. */

@@ -4,12 +4,12 @@ status: draft
 summary: Eden's AI layer: one persona across every surface, bring-your-own-key providers and local models, model grades, declared reads and the context pack, typed tools with access levels, the Council, the Phase 1 privacy pipeline, hard budgets, and the audit log.
 read-this-if: You are designing any feature that involves a model, or anything the Gardener can see or do.
 depends-on: [privacy, registry, grants, primitives]
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 ## Persona and voice
 
-One assistant, the Gardener, everywhere: the global panel, each domain's chat, inline asks, proposal cards. It speaks in the first person, briefly, and always says what it can see. It never implies it saw more than its context pack. It does not cheer, apologise in loops, or moralise. It tends; it does not own. In a conversation it always writes Markdown, which the panel draws, and never raw HTML. It knows the grades exist and never changes its own: where a request needs more than its grade, or would do as well on a lower one and save the owner money, it proposes the other grade as a proposal card with both estimates, and the owner decides (D-74). The system prompt tells it so; the card is not built yet, so it proposes the grade in words. The prompt itself is a briefing addressed to the model, in the second person, and it names each enabled domain by its display name and its id (`engineering/gardener.md`, "The system prompt"). Voice examples live in `design/brand.md`.
+One assistant, the Gardener, everywhere: the global panel, each domain's chat, inline asks, proposal cards. It speaks in the first person, briefly, and always says what it can see. It never implies it saw more than its context pack and what its tools read. It does not cheer, apologise in loops, or moralise. It tends; it does not own. In a conversation it always writes Markdown, which the panel draws, and never raw HTML. It knows the grades exist and never changes its own: where a request needs more than its grade, or would do as well on a lower one and save the owner money, it proposes the other grade as a proposal card with both estimates, and the owner decides (D-74). The system prompt tells it so; the card is not built yet, so it proposes the grade in words. The prompt itself is a briefing addressed to the model, in the second person, and it names each enabled domain by its display name and its id (`engineering/gardener.md`, "The system prompt"). Voice examples live in `design/brand.md`.
 
 ## Providers and models
 
@@ -24,7 +24,7 @@ The provider registry holds each provider's models, each with its flags (`tools`
 ## Surfaces
 
 - **Global panel**: a right-side panel on desktop, a sheet on mobile, opened from the Gardener chip or ⌘K "ask". It has every enabled domain's tools.
-- **Domain chat**: the same panel opened from inside a domain, with that domain's tools first and the "can see" chip pre-filled with that domain's declared reads.
+- **Domain chat**: the same panel opened from inside a domain. It has the same tools in the same order (D-150), and the domain's own facts go up front with the message (D-148).
 - **Inline ask**: select text or an entity and ask about it; the entity's URI becomes a declared read for that request.
 - **Proposal cards**: when a tool wants to store a fact or create an entity with `write-draft`, the draft appears as a card with accept and dismiss (`substrate/profile.md`).
 - **Council view** (Phase 2): side-by-side columns.
@@ -33,9 +33,9 @@ Threads persist in the workspace, listed globally and filterable by domain. A th
 
 ## Declared reads and the context pack (Phase 1)
 
-There is no "current domain" for a read (D-31). Each tool and surface declares the registry ids it reads. The pack is assembled in this order, within the model's size budget: the tool schemas; the system prompt; the thread; then, with the message and ahead of it, declared facts (user-asserted first), declared entities, most recent first, and declared primitives in the relevant time window. Trimming drops the oldest entities first and says so in the chip. Content from mirrors is marked untrusted, and the persona instructs the model to treat it as data. The **"can see" chip** on the panel carries the row count and opens to the registry ids in the pack, named as the owner knows them, each with its exact rows, so the chip is literal, never a summary (D-78). It shows what the owner's next message will carry, read afresh each time it opens, not what the last request read: that is the audit log's (D-120). A T2 id a tool declared and no grant allows is listed as not shared, with why and a one-tap standing grant.
+There is no "current domain" for a read (D-31). Each tool and surface declares the registry ids it reads, and a request reaches those ids and no others. What it carries of them depends on who asks (D-148). A tool's own request carries every row it declared, within the model's size budget: declared facts (user-asserted first), declared entities, most recent first, and declared primitives in the relevant time window; trimming drops the oldest entities first. A conversation carries little: the facts the substrate owns and those of the domain it was opened in, the rows it was opened on, and an index of every other id it can reach with a row count. The Gardener reads the rest on demand with `read-rows`, which answers only ids in that reach, under the same tier gate. Content from mirrors is marked untrusted on both paths, and the persona instructs the model to treat it as data. The request is laid out so the provider can cache it from one message to the next: the tool list in one fixed order, a system prompt that does not change, and the clock with the newest message (D-147, D-150). The **eye** under the conversation's last reply opens to the registry ids that reply read, named as the owner knows them, each with its exact rows, the ones sent with the message and the ones its tools fetched, so it is literal, never a summary (D-149). A T2 id a tool declared and no grant allows is listed there as not shared, with why and a one-tap standing grant.
 
-**Files on a message.** Beside the declared reads, a request carries what the owner attached to their message: images, PDFs and text files, under the consent of attaching and sending, listed in the "can see" chip (D-82). They stay on the device as Attachments (D-83).
+**Files on a message.** Beside the declared reads, a request carries what the owner attached to their message: images, PDFs and text files, under the consent of attaching and sending, listed under the reply's eye (D-82, D-149). They stay on the device as Attachments (D-83).
 
 ## Tools
 

@@ -47,7 +47,7 @@
 			docs: {
 				description: {
 					component:
-						'The “can see” button at the composer’s foot: an eye `IconButton`, like the paperclip beside it, that opens a `DetailPopover` saying, literally, what the Gardener can see in this request. One row per id with rows to read, each opening to the rows themselves or to a sentence saying how many there are; the ids with nothing to read behind a quiet toggle; what was trimmed; the T2 ids kept out, each with an Allow when the app can ask for the grant; the audit log one quiet button away.',
+						'The eye under a reply: an eye `IconButton`, like the copy glyph beside it, that opens a `DetailPopover` saying, literally, what the Gardener read for that reply. One row per id with rows it read, each opening to the rows themselves or to a sentence saying how many there are; the ids with nothing to read behind a quiet toggle; what was trimmed; the T2 ids kept out, each with an Allow when the app can ask for the grant; the audit log one quiet button away.',
 				},
 			},
 		},

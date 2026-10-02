@@ -5,8 +5,9 @@
 </script>
 
 <script lang="ts">
-	// The "can see" button in the composer's foot (product/substrate/ai.md): an eye IconButton, beside the paperclip
-	// and like it, that opens a DetailPopover saying, literally, what the Gardener can see in the owner's next message. The
+	// The eye under a reply (product/substrate/ai.md, D-149): an eye IconButton, beside the reply's copy glyph and
+	// like it, that opens a DetailPopover saying, literally, what the Gardener read for that reply: the rows sent with
+	// the message and the rows its tools fetched. The
 	// popover is green because the Gardener is saying what it reads (D-40); its caption carries the count. Inside: the
 	// ReadList (one row per id with rows to read, each opening to the exact rows or to a sentence; what was trimmed);
 	// then the T2 ids kept out, each with an Allow when the app can ask for the grant; and the audit log one quiet
@@ -22,13 +23,13 @@
 	import ReadList from '../ReadList/ReadList.svelte'
 
 	type Props = HTMLAttributes<HTMLElement> & {
-		/** The registry ids in the context pack, with counts. */
+		/** The registry ids the reply read rows of, with counts. */
 		items: CanSeeItem[]
 		/** T2 ids excluded from this request. */
 		locked?: CanSeeItem[]
 		/** The ids whose rows were cut to fit the pack. */
 		trimmed?: string[]
-		/** The button's size; sm sits beside the composer's paperclip. */
+		/** The button's size; xs sits beside a reply's copy glyph. */
 		size?: 'xs' | 'sm' | 'md'
 		/** Called as the panel opens, so the app can read afresh what it is about to show. */
 		onopen?: () => void

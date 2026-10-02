@@ -12,6 +12,7 @@ import { dueDay, dueTime } from '../tasks/rules.js'
 import { todayView } from '../tasks/today.js'
 import type { Task } from '../tasks/types.js'
 import type { WeekStart } from '../types/index.js'
+import { writeRows } from './rows.js'
 
 /** The most days one call answers. */
 export const AGENDA_DAYS = 31
@@ -272,4 +273,34 @@ export function agenda(input: AgendaInput): Agenda {
 		...(habits.length ? { habits } : {}),
 		...(reachesToday && input.alerts?.length ? { alerts: [...input.alerts] } : {}),
 	}
+}
+
+/**
+ * The agenda as the model reads it (D-151): a heading a day, then each list under its name with its count, written
+ * as rows are everywhere else (a table from three rows on), so a busy week costs its values and not its field names.
+ * A list with nothing in it is left out, as in the agenda itself; `note` is what the caller has to add.
+ */
+export function agendaText(agenda: Agenda, note?: string): string {
+	const list = (name: string, rows: readonly { id: string }[] | undefined) =>
+		rows?.length ? `${name} (${rows.length})\n${writeRows(name, rows)}` : undefined
+	const days = agenda.days.map((day) => {
+		const parts = [
+			day.weather === undefined ? undefined : `weather: ${JSON.stringify(day.weather)}`,
+			list('events', day.events),
+			list('due', day.due),
+			list('routines', day.routines),
+			list('done', day.done),
+		].filter((part) => part !== undefined)
+		return [`## ${day.day} ${day.weekday}`, ...(parts.length ? parts : ['nothing'])].join('\n')
+	})
+	return [
+		`today: ${agenda.today}`,
+		...days,
+		list('## overdue', agenda.overdue),
+		list('## habits', agenda.habits),
+		agenda.alerts?.length ? `## alerts\n${agenda.alerts.map((alert) => JSON.stringify(alert)).join('\n')}` : undefined,
+		note,
+	]
+		.filter((part) => part !== undefined)
+		.join('\n\n')
 }
