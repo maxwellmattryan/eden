@@ -1,5 +1,5 @@
 <script lang="ts">
-	// The Garden on the phone (product/substrate/shell.md, "The Garden"; D-TBD(phone-garden)), after the phone canvas
+	// The Garden on the phone (product/substrate/shell.md, "The Garden"; D-165), after the phone canvas
 	// of the Domains/Garden/Garden story: the quick-navigation row with Today and every enabled domain, the grid in
 	// two columns (the kit's, at `data-platform="mobile"`) and the activity feed beneath it, in the page's own scroll.
 	// The tiles' bodies are the ones the desktop mounts and the layout is the owner's on this device

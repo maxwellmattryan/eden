@@ -12,7 +12,7 @@
 	import { compactPage } from './compact.js'
 
 	// The phone keeps the tool and its access, by their place in the full list; the grade and the reads are in the
-	// detail's declaration already, and the owner is said above it (D-TBD(gardener-page-phone)).
+	// detail's declaration already, and the owner is said above it (D-164).
 	const compact = compactPage()
 	const PHONE_COLUMNS = [0, 2]
 	const kept = <T,>(cells: T[]): T[] => (compact ? PHONE_COLUMNS.map((index) => cells[index]!) : cells)

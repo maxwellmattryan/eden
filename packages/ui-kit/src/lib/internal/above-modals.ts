@@ -16,7 +16,7 @@ const stands = (dialog: HTMLDialogElement) =>
 	dialog.isConnected && isModal(dialog) && dialog.dataset.closing === undefined
 
 /**
- * Keeps an element above every modal dialog (D-TBD(toast-over-modal)). A `<dialog>` opened with `showModal()` sits
+ * Keeps an element above every modal dialog (D-169). A `<dialog>` opened with `showModal()` sits
  * in the top layer and makes everything outside itself inert, a popover in the top layer included, so nothing
  * outside it can be seen over its scrim or pressed. The only place that is both is inside the dialog, so while one
  * is open the element is moved to be the last child of the top-most one, and it goes back to where it was mounted

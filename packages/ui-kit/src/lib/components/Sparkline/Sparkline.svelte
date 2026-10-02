@@ -57,7 +57,7 @@
 	let read = $state<number>()
 	let scale = $state(1)
 	const reading = $derived(read === undefined ? undefined : geo.points[read])
-	// A finger pins the readout, scrubs it and leaves it until a tap elsewhere (`chartRead`, D-TBD(chart-touch)).
+	// A finger pins the readout, scrubs it and leaves it until a tap elsewhere (`chartRead`, D-168).
 	function point(place: ChartPlace | undefined, el: HTMLElement) {
 		scale = el.offsetWidth / width || 1
 		const at = place

@@ -1,6 +1,6 @@
 <script lang="ts">
 	// Settings → Domains on the phone: the two domains in the tab bar beside Garden and Today
-	// (product/substrate/shell.md, "Mobile"; D-TBD(pinned-tabs)). Two selects, the third tab and the fourth; choosing
+	// (product/substrate/shell.md, "Mobile"; D-160). Two selects, the third tab and the fourth; choosing
 	// what the other holds swaps them, so the pair is always two different domains. The choice is this device's:
 	// `settings.pinnedTabs`, which no bundle carries. Enabling, disabling and reordering domains arrive with the
 	// rest of this tab.

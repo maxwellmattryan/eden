@@ -70,7 +70,7 @@
 	const reads = $derived(hover && !!format)
 	let at = $state<number>()
 	const reading = $derived(geo && at !== undefined ? sunAt(sunrise, sunset, latitude, geo, at) : undefined)
-	// A finger pins the readout, scrubs it and leaves it until a tap elsewhere (`chartRead`, D-TBD(chart-touch)).
+	// A finger pins the readout, scrubs it and leaves it until a tap elsewhere (`chartRead`, D-168).
 	function point(place: ChartPlace | undefined) {
 		at = place?.x
 	}

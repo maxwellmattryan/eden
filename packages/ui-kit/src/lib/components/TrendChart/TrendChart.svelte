@@ -5,7 +5,7 @@
 	// marked with their values, since those are what a reader looks for. It fills its container's width and keeps its
 	// height, and it needs no legend, since it draws one series and its axes say what that is. The point nearest the
 	// pointer is read out above itself (`hover`), on a hairline down to its tick; a finger pins the readout with a
-	// tap, moves it with a horizontal scrub and leaves it standing until a tap elsewhere (D-TBD(chart-touch)). Colour
+	// tap, moves it with a horizontal scrub and leaves it standing until a tap elsewhere (D-168). Colour
 	// is not the only carrier: the SVG carries one accessible sentence.
 	import type { HTMLAttributes } from 'svelte/elements'
 	import { measure } from '../../internal/measure.js'

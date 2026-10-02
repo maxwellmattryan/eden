@@ -1,5 +1,5 @@
 <script lang="ts">
-	// The phone's settings drawer (product/substrate/settings-utilities.md; D-TBD(settings-drawer)): one full-height
+	// The phone's settings drawer (product/substrate/settings-utilities.md; D-159): one full-height
 	// bottom sheet with two levels held by `settingsUi`. The first lists the tabs desktop's rail lists, in its order;
 	// a row opens its tab in place, and Back returns to the list. A deep link (`settingsUi.show('gardener')`) opens
 	// at the tab, and Back from it still leads to the list. The tab bodies are the shared ones desktop mounts

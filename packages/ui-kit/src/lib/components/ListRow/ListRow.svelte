@@ -62,7 +62,7 @@
 	const isSwipeItem = (item: MenuItem) => item.id === SWIPE_LEADING || item.id === SWIPE_TRAILING
 	/**
 	 * A row's swipe actions as menu items, the leading one first and the trailing one destructive: what the menu of a
-	 * row with no `actions` of its own holds, so nothing depends on a swipe (D-TBD(list-swipe)).
+	 * row with no `actions` of its own holds, so nothing depends on a swipe (D-167).
 	 */
 	export function swipeItems(leading?: SwipeLeading, trailing?: SwipeTrailing): MenuItem[] {
 		return [
@@ -150,7 +150,7 @@
 	// it leaves with a collapse (`collapse` above); on its own it is a list item and its own tab stop. A press on a
 	// button in the row (the hint, the ⋯) never toggles or opens the row. With a `dragGroup` a desktop pointer can pick
 	// the row up and drop it on a DropTarget that accepts the group; the row dims while it is held. With a
-	// `swipeLeading` or a `swipeTrailing` the row is drawn through SwipeRow (D-TBD(list-swipe)): on the phone a
+	// `swipeLeading` or a `swipeTrailing` the row is drawn through SwipeRow (D-167): on the phone a
 	// horizontal drag reveals and fires them, and on desktop nothing moves. Either way a row with no `actions` of its
 	// own takes them as its menu, the leading one first and the trailing one last and destructive, so a held press, a
 	// right-click and Shift+F10 reach them without a swipe, under reduced motion too; on the phone that menu has no ⋯

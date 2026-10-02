@@ -5,7 +5,7 @@
 	// TrendChart draws: round figures up the side on hairlines, a label under every bar that has room, the container's
 	// width and its own height. A bar under the pointer is read out above itself (`hover`): its bucket, a figure for
 	// each series, and their sum when there is more than one; a finger pins the readout with a tap, moves it with a
-	// horizontal scrub and leaves it standing until a tap elsewhere (D-TBD(chart-touch)). Colour is not the only carrier: the legend names each
+	// horizontal scrub and leaves it standing until a tap elsewhere (D-168). Colour is not the only carrier: the legend names each
 	// series beside its swatch, the SVG carries one sentence, and the same numbers stand as a table for a reader who
 	// cannot see the drawing or point at it.
 	import type { HTMLAttributes } from 'svelte/elements'

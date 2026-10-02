@@ -1,5 +1,5 @@
 <script lang="ts">
-	// The mobile shell (product/substrate/shell.md, "Mobile"; D-TBD(phone-chrome)): the top bar pinned under the
+	// The mobile shell (product/substrate/shell.md, "Mobile"; D-158): the top bar pinned under the
 	// notch (back, the Gardener, the bell), the page, the bottom tab bar pinned to the viewport (Garden, Today, the
 	// two pinned domains, More), the floating + over it, and the overlays (toast, the settings drawer, Quick Log, the
 	// inbox, each domain's own, crash). It mounts the shared pieces once: settings, i18n, the global error handler,

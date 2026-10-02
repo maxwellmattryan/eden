@@ -4,7 +4,7 @@
 	// the panel docked beside whatever page is open (the chat sheet on the phone); this is where everything about it
 	// is looked up. The tab lives in the address, so the audit log and the tools keep the addresses they had as pages
 	// of their own: each app's route hands its `tab` parameter in, and a pick goes back through the navigation seam.
-	// On the phone the four tabs are named without their icons, so they fit the width (D-TBD(gardener-page-phone)).
+	// On the phone the four tabs are named without their icons, so they fit the width (D-164).
 	import { PageHeader, Segmented, domainGlyph, type SegmentedItem } from '@eden/ui-kit'
 	import { t } from '../../../i18n/index.js'
 	import { navigation } from '../../../navigation/index.js'

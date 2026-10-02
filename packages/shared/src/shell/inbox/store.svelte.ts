@@ -111,7 +111,7 @@ export class InboxStore {
 	/**
 	 * Turns OS notifications on for this device, asked in context by the card that would have been one. The system is
 	 * asked first (a phone raises its own prompt; desktop answers yes): refused there, no grant is recorded and a
-	 * toast says where to change it (D-TBD(phone-chrome)).
+	 * toast says where to change it (D-158).
 	 */
 	async allowNotifications(): Promise<void> {
 		const allowed = await requestNotificationPermission().catch((error) => {

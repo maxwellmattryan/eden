@@ -26,7 +26,7 @@ export const routable = (id: string): boolean => !!manifestFor(id)?.routes.open
 
 /**
  * The tab bar and More as this device has them: Garden and Today, the two domains the owner pinned here (the
- * declared pair until they choose, D-TBD(pinned-tabs)), then More with the rest. Reads `settings.pinnedTabs`, so a
+ * declared pair until they choose, D-160), then More with the rest. Reads `settings.pinnedTabs`, so a
  * `$derived` over it follows the picker.
  */
 export function phoneTabBar(): TabBar {

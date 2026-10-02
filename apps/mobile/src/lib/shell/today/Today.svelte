@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Today on the phone (product/substrate/tasks.md, "Today view"; D-75, D-TBD(phone-today)), after the phone canvas
+	// Today on the phone (product/substrate/tasks.md, "Today view"; D-75, D-166), after the phone canvas
 	// of the Domains/Today/Today story: the Quick Log strip, the quick-add line with its parsed chips under the
 	// field, then Overdue (closed until opened), Due today, Routines and Habits, one list each. A row swipes: to the
 	// right is its main action (Done, Not done for a routine already done, Log one for a habit), to the left Delete.

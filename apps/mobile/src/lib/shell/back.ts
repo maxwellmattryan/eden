@@ -1,4 +1,4 @@
-// Android's back press (product/substrate/shell.md, "Mobile"; D-TBD(phone-chrome)). The order: what is on top
+// Android's back press (product/substrate/shell.md, "Mobile"; D-158). The order: what is on top
 // closes first (a menu or a popover, then the top-most sheet), then whatever a page holds open (`holdBack` in
 // `@eden/shared/navigation`: a pushed detail), then the shell's own way back (history, the parent page), and at a
 // tab's root with nothing open the app exits. iOS has no such press: its edge swipe is the webview's own history.

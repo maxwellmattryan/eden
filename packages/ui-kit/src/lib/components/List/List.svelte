@@ -22,7 +22,7 @@
 	// to the row that takes its place, or to the one before it when it was last (`onleave`).
 	// With a `dragGroup` the rows can be dragged out, by a desktop pointer, to a DropTarget that accepts the group.
 	// With `leading` or `trailing` the rows swipe on the phone (ListRow draws them through SwipeRow,
-	// D-TBD(list-swipe)); a row with no menu of its own takes the two actions as its menu on both platforms, so they
+	// D-167); a row with no menu of its own takes the two actions as its menu on both platforms, so they
 	// are never reached by a swipe alone.
 	import type { Snippet } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'

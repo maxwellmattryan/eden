@@ -91,7 +91,7 @@ pub async fn show_notification(
 
 /// Asks the system whether Eden may show notifications, which on a phone (iOS, Android 13 and later) raises the
 /// system's own prompt the first time. Answers whether it is allowed: desktop answers yes without a prompt. The shell
-/// asks when the owner turns notifications on, before the capability grant is recorded (D-TBD(phone-chrome)).
+/// asks when the owner turns notifications on, before the capability grant is recorded (D-158).
 #[tauri::command]
 pub async fn request_notification_permission(app: AppHandle) -> Result<bool> {
     match app.notification().request_permission() {

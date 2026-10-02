@@ -57,7 +57,7 @@ export function scrollOf(tab: string): number {
 /** The pathname each tab was last at, for this session. */
 const tabPlaces = new Map<string, string>()
 
-/** Keeps where a tab is, so the phone's tab bar comes back to it (D-TBD(phone-chrome)). */
+/** Keeps where a tab is, so the phone's tab bar comes back to it (D-158). */
 export function rememberTabPlace(tab: string, pathname: string) {
 	tabPlaces.set(tab, pathname)
 }

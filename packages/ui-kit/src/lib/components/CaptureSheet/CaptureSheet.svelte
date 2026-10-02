@@ -293,7 +293,7 @@
 	}
 
 	// The phone has no page to paste onto and nothing to drop, so in the stacked layout a haul's collect step carries
-	// a field for the text (D-TBD(capture-paste-field)): what is typed or pasted there goes to `onpastetext` on Add,
+	// a field for the text (D-171): what is typed or pasted there goes to `onpastetext` on Add,
 	// the callback a paste anywhere in the sheet already feeds, and the field empties. The wide layout keeps
 	// paste-anywhere and shows no field; taking stock reads photos only, so it shows none either.
 	let pasted = $state('')

@@ -1,5 +1,5 @@
 // The phone's half of the Sync tab's file port (`@eden/shared/shell/settings`, archive-files.ts;
-// D-TBD(phone-archive)). The crate reads and writes paths with the standard library, and a phone's pickers do not
+// D-161). The crate reads and writes paths with the standard library, and a phone's pickers do not
 // answer one it can use (Android's answer a `content://` address), so both ways go through Eden's own folder:
 //   - import: the file comes from a file input, is written to `<data dir>/imports/`, and the crate reads it there;
 //   - export: the crate writes to `<data dir>/exports/` as it does by default, then the system's save dialog says

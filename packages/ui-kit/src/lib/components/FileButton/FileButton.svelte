@@ -4,7 +4,7 @@
 	// files to nothing else: the app runs them through the same `checkFiles` a drop goes through. The same file can be
 	// picked twice in a row. Where a file is one of several places the thing may come from (a link, say), the app names
 	// the others as `sources` and the press opens a menu instead: the picker first, then the app's own rows. With
-	// `camera`, on the phone, the camera is one of those places (D-TBD(file-camera)): the menu leads with "Take a
+	// `camera`, on the phone, the camera is one of those places (D-170): the menu leads with "Take a
 	// photo", a second file input that carries `capture`, so the system opens the camera at once, and the picker's
 	// row reads "From the library or files", the input without `capture`, where the system offers its own chooser.
 	// On desktop `camera` does nothing.

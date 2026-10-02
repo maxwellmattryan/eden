@@ -2,7 +2,7 @@
 // its line written from the rule's locale key and the signal's payload, so it reads in the current locale; when it
 // arrived; its domain; Open, which goes to the domain's place; and, on the latest card that would have been an OS
 // notification while those are off, the offer to turn them on. Both shells draw the same items: desktop behind the
-// status bar's bell, the phone in its inbox sheet (D-TBD(phone-chrome)). The module is pure: the words, the clock
+// status bar's bell, the phone in its inbox sheet (D-158). The module is pure: the words, the clock
 // and the store's two answers arrive as arguments.
 import { domainGlyph, type GlyphId, type InboxItem } from '@eden/ui-kit'
 import { formatTime, formatWeekday, relativeDay, type DateFormat } from '../../dates/index.js'

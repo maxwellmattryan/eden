@@ -4,7 +4,7 @@
 	// the owner chooses how to import it; a replace asks first, and writes a backup before it clears anything. Sync,
 	// devices, the backup schedule, the Vault and the wipe arrive with their substrate. Where an archive goes and where
 	// one comes from is the app's (`files`, archive-files.ts): desktop's dialogs answer paths; the phone writes to
-	// Eden's own folder and hands the file on, and copies a picked file in before it is read (D-TBD(phone-archive)).
+	// Eden's own folder and hands the file on, and copies a picked file in before it is read (D-161).
 	import { Button, ConfirmSheet, FileButton, InlineError, Notice, Segmented, Select, toast } from '@eden/ui-kit'
 	import { isTauri, logError } from '../../../api/index.js'
 	import {

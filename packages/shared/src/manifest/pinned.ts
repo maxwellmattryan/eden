@@ -1,5 +1,5 @@
 // The two domains in the phone's tab bar as the owner chose them (product/substrate/shell.md, "Mobile";
-// D-TBD(pinned-tabs)). The choice is this device's and is stored as it was made; what the bar shows is this
+// D-160). The choice is this device's and is stored as it was made; what the bar shows is this
 // function's answer, so a domain that has since been disabled, or one the phone has no page for, gives its tab to
 // the next in line instead of leaving a gap. Pure: `tabBar(declarations, shell, pinnedPair(...))`.
 import type { DomainDeclaration, ShellDeclaration } from './types.js'

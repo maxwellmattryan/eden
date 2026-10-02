@@ -1,5 +1,5 @@
 <script lang="ts">
-	// The inbox on the phone (substrate/signals-notifications.md, "Notification center"; D-TBD(phone-chrome)): a
+	// The inbox on the phone (substrate/signals-notifications.md, "Notification center"; D-158): a
 	// sheet over whatever page is open, so the place is kept, with the cards the desktop shows behind its bell, the
 	// latest first. A card opens its domain, and the latest one that would have been an OS notification offers to
 	// turn those on. Closing the sheet is the moment what it showed is read, as the bell's closing is on desktop.

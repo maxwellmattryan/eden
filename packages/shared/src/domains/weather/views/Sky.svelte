@@ -9,7 +9,7 @@
 	// Offline, an InlineError names the last good forecast and the desktop's status bar carries the banner; the
 	// numbers stay, since a mirror is still worth reading. Both apps mount this view: the phone reads it through the
 	// narrow page (D-112), with its own few rules under `[data-platform='mobile']` at the foot of the styles, so the
-	// desktop's docked narrow page is unchanged (D-TBD(sky-phone)).
+	// desktop's docked narrow page is unchanged (D-172).
 	import {
 		Badge,
 		Banner,
@@ -1313,7 +1313,7 @@
 		letter-spacing: var(--ed-t-body-tracking);
 	}
 
-	/* The phone (D-TBD(sky-phone)): no status bar to leave a breath above, since the shell's own foot holds the tab
+	/* The phone (D-172): no status bar to leave a breath above, since the shell's own foot holds the tab
 	   bar and the floating button; the day's two shapes stacked, each the page's width, so twenty-four hours stay
 	   readable; the details two abreast, their labels free to wrap where a language runs long */
 	:global([data-platform='mobile']) .page {

@@ -15,7 +15,7 @@ export interface ChartReadOptions {
 }
 
 /**
- * How a chart is read (D-117), by a mouse and by a finger (D-TBD(chart-touch)). A mouse reads the place under it as
+ * How a chart is read (D-117), by a mouse and by a finger (D-168). A mouse reads the place under it as
  * it moves and the readout goes when it leaves, as it always did. A finger or a pen pins it: a tap reads the place
  * tapped, a horizontal scrub moves the reading with the finger, and lifting leaves it standing until a press
  * anywhere outside the chart. The element takes `touch-action: pan-y`, so a vertical drag still scrolls the page;

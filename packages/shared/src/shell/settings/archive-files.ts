@@ -2,7 +2,7 @@
 // the crate reads and writes paths, and what gives it a path is the app's. Desktop asks the system's dialogs for one
 // (`target`, `choose`). The phone cannot: a picker there answers a file, or an address the crate's file calls cannot
 // open, so the archive is written to Eden's own folder and then handed on (`deliver`), and a picked file is copied
-// into Eden's folder first (`stage`) (D-TBD(phone-archive)). Each app passes its own to the Sync tab.
+// into Eden's folder first (`stage`) (D-161). Each app passes its own to the Sync tab.
 import type { BundleScope } from '../../data/index.js'
 
 export interface ArchiveFiles {

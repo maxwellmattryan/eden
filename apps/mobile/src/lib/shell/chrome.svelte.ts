@@ -1,4 +1,4 @@
-// The phone's chrome as the pages may steer it (D-TBD(phone-chrome)): one $state object, so a phone-own view can
+// The phone's chrome as the pages may steer it (D-158): one $state object, so a phone-own view can
 // ask the floating + to stand down while it has a mode of its own on screen (the Garden's edit mode), and the layout
 // hears it. Nothing here is kept: it is the session's.
 import { untrack } from 'svelte'

@@ -62,7 +62,7 @@
 
 	const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
 	// The phone keeps four of the columns (when, tool, cost, outcome), by their place in the full list; the surface,
-	// the grade, the model and the tokens are in the row's detail (D-TBD(gardener-page-phone)).
+	// the grade, the model and the tokens are in the row's detail (D-164).
 	const compact = compactPage()
 	const PHONE_COLUMNS = [0, 2, 7, 8]
 	const kept = <T,>(cells: T[]): T[] => (compact ? PHONE_COLUMNS.map((index) => cells[index]!) : cells)

@@ -1,4 +1,4 @@
-// The back stack (D-TBD(phone-chrome)): what the system's back press closes before it leaves the page. A view that
+// The back stack (D-158): what the system's back press closes before it leaves the page. A view that
 // pushes a detail over its list in a narrow page (D-112), or anything else that is open without being a `<dialog>`
 // or a popover, holds a handler for as long as it is open; the phone's shell asks the top one first when Android's
 // back is pressed, after the sheets and before history. Desktop never asks. The module is pure.

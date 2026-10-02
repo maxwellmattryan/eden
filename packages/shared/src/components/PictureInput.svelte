@@ -1,6 +1,6 @@
 <script lang="ts">
 	// The picture of an item, a recipe or a place, with the buttons that change it: the picture, or a glyph on a tile of the
-	// same size; one button whose menu offers a file or a link (on the phone the camera first, D-TBD(file-camera));
+	// same size; one button whose menu offers a file or a link (on the phone the camera first, D-170);
 	// and Remove, last. A link is typed into a small panel
 	// that hangs from the button, fetched as soon as it is pasted, and the panel stays open until a picture came of it,
 	// so a wrong address can be corrected. The

@@ -1,5 +1,5 @@
 <script lang="ts">
-	// The phone's top bar (product/substrate/shell.md, "Mobile"; D-TBD(phone-chrome)): pinned over every page, under
+	// The phone's top bar (product/substrate/shell.md, "Mobile"; D-158): pinned over every page, under
 	// the notch. The back arrow leads when the page is not a tab's root; two quiet buttons end it, the Gardener (its
 	// chat sheet) and the bell (the inbox, with its unread count). It is the phone's twin of the desktop's back row
 	// and status bar, composed of the kit's pieces and nothing else; the page's own header sits under it.

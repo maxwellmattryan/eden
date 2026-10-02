@@ -2,7 +2,7 @@
 	// Hearth's page on the phone (product/domains/kitchen.md, "Surfaces" and "Mobile"): the header with the domain's
 	// tabs and the tab's filters beneath it, then the tab's view: the phone's own Stock and Grocery, and the shared
 	// Recipes. The tab lives in the URL, as on the desktop, so a tile or the Gardener's draft can open one; with none
-	// the page opens on Grocery, the phone's primary surface (D-TBD(phone-hearth)). Capture a haul and Take stock open
+	// the page opens on Grocery, the phone's primary surface (D-174). Capture a haul and Take stock open
 	// the capture sheet (D-13, D-86, D-89), which the phone's shell mounts over any page; the floating + reaches it too.
 	import {
 		Chip,

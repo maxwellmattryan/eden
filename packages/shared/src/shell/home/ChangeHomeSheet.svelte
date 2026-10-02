@@ -5,7 +5,7 @@
 	// house number, and a rounded point to look near (D-140). The address and the exact point stay on this device.
 	// Save writes the home as one change with one undo; the forecast, the distances and the `home-area` fact follow
 	// it through the home store's hook. The map is the app's to give (`map`): its worker is bundled by the app's own
-	// build. On the phone (`touch`) the same sheet is a bottom sheet and the copy says tap (D-TBD(home-on-phone)).
+	// build. On the phone (`touch`) the same sheet is a bottom sheet and the copy says tap (D-162).
 	import { tick } from 'svelte'
 	import type { Attachment } from 'svelte/attachments'
 	import { AddressForm, Button, Field, PinLayer, Sheet, toast, type AddressFormKey } from '@eden/ui-kit'

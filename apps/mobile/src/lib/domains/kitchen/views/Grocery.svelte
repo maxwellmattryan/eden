@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Hearth's Grocery on the phone (product/domains/kitchen.md, "Mobile"; D-TBD(phone-grocery)), after the phone
+	// Hearth's Grocery on the phone (product/domains/kitchen.md, "Mobile"; D-176), after the phone
 	// canvas of Domains/Hearth/Grocery, for a list read one-handed in a shop: one list per store (D-96), every one on
 	// the page, with a row of chips under the header to stand in one store (All, each store with what is left on it,
 	// Miscellaneous), held for the session. A tap anywhere on a row checks it off or back on, with no toast: the row
@@ -113,7 +113,7 @@
 		window.scrollTo({ top: 0 })
 	}
 
-	/** A check makes no toast: the row is its own undo (D-TBD(phone-grocery)). */
+	/** A check makes no toast: the row is its own undo (D-176). */
 	function toggle(id: string) {
 		kitchen.toggleGrocery(id)
 	}

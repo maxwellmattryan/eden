@@ -1,6 +1,6 @@
 <script lang="ts">
 	// The Gardener's chat on the phone (product/substrate/ai.md, "Surfaces"; docs/design/ux-patterns.md, "Gardener
-	// surfaces"; D-TBD(gardener-chat-sheet)): one full-height bottom sheet, opened by the top bar's button and by
+	// surfaces"; D-163): one full-height bottom sheet, opened by the top bar's button and by
 	// anything else that calls `gardenerUi.show()` (a conversation's row, an audit entry, Toolbench's brainstorm).
 	// The header names the conversation and holds the grade switch (D-74, the status bar's on desktop), the thread
 	// list, a new conversation and close; under it one quiet line says the month's spend against its cap and the

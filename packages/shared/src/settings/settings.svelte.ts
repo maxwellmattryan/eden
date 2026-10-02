@@ -60,7 +60,7 @@ export const storage = {
 } as const
 
 /**
- * What this device keeps for itself (D-TBD(pinned-tabs)): read and written like the rest, and never part of
+ * What this device keeps for itself (D-160): read and written like the rest, and never part of
  * `snapshot()` or `restore()`, so no bundle carries it and no import changes it.
  */
 export const deviceStorage = {
@@ -139,7 +139,7 @@ export class Settings {
 	/** The Garden as the owner arranged it on this device (D-156); nothing until they edit it, and it shows its default. */
 	gardenLayout = $state<StoredLayout | undefined>(undefined)
 	/**
-	 * The two domains in the phone's tab bar as the owner chose them on this device (D-TBD(pinned-tabs)); nothing
+	 * The two domains in the phone's tab bar as the owner chose them on this device (D-160); nothing
 	 * until they choose, and the bar shows the declared pair. Read through `pinnedPair`, which mends a stale choice.
 	 */
 	pinnedTabs = $state<string[] | undefined>(undefined)

@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Meadow on the phone (product/domains/places.md, "Mobile"; D-TBD(meadow-phone)): the desktop's four tabs in a
+	// Meadow on the phone (product/domains/places.md, "Mobile"; D-173): the desktop's four tabs in a
 	// text Segmented, Map, Listings, Collections and Visits, with the tab in the URL as on the desktop. The Map tab is
 	// the map at the top and the saved places under it by distance (what was the Nearby tab), then what the Gardener
 	// found and the way to find more. What is picked opens in a sheet from the foot (`PlaceSheet`) holding the

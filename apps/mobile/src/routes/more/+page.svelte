@@ -1,5 +1,5 @@
 <script lang="ts">
-	// More: what the tab bar has no room for (product/substrate/shell.md, "Mobile"; D-TBD(phone-chrome)), composed
+	// More: what the tab bar has no room for (product/substrate/shell.md, "Mobile"; D-158), composed
 	// from the manifests: the domains that are not pinned, then the Gardener's page, the profile, and Settings, which
 	// opens the drawer. A row is a place unless the shell declares it an action (`place` in shell.json).
 	import { List, PageHeader, domainGlyph, type GlyphId, type ListRowData } from '@eden/ui-kit'

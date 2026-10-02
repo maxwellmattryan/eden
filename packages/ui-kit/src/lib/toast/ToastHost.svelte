@@ -7,7 +7,7 @@
 	// id, so a replacement announces again, and a dismiss from an older toast cannot remove the one that replaced it.
 	// A modal Sheet is a <dialog> in the top layer, and everything outside it is inert: a toast left in the page would
 	// sit behind the scrim, unpressable. So while a modal dialog is open the strip is moved inside the top-most one
-	// (`aboveModals`, D-TBD(toast-over-modal)), where it is seen over the sheet and its action can be pressed, and it
+	// (`aboveModals`, D-169), where it is seen over the sheet and its action can be pressed, and it
 	// goes back to its anchor when none is open. One host serves the page and every sheet; it looks the same in both.
 	import type { HTMLAttributes } from 'svelte/elements'
 	import type { TransitionConfig } from 'svelte/transition'

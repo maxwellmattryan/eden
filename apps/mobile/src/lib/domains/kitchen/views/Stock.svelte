@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Hearth's Stock on the phone (product/domains/kitchen.md, "Mobile"; D-TBD(phone-stock)), after the phone canvas
+	// Hearth's Stock on the phone (product/domains/kitchen.md, "Mobile"; D-175), after the phone canvas
 	// of Domains/Hearth/Stock: a card per location that holds something, sorted as the header's chip says, then what
 	// ran out lately (D-92). A row swipes: to the right Ran out, to the left Delete, each with an undo; in Ran out the
 	// swipe to the right puts the item on a grocery list instead. A tap opens the item in a sheet (the shared
