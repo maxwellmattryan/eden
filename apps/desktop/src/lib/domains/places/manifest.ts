@@ -8,7 +8,7 @@ import { bindPlacesSignals, meadow, meadowExtras } from '@eden/shared/domains/pl
 import { photon } from '@eden/shared/geo'
 import { t } from '@eden/shared/i18n'
 import { declarationOf, type TabId } from '@eden/shared/manifest'
-import { feed } from '../../shell/feed.svelte.js'
+import { feed } from '@eden/shared/shell'
 import { defineDomain } from '../manifest.js'
 import ImportSheet from './views/ImportSheet.svelte'
 import NearbyFavorites from './widgets/NearbyFavorites.svelte'

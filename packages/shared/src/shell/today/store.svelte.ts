@@ -5,7 +5,7 @@
 // write hands back an undo (D-12) and lands in the Garden feed. It is the shell's, so a domain may import it: a
 // domain that makes a task asks it to reload. The task signals are emitted here, once the write has landed: one per
 // owner action, none for a batch (D-75). Mobile lifts it into `@eden/shared` when it needs it (issue 19).
-import { logError } from '@eden/shared/api'
+import { logError } from '../../api/index.js'
 import {
 	applyBatch,
 	createTask,
@@ -20,9 +20,9 @@ import {
 	type TaskInput,
 	type TaskRow,
 	type Write,
-} from '@eden/shared/data'
-import { dateIn, nowIso } from '@eden/shared/dates'
-import { settings } from '@eden/shared/settings'
+} from '../../data/index.js'
+import { dateIn, nowIso } from '../../dates/index.js'
+import { settings } from '../../settings/index.js'
 import {
 	addedToday,
 	completion,
@@ -45,7 +45,7 @@ import {
 	type TaskChange,
 	type TaskEdit,
 	type TodayView,
-} from '@eden/shared/tasks'
+} from '../../tasks/index.js'
 import { feed } from '../feed.svelte.js'
 
 export type Undo = () => void

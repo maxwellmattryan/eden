@@ -6,10 +6,10 @@
 	import { CanSee, ConfirmSheet } from '@eden/ui-kit'
 	import type { MessageBlock } from '@eden/shared/gardener'
 	import { t } from '@eden/shared/i18n'
-	import { grants } from '../grants.svelte'
-	import { undoToast } from '../undo'
+	import { grants } from '@eden/shared/shell'
+	import { undoToast } from '@eden/shared/shell'
 	import { labelRows, registryLabel, type RowLabel } from './labels'
-	import { GRANT_SUBJECT } from './types'
+	import { GRANT_SUBJECT } from '@eden/shared/shell/gardener'
 
 	type Props = { block: Extract<MessageBlock, { kind: 'can-see' }> }
 	let { block }: Props = $props()

@@ -2,7 +2,7 @@
 // patterns"). Stores return an `undo` with each write; the component translates the message and calls this.
 import { get } from 'svelte/store'
 import { toast } from '@eden/ui-kit'
-import { t } from '@eden/shared/i18n'
+import { t } from '../i18n/index.js'
 
 /** Shows the kit's one toast with an Undo action; `message` is already translated. */
 export function undoToast(message: string, undo: () => void) {

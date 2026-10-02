@@ -7,8 +7,8 @@
 	import { stampToDate } from '@eden/shared/data'
 	import { formatAgo } from '@eden/shared/dates'
 	import { manifestFor } from '$lib/domains'
-	import { undoToast } from '../undo'
-	import { threads } from './threads.svelte'
+	import { undoToast } from '@eden/shared/shell'
+	import { threads } from '@eden/shared/shell/gardener'
 
 	type Props = {
 		domain?: string

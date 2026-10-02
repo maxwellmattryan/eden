@@ -10,7 +10,7 @@
 	import { FACETS, meadow, vibesByFacet } from '@eden/shared/domains/places'
 	import { formatCost } from '@eden/shared/gardener'
 	import { locale, t } from '@eden/shared/i18n'
-	import { undoToast } from '$lib/shell/undo'
+	import { undoToast } from '@eden/shared/shell'
 	import { placesImport, type ImportRow } from '../import.svelte'
 	import { vibeNamer } from '../words'
 

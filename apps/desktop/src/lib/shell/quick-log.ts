@@ -9,7 +9,7 @@ import { t } from '@eden/shared/i18n'
 import { quickActions, type QuickAction } from '@eden/shared/manifest'
 import { parseQuickLog, type QuickLogCandidate } from '@eden/shared/quick-log'
 import { declarations, manifestFor } from '$lib/domains'
-import { undoToast } from './undo'
+import { undoToast } from '@eden/shared/shell'
 
 export interface QuickLogAction extends QuickAction {
 	icon: IconName

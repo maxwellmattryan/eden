@@ -35,7 +35,7 @@
 	} from '@eden/shared/gardener'
 	import { locale, t } from '@eden/shared/i18n'
 	import { manifestFor } from '$lib/domains'
-	import { gardenerSetup } from '../setup.svelte'
+	import { gardenerSetup } from '@eden/shared/shell/gardener'
 
 	const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
 	const SPANS: readonly UsageSpan[] = ['day', 'week', 'month', 'year']

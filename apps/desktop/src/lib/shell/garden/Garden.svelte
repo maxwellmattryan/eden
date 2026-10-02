@@ -39,8 +39,8 @@
 		type StoredLayout,
 	} from '@eden/shared/manifest'
 	import { declarations, manifestFor, manifests, type WidgetBinding } from '$lib/domains'
-	import { feed as activity } from '$lib/shell/feed.svelte'
-	import { undoToast } from '$lib/shell/undo'
+	import { feed as activity } from '@eden/shared/shell'
+	import { undoToast } from '@eden/shared/shell'
 	import { formatDate, formatTime, formatWeekday, nowIso, relativeDay } from '@eden/shared/dates'
 	import { TileDrag } from './tile-drag.svelte'
 	import { shellTiles } from './tiles'

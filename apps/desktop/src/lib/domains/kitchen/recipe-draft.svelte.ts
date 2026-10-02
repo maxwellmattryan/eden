@@ -14,8 +14,8 @@ import {
 	recipeFromJsonLd,
 	type RecipeDraft,
 } from '@eden/shared/domains/kitchen'
-import type { DirectPreview } from '$lib/shell/gardener/runtime.svelte'
-import type { ToolFailure } from '$lib/shell/gardener/types'
+import type { DirectPreview } from '@eden/shared/shell/gardener'
+import type { ToolFailure } from '@eden/shared/shell/gardener'
 import { recipePicture, StagedSources, type RecipePicture } from './staging.svelte.js'
 
 class RecipeDrafts {

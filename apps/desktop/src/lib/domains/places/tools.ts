@@ -38,15 +38,8 @@ import {
 	type WeeklyOutcome,
 } from '@eden/shared/domains/places'
 import { normalLink } from '@eden/shared/gardener'
-import { entries, given, ids, preview, together, unknown, withFields, type Fields } from '../../shell/gardener/batch.js'
-import {
-	int,
-	parseJson,
-	str,
-	type ToolContext,
-	type ToolFailure,
-	type ToolHandler,
-} from '../../shell/gardener/types.js'
+import { entries, given, ids, preview, together, unknown, withFields, type Fields } from '@eden/shared/shell/gardener'
+import { int, parseJson, str, type ToolContext, type ToolFailure, type ToolHandler } from '@eden/shared/shell/gardener'
 import { placesImport } from './import.svelte.js'
 
 export const SUGGEST_PLACES = 'places.suggest-places'
@@ -466,7 +459,7 @@ export async function weeklyListings(): Promise<WeeklyOutcome> {
 	const { runtime } = await import('$lib/shell/gardener/runtime.svelte')
 	const preview = await runtime.previewDirect(SUGGEST_LISTINGS, {})
 	if ('unavailable' in preview) return { outcome: 'skipped' }
-	const { gardenerSetup } = await import('$lib/shell/gardener/setup.svelte')
+	const { gardenerSetup } = await import('@eden/shared/shell/gardener')
 	if (preview.model === gardenerSetup.map.deep.model && preview.model !== gardenerSetup.map.standard.model)
 		return { outcome: 'skipped' }
 	const { failure, found } = await meadow.findListings(lang)

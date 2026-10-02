@@ -17,10 +17,10 @@
 	import { locale, t } from '@eden/shared/i18n'
 	import { todayIso } from '@eden/shared/dates'
 	import { formatValue, type Fact, type FactProposal } from '@eden/shared/profile'
-	import { undoToast } from '$lib/shell/undo'
+	import { undoToast } from '@eden/shared/shell'
 	import FactEditor from './FactEditor.svelte'
-	import { proposalDetail, rowOf, type RowContext } from './rows'
-	import { profile } from './store.svelte'
+	import { proposalDetail, rowOf, type RowContext } from '@eden/shared/shell/profile'
+	import { profile } from '@eden/shared/shell/profile'
 
 	const lang = $derived($locale ?? 'en')
 	const today = todayIso()

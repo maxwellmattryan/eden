@@ -42,7 +42,7 @@ import {
 	unknown,
 	withFields,
 	type Fields,
-} from '$lib/shell/gardener/batch'
+} from '@eden/shared/shell/gardener'
 import {
 	DRAFTED,
 	int,
@@ -51,7 +51,7 @@ import {
 	type ToolContext,
 	type ToolHandler,
 	type ToolResult,
-} from '$lib/shell/gardener/types'
+} from '@eden/shared/shell/gardener'
 import { capture } from './capture.svelte.js'
 import { recipeDrafts } from './recipe-draft.svelte.js'
 import { forbidden } from './safety.svelte.js'

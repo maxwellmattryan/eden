@@ -2,8 +2,8 @@
 // shows. It is the shell's, so a domain may import it: a domain never imports another domain. Entries hold a locale
 // key and its values rather than a sentence, so the feed reads in whichever locale is current. Persisted as the
 // `garden` document, the name it had when the Garden kept it.
-import { load, save } from '@eden/shared/persistence'
-import { nowIso } from '@eden/shared/dates'
+import { load, save } from '../persistence/index.js'
+import { nowIso } from '../dates/index.js'
 
 export interface FeedEntry {
 	id: string

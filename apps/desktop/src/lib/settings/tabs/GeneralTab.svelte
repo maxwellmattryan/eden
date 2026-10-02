@@ -10,8 +10,8 @@
 	import { settings } from '@eden/shared/settings'
 	import { clockFormats, languages, measurementSystems, weekStarts } from '@eden/shared/types'
 	import { distance, pressure, rainfall, speed } from '@eden/shared/weather'
-	import { homeUi } from '$lib/shell/home/home-ui.svelte'
-	import { settingsUi } from '../settings-ui.svelte'
+	import { homeUi } from '@eden/shared/shell/home'
+	import { settingsUi } from '@eden/shared/shell/settings'
 	import SettingsRow from './SettingsRow.svelte'
 
 	// half past six in the evening, on the device's own clock

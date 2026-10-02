@@ -2,9 +2,9 @@
 // this morning and the habit with its days, every date shifted onto the real calendar so Wednesday's picture holds
 // whenever the seed runs. Written as one batch with an undo; a batch emits no signal (D-75).
 import { todayDues, todayHabit, todayRoutine, todayTasks } from '@eden/ui-kit/sample-data'
-import type { TaskInput } from '@eden/shared/data'
-import { shiftSampleDate, shiftSampleDateTime } from '@eden/shared/dates'
-import type { TaskProgress } from '@eden/shared/tasks'
+import type { TaskInput } from '../../data/index.js'
+import { shiftSampleDate, shiftSampleDateTime } from '../../dates/index.js'
+import type { TaskProgress } from '../../tasks/index.js'
 import { tasks, type Undo } from './store.svelte.js'
 
 /** The sample as inputs, the routine's and the habit's progress included. */

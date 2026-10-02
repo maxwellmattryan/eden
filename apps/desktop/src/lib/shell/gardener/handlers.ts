@@ -4,7 +4,7 @@
 import { toolIndex, type GardenerTool } from '@eden/shared/gardener'
 import { declarations, manifestFor } from '$lib/domains'
 import { substrateTools } from './substrate-tools.js'
-import type { ToolHandler } from './types.js'
+import type { ToolHandler } from '@eden/shared/shell/gardener'
 
 export const tools: readonly GardenerTool[] = toolIndex(declarations)
 

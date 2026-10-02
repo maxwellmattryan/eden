@@ -23,13 +23,13 @@
 	import { quintOut } from 'svelte/easing'
 	import { addDays, formatDate } from '@eden/shared/dates'
 	import { parseTask, TODAY_SECTIONS, type Language, type TodayItem, type TodaySection } from '@eden/shared/tasks'
-	import { undoToast } from '$lib/shell/undo'
+	import { undoToast } from '@eden/shared/shell'
 	import { quickLogActions, quickLogKey } from '$lib/shell/quick-log'
 	import { runQuickLog } from '$lib/shell/quick-log-ui.svelte'
-	import { parsedChips } from './chips'
-	import { rowOf, type RowAction, type RowWords } from './rows'
-	import { seedTasks } from './seed'
-	import { tasks } from './store.svelte'
+	import { parsedChips } from '@eden/shared/shell/today'
+	import { rowOf, type RowAction, type RowWords } from '@eden/shared/shell/today'
+	import { seedTasks } from '@eden/shared/shell/today'
+	import { tasks } from '@eden/shared/shell/today'
 
 	const uid = $props.id()
 	const lang = $derived<Language>($locale === 'ja' ? 'ja' : 'en')

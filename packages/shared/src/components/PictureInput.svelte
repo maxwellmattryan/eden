@@ -6,8 +6,8 @@
 	// form says what a file or a link becomes; nothing is written here. A dropped or pasted picture comes in through
 	// PictureDrop, around the form.
 	import { Field, FileButton, Icon, IconButton, Popover, type IconName } from '@eden/ui-kit'
-	import { PICTURE_ACCEPT } from '@eden/shared/api'
-	import { t } from '@eden/shared/i18n'
+	import { PICTURE_ACCEPT } from '../api/index.js'
+	import { t } from '../i18n/index.js'
 
 	type Props = {
 		/** The picture as it stands, as a URL the page may load. */

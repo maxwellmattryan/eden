@@ -1,10 +1,10 @@
 // A fact as a row of the profile page (docs/design/screens.md, `profile`): the value as one line, then the type,
 // who wrote it and when it holds, the T2 lock, the Gardener's confidence, and how many requests read it.
 import type { ListRowData, MenuItem } from '@eden/ui-kit'
-import { stampToDate } from '@eden/shared/data'
-import { formatDateOf } from '@eden/shared/dates'
-import { formatValue, isExpired, weightOf, type Fact, type FactProposal } from '@eden/shared/profile'
-import { tierOf } from '@eden/shared/registry'
+import { stampToDate } from '../../data/index.js'
+import { formatDateOf } from '../../dates/index.js'
+import { formatValue, isExpired, weightOf, type Fact, type FactProposal } from '../../profile/index.js'
+import { tierOf } from '../../registry/index.js'
 
 export interface RowContext {
 	t: (key: string, options?: { values: Record<string, string | number> }) => string

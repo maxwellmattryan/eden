@@ -9,11 +9,11 @@
 	import { Button, Chip, Field, Menu, Segmented, Sheet, toast, type MenuItem } from '@eden/ui-kit'
 	import { CATEGORIES, categoriesFor, productLink } from '@eden/shared/domains/kitchen'
 	import { t } from '@eden/shared/i18n'
-	import { undoToast } from '$lib/shell/undo'
+	import { undoToast } from '@eden/shared/shell'
 	import { linkedPicture, squarePicture } from '../staging.svelte'
 	import { categoryGlyph } from '../words'
-	import PictureDrop from '$lib/components/PictureDrop.svelte'
-	import PictureInput from '$lib/components/PictureInput.svelte'
+	import PictureDrop from '@eden/shared/components/PictureDrop.svelte'
+	import PictureInput from '@eden/shared/components/PictureInput.svelte'
 	import { LOCATIONS, kitchen, type StockItem, type StockLocation, type StockPatch } from '../store.svelte'
 
 	type Props = {

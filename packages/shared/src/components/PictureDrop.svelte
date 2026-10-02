@@ -5,7 +5,7 @@
 	// (the Recipes page takes dropped files as a recipe to import), so one drop is never read twice.
 	import type { Snippet } from 'svelte'
 	import { Dropzone } from '@eden/ui-kit'
-	import { PICTURE_ACCEPT } from '@eden/shared/api'
+	import { PICTURE_ACCEPT } from '../api/index.js'
 
 	type Props = {
 		onfile: (file: File) => void

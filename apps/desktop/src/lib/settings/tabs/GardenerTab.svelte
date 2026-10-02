@@ -22,8 +22,8 @@
 	} from '@eden/shared/gardener'
 	import { t } from '@eden/shared/i18n'
 	import { declarations } from '$lib/domains'
-	import { gardenerSetup } from '$lib/shell/gardener/setup.svelte'
-	import { settingsUi } from '../settings-ui.svelte'
+	import { gardenerSetup } from '@eden/shared/shell/gardener'
+	import { settingsUi } from '@eden/shared/shell/settings'
 	import SettingsRow from './SettingsRow.svelte'
 
 	let key = $state('')

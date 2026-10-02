@@ -17,9 +17,9 @@
 		type MenuItem,
 	} from '@eden/ui-kit'
 	import { t } from '@eden/shared/i18n'
-	import { gardenerUi } from '$lib/shell/gardener/panel-ui.svelte'
-	import { showPushed } from '$lib/shell/pushed'
-	import { undoToast } from '$lib/shell/undo'
+	import { gardenerUi } from '@eden/shared/shell/gardener'
+	import { showPushed } from '@eden/shared/shell'
+	import { undoToast } from '@eden/shared/shell'
 	import { formatDay } from '@eden/shared/dates'
 	import { ideaChips } from '../parse'
 	import { IDEA_STATUSES, RESURFACE_DAYS, toolbench, type Idea, type IdeaStatus } from '../store.svelte'

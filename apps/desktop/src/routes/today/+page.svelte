@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte'
 	import Today from '$lib/shell/today/Today.svelte'
-	import { tasks } from '$lib/shell/today/store.svelte'
+	import { tasks } from '@eden/shared/shell/today'
 
 	onMount(() => {
 		void tasks.load()

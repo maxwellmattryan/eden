@@ -2,8 +2,8 @@
 // routine's rule), its time or its day in the meta, and its menu. Done is the first item of every menu that has
 // one, as Enter and a double-click are (there are no checkboxes, D-41); Delete is last.
 import type { ListRowData, MenuItem } from '@eden/ui-kit'
-import { formatTime } from '@eden/shared/dates'
-import { describeRecurrence, type SnoozeTargets, type TodayItem } from '@eden/shared/tasks'
+import { formatTime } from '../../dates/index.js'
+import { describeRecurrence, type SnoozeTargets, type TodayItem } from '../../tasks/index.js'
 import { formatDayWord, formatRepeat, formatWallTime, type Words } from './chips.js'
 
 /** What a row's menu can ask for; the page maps each to the store. */

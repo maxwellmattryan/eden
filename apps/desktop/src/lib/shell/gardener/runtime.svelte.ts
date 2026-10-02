@@ -55,32 +55,30 @@ import {
 import { locale, t } from '@eden/shared/i18n'
 import { newId } from '@eden/shared/data'
 import { declarations } from '$lib/domains'
-import { grants } from '../grants.svelte.js'
-import { profile } from '../profile/store.svelte.js'
-import { undoToast } from '../undo.js'
-import { threadAttachments } from './attachments.svelte.js'
-import { storeFiles, type StagedFile } from './files.js'
+import { grants } from '@eden/shared/shell'
+import { profile } from '@eden/shared/shell/profile'
+import { undoToast } from '@eden/shared/shell'
+import { threadAttachments } from '@eden/shared/shell/gardener'
+import { storeFiles, type StagedFile } from '@eden/shared/shell/gardener'
 import { handlerOf, toolByWireName, tools as everyTool } from './handlers.js'
-import { gardenerUi } from './panel-ui.svelte.js'
+import { gardenerUi } from '@eden/shared/shell/gardener'
 import { readers } from './readers.js'
-import { gardenerSetup } from './setup.svelte.js'
-import { threads } from './threads.svelte.js'
-import { transport } from './transport.js'
+import { gardenerSetup } from '@eden/shared/shell/gardener'
+import { threads } from '@eden/shared/shell/gardener'
+import { transport } from '@eden/shared/shell/gardener'
 import {
 	GRANT_SUBJECT,
 	parseJson,
 	type Delegate,
+	type DirectPreview,
 	type Research,
 	type ToolContext,
 	type ToolFailure,
 	type ToolFiles,
 	type ToolResult,
-} from './types.js'
+} from '@eden/shared/shell/gardener'
 
-/** What a page shows before it runs a tool itself: who will answer and roughly what it costs, or why it cannot. */
-export type DirectPreview =
-	| { provider: string; model: string; estimateUsd: number }
-	| { unavailable: Extract<ToolFailure, 'no-key' | 'unavailable' | 'budget'> }
+export type { DirectPreview }
 
 /** A confirm the owner owes before a request is sent (D-74): the sheet's words and what answers it. */
 export interface ConfirmRequest {

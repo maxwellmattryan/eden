@@ -2,7 +2,7 @@
 // answer, and why a file was not taken. Each takes the translator, so the caller's `$t` keeps them reactive.
 import type { IconName } from '@eden/ui-kit'
 import { formatCost } from '@eden/shared/gardener'
-import type { DirectPreview } from '$lib/shell/gardener/runtime.svelte'
+import type { DirectPreview } from '@eden/shared/shell/gardener'
 import { modelLabel } from './staging.svelte.js'
 
 /** The glyph that stands for an item with no picture of its own, by its category (D-90). */

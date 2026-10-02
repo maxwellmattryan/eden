@@ -22,9 +22,9 @@
 	import { t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { manifests } from '$lib/domains'
-	import { grants } from '$lib/shell/grants.svelte'
-	import { profile } from '$lib/shell/profile/store.svelte'
-	import { tasks } from '$lib/shell/today/store.svelte'
+	import { grants } from '@eden/shared/shell'
+	import { profile } from '@eden/shared/shell/profile'
+	import { tasks } from '@eden/shared/shell/today'
 	import SettingsRow from './SettingsRow.svelte'
 
 	const ARCHIVE = [{ name: 'Eden', extensions: ['zip'] }]

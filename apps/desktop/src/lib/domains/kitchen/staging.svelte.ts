@@ -35,8 +35,8 @@ import {
 	siteAddress,
 	wwwAddress,
 } from '@eden/shared/domains/kitchen'
-import { measure, sizeLabel, toSend } from '$lib/shell/gardener/files'
-import type { ToolFiles } from '$lib/shell/gardener/types'
+import { measure, sizeLabel, toSend } from '@eden/shared/shell/gardener'
+import type { ToolFiles } from '@eden/shared/shell/gardener'
 
 /** Why a file was not taken. */
 export type CaptureRefusal = 'type' | 'size' | 'count' | 'total' | 'empty' | 'unreadable'

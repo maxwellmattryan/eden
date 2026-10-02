@@ -10,8 +10,8 @@ import type {
 	ModelGrade,
 	PackAttachment,
 	ThreadTier,
-} from '@eden/shared/gardener'
-import type { FactProposal } from '@eden/shared/profile'
+} from '../../gardener/index.js'
+import type { FactProposal } from '../../profile/index.js'
 
 /**
  * The files a tool is given: the ones on the owner's message in a conversation, or the ones a page staged for a
@@ -43,6 +43,11 @@ export type ToolFailure =
 	| 'search-refused'
 	/** The web search ran and brought nothing back. */
 	| 'search-failed'
+
+/** What a page shows before it runs a tool itself: who will answer and roughly what it costs, or why it cannot. */
+export type DirectPreview =
+	| { provider: string; model: string; estimateUsd: number }
+	| { unavailable: Extract<ToolFailure, 'no-key' | 'unavailable' | 'budget'> }
 
 /** What a handler knows of the request it serves. */
 export interface ToolContext {

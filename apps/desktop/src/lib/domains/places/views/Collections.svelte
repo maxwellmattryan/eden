@@ -16,7 +16,7 @@
 	} from '@eden/ui-kit'
 	import { categoryGlyph, meadow, type Collection, type SavedPlace } from '@eden/shared/domains/places'
 	import { t } from '@eden/shared/i18n'
-	import { undoToast } from '$lib/shell/undo'
+	import { undoToast } from '@eden/shared/shell'
 	import { categoryNamer } from '../words'
 
 	type Props = {

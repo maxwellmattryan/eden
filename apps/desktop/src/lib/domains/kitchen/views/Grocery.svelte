@@ -46,7 +46,7 @@
 	import { formatUsd } from '@eden/shared/gardener'
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
-	import { undoToast } from '$lib/shell/undo'
+	import { undoToast } from '@eden/shared/shell'
 	import { daysFromToday, daysSince, formatEventTime, todayIso } from '@eden/shared/dates'
 	import { fitPicture, storeLogo } from '../staging.svelte'
 	import { fetchStoreSite } from '../store-site'

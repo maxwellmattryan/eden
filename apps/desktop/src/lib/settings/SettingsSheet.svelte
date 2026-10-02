@@ -6,7 +6,7 @@
 	// the content over the panel duration, so a taller tab grows the sheet instead of snapping it.
 	import { Icon, Sheet } from '@eden/ui-kit'
 	import { t } from '@eden/shared/i18n'
-	import { settingsTabIcons, settingsTabs, settingsUi, type SettingsTabId } from './settings-ui.svelte'
+	import { settingsTabIcons, settingsTabs, settingsUi, type SettingsTabId } from '@eden/shared/shell/settings'
 	import AboutTab from './tabs/AboutTab.svelte'
 	import AppearanceTab from './tabs/AppearanceTab.svelte'
 	import GardenerTab from './tabs/GardenerTab.svelte'

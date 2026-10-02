@@ -22,8 +22,8 @@
 	import { home } from '@eden/shared/home'
 	import { locale, t } from '@eden/shared/i18n'
 	import { createSurface, source } from '$lib/domains/places/map'
-	import { undoToast } from '$lib/shell/undo'
-	import { homeUi } from './home-ui.svelte'
+	import { undoToast } from '@eden/shared/shell'
+	import { homeUi } from '@eden/shared/shell/home'
 
 	const uid = $props.id()
 	const lang = $derived($locale ?? 'en')

@@ -6,7 +6,7 @@
 	import { t } from '@eden/shared/i18n'
 	import { shell, tabBar } from '@eden/shared/manifest'
 	import { declarations, manifestFor } from '$lib/domains'
-	import { settingsUi } from '$lib/settings/settings-ui.svelte'
+	import { settingsUi } from '@eden/shared/shell/settings'
 
 	const rows = $derived(
 		tabBar(declarations, shell).more.map((item) => ({

@@ -4,7 +4,7 @@
 	// the store's, so it carries the same undo.
 	import { QuickAdd } from '@eden/ui-kit'
 	import { t } from '@eden/shared/i18n'
-	import { undoToast } from '$lib/shell/undo'
+	import { undoToast } from '@eden/shared/shell'
 	import { kitchen } from '../store.svelte'
 
 	const open = $derived(kitchen.grocery.items.filter((item) => !item.done).length)

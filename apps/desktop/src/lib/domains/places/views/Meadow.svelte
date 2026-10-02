@@ -20,7 +20,7 @@
 	} from '@eden/ui-kit'
 	import { meadow, type SavedPlace } from '@eden/shared/domains/places'
 	import { t } from '@eden/shared/i18n'
-	import { undoToast } from '$lib/shell/undo'
+	import { undoToast } from '@eden/shared/shell'
 	import { placesImport } from '../import.svelte'
 	import { PLACES_TABS, type PlacesTab } from '../manifest'
 	import { seedData } from '../seed'

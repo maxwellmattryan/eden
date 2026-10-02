@@ -3,9 +3,9 @@
 // changes the store at once and is sent after, in order (`WriteQueue`), hands back an undo (D-12) and lands in the
 // Garden's feed. It is the shell's, so a domain may import it: Sky hands it the home the owner chose, and the
 // Gardener hands it what it noticed. "Used by N requests" is read from the audit log (`refreshUsage`).
-import { logError } from '@eden/shared/api'
-import { newId, WriteQueue } from '@eden/shared/data'
-import { todayIso } from '@eden/shared/dates'
+import { logError } from '../../api/index.js'
+import { newId, WriteQueue } from '../../data/index.js'
+import { todayIso } from '../../dates/index.js'
 import {
 	assertFact,
 	deleteFact,
@@ -20,10 +20,10 @@ import {
 	type FactInput,
 	type FactPatch,
 	type FactProposal,
-} from '@eden/shared/profile'
-import { auditUsage } from '@eden/shared/gardener'
-import { ownerOf, type OwnerId } from '@eden/shared/registry'
-import type { HomePlace } from '@eden/shared/types'
+} from '../../profile/index.js'
+import { auditUsage } from '../../gardener/index.js'
+import { ownerOf, type OwnerId } from '../../registry/index.js'
+import type { HomePlace } from '../../types/index.js'
 import { facts as sampleFacts } from '@eden/ui-kit/sample-data'
 import { feed } from '../feed.svelte.js'
 

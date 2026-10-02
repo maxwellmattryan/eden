@@ -1,7 +1,7 @@
 // Whether the Gardener's panel is open and where it was opened from: one $state object so the sidebar's entry, ⌘G,
 // the status bar's chip, a domain page's action and a deep link all reach the same panel. Whether it is open and its
 // domain are kept on the device (`gardenerPanelState`), so the next launch finds the panel as it was left.
-import { gardenerPanelState, rememberGardenerPanel } from '@eden/shared/gardener'
+import { gardenerPanelState, rememberGardenerPanel } from '../../gardener/index.js'
 
 const kept = gardenerPanelState()
 

@@ -33,7 +33,7 @@ import {
 	type ProjectPayload,
 	type ToolbenchData,
 } from '@eden/shared/domains/toolbench'
-import { feed } from '../../shell/feed.svelte.js'
+import { feed } from '@eden/shared/shell'
 import { parseIdea } from './parse.js'
 import { seedData } from './seed.js'
 

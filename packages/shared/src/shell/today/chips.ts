@@ -2,9 +2,9 @@
 // a wall time on the owner's clock. `@eden/shared/tasks` answers kinds and values; this module puts the locale to
 // them, so the page and its rows share one set of words.
 import type { ParsedChip } from '@eden/ui-kit'
-import { formatDay, formatTime, formatWeekdayOf, type DateFormat } from '@eden/shared/dates'
-import { WEEKDAYS, type Weekday } from '@eden/shared/recurrence'
-import { isWorkdays, taskChips, type ParsedTask, type RepeatDescription } from '@eden/shared/tasks'
+import { formatDay, formatTime, formatWeekdayOf, type DateFormat } from '../../dates/index.js'
+import { WEEKDAYS, type Weekday } from '../../recurrence/index.js'
+import { isWorkdays, taskChips, type ParsedTask, type RepeatDescription } from '../../tasks/index.js'
 
 /** svelte-i18n's `t`, as a page reads it from the store. */
 export type Translate = (key: string, options?: { values?: Record<string, string | number> }) => string

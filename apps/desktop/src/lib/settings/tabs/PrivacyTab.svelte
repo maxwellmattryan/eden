@@ -19,8 +19,8 @@
 	} from '@eden/shared/egress'
 	import { t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
-	import { grants } from '$lib/shell/grants.svelte'
-	import { settingsUi } from '../settings-ui.svelte'
+	import { grants } from '@eden/shared/shell'
+	import { settingsUi } from '@eden/shared/shell/settings'
 	import SettingsRow from './SettingsRow.svelte'
 
 	const DAYS = 7

@@ -5,7 +5,7 @@
 	import { todayIso } from '@eden/shared/dates'
 	import { meadow, type SavedPlace, type Visit } from '@eden/shared/domains/places'
 	import { t } from '@eden/shared/i18n'
-	import { undoToast } from '$lib/shell/undo'
+	import { undoToast } from '@eden/shared/shell'
 
 	const uid = $props.id()
 	let open = $state(false)

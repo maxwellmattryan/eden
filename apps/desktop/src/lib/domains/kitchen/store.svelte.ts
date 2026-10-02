@@ -71,7 +71,7 @@ import {
 	type StorePlace,
 	type StoreSells,
 } from '@eden/shared/domains/kitchen'
-import { feed } from '../../shell/feed.svelte.js'
+import { feed } from '@eden/shared/shell'
 import { seedData } from './seed.js'
 import type { RecipePicture } from './staging.svelte.js'
 

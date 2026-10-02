@@ -48,9 +48,9 @@
 	import type { GeocodeHit } from '@eden/shared/geo'
 	import { home } from '@eden/shared/home'
 	import { locale, t } from '@eden/shared/i18n'
-	import PictureDrop from '$lib/components/PictureDrop.svelte'
-	import PictureInput from '$lib/components/PictureInput.svelte'
-	import { undoToast } from '$lib/shell/undo'
+	import PictureDrop from '@eden/shared/components/PictureDrop.svelte'
+	import PictureInput from '@eden/shared/components/PictureInput.svelte'
+	import { undoToast } from '@eden/shared/shell'
 	import { vibeNamer } from '../words'
 
 	type Props = {

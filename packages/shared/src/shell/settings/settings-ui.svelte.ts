@@ -1,5 +1,5 @@
 // Whether the settings sheet is open and which tab shows: one $state object so the sidebar's Settings item, the ⌘,
-// shortcut and a deep link all reach the same sheet.
+// shortcut, the phone's More page and a deep link all reach the same sheet. Both apps read this one class.
 import type { IconName } from '@eden/ui-kit'
 
 export const settingsTabs = [

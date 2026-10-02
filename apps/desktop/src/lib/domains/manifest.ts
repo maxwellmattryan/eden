@@ -16,7 +16,7 @@ import {
 } from '@eden/shared/manifest'
 import { domainGlyph, type IconName, type QuickLog } from '@eden/ui-kit'
 import type { DraftCard } from '@eden/shared/gardener'
-import type { ToolHandler } from '../shell/gardener/types.js'
+import type { ToolHandler } from '@eden/shared/shell/gardener'
 
 /** The route ids a domain may own; a page with tabs takes the tab as an optional parameter. */
 export type DomainRoute = '/kitchen/[[tab]]' | '/toolbench/[[tab]]' | '/weather' | '/places/[[tab]]'

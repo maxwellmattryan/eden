@@ -10,10 +10,10 @@
 	import { auditThreadTotals, formatCost, NO_AUDIT_PARAMS, type ThreadUsage } from '@eden/shared/gardener'
 	import { locale, t } from '@eden/shared/i18n'
 	import { manifestFor } from '$lib/domains'
-	import { undoToast } from '../../undo'
-	import { gardenerUi } from '../panel-ui.svelte'
-	import { gardenerSetup } from '../setup.svelte'
-	import { threads } from '../threads.svelte'
+	import { undoToast } from '@eden/shared/shell'
+	import { gardenerUi } from '@eden/shared/shell/gardener'
+	import { gardenerSetup } from '@eden/shared/shell/gardener'
+	import { threads } from '@eden/shared/shell/gardener'
 	import { gotoAudit } from './audit-link'
 
 	let totals = $state<Record<string, ThreadUsage>>({})

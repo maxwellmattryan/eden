@@ -4,7 +4,7 @@
 // bytes from the moment it arrives (a drop, the picker, a paste) and never a path. Images are decoded with
 // `createImageBitmap` and drawn off-screen: the page's CSP has no `blob:` to load one through.
 import { checkFiles, formatBytes, type FileRefusal, type FileRules } from '@eden/ui-kit'
-import { attachBytes, deleteRows, readAttachment } from '@eden/shared/data'
+import { attachBytes, deleteRows, readAttachment } from '../../data/index.js'
 import {
 	ACCEPT,
 	attachmentForm,
@@ -20,7 +20,7 @@ import {
 	THUMB_EDGE,
 	type AttachmentBlock,
 	type PackAttachment,
-} from '@eden/shared/gardener'
+} from '../../gardener/index.js'
 
 /** What is known of an image once it has been decoded. */
 export interface FileMeta {

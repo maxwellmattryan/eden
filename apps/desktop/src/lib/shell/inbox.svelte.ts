@@ -22,7 +22,7 @@ import {
 	type InboxEntry,
 } from '@eden/shared/signals'
 import { manifestFor } from '../domains/index.js'
-import { grants } from './grants.svelte.js'
+import { grants } from '@eden/shared/shell'
 
 const report = (what: string) => (error: unknown) => void logError('inbox', what, String(error)).catch(() => null)
 

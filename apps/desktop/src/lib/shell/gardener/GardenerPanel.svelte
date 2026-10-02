@@ -41,10 +41,10 @@
 	} from '@eden/shared/gardener'
 	import { t } from '@eden/shared/i18n'
 	import { manifestFor } from '$lib/domains'
-	import { settingsUi } from '$lib/settings/settings-ui.svelte'
-	import { grants } from '../grants.svelte'
-	import { profile } from '../profile/store.svelte'
-	import { threadAttachments } from './attachments.svelte'
+	import { settingsUi } from '@eden/shared/shell/settings'
+	import { grants } from '@eden/shared/shell'
+	import { profile } from '@eden/shared/shell/profile'
+	import { threadAttachments } from '@eden/shared/shell/gardener'
 	import {
 		capByType,
 		checkStaged,
@@ -55,13 +55,13 @@
 		stagedRules,
 		type StageCheck,
 		type StagedFile,
-	} from './files'
+	} from '@eden/shared/shell/gardener'
 	import MessageBlocks from './MessageBlocks.svelte'
-	import { gardenerUi } from './panel-ui.svelte'
+	import { gardenerUi } from '@eden/shared/shell/gardener'
 	import { runtime } from './runtime.svelte'
-	import { gardenerSetup } from './setup.svelte'
+	import { gardenerSetup } from '@eden/shared/shell/gardener'
 	import ThreadList from './ThreadList.svelte'
-	import { threads } from './threads.svelte'
+	import { threads } from '@eden/shared/shell/gardener'
 
 	const uid = $props.id()
 	let listOpen = $state(false)

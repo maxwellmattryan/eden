@@ -2,7 +2,7 @@
 // policy row with the owner's edits, overrides and caps, the provider as those edits leave it, the map the resolver
 // runs on (clamped to the light model in development, D-76), this month's spend from the audit log, and the
 // conversation's grade from the settings. One instance, read by the panel, the chip and the Gardener tab.
-import { getAppInfo } from '@eden/shared/api'
+import { getAppInfo } from '../../api/index.js'
 import {
 	ANTHROPIC_SEED,
 	auditSpend,
@@ -24,8 +24,8 @@ import {
 	type ModelLookup,
 	type ModelOverrides,
 	type ProviderRow,
-} from '@eden/shared/gardener'
-import { settings } from '@eden/shared/settings'
+} from '../../gardener/index.js'
+import { settings } from '../../settings/index.js'
 
 export class GardenerSetup {
 	ready = $state(false)

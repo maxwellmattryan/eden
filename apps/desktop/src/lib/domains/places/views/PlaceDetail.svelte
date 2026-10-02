@@ -20,7 +20,7 @@
 	} from '@eden/shared/domains/places'
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
-	import { undoToast } from '$lib/shell/undo'
+	import { undoToast } from '@eden/shared/shell'
 	import { categoryNamer, vibeNamer } from '../words'
 
 	type Props = {

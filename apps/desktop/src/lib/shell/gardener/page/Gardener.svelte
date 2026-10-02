@@ -10,7 +10,7 @@
 	import { t } from '@eden/shared/i18n'
 	import AuditTab from './AuditTab.svelte'
 	import ConversationsTab from './ConversationsTab.svelte'
-	import { GARDENER_TAB_ICONS, GARDENER_TABS, type GardenerTab } from './tabs'
+	import { GARDENER_TAB_ICONS, GARDENER_TABS, type GardenerTab } from '@eden/shared/shell/gardener'
 	import ToolsTab from './ToolsTab.svelte'
 	import UsageTab from './UsageTab.svelte'
 

@@ -5,7 +5,7 @@
 	import { formatAddress } from '@eden/shared/address'
 	import { home } from '@eden/shared/home'
 	import { locale, t } from '@eden/shared/i18n'
-	import { homeUi } from '$lib/shell/home/home-ui.svelte'
+	import { homeUi } from '@eden/shared/shell/home'
 
 	type Props = {
 		closable?: boolean

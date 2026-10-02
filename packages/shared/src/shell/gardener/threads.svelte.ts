@@ -3,8 +3,8 @@
 // once and is sent after, in order (`WriteQueue`); the blocks of a reply change many times a second while it
 // streams, so they are persisted on a short debounce and once more when the reply settles. A reply being written is
 // held apart from the open thread, so its request goes on writing to it while the owner reads another conversation.
-import { logError } from '@eden/shared/api'
-import { newId, WriteQueue } from '@eden/shared/data'
+import { logError } from '../../api/index.js'
+import { newId, WriteQueue } from '../../data/index.js'
 import {
 	appendMessage,
 	createThread,
@@ -20,7 +20,7 @@ import {
 	type MessageBlock,
 	type Thread,
 	type ThreadTier,
-} from '@eden/shared/gardener'
+} from '../../gardener/index.js'
 
 export type Undo = () => void
 

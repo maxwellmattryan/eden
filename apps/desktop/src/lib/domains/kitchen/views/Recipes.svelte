@@ -20,8 +20,8 @@
 		type CookLine,
 	} from '@eden/shared/domains/kitchen'
 	import { t } from '@eden/shared/i18n'
-	import { undoToast } from '$lib/shell/undo'
-	import { showPushed } from '$lib/shell/pushed'
+	import { undoToast } from '@eden/shared/shell'
+	import { showPushed } from '@eden/shared/shell'
 	import { recipeBrowse } from '../recipe-browse.svelte'
 	import { recipeDrafts, recipeImport } from '../recipe-draft.svelte'
 	import { forbidden } from '../safety.svelte'

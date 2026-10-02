@@ -11,7 +11,7 @@ import {
 	type GrantCheck,
 	type GrantDecision,
 	type GrantInput,
-} from '@eden/shared/grants'
+} from '../grants/index.js'
 
 const byId = (a: Grant, b: Grant) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
 

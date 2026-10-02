@@ -18,7 +18,7 @@ import {
 } from '@eden/shared/domains/places'
 import { addressFromHit } from '@eden/shared/address'
 import type { GeocodeHit, LngLat } from '@eden/shared/geo'
-import type { DirectPreview } from '$lib/shell/gardener/runtime.svelte'
+import type { DirectPreview } from '@eden/shared/shell/gardener'
 
 export const IMPORT_PLACES = 'places.import-places'
 

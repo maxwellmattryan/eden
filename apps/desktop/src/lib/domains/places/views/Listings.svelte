@@ -17,8 +17,8 @@
 	import { formatCost } from '@eden/shared/gardener'
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
-	import { settingsUi } from '$lib/settings/settings-ui.svelte'
-	import { undoToast } from '$lib/shell/undo'
+	import { settingsUi } from '@eden/shared/shell/settings'
+	import { undoToast } from '@eden/shared/shell'
 
 	const lang = $derived($locale ?? 'en')
 	const format = $derived({ lang, clock: settings.clock })

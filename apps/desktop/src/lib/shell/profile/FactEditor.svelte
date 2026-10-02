@@ -16,8 +16,8 @@
 		type ValueShape,
 	} from '@eden/shared/profile'
 	import { ownerOf, tierOf } from '@eden/shared/registry'
-	import { undoToast } from '$lib/shell/undo'
-	import { profile } from './store.svelte'
+	import { undoToast } from '@eden/shared/shell'
+	import { profile } from '@eden/shared/shell/profile'
 
 	type Props = {
 		/** Bindable. */

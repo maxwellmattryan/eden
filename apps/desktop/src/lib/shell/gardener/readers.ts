@@ -6,8 +6,8 @@ import type { PackReaders } from '@eden/shared/gardener'
 import { queryFacts } from '@eden/shared/profile'
 import type { FactId } from '@eden/shared/registry'
 import { manifests } from '../../domains/index.js'
-import { grants } from '../grants.svelte.js'
-import { readForPack } from './files.js'
+import { grants } from '@eden/shared/shell'
+import { readForPack } from '@eden/shared/shell/gardener'
 
 /** The rows of a type as its domain's `pack` binding shapes them (D-85); a type without one is sent whole. */
 async function entities(type: string) {

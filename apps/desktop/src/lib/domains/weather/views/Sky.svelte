@@ -41,7 +41,7 @@
 	import { cubicOut } from 'svelte/easing'
 	import { openExternal } from '@eden/shared/api'
 	import { updatedLine } from '$lib/domains/weather/updated'
-	import { homeUi } from '$lib/shell/home/home-ui.svelte'
+	import { homeUi } from '@eden/shared/shell/home'
 	import { home } from '@eden/shared/home'
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'

@@ -6,7 +6,7 @@
 	import { formatDateOf } from '@eden/shared/dates'
 	import { categoryGlyph, meadow, type SavedPlace, type Visit } from '@eden/shared/domains/places'
 	import { locale, t } from '@eden/shared/i18n'
-	import { undoToast } from '$lib/shell/undo'
+	import { undoToast } from '@eden/shared/shell'
 
 	type Props = {
 		onopen?: (place: SavedPlace) => void

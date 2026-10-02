@@ -15,7 +15,7 @@ import {
 	type DayReading,
 	type MoonMoment,
 } from '@eden/shared/weather'
-import { int, str, type ToolHandler } from '$lib/shell/gardener/types'
+import { int, str, type ToolHandler } from '@eden/shared/shell/gardener'
 
 const HOUR_MS = 60 * 60 * 1000
 const DAY_MS = 24 * HOUR_MS

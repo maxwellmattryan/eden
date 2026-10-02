@@ -2,8 +2,8 @@
 // through a scripted stream in the browser, where there is no key and no crate, so the panel can be worked on with
 // `yarn dev:web`. Either way the runtime sees the same events. A request held to a schema is answered in that
 // shape, so a page that runs a tool itself (Hearth's capture sheet) can be walked in the browser too.
-import { isTauri } from '@eden/shared/api'
-import { gardenerSend, type GardenerEvent, type GardenerRequest } from '@eden/shared/gardener'
+import { isTauri } from '../../api/index.js'
+import { gardenerSend, type GardenerEvent, type GardenerRequest } from '../../gardener/index.js'
 
 export interface Transport {
 	(

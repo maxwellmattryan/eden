@@ -21,9 +21,9 @@ import { isTime, parseTarget, repeatOf, type DraftTask, type Task, type TaskEdit
 import { temperature, weather } from '@eden/shared/weather'
 import { declarations } from '$lib/domains'
 import { manifests } from '../../domains/index.js'
-import { profile } from '../profile/store.svelte.js'
+import { profile } from '@eden/shared/shell/profile'
 import { runQuickAction } from '../quick-log.js'
-import { tasks } from '../today/store.svelte.js'
+import { tasks } from '@eden/shared/shell/today'
 import {
 	agenda,
 	AGENDA_DAYS,
@@ -40,10 +40,10 @@ import {
 	type DraftCard,
 	type UsageGroup,
 } from '@eden/shared/gardener'
-import { entries, given, ids, preview, together, unknown, withFields } from './batch.js'
+import { entries, given, ids, preview, together, unknown, withFields } from '@eden/shared/shell/gardener'
 import { readers } from './readers.js'
-import { gardenerSetup } from './setup.svelte.js'
-import { DRAFTED, GRANT_SUBJECT, int, num, str, type ToolHandler, type ToolResult } from './types.js'
+import { gardenerSetup } from '@eden/shared/shell/gardener'
+import { DRAFTED, GRANT_SUBJECT, int, num, str, type ToolHandler, type ToolResult } from '@eden/shared/shell/gardener'
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/
 

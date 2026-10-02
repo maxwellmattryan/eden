@@ -15,9 +15,9 @@
 	import { describeRecurrence, taskFromDraft, type DraftTask } from '@eden/shared/tasks'
 	import { copyText } from '@eden/shared/api'
 	import { manifestFor } from '$lib/domains'
-	import { formatDayWord, formatRepeat, formatWallTime, type Words } from '../today/chips'
-	import { tasks } from '../today/store.svelte'
-	import { undoToast } from '../undo'
+	import { formatDayWord, formatRepeat, formatWallTime, type Words } from '@eden/shared/shell/today'
+	import { tasks } from '@eden/shared/shell/today'
+	import { undoToast } from '@eden/shared/shell'
 
 	type Props = {
 		draft: Draft

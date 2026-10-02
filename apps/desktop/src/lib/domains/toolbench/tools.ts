@@ -6,7 +6,7 @@ import { get } from 'svelte/store'
 import { newId, queryEntities } from '@eden/shared/data'
 import { answer, type DraftCard } from '@eden/shared/gardener'
 import { t } from '@eden/shared/i18n'
-import { DRAFTED, int, parseJson, str, type ToolHandler } from '$lib/shell/gardener/types'
+import { DRAFTED, int, parseJson, str, type ToolHandler } from '@eden/shared/shell/gardener'
 import { toolbench } from './store.svelte.js'
 
 const ideaUri = (id: string) => `eden://idea/${id}`

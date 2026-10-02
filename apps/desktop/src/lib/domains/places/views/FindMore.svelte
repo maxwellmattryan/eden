@@ -7,7 +7,7 @@
 	import { areaWords, meadow, type Availability } from '@eden/shared/domains/places'
 	import { formatCost } from '@eden/shared/gardener'
 	import { locale, t } from '@eden/shared/i18n'
-	import { settingsUi } from '$lib/settings/settings-ui.svelte'
+	import { settingsUi } from '@eden/shared/shell/settings'
 
 	const uid = $props.id()
 	const lang = $derived($locale ?? 'en')

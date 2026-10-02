@@ -3,7 +3,7 @@
 	// The other tabs arrive with their substrate; extracting the tabs into @eden/shared is a later issue.
 	import { Sheet } from '@eden/ui-kit'
 	import { t } from '@eden/shared/i18n'
-	import { settingsUi } from './settings-ui.svelte'
+	import { settingsUi } from '@eden/shared/shell/settings'
 	import AppearanceTab from './tabs/AppearanceTab.svelte'
 
 	const uid = $props.id()

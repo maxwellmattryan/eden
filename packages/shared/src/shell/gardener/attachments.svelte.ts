@@ -1,7 +1,7 @@
 // The Attachment rows behind the files of the open conversation (D-83): a message's blocks name each file by id, and
 // the row has the thumbnail and says whether the file is still there. Read when a thread opens and after a send.
 import { SvelteMap } from 'svelte/reactivity'
-import { queryAttachments, type AttachmentRow } from '@eden/shared/data'
+import { queryAttachments, type AttachmentRow } from '../../data/index.js'
 
 class ThreadAttachments {
 	/** The live rows of the thread's files, by id. */
