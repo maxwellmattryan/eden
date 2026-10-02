@@ -18,6 +18,7 @@ export const weatherManifest = defineDomain('weather', {
 	},
 	liveGlyph: () => (weather.now ? iconFor(weather.now.condition, weather.now.night) : undefined),
 	load: () => weather.load(),
+	reload: () => weather.reload(),
 	subscribe: () => weather.bind(),
 	tools: weatherTools,
 	// the tools answer the hours and the details; the pack carries the week at a glance

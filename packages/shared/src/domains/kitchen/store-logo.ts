@@ -3,7 +3,7 @@
 // them. A site's `.ico` is the last resort (D-103): a grocer that keeps programs from its page often still gives it.
 // An SVG is never taken. The same page may say where the store is and how to call it, which is read here too.
 import { decodeEntities } from './sources.js'
-import { httpsAddress, jsonLdNodes } from './recipe-import.js'
+import { businessDetails, httpsAddress } from '../../api/html.js'
 
 /** The size a touch icon is when its tag does not say: what a phone asks for. */
 const TOUCH_EDGE = 180
@@ -76,34 +76,12 @@ export interface StoreDetails {
 /** The schema.org types a shop describes itself as: a `LocalBusiness` and the kinds of it a grocer uses. */
 const SHOP_TYPE = /(?:LocalBusiness|Store|GroceryStore|Supermarket|ConvenienceStore|Bakery)$/
 
-const line = (value: unknown): string =>
-	typeof value === 'string' || typeof value === 'number'
-		? decodeEntities(String(value)).replace(/\s+/g, ' ').trim().slice(0, 200)
-		: ''
-
-/** A `PostalAddress` on one line, or an address already written as one. */
-function addressOf(value: unknown): string {
-	if (Array.isArray(value)) return addressOf(value[0])
-	if (!value || typeof value !== 'object') return line(value)
-	const node = value as Record<string, unknown>
-	const town = [line(node.addressLocality), [line(node.addressRegion), line(node.postalCode)].filter(Boolean).join(' ')]
-	return [line(node.streetAddress), ...town].filter(Boolean).join(', ')
-}
-
 /**
  * A store's phone number and address as its page describes them in JSON-LD, read with no model. A page that
  * describes several shops, as a chain's front page may, answers nothing for what they do not agree on: one
  * branch's address is not the owner's.
  */
 export function storeDetails(html: string): StoreDetails {
-	const shops = jsonLdNodes(html).filter((node) =>
-		[node['@type']].flat().some((type) => typeof type === 'string' && SHOP_TYPE.test(type))
-	)
-	const one = (values: string[]) => {
-		const said = [...new Set(values.filter(Boolean))]
-		return said.length === 1 ? said[0] : undefined
-	}
-	const phone = one(shops.map((shop) => line(shop.telephone)))
-	const address = one(shops.map((shop) => addressOf(shop.address)))
+	const { phone, address } = businessDetails(html, SHOP_TYPE)
 	return { ...(phone ? { phone } : {}), ...(address ? { address } : {}) }
 }

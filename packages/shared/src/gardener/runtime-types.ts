@@ -20,9 +20,12 @@ export interface GardenerRequest {
 	/** A string or the API's list of text blocks (with cache_control); passed through verbatim. */
 	system: unknown
 	messages: unknown[]
+	/** The tools as the API is given them: Eden's own, and any the provider runs itself (web search, D-132). */
 	tools: unknown[]
 	/** A JSON schema the reply is held to (the API's structured output), for a delegated request a handler parses. */
 	outputFormat?: unknown
+	/** The effort the model is asked to work at, as its provider names the level (D-146); left out for a model with none. */
+	effort?: string
 }
 
 export type GardenerEvent =
@@ -31,9 +34,20 @@ export type GardenerEvent =
 	| { type: 'tool_use'; id: string; name: string; input: unknown }
 	/** One whole reasoning block as the API sent it, to be sent back unchanged while its request continues. */
 	| { type: 'thinking'; block: unknown }
-	| { type: 'usage'; input: number; output: number; cacheRead: number; cacheWrite: number }
+	/**
+	 * One block of a tool the provider ran on its own side (D-132), whole: the call with its input, or its result as
+	 * the addresses and titles it returned, or its error code.
+	 */
+	| { type: 'server_block'; block: ServerBlock }
+	/** `searches` is how many web searches the provider ran; it comes with the closing usage, and is absent before. */
+	| { type: 'usage'; input: number; output: number; cacheRead: number; cacheWrite: number; searches?: number }
 	| { type: 'stop'; reason: string; refusal: string | null }
 	| { type: 'error'; status: number | null; message: string }
+
+/** A server tool's block as the crate hands it over. */
+export type ServerBlock =
+	| { type: 'server_tool_use'; id: string; name: string; input: Record<string, unknown> }
+	| { type: string; toolUseId: string; results: { url: string; title: string }[]; error: string | null }
 
 export type ThreadTier = 'T0' | 'T1' | 'T2'
 

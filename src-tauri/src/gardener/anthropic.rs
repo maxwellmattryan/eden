@@ -1,7 +1,9 @@
 //! The Anthropic adapter (docs/engineering/gardener.md, "The provider call"; D-76): one streaming Messages request
 //! and the translation of its server-sent events into the Gardener's own. The request crosses as the frontend built
-//! it, with the API's names; nothing is added but `stream`, and `output_config` around a schema the reply is held to,
-//! and neither `thinking` nor `tool_choice` is ever sent.
+//! it, with the API's names; nothing is added but `stream`, and `output_config` around a schema the reply is held to
+//! and the effort the model is asked to work at (D-146), and neither `thinking` nor `tool_choice` is ever sent. A tool the provider runs on its own side (web search,
+//! D-132) is in `tools` like any other; what it did comes back as blocks of its own, which are handed over whole
+//! when they close, and the searches it made are counted in the closing usage.
 //!
 //! The key is a header and nothing else: no message this module produces, whether from the provider, from a broken
 //! stream or from a failure to connect, carries it. A request that never reached the provider is refused
@@ -37,7 +39,10 @@ pub fn body(request: &GardenerRequest) -> Value {
         body["tools"] = Value::Array(request.tools.clone());
     }
     if let Some(schema) = &request.output_format {
-        body["output_config"] = json!({ "format": { "type": "json_schema", "schema": schema } });
+        body["output_config"]["format"] = json!({ "type": "json_schema", "schema": schema });
+    }
+    if let Some(effort) = &request.effort {
+        body["output_config"]["effort"] = json!(effort);
     }
     body
 }
@@ -224,6 +229,12 @@ enum Block {
     },
     /// Reasoning the provider encrypted; it goes back as it came.
     Redacted(Value),
+    /// A block of a tool the provider runs itself (D-132): the call it made, whose input arrives in pieces like any
+    /// tool's, or what came back, which arrives whole.
+    Server {
+        block: Value,
+        json: String,
+    },
     /// A block kind this build does not read (whatever comes next).
     Other,
 }
@@ -236,6 +247,47 @@ pub struct StreamState {
     input: u64,
     cache_read: u64,
     cache_write: u64,
+}
+
+/// What the frontend is given of a server tool's block: the call with its input, or the result as the addresses
+/// and titles it returned (never the pages' encrypted text, which only the provider reads) or its error code.
+fn server_block(block: &Value, json: &str) -> Value {
+    match block.get("type").and_then(Value::as_str) {
+        Some("server_tool_use") => {
+            let input =
+                serde_json::from_str::<Value>(if json.trim().is_empty() { "{}" } else { json })
+                    .unwrap_or_else(|_| json!({}));
+            json!({
+                "type": "server_tool_use",
+                "id": text(block, "id"),
+                "name": text(block, "name"),
+                "input": input,
+            })
+        }
+        _ => {
+            let content = &block["content"];
+            let results: Vec<Value> = content
+                .as_array()
+                .map(|list| {
+                    list.iter()
+                        .filter(|entry| entry.get("url").is_some())
+                        .map(|entry| json!({ "url": text(entry, "url"), "title": text(entry, "title") }))
+                        .collect()
+                })
+                .unwrap_or_default();
+            // an error is an object where the results would be a list
+            let error = content
+                .get("error_code")
+                .and_then(Value::as_str)
+                .map(str::to_string);
+            json!({
+                "type": text(block, "type"),
+                "toolUseId": text(block, "tool_use_id"),
+                "results": results,
+                "error": error,
+            })
+        }
+    }
 }
 
 fn count(value: &Value, key: &str) -> u64 {
@@ -282,6 +334,7 @@ pub fn translate(sse: &Sse, state: &mut StreamState) -> Vec<GardenerEvent> {
                     output: 0,
                     cache_read: state.cache_read,
                     cache_write: state.cache_write,
+                    searches: 0,
                 },
             ]
         }
@@ -300,6 +353,12 @@ pub fn translate(sse: &Sse, state: &mut StreamState) -> Vec<GardenerEvent> {
                     signature: text(block, "signature"),
                 },
                 Some("redacted_thinking") => Block::Redacted(block.clone()),
+                Some(kind) if kind == "server_tool_use" || kind.ends_with("_tool_result") => {
+                    Block::Server {
+                        block: block.clone(),
+                        json: String::new(),
+                    }
+                }
                 _ => Block::Other,
             };
             state.blocks.insert(index, opened);
@@ -313,7 +372,9 @@ pub fn translate(sse: &Sse, state: &mut StreamState) -> Vec<GardenerEvent> {
                     text: text(delta, "text"),
                 }],
                 Some("input_json_delta") => {
-                    if let Some(Block::Tool { json, .. }) = state.blocks.get_mut(&index) {
+                    if let Some(Block::Tool { json, .. } | Block::Server { json, .. }) =
+                        state.blocks.get_mut(&index)
+                    {
                         json.push_str(delta["partial_json"].as_str().unwrap_or_default());
                     }
                     Vec::new()
@@ -353,6 +414,9 @@ pub fn translate(sse: &Sse, state: &mut StreamState) -> Vec<GardenerEvent> {
                     block: json!({ "type": "thinking", "thinking": thinking, "signature": signature }),
                 }],
                 Some(Block::Redacted(block)) => vec![GardenerEvent::Thinking { block }],
+                Some(Block::Server { block, json }) => vec![GardenerEvent::ServerBlock {
+                    block: server_block(&block, &json),
+                }],
                 _ => Vec::new(),
             }
         }
@@ -368,12 +432,25 @@ pub fn translate(sse: &Sse, state: &mut StreamState) -> Vec<GardenerEvent> {
                         .map(str::to_string)
                 })
                 .flatten();
+            // The closing usage is read in full: with a server tool the input grows by what its results put into
+            // the context, so the figures the start gave are replaced by the ones the end gives, where it gives them.
+            let usage = &data["usage"];
+            for (held, key) in [
+                (&mut state.input, "input_tokens"),
+                (&mut state.cache_read, "cache_read_input_tokens"),
+                (&mut state.cache_write, "cache_creation_input_tokens"),
+            ] {
+                if let Some(value) = usage.get(key).and_then(Value::as_u64) {
+                    *held = value;
+                }
+            }
             vec![
                 GardenerEvent::Usage {
                     input: state.input,
-                    output: count(&data["usage"], "output_tokens"),
+                    output: count(usage, "output_tokens"),
                     cache_read: state.cache_read,
                     cache_write: state.cache_write,
+                    searches: count(&usage["server_tool_use"], "web_search_requests"),
                 },
                 GardenerEvent::Stop { reason, refusal },
             ]
@@ -414,6 +491,7 @@ mod tests {
             messages: vec![json!({ "role": "user", "content": "Dinner?" })],
             tools: Vec::new(),
             output_format: None,
+            effort: None,
         }
     }
 
@@ -437,6 +515,7 @@ mod tests {
                     output: 0,
                     cache_read: 1000,
                     cache_write: 200,
+                    searches: 0,
                 },
                 GardenerEvent::TextDelta {
                     text: "Dal tonight: ".into()
@@ -454,6 +533,7 @@ mod tests {
                     output: 57,
                     cache_read: 1000,
                     cache_write: 200,
+                    searches: 0,
                 },
                 GardenerEvent::Stop {
                     reason: "tool_use".into(),
@@ -477,6 +557,97 @@ mod tests {
         assert!(parser.push(b"\n\n").is_empty());
     }
 
+    const SEARCH: &[u8] = include_bytes!("fixtures/search.sse");
+
+    #[test]
+    fn a_server_tool_is_handed_over_block_by_block_and_counted_at_the_end() {
+        let whole = events_of(std::iter::once(SEARCH.to_vec()));
+        // fed a byte at a time, the stream reads the same
+        assert_eq!(whole, events_of(SEARCH.iter().map(|byte| vec![*byte])));
+        assert_eq!(
+            whole,
+            vec![
+                GardenerEvent::Start {
+                    message_id: "msg_01SearchFixture".into(),
+                    model: "claude-haiku-4-5-20251001".into(),
+                },
+                GardenerEvent::Usage {
+                    input: 2400,
+                    output: 0,
+                    cache_read: 0,
+                    cache_write: 0,
+                    searches: 0,
+                },
+                GardenerEvent::TextDelta {
+                    text: "Looking for quiet cafes.".into()
+                },
+                // the call, with its input put together from its pieces
+                GardenerEvent::ServerBlock {
+                    block: json!({
+                        "type": "server_tool_use",
+                        "id": "srvtoolu_01Query",
+                        "name": "web_search",
+                        "input": { "query": "quiet cafe to work in Austin" },
+                    }),
+                },
+                // what came back: the addresses and titles, and none of the encrypted text
+                GardenerEvent::ServerBlock {
+                    block: json!({
+                        "type": "web_search_tool_result",
+                        "toolUseId": "srvtoolu_01Query",
+                        "results": [
+                            { "url": "https://www.flitchcoffee.com/", "title": "Flitch Coffee" },
+                            { "url": "https://bennucoffee.com/", "title": "Bennu Coffee | Open 24 hours" },
+                        ],
+                        "error": null,
+                    }),
+                },
+                // a citation is not text: only the words are
+                GardenerEvent::TextDelta {
+                    text: "Flitch Coffee is a trailer under the trees.".into()
+                },
+                GardenerEvent::ServerBlock {
+                    block: json!({
+                        "type": "server_tool_use",
+                        "id": "srvtoolu_02Query",
+                        "name": "web_search",
+                        "input": { "query": "late night coffee Austin" },
+                    }),
+                },
+                // a search that failed answers an error where its results would be
+                GardenerEvent::ServerBlock {
+                    block: json!({
+                        "type": "web_search_tool_result",
+                        "toolUseId": "srvtoolu_02Query",
+                        "results": [],
+                        "error": "max_uses_exceeded",
+                    }),
+                },
+                // the closing usage is read in full: the input grew by what the results held
+                GardenerEvent::Usage {
+                    input: 9150,
+                    output: 212,
+                    cache_read: 0,
+                    cache_write: 0,
+                    searches: 2,
+                },
+                GardenerEvent::Stop {
+                    reason: "end_turn".into(),
+                    refusal: None,
+                },
+            ]
+        );
+        assert!(!format!("{whole:?}").contains("encrypted"));
+    }
+
+    #[test]
+    fn a_server_tool_goes_out_among_the_tools_as_it_was_given() {
+        let mut request = request();
+        let tool = json!({ "type": "web_search_20250305", "name": "web_search", "max_uses": 5 });
+        request.tools = vec![tool.clone()];
+        assert_eq!(body(&request)["tools"], json!([tool]));
+    }
+
     #[test]
     fn a_refusal_carries_its_category() {
         let sse = Sse {
@@ -498,7 +669,8 @@ mod tests {
                     input: 10,
                     output: 3,
                     cache_read: 0,
-                    cache_write: 0
+                    cache_write: 0,
+                    searches: 0
                 },
                 GardenerEvent::Stop {
                     reason: "refusal".into(),
@@ -677,6 +849,17 @@ mod tests {
         assert_eq!(
             body(&request)["output_config"],
             json!({ "format": { "type": "json_schema", "schema": { "type": "object" } } })
+        );
+        request.effort = Some("medium".into());
+        assert_eq!(body(&request)["output_config"]["effort"], "medium");
+        assert_eq!(
+            body(&request)["output_config"]["format"]["type"],
+            "json_schema"
+        );
+        request.output_format = None;
+        assert_eq!(
+            body(&request)["output_config"],
+            json!({ "effort": "medium" })
         );
         request.tools = vec![json!({ "name": "kitchen_plan" })];
         assert_eq!(body(&request)["tools"][0]["name"], "kitchen_plan");

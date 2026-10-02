@@ -4,7 +4,7 @@ status: draft
 summary: Where engineering stands. It started with the UI kit ahead of the rest reaching review; this page lists what is answered so far and the questions the remaining engineering docs must answer.
 read-this-if: You are starting engineering work and want to know what is decided and what has to be decided first.
 depends-on: [product/roadmap, product/substrate/domain-manifest, product/substrate/data]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## When
@@ -24,6 +24,7 @@ Engineering started with the UI kit (D-43) ahead of the rest of the docs reachin
 - The grant store and the egress ledger: the check every read and confirm asks, what stays on a device, what Eden counts as bytes out (D-70, D-71, `engineering/data-layer.md`, "Grants", "The egress ledger").
 - The scheduler on desktop, signals, rules and the inbox: the alarm in the crate and the take in the webview, rules from the manifests, the refresh coordinator (D-73, `engineering/signals.md`).
 - The Gardener v0: the key in the keychain, the request sent from the crate and streamed back, the context pack from declared reads, every declared tool with a handler, budgets, the audit log, threads as rows, the development clamp (D-74, D-76, `engineering/gardener.md`).
+- Meadow ahead of its phase (D-128 to D-136): the map behind a seam, discovery and listings through the Gardener's web search, details slots, import, the phone's read surfaces (`engineering/meadow.md`).
 
 ## Questions the engineering docs must answer
 

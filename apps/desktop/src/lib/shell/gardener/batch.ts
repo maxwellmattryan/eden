@@ -42,7 +42,7 @@ export const together =
 /** The error for ids the model passed that name nothing, saying where the real ones are. */
 export const unknown = (what: string, under: string, missing: string[]) => ({
 	output: {
-		error: `No ${what} has the id ${missing.map((id) => JSON.stringify(id)).join(', ')}. Pass the \`id\` of a row under \`${under}\` in the context. Nothing was changed.`,
+		error: `No ${what} has the id ${missing.map((id) => JSON.stringify(id)).join(', ')}. Pass the \`id\` of a row under \`${under}\`, from \`read-rows\`. Nothing was changed.`,
 	},
 })
 

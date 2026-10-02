@@ -1,7 +1,7 @@
 <script lang="ts">
 	// The Gardener's panel (product/substrate/ai.md, "Surfaces"; docs/design/ux-patterns.md, "Gardener surfaces"): a
-	// docked column on the right with the thread list behind a toggle, the conversation, the composer with the literal
-	// "can see" chip at its foot, and the states in which it cannot answer: no key on this device, the browser, the
+	// docked column on the right with the thread list behind a toggle, the conversation, whose last reply carries the
+	// eye that says what it read, the composer, and the states in which it cannot answer: no key on this device, the browser, the
 	// budget.
 	// The whole panel is a drop zone while the composer is up (never over the thread list): files dropped on it, picked
 	// with the paperclip or pasted into the field wait above the message as chips until it is sent (D-82 to D-84).
@@ -11,7 +11,6 @@
 	import { resolve } from '$app/paths'
 	import {
 		Button,
-		CanSee,
 		Composer,
 		ConfirmSheet,
 		Dropzone,
@@ -45,7 +44,6 @@
 	import { settingsUi } from '$lib/settings/settings-ui.svelte'
 	import { grants } from '../grants.svelte'
 	import { profile } from '../profile/store.svelte'
-	import { undoToast } from '../undo'
 	import { threadAttachments } from './attachments.svelte'
 	import {
 		capByType,
@@ -58,20 +56,15 @@
 		type StageCheck,
 		type StagedFile,
 	} from './files'
-	import { labelRows, registryLabel, type RowLabel } from './labels'
-	import { GRANT_SUBJECT } from './types'
 	import MessageBlocks from './MessageBlocks.svelte'
 	import { gardenerUi } from './panel-ui.svelte'
-	import { runtime, type CanSeeBlock } from './runtime.svelte'
+	import { runtime } from './runtime.svelte'
 	import { gardenerSetup } from './setup.svelte'
 	import ThreadList from './ThreadList.svelte'
 	import { threads } from './threads.svelte'
 
 	const uid = $props.id()
 	let listOpen = $state(false)
-	// the rows behind an opened chip, labelled; read when the chip opens and kept for the block
-	let labels = $state<Record<string, RowLabel[] | undefined>>({})
-	let unlocking = $state<string | undefined>()
 	let key = $state('')
 	let keyBusy = $state(false)
 	let log = $state<HTMLElement>()
@@ -82,70 +75,8 @@
 		threads.current?.title ??
 			(domainName ? $t('gardener.askInDomain', { values: { domain: domainName } }) : $t('shell.gardener'))
 	)
-	// The chip shows what the next message would carry, read afresh each time it opens (`runtime.canSeeNext`); until
-	// that answers, and where no model can, it shows what the conversation's last request read.
-	let live = $state<{ thread: string | undefined; block: CanSeeBlock }>()
-	const canSee = $derived(
-		live && live.thread === threads.current?.id ? live.block : (runtime.canSee as CanSeeBlock | undefined)
-	)
-	async function refreshCanSee() {
-		const thread = threads.current?.id
-		const block = await runtime.canSeeNext().catch(() => undefined)
-		if (block && thread === threads.current?.id) live = { thread, block }
-	}
-	// the chip names each id as the owner knows it (a fact's name), the id itself beside it; the owner's files the
-	// request carried are one more line, opening to their names (D-82)
-	const FILES_ITEM = 'attachment'
-	const chipFiles = $derived(canSee?.attachments ?? [])
-	const chipItems = $derived([
-		...(canSee?.items ?? []).map((item) => ({ ...item, label: registryLabel(item.id) })),
-		...(chipFiles.length
-			? [{ id: FILES_ITEM, count: chipFiles.length, label: $t('gardener.attachments.canSee') }]
-			: []),
-	])
-	// a locked id the owner has since shared leaves the list: the block is that request's snapshot, the grant is live
-	const chipLocked = $derived(
-		(canSee?.locked ?? [])
-			.filter(
-				(id) =>
-					!grants.grants.some(
-						(grant) =>
-							grant.subject === GRANT_SUBJECT &&
-							grant.resource === id &&
-							grant.access === 'read' &&
-							grant.lifetime === 'standing' &&
-							!grant.deletedAt
-					)
-			)
-			.map((id) => ({ id, label: registryLabel(id) }))
-	)
-	const chipRows = $derived(canSee?.rows ?? {})
-	// a new block empties what the last one's chips showed
-	$effect(() => {
-		void canSee
-		labels = {}
-	})
-	async function expand(item: { id: string }) {
-		if (labels[item.id] || item.id === FILES_ITEM) return
-		labels = { ...labels, [item.id]: await labelRows(item.id, chipRows[item.id] ?? []) }
-	}
-	/** A standing read grant on the T2 id the tools in reach declared; the next request includes it (grants.md). */
-	async function allow(id: string) {
-		unlocking = undefined
-		try {
-			const granted = await grants.grant({
-				subject: GRANT_SUBJECT,
-				resource: id,
-				resourceType: 'registry',
-				access: 'read',
-				lifetime: 'standing',
-				origin: 'confirm',
-			})
-			undoToast($t('gardener.allowed', { values: { id: registryLabel(id) } }), () => void grants.revoke(granted.id))
-		} catch {
-			// the store refused: the chip stays locked
-		}
-	}
+	// the thread's last reply carries the eye that says what it read (D-149)
+	const lastReply = $derived(threads.messages.findLast((message) => message.role !== 'owner')?.id)
 	const inApp = isTauri()
 	// the browser answers with a scripted stream, so the composer stays open there
 	const canAsk = $derived((inApp ? gardenerSetup.hasKey : true) && !gardenerSetup.failed)
@@ -339,7 +270,7 @@
 	{/each}
 {/snippet}
 
-<!-- the composer's foot: the paperclip, then the "can see" eye once something can be asked -->
+<!-- the composer's foot: the paperclip -->
 {#snippet composerTools()}
 	<FileButton
 		label={$t('gardener.attach')}
@@ -349,37 +280,6 @@
 		tooltip
 		onfiles={picked}
 	/>
-	{@render canSeeChip()}
-{/snippet}
-
-{#snippet canSeeChip()}
-	{#if canSee || canAsk}
-		<CanSee
-			items={chipItems}
-			locked={chipLocked}
-			trimmed={canSee?.trimmed ?? []}
-			onopen={() => void refreshCanSee()}
-			onexpand={(item) => void expand(item)}
-			onunlock={(id) => (unlocking = id)}
-		>
-			{#snippet expanded(item)}
-				{@const rows = labels[item.id]}
-				{#if item.id === FILES_ITEM}
-					<ul class="rows">
-						{#each chipFiles as name, i (i)}<li>{name}</li>{/each}
-					</ul>
-				{:else if !(chipRows[item.id] ?? []).length}
-					<p class="rows-none">{$t('gardener.noRows')}</p>
-				{:else if !rows}
-					<p class="rows-none">…</p>
-				{:else}
-					<ul class="rows">
-						{#each rows as row (row.id)}<li>{row.label}</li>{/each}
-					</ul>
-				{/if}
-			{/snippet}
-		</CanSee>
-	{/if}
 {/snippet}
 
 <Dropzone class="panel-drop" {...dropRules} disabled={listOpen || !canAsk || blocked} ondrop={dropped}>
@@ -453,7 +353,7 @@
 				{#if greets}<Greeting text={greeting} name={ownerName} />{/if}
 				<Thread label={$t('gardener.conversation')}>
 					{#each threads.messages as message (message.id)}
-						<MessageBlocks {message} />
+						<MessageBlocks {message} last={message.id === lastReply} />
 					{/each}
 					{#if waiting}<GardenerMessage><Sprouting size="md" /></GardenerMessage>{/if}
 				</Thread>
@@ -477,19 +377,6 @@
 		{/if}
 	</aside>
 </Dropzone>
-
-{#if unlocking}
-	<ConfirmSheet
-		open={true}
-		title={$t('gardener.allow.title')}
-		subject={$t('shell.gardener')}
-		resource={registryLabel(unlocking)}
-		text={$t('gardener.allow.text', { values: { id: registryLabel(unlocking) } })}
-		verb={$t('gardener.allow.verb')}
-		onconfirm={() => unlocking && void allow(unlocking)}
-		oncancel={() => (unlocking = undefined)}
-	/>
-{/if}
 
 {#if runtime.pending}
 	<ConfirmSheet
@@ -579,17 +466,5 @@
 	.key {
 		display: grid;
 		gap: var(--space-2);
-	}
-	.rows {
-		margin: 0;
-		padding-left: var(--space-4);
-		font: var(--ed-t-body-sm);
-		color: var(--text-primary);
-		overflow-wrap: anywhere;
-	}
-	.rows-none {
-		margin: 0;
-		font: var(--ed-t-body-sm);
-		color: var(--text-secondary);
 	}
 </style>

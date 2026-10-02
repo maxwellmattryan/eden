@@ -28,12 +28,30 @@ export function fakeTransport(script: (request: GardenerRequest) => string = () 
 			onEvent({ type: 'usage', input: 120, output: 0, cacheRead: 0, cacheWrite: 0 })
 			const looks = moonRound(request)
 			const held = request.outputFormat ? JSON.stringify(heldAnswer(request.outputFormat)) : undefined
+			// a research request (D-132): the provider's web search among its tools. The search is scripted too
+			const searches = (request.tools as { type?: string }[]).some((tool) => tool.type?.startsWith('web_search'))
 			// the wait a model makes before its first word, so the sprout can be worked on too
 			await new Promise((resolve) => setTimeout(resolve, 1200))
 			// an answer held to a schema comes whole: nothing reads it word by word
+			if (searches && !cancelled) {
+				for (const [at, search] of FAKE_SEARCHES.entries()) {
+					await new Promise((resolve) => setTimeout(resolve, 400))
+					const id = `fake-search-${request.id}-${at}`
+					onEvent({
+						type: 'server_block',
+						block: { type: 'server_tool_use', id, name: 'web_search', input: { query: search.query } },
+					})
+					onEvent({
+						type: 'server_block',
+						block: { type: 'web_search_tool_result', toolUseId: id, results: search.results, error: null },
+					})
+				}
+			}
 			for (const word of held
 				? [held]
-				: (looks === 'ask' ? FAKE_LOOK : looks === 'answer' ? FAKE_MOON : script(request)).split(/(?<=\s)/)) {
+				: searches
+					? [FAKE_NOTES]
+					: (looks === 'ask' ? FAKE_LOOK : looks === 'answer' ? FAKE_MOON : script(request)).split(/(?<=\s)/)) {
 				if (cancelled) break
 				await new Promise((resolve) => setTimeout(resolve, 30))
 				onEvent({ type: 'text_delta', text: word })
@@ -49,7 +67,14 @@ export function fakeTransport(script: (request: GardenerRequest) => string = () 
 					})
 				}
 			}
-			onEvent({ type: 'usage', input: 120, output: 40, cacheRead: 0, cacheWrite: 0 })
+			onEvent({
+				type: 'usage',
+				input: searches ? 9000 : 120,
+				output: searches ? 380 : 40,
+				cacheRead: 0,
+				cacheWrite: 0,
+				...(searches ? { searches: FAKE_SEARCHES.length } : {}),
+			})
 			const reason = cancelled ? 'cancelled' : looks === 'ask' ? 'tool_use' : 'end_turn'
 			onEvent({ type: 'stop', reason, refusal: null })
 		})()
@@ -64,14 +89,25 @@ export function fakeTransport(script: (request: GardenerRequest) => string = () 
 }
 
 /**
- * What the browser answers a request held to a schema (a delegated tool's): a haul for `capture-haul` and a recipe
- * for `import-recipe`, so their sheets can be walked with `yarn dev:web`, and for any other shape an answer with
- * every field present and nothing in it.
+ * What the browser answers a request held to a schema (a delegated tool's): a haul for `capture-haul`, a recipe
+ * for `import-recipe` and candidates for Meadow's `suggest-places`, so their surfaces can be walked with
+ * `yarn dev:web`, and for any other shape an answer with every field present and nothing in it.
  */
 function heldAnswer(schema: unknown): unknown {
 	const properties = (schema as { properties?: Record<string, unknown> } | null)?.properties ?? {}
 	if ('rows' in properties) return FAKE_HAUL
 	if ('ingredients' in properties) return FAKE_RECIPE
+	if ('candidates' in properties) return FAKE_CANDIDATES
+	if ('listings' in properties) return fakeListings()
+	// `import-places`: a vibe or two for the first few names, so the import sheet's suggestions can be seen
+	if ('tagged' in properties)
+		return {
+			tagged: [
+				{ index: 1, vibes: ['work-friendly', 'outdoors'] },
+				{ index: 2, vibes: ['social'] },
+				{ index: 3, vibes: ['read', 'calm'] },
+			],
+		}
 	return blank(schema)
 }
 
@@ -160,6 +196,149 @@ const FAKE_RECIPE = {
 		'Stir in the spinach until it wilts, then the lemon juice and zest.',
 	],
 	tip: 'Dry the chickpeas well first, or they steam where they should fry.',
+}
+
+/**
+ * The scripted web search (D-132): two searches and what each returned, the notes the research request answers, and
+ * the candidates the reading request makes of them. The places are real ones in Austin, so the geocoder finds them;
+ * one is made up, to show a name that cannot be placed, and one names an address the search never returned, which
+ * Meadow drops.
+ */
+const FAKE_SEARCHES = [
+	{
+		query: 'quiet cafes to work in Austin Texas',
+		results: [
+			{ url: 'https://www.flitchcoffee.com/', title: 'Flitch Coffee' },
+			{ url: 'https://bennucoffee.com/', title: 'Bennu Coffee | Open 24 hours' },
+		],
+	},
+	{
+		query: 'Austin Central Library hours study space',
+		results: [
+			{ url: 'https://library.austintexas.gov/central-library', title: 'Central Library | Austin Public Library' },
+			{ url: 'https://example.com/hidden-reading-rooms', title: 'Hidden reading rooms of Austin' },
+		],
+	},
+]
+
+const FAKE_NOTES = [
+	'Flitch Coffee, 641 Tillery St, East Austin. A coffee trailer under the trees with shaded tables; quiet on weekday mornings. Open daily 07:00 to 15:00. https://www.flitchcoffee.com/',
+	'Bennu Coffee, 2001 E Martin Luther King Jr Blvd, East Austin. Open around the clock and built for long sessions, with outlets at most tables. https://bennucoffee.com/',
+	'Austin Central Library, 710 W Cesar Chavez St, Downtown. Six floors of quiet with a roof garden and daylight everywhere; no alcohol. https://library.austintexas.gov/central-library',
+	'The Lantern Reading Room, said to be upstairs on a side street off Guadalupe; no address given. https://example.com/hidden-reading-rooms',
+].join('\n\n')
+
+const fakeCandidate = (given: Record<string, unknown>) => ({
+	name: '',
+	category: 'cafe',
+	address: '',
+	locality: '',
+	why: '',
+	vibes: [],
+	price: 0,
+	alcoholFree: 'unknown',
+	hours: '',
+	website: '',
+	sources: [],
+	...given,
+})
+
+const FAKE_CANDIDATES = {
+	candidates: [
+		fakeCandidate({
+			name: 'Flitch Coffee',
+			address: '641 Tillery St',
+			locality: 'East Austin',
+			why: 'A trailer under the trees with shaded tables; quiet on weekday mornings.',
+			vibes: ['work-friendly', 'calm', 'outdoors', 'solo-friendly'],
+			price: 1,
+			hours: 'Mo-Su 07:00-15:00',
+			website: 'https://www.flitchcoffee.com/',
+			sources: ['https://www.flitchcoffee.com/'],
+		}),
+		fakeCandidate({
+			name: 'Bennu Coffee',
+			address: '2001 E Martin Luther King Jr Blvd',
+			locality: 'East Austin',
+			why: 'Open around the clock and built for long sessions, with outlets at most tables.',
+			vibes: ['deep-work', 'late-night', 'laptop-crowd'],
+			price: 2,
+			hours: '24/7',
+			website: 'https://bennucoffee.com/',
+			sources: ['https://bennucoffee.com/'],
+		}),
+		fakeCandidate({
+			name: 'Austin Central Library',
+			category: 'library',
+			address: '710 W Cesar Chavez St',
+			locality: 'Downtown',
+			why: 'Six floors of quiet with a roof garden and daylight everywhere.',
+			vibes: ['deep-work', 'read', 'quiet', 'natural-light', 'spacious'],
+			alcoholFree: 'yes',
+			// an address the search did not return, whole: Meadow keeps the candidate and drops this
+			website: 'https://library.austintexas.gov/central-library/visit?from=eden',
+			sources: ['https://library.austintexas.gov/central-library'],
+		}),
+		fakeCandidate({
+			name: 'The Lantern Reading Room',
+			category: 'venue',
+			locality: 'Central Austin',
+			why: 'A reading room said to be upstairs on a side street; the notes give no address.',
+			vibes: ['read', 'quiet', 'intimate'],
+			sources: ['https://example.com/hidden-reading-rooms'],
+		}),
+		// no source the search returned: dropped before it is ever shown
+		fakeCandidate({ name: 'A Cafe The Model Remembered', sources: ['https://not-returned.example/'] }),
+	],
+}
+
+/** Two listings a few days ahead, whichever day the script runs on, read at addresses the scripted search returned. */
+function fakeListings() {
+	const day = (ahead: number) => {
+		const at = new Date(Date.now() + ahead * 86_400_000)
+		return `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, '0')}-${String(at.getDate()).padStart(2, '0')}`
+	}
+	return {
+		listings: [
+			{
+				title: 'Library late: readings on the roof garden',
+				venue: 'Austin Central Library',
+				address: '710 W Cesar Chavez St',
+				start: `${day(1)}T18:00`,
+				end: `${day(1)}T21:00`,
+				category: 'Talk',
+				price: 'Free',
+				why: 'Calm, spacious and good on your own.',
+				url: 'https://library.austintexas.gov/central-library',
+				sources: ['https://library.austintexas.gov/central-library'],
+			},
+			{
+				title: 'Morning market at the coffee trailer',
+				venue: 'Flitch Coffee',
+				address: '641 Tillery St',
+				start: day(2),
+				end: '',
+				category: 'Market',
+				price: '',
+				why: 'Outdoors and unhurried, with the makers behind their tables.',
+				url: 'https://www.flitchcoffee.com/',
+				sources: ['https://www.flitchcoffee.com/'],
+			},
+			// no page the search returned: dropped
+			{
+				title: 'A show the model remembered',
+				venue: '',
+				address: '',
+				start: `${day(2)}T20:00`,
+				end: '',
+				category: 'Music',
+				price: '',
+				why: '',
+				url: 'https://not-returned.example/show',
+				sources: [],
+			},
+		],
+	}
 }
 
 const FAKE_LOOK = 'Let me look at the moon over the next weeks.'

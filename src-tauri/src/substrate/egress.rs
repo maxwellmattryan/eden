@@ -56,10 +56,35 @@ pub fn record(conn: &Connection, destination: &str, bytes_out: u64) -> Result<()
     record_on(conn, destination, bytes_out, &today())
 }
 
+/// The most requests one entry may stand for: a batch is a few seconds of map tiles, never a day's worth.
+pub const MAX_BATCH: u64 = 10_000;
+
+/// Counts several requests to the destination today in one write, with the bytes Eden handed over across them
+/// (D-131): a map asks for tiles by the dozen, and a write for each would be the ledger's own load. A batch of none
+/// is one, and a batch is never more than `MAX_BATCH`.
+pub fn record_many(
+    conn: &Connection,
+    destination: &str,
+    bytes_out: u64,
+    requests: u64,
+) -> Result<()> {
+    record_many_on(conn, destination, bytes_out, requests, &today())
+}
+
 pub(crate) fn record_on(
     conn: &Connection,
     destination: &str,
     bytes_out: u64,
+    day: &str,
+) -> Result<()> {
+    record_many_on(conn, destination, bytes_out, 1, day)
+}
+
+pub(crate) fn record_many_on(
+    conn: &Connection,
+    destination: &str,
+    bytes_out: u64,
+    requests: u64,
     day: &str,
 ) -> Result<()> {
     if destination == VAULT_AI {
@@ -73,10 +98,15 @@ pub(crate) fn record_on(
     }
     parse_day(day)?;
     conn.execute(
-        "INSERT INTO egress (destination, day, requests, bytes_out) VALUES (?1, ?2, 1, ?3)
+        "INSERT INTO egress (destination, day, requests, bytes_out) VALUES (?1, ?2, ?4, ?3)
          ON CONFLICT(destination, day) DO UPDATE
-         SET requests = requests + 1, bytes_out = bytes_out + excluded.bytes_out",
-        rusqlite::params![destination, day, bytes_out as i64],
+         SET requests = requests + excluded.requests, bytes_out = bytes_out + excluded.bytes_out",
+        rusqlite::params![
+            destination,
+            day,
+            bytes_out as i64,
+            requests.clamp(1, MAX_BATCH) as i64
+        ],
     )?;
     Ok(())
 }
@@ -155,6 +185,27 @@ mod tests {
         assert_eq!(
             (latest.0.as_str(), latest.1.as_str()),
             ("updater", today().as_str())
+        );
+    }
+
+    #[test]
+    fn a_batch_counts_its_requests_in_one_write() {
+        let ws = Workspace::in_memory();
+        ws.write(|ctx| {
+            record_many_on(ctx.conn, "openfreemap", 4_200, 24, "2026-10-01")?;
+            record_many_on(ctx.conn, "openfreemap", 800, 6, "2026-10-01")?;
+            // a batch of none is one request, and a batch is never more than the cap
+            record_many_on(ctx.conn, "photon", 90, 0, "2026-10-01")?;
+            record_many_on(ctx.conn, "overpass", 1, MAX_BATCH + 5, "2026-10-01")
+        })
+        .unwrap();
+        assert_eq!(
+            rows(&ws, EgressQuery::default()),
+            vec![
+                ("openfreemap".into(), "2026-10-01".into(), 30, 5_000),
+                ("overpass".into(), "2026-10-01".into(), MAX_BATCH, 1),
+                ("photon".into(), "2026-10-01".into(), 1, 90),
+            ]
         );
     }
 

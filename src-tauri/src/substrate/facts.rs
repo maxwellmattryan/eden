@@ -240,7 +240,7 @@ fn check_provenance(fields: &Fields<'_>, owner: Option<&str>) -> std::result::Re
     Ok(())
 }
 
-/// What the store refuses to hold: a type that is not a fact of Phase 1, anything T3, a value that is nothing, and
+/// What the store refuses to hold: a type that is not a live fact (D-130), anything T3, a value that is nothing, and
 /// a provenance that does not fit its fields.
 fn validate(fields: &Fields<'_>) -> Result<()> {
     let row = registry::resource(fields.type_id).filter(|row| row.category == Category::Fact);
@@ -259,7 +259,7 @@ fn validate(fields: &Fields<'_>) -> Result<()> {
     if !registry::is_fact(fields.type_id) {
         return Err(refused(
             "invalid",
-            format!("not a fact type of Phase 1: {}", fields.type_id),
+            format!("not a live fact type: {}", fields.type_id),
         ));
     }
     if fields.value.is_null() {
@@ -839,7 +839,7 @@ mod tests {
         ] {
             assert_eq!(code(ws.write(|ctx| assert(ctx, bad))), expected);
         }
-        // The owner may assert a fact whose domain has not shipped, as long as the fact is of Phase 1.
+        // The owner may assert a fact whose domain has not shipped, as long as the fact is live (D-130).
         ws.write(|ctx| {
             assert(
                 ctx,

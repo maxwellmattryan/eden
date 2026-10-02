@@ -14,12 +14,12 @@ import {
 	type TabId,
 	type WidgetDeclaration as DeclaredWidget,
 } from '@eden/shared/manifest'
-import { domainGlyph, type IconName } from '@eden/ui-kit'
+import { domainGlyph, type IconName, type QuickLog } from '@eden/ui-kit'
 import type { DraftCard } from '@eden/shared/gardener'
 import type { ToolHandler } from '../shell/gardener/types.js'
 
 /** The route ids a domain may own; a page with tabs takes the tab as an optional parameter. */
-export type DomainRoute = '/kitchen/[[tab]]' | '/toolbench/[[tab]]' | '/weather'
+export type DomainRoute = '/kitchen/[[tab]]' | '/toolbench/[[tab]]' | '/weather' | '/places/[[tab]]'
 
 /** What the app binds to a declared widget; the tile computes locally from the domain's store, never from a model. */
 export interface WidgetBinding {
@@ -86,8 +86,15 @@ export interface DomainBindings<D extends BuiltDomainId> {
 	 * by its `name`, `title` or `label`.
 	 */
 	labels?: Partial<Record<string, (row: Entity<object>) => Promise<string | undefined> | string | undefined>>
-	/** What each quick action writes, by its id; `log-quick` dispatches here and the Quick Log sheet (#27) reuses it. */
+	/** What each quick action writes, by its id; the Quick Log sheet and `log-quick` both dispatch here. */
 	quickActionHandlers?: Partial<Record<string, QuickActionHandler>>
+	/** What each `launch` quick action opens, by its id: a surface of the domain's own (Hearth's capture, D-13). */
+	quickActionLaunchers?: Partial<Record<string, () => void>>
+	/**
+	 * What the Quick Log sheet shows beside a quick action's field, by its id, read from the domain's store: the last
+	 * value and the recent ones of a number, the options of a check. The Garden's quick-log tile draws the same series.
+	 */
+	quickActionReadouts?: Partial<Record<string, () => QuickLogReadout>>
 	/** The domain's part of committing a draft its tool left; the substrate's parts (tasks, events) are the shell's. */
 	commitDraft?: (card: DraftCard) => Promise<{ undo: () => void } | undefined>
 	/**
@@ -102,6 +109,9 @@ export interface DomainBindings<D extends BuiltDomainId> {
 	 */
 	overlay?: Component
 }
+
+/** What a store knows of a quick action's log, in the words the sheet shows. */
+export type QuickLogReadout = Pick<QuickLog, 'last' | 'series' | 'reference' | 'options' | 'value'>
 
 /** A quick action's write: the value as typed, the undo back. */
 export type QuickActionHandler = (value: string) => { undo: () => void } | Promise<{ undo: () => void }>

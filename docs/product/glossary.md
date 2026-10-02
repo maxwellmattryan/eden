@@ -4,7 +4,7 @@ status: draft
 summary: Every fixed term in Eden, the domain names in English and Japanese with their plain ids and subtitles, and the metaphor policy that decides what gets a themed name.
 read-this-if: You are naming anything, writing copy, or unsure what a word means in these docs.
 depends-on: []
-updated: 2026-09-30
+updated: 2026-10-02
 ---
 
 ## Core terms
@@ -33,7 +33,7 @@ updated: 2026-09-30
 | **access level** | `read`, `write-draft`, `write`, `act-external`, `never`. One vocabulary for AI tools, integrations and rule actions. |
 | **Gardener** | The AI assistant. One persona across every surface. |
 | **Council** | Fanning one prompt to several models side by side, with optional chair synthesis. |
-| **context pack** | What one AI request is allowed to see, assembled from the declared reads of its tools and surface, gated by tier grants. |
+| **context pack** | What one AI request is given, assembled from the declared reads of its tools and surface, gated by tier grants. A tool's own request carries the rows; a conversation carries a few facts and an index, and reads the rest on demand (D-148). |
 | **declared reads** | The registry ids an AI tool or surface states it reads. Nothing outside them reaches the model. |
 | **audit log** | The per-request record of what the Gardener saw, did and cost. |
 | **egress ledger** | The Settings view of every byte that left the device, by destination. |

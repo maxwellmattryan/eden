@@ -3,7 +3,16 @@ import { dataErrorCode } from '../data/errors.js'
 import type { GrantCheck } from '../grants/types.js'
 import { declarations } from '../manifest/index.js'
 import type { Fact } from '../profile/types.js'
-import { buildPack, WINDOW, type Pack, type PackReaders, type PackRequest, type PackRow } from './pack.js'
+import {
+	buildPack,
+	READ_ROWS_CHARS,
+	readRows,
+	WINDOW,
+	type Pack,
+	type PackReaders,
+	type PackRequest,
+	type PackRow,
+} from './pack.js'
 import { ANTHROPIC_SEED } from './providers.js'
 import type { Message } from './runtime-types.js'
 import { toolIndex, toolsFor } from './tools.js'
@@ -126,7 +135,7 @@ function request(over: Partial<PackRequest> = {}): PackRequest {
 		],
 		thread: [message(15, 'owner', 'What can I cook?'), message(16, 'gardener', null), message(17, 'gardener', 'Dal.')],
 		message: 'And tomorrow?',
-		tools: toolsFor(index, 'kitchen'),
+		tools: toolsFor(index),
 		model: ANTHROPIC_SEED.models[1]!,
 		outputReserve: 1_000,
 		tokenCap: null,
@@ -134,6 +143,7 @@ function request(over: Partial<PackRequest> = {}): PackRequest {
 		now: NOW,
 		zone: 'America/Chicago',
 		lang: 'en',
+		domain: 'kitchen',
 		domainName: 'Hearth',
 		domains: [
 			{ id: 'kitchen', name: 'Hearth' },
@@ -144,11 +154,17 @@ function request(over: Partial<PackRequest> = {}): PackRequest {
 	}
 }
 
-/** The context block of the last message, or nothing. */
+/** What the last message opens with: the clock, the context block and, in a conversation, the index. */
 function contextOf(pack: Pack): string {
-	const last = pack.messages.at(-1) as { content: string | { text: string }[] }
-	return typeof last.content === 'string' ? '' : last.content[0]!.text
+	const last = pack.messages.at(-1) as { content: { text: string }[] }
+	return last.content[0]!.text
 }
+
+/** A tool's own request: every row it declared goes up front, as a conversation's did before D-148. */
+const whole = (over: Partial<PackRequest> = {}) => request({ mode: 'delegated', tools: [], ...over })
+/** The breakpoint on the settled history's last block (D-147). */
+const MARK = { cache_control: { type: 'ephemeral' } }
+const HEAD = { type: 'text', text: expect.stringContaining('Now: ') }
 
 describe('buildPack', () => {
 	it('gates the reads: T2 under a grant or locked, T3 never', async () => {
@@ -178,7 +194,7 @@ describe('buildPack', () => {
 	})
 
 	it('orders the sections as declared, facts by the owner’s word then newest, entities newest first', async () => {
-		const pack = await buildPack(request(), readers())
+		const pack = await buildPack(whole(), readers())
 		expect(pack.reads).toEqual([
 			{ id: 'dietary-preference', count: 3, rows: [id(2), id(4), id(1)] },
 			{ id: 'allergy', count: 1, rows: [id(3)] },
@@ -230,37 +246,48 @@ describe('buildPack', () => {
 			}),
 		]
 		const fake: PackReaders = { ...readers(), primitives: async (primitive) => (primitive === 'task' ? tasks : []) }
+		// a conversation counts what `read-rows` would answer: what is open, and what was done lately
 		const chat = contextOf(await buildPack(request({ reads: ['task'] }), fake))
-		expect(chat).toContain('Restock rice')
-		expect(chat).toContain('Post the letter')
-		expect(chat).not.toContain('Clean the gutters')
+		expect(chat).toContain('- task (substrate): 3 rows')
+		expect(chat).not.toContain('Restock rice')
+		const read = await readRows({ type: 'task', reach: ['task'], subject: 'anthropic', now: NOW, zone: 'UTC' }, fake)
+		expect(read.text).toContain('Restock rice')
+		expect(read.text).toContain('Post the letter')
+		expect(read.text).not.toContain('Clean the gutters')
 		// a tool's own request works from the tasks it declared, every one
-		const delegated = contextOf(await buildPack(request({ reads: ['task'], mode: 'delegated' }), fake))
+		const delegated = contextOf(await buildPack(whole({ reads: ['task'] }), fake))
 		expect(delegated).toContain('Clean the gutters')
-		// and what the conversation is about is never left out
-		const about = contextOf(await buildPack(request({ reads: ['task'], focus: [tasks[2]!.uri] }), fake))
-		expect(about).toContain('Clean the gutters')
+		// and what the conversation is about is never left out: it is sent whole, ahead of the index
+		const about = await buildPack(request({ reads: ['task'], focus: [tasks[2]!.uri] }), fake)
+		expect(contextOf(about)).toContain('"title":"Clean the gutters"')
+		expect(about.reads).toEqual([{ id: 'task', count: 1, rows: [tasks[2]!.id] }])
+		expect(about.entities).toEqual([tasks[2]!.uri])
 	})
 
 	it('holds a by-kind primitive to its rows’ kinds: a T2 kind needs a grant', async () => {
-		const locked = await buildPack(request({ reads: ['place'] }), readers([]))
+		const locked = await buildPack(whole({ reads: ['place'] }), readers([]))
 		expect(locked.reads).toEqual([{ id: 'place', count: 1, rows: [id(13)] }])
 		expect(locked.tier).toBe('T1')
-		const granted = await buildPack(request({ reads: ['place'] }), readers(['home']))
+		const granted = await buildPack(whole({ reads: ['place'] }), readers(['home']))
 		expect(granted.reads).toEqual([{ id: 'place', count: 2, rows: [id(14), id(13)] }])
 		expect(granted.grants).toEqual(['grant-home'])
 		expect(granted.tier).toBe('T2')
 	})
 
 	it('scrubs every string and wraps a mirror as untrusted', async () => {
-		const context = contextOf(await buildPack(request(), readers()))
+		const context = contextOf(await buildPack(whole(), readers()))
 		expect(context).not.toContain('a@b.io')
 		expect(context).toContain('[email]')
 		expect(context).not.toContain('512-555-0134')
-		expect(context).toContain('<untrusted source="web">{"id":"' + id(7))
-		expect(context).toContain('[phone]"}}</untrusted>')
-		expect(context).not.toContain('"uri"')
-		expect(context).not.toContain('"links"')
+		// three recipes are a table, and the mirrored one is wrapped on its own line
+		expect(context).toContain(
+			`## recipe (3 rows)\nid|name|phone\n<untrusted source="web">${id(7)}|Curry from the shop|[phone]</untrusted>\n${id(6)}|Miso salmon|\n`
+		)
+		// two stock items are an object a line, the payload's fields beside the id
+		expect(context).toContain(`{"id":"${id(9)}","type":"stock-item","name":"leeks"}`)
+		expect(context).not.toContain('uri')
+		expect(context).not.toContain('links')
+		expect(context).not.toContain('updatedAt')
 	})
 
 	it('scrubs the message and the thread as it scrubs the rows', async () => {
@@ -271,41 +298,129 @@ describe('buildPack', () => {
 			}),
 			readers()
 		)
-		expect(pack.messages[0]).toEqual({ role: 'user', content: 'Mail the list to [email]' })
+		expect(pack.messages[0]).toEqual({
+			role: 'user',
+			content: [{ type: 'text', text: 'Mail the list to [email]', ...MARK }],
+		})
 		expect(pack.messages.at(-1)).toMatchObject({
 			content: [{ type: 'text' }, { type: 'text', text: 'Then text it to [phone]' }],
 		})
 		const bare = await buildPack(request({ reads: ['grocery-list'], message: 'Text 512-555-0134' }), readers())
-		expect(bare.messages.at(-1)).toEqual({ role: 'user', content: 'Text [phone]' })
+		expect(bare.messages.at(-1)).toEqual({ role: 'user', content: [HEAD, { type: 'text', text: 'Text [phone]' }] })
 	})
 
-	it('turns the thread into user and assistant turns and puts the context before the message', async () => {
+	it('turns the thread into user and assistant turns, and opens the newest message with the clock and the rows', async () => {
 		const pack = await buildPack(request(), readers())
 		expect(pack.messages).toHaveLength(3)
-		expect(pack.messages[0]).toEqual({ role: 'user', content: 'What can I cook?' })
+		// the turn ahead of the last reply ends the settled history, on a breakpoint
+		expect(pack.messages[0]).toEqual({ role: 'user', content: [{ type: 'text', text: 'What can I cook?', ...MARK }] })
 		expect(pack.messages[1]).toEqual({ role: 'assistant', content: 'Dal.' })
 		expect(pack.messages[2]).toMatchObject({
 			role: 'user',
 			content: [{ type: 'text' }, { type: 'text', text: 'And tomorrow?' }],
 		})
+		// the system prompt is one block, cached, and says nothing of the clock, the panel or the pack
+		expect(pack.system).toHaveLength(1)
 		expect(pack.system[0]).toMatchObject({ type: 'text', cache_control: { type: 'ephemeral' } })
-		expect(pack.system[0]!.text).toContain('which they opened from Hearth')
+		expect(pack.system[0]!.text).not.toContain('Hearth,')
+		expect(pack.system[0]!.text).not.toContain('Now:')
 		expect(pack.system[0]!.text).toContain('- Hearth (kitchen): food and household consumables at home')
 		expect(pack.system[0]!.text).toContain('- Sky (weather): the weather')
 		expect(pack.system[0]!.text).toContain('Every tool call appears in the thread as a card')
 		expect(pack.system[0]!.text).not.toContain('kitchen_suggest-recipes')
-		expect(pack.system[1]!.text).toContain('Now: Wednesday 2026-09-30, 04:40 (America/Chicago).')
-		expect(pack.system[1]!.text).toContain('You can see: dietary-preference (3), allergy (1), recipe (3)')
-		expect(pack.system[1]!.text).toContain('Locked: medical-dietary-restriction.')
-		const context = contextOf(pack)
-		expect(context.startsWith('<context>\n## dietary-preference (3 rows)\n')).toBe(true)
-		expect(context.endsWith('\n</context>')).toBe(true)
+		const head = contextOf(pack)
+		expect(head.startsWith('Now: Wednesday 2026-09-30, 04:40 (America/Chicago).')).toBe(true)
+		expect(head).toContain('The owner opened this conversation from Hearth.')
+		expect(head).toContain('\n\n<context>\n## dietary-preference (3 rows)\n')
+		expect(head).toContain('\n</context>\n\n<index>\n')
+		expect(head.endsWith('\n</index>')).toBe(true)
 		expect(pack.tools).toHaveLength(index.length)
-		expect((pack.tools[0] as { name: string }).name).toBe('kitchen_suggest-recipes')
-		// A read with no rows is still on the chip, at zero.
+		// A read with no rows is a line of the index, at zero, and nothing on the eye.
 		const empty = await buildPack(request({ reads: ['grocery-list'] }), readers())
-		expect(empty.canSee).toEqual([{ id: 'grocery-list', count: 0 }])
-		expect(empty.messages.at(-1)).toEqual({ role: 'user', content: 'And tomorrow?' })
+		expect(empty.canSee).toEqual([])
+		expect(contextOf(empty)).toContain('<index>\n- grocery-list (kitchen): 0 rows\n</index>')
+		expect(contextOf(empty)).not.toContain('<context>')
+	})
+
+	it('sends a conversation the facts of the substrate and of its domain, and an index of the rest (D-148)', async () => {
+		const facts = [...FACTS, fact(23, 'preferred-name', 'user-asserted', 'Sam')]
+		const fake: PackReaders = {
+			...readers(),
+			facts: async (types) => facts.filter((entry) => types.includes(entry.type)),
+		}
+		const reads = ['preferred-name', ...request().reads]
+		const pack = await buildPack(request({ reads }), fake)
+		// the kitchen's facts and the substrate's, whole; no entity, task or event row
+		expect(pack.reads).toEqual([
+			{ id: 'preferred-name', count: 1, rows: [id(23)] },
+			{ id: 'dietary-preference', count: 3, rows: [id(2), id(4), id(1)] },
+			{ id: 'allergy', count: 1, rows: [id(3)] },
+		])
+		expect(pack.canSee).toEqual(pack.reads.map(({ id, count }) => ({ id, count })))
+		expect(pack.entities).toEqual([])
+		expect(pack.tier).toBe('T2')
+		const head = contextOf(pack)
+		expect(head).toContain('"value":"Sam"')
+		expect(head).not.toContain('Miso salmon')
+		expect(head.slice(head.indexOf('<index>'))).toBe(
+			[
+				'<index>',
+				'- recipe (kitchen): 3 rows',
+				'- stock-item (kitchen): 2 rows',
+				'- local-event (substrate): 1 rows',
+				'- task (substrate): 2 rows',
+				'- medical-dietary-restriction (health): locked',
+				'</index>',
+			].join('\n')
+		)
+		// opened from nowhere, or from another domain, the kitchen's facts are lines of the index like any other
+		const global = await buildPack(request({ reads, domain: undefined, domainName: undefined }), fake)
+		expect(global.reads).toEqual([{ id: 'preferred-name', count: 1, rows: [id(23)] }])
+		expect(contextOf(global)).toContain('- dietary-preference (kitchen): 3 rows')
+		expect(contextOf(global)).toContain('- allergy (kitchen): 1 rows')
+		expect(contextOf(global)).not.toContain('pescatarian')
+		expect(global.tier).toBe('T1')
+	})
+
+	it('sends the same system prompt and the same tools whatever panel asks (D-147)', async () => {
+		const hearth = await buildPack(request(), readers())
+		const sky = await buildPack(
+			request({ domain: 'weather', domainName: 'Sky', now: NOW + DAY, message: 'Will it rain?' }),
+			readers()
+		)
+		expect(JSON.stringify(sky.system)).toBe(JSON.stringify(hearth.system))
+		expect(JSON.stringify(sky.tools)).toBe(JSON.stringify(hearth.tools))
+		const names = (hearth.tools as { name: string }[]).map((tool) => tool.name)
+		expect(names).toEqual([...names].sort())
+	})
+
+	it('ends the settled history on a breakpoint, and where the last request left its own (D-147)', async () => {
+		const thread = [
+			message(15, 'owner', 'One'),
+			message(16, 'gardener', 'First.'),
+			message(17, 'owner', 'Two'),
+			message(18, 'gardener', 'Second.'),
+			message(19, 'owner', 'Three'),
+			message(21, 'gardener', 'Third.'),
+		]
+		const marks = (pack: Pack) =>
+			pack.messages.flatMap((turn, at) => (JSON.stringify(turn).includes('cache_control') ? [at] : []))
+		const pack = await buildPack(request({ thread, message: 'Four' }), readers())
+		// ahead of the last reply, and ahead of the one before it; the newest message's own is the runtime's
+		expect(marks(pack)).toEqual([2, 4])
+		expect(pack.messages[4]).toEqual({ role: 'user', content: [{ type: 'text', text: 'Three', ...MARK }] })
+		// the request before this one ended its settled history where this one's earlier breakpoint is
+		const before = await buildPack(request({ thread: thread.slice(0, 4), message: 'Three' }), readers())
+		expect(marks(before)).toEqual([0, 2])
+		// and the turns behind it are the same words: a marker is a position, not content
+		const words = (turns: unknown[]) =>
+			JSON.stringify(turns, (key, value) => (key === 'cache_control' ? undefined : value)).replaceAll(
+				/\[\{"type":"text","text":("(?:[^"\\]|\\.)*")\}\]/g,
+				'$1'
+			)
+		expect(words(pack.messages.slice(0, 3))).toBe(words(before.messages.slice(0, 3)))
+		// nothing to settle in a first message
+		expect(marks(await buildPack(request({ thread: [] }), readers()))).toEqual([])
 	})
 
 	it('replays a reply as it happened: its words, the tools it called and what each answered', async () => {
@@ -343,11 +458,12 @@ describe('buildPack', () => {
 					call: call('toolu_4', 'update-tasks', { taskId: 'x' }, { error: 'no', cancelled: true }),
 				},
 				{ kind: 'tool', state: 'running', call: call('toolu_5', 'agenda', {}) },
+				{ kind: 'tool', state: 'done', call: call('toolu_6', 'read-rows', { type: 'recipe' }, '## recipe (0 rows)') },
 			]),
 		]
 		const pack = await buildPack(request({ thread, message: 'Thanks' }), readers())
 		expect(pack.messages.slice(0, -1)).toEqual([
-			{ role: 'user', content: 'Remind me to call [email] on Friday' },
+			{ role: 'user', content: [{ type: 'text', text: 'Remind me to call [email] on Friday', ...MARK }] },
 			{
 				role: 'assistant',
 				content: [
@@ -375,13 +491,14 @@ describe('buildPack', () => {
 				],
 			},
 			{ role: 'assistant', content: 'It is drafted.' },
-			{ role: 'user', content: 'And the weather?' },
+			{ role: 'user', content: [{ type: 'text', text: 'And the weather?', ...MARK }] },
 			{
 				role: 'assistant',
 				content: [
 					{ type: 'tool_use', id: 'toolu_3', name: 'weather_forecast', input: {} },
 					{ type: 'tool_use', id: 'toolu_4', name: 'update-tasks', input: { taskId: 'x' } },
 					{ type: 'tool_use', id: 'toolu_5', name: 'agenda', input: {} },
+					{ type: 'tool_use', id: 'toolu_6', name: 'read-rows', input: { type: 'recipe' } },
 				],
 			},
 			{
@@ -402,6 +519,8 @@ describe('buildPack', () => {
 						content: expect.stringContaining('interrupted'),
 						is_error: true,
 					},
+					// a result that is text already is replayed as it was sent, not as a JSON string
+					{ type: 'tool_result', tool_use_id: 'toolu_6', content: '## recipe (0 rows)', is_error: false },
 				],
 			},
 		])
@@ -448,32 +567,28 @@ describe('buildPack', () => {
 	it('estimates the input as a quarter of its characters', async () => {
 		const pack = await buildPack(request(), readers())
 		const tokens = (text: string) => Math.ceil(text.length / 4)
-		const turns = pack.messages.slice(0, -1) as { content: string }[]
 		expect(pack.estimatedInputTokens).toBe(
 			tokens(pack.system[0]!.text) +
-				tokens(pack.system[1]!.text) +
 				tokens(contextOf(pack)) +
-				turns.reduce((sum, turn) => sum + tokens(turn.content), 0) +
+				tokens('What can I cook?') +
+				tokens('Dal.') +
 				tokens('And tomorrow?')
 		)
 	})
 
 	it('trims the oldest entity rows first, round-robin, never a pinned row or a fact, then the thread', async () => {
-		const full = await buildPack(request(), readers())
+		const full = await buildPack(whole(), readers())
 		const focus = [`eden://recipe/${id(5)}`]
-		const one = await buildPack(
-			request({ focus, tokenCap: full.estimatedInputTokens - 1, outputReserve: 0 }),
-			readers()
-		)
+		const one = await buildPack(whole({ focus, tokenCap: full.estimatedInputTokens - 1, outputReserve: 0 }), readers())
 		expect(one.trimmed).toEqual(['recipe'])
 		expect(one.reads.find((read) => read.id === 'recipe')).toEqual({ id: 'recipe', count: 2, rows: [id(5), id(7)] })
 		expect(one.estimatedInputTokens).toBeLessThan(full.estimatedInputTokens)
 
-		const two = await buildPack(request({ focus, tokenCap: one.estimatedInputTokens - 1, outputReserve: 0 }), readers())
+		const two = await buildPack(whole({ focus, tokenCap: one.estimatedInputTokens - 1, outputReserve: 0 }), readers())
 		expect(two.trimmed).toEqual(['recipe', 'stock-item'])
 		expect(two.reads.find((read) => read.id === 'stock-item')?.rows).toEqual([id(9)])
 
-		const bare = await buildPack(request({ focus, tokenCap: 1, outputReserve: 0 }), readers())
+		const bare = await buildPack(whole({ focus, tokenCap: 1, outputReserve: 0 }), readers())
 		expect(bare.trimmed).toEqual(['recipe', 'stock-item', 'local-event', 'task', 'thread'])
 		expect(bare.reads).toEqual([
 			{ id: 'dietary-preference', count: 3, rows: [id(2), id(4), id(1)] },
@@ -485,7 +600,84 @@ describe('buildPack', () => {
 		])
 		expect(bare.canSee).toContainEqual({ id: 'task', count: 0 })
 		expect(bare.messages).toHaveLength(1)
-		expect(bare.system[1]!.text).toContain('Trimmed: recipe, stock-item, local-event, task, thread.')
+		expect(contextOf(bare)).toContain('Trimmed: recipe, stock-item, local-event, task, thread.')
 		expect(bare.estimatedInputTokens).toBeGreaterThan(1)
+	})
+
+	it('answers one id’s rows on demand, through the pack’s own gate and writer (D-148)', async () => {
+		const reach = ['recipe', 'stock-item', 'allergy', 'medical-dietary-restriction', 'task']
+		const ask = (type: string, ids?: string[], fake = readers()) =>
+			readRows({ type, ...(ids ? { ids } : {}), reach, subject: 'anthropic', now: NOW, zone: 'America/Chicago' }, fake)
+
+		const recipes = await ask('recipe')
+		expect(recipes.text).toBe(
+			[
+				'## recipe (3 rows)',
+				'id|name|phone',
+				`<untrusted source="web">${id(7)}|Curry from the shop|[phone]</untrusted>`,
+				`${id(6)}|Miso salmon|`,
+				`${id(5)}|Dal|`,
+			].join('\n')
+		)
+		expect(recipes.read).toEqual({ id: 'recipe', count: 3, rows: [id(7), id(6), id(5)] })
+		expect(recipes.entities).toEqual([7, 6, 5].map((n) => `eden://recipe/${id(n)}`))
+		expect(recipes.tier).toBe('T0')
+
+		// by id: the rows named, and a word for the ones that are not there
+		const one = await ask('recipe', [id(5), 'nope'])
+		expect(one.text).toBe(
+			`## recipe (1 rows)\n{"id":"${id(5)}","type":"recipe","name":"Dal"}\n\nNo row of recipe in reach has the id "nope".`
+		)
+		expect(one.read).toEqual({ id: 'recipe', count: 1, rows: [id(5)] })
+
+		// a T2 fact under its grant: the grant is kept and the thread's tier follows
+		const allergy = await ask('allergy')
+		expect(allergy.text).toContain('[email]')
+		expect(allergy.grants).toEqual(['grant-allergy'])
+		expect(allergy.tier).toBe('T2')
+		expect(allergy.entities).toEqual([])
+
+		// refused: locked, never shared, outside the conversation's reach, not an id at all
+		const locked = await ask('medical-dietary-restriction')
+		expect(locked).toMatchObject({ locked: 'medical-dietary-restriction', error: expect.stringContaining('locked') })
+		expect(locked.text).toBeUndefined()
+		expect(locked.read).toBeUndefined()
+		for (const type of ['grocery-list', 'identity-document', 'secret-sauce']) {
+			const refused = await ask(type)
+			expect(refused.error, type).toContain('not a type you can read')
+			expect(refused.text, type).toBeUndefined()
+		}
+		const never = await readRows(
+			{ type: 'identity-document', reach: ['identity-document'], subject: 'anthropic', now: NOW, zone: 'UTC' },
+			readers()
+		)
+		expect(never.error).toContain('never shared')
+	})
+
+	it('answers a great many rows as their ids and names, to be asked for by id', async () => {
+		const many = Array.from({ length: 400 }, (_, n) =>
+			row(n % 26, 'recipe', {
+				id: `R${n}`,
+				uri: `eden://recipe/R${n}`,
+				payload: { name: `Dish ${n}`, steps: ['Chop.', 'Fry.', 'Serve.'], minutes: 30 },
+				...(n === 0 ? { mirror: true, source: 'web' } : {}),
+			})
+		)
+		const fake: PackReaders = { ...readers(), entities: async () => many }
+		const ask = { type: 'recipe', reach: ['recipe'], subject: 'anthropic', now: NOW, zone: 'UTC' }
+		const listed = await readRows(ask, fake)
+		expect(listed.text!.length).toBeLessThan(READ_ROWS_CHARS)
+		expect(listed.text).toContain('## recipe (400 rows; too many to send whole')
+		expect(listed.text).toContain('\nid|name\n')
+		expect(listed.text).toContain('R7|Dish 7')
+		expect(listed.text).toContain('<untrusted source="web">R0|Dish 0</untrusted>')
+		expect(listed.text).not.toContain('Chop.')
+		// names alone are not rows read: nothing joins the audit entry
+		expect(listed.read).toBeUndefined()
+		expect(listed.entities).toEqual([])
+		const some = await readRows({ ...ask, ids: ['R7', 'R8', 'R9'] }, fake)
+		expect(some.text).toContain('R7|Dish 7|["Chop.","Fry.","Serve."]|30')
+		expect(some.read).toMatchObject({ id: 'recipe', count: 3 })
+		expect([...some.read!.rows].sort()).toEqual(['R7', 'R8', 'R9'])
 	})
 })

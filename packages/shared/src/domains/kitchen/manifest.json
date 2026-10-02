@@ -38,8 +38,21 @@
 		{ "id": "grocery-quick-add", "sizes": ["s"], "reads": ["grocery-store", "grocery-list", "grocery-item"] }
 	],
 	"quickActions": [
-		{ "id": "capture-haul", "label": "domains.kitchen.capture.action", "icon": "camera" },
-		{ "id": "add-to-grocery", "label": "domains.kitchen.grocery.add", "icon": "plus" }
+		{
+			"id": "capture-haul",
+			"label": "domains.kitchen.capture.action",
+			"icon": "camera",
+			"kind": "launch",
+			"keyword": "domains.kitchen.capture.keyword"
+		},
+		{
+			"id": "add-to-grocery",
+			"label": "domains.kitchen.grocery.add",
+			"icon": "plus",
+			"kind": "text",
+			"keyword": "domains.kitchen.grocery.keyword",
+			"placeholder": "domains.kitchen.grocery.addPlaceholder"
+		}
 	],
 	"captureSources": ["photo", "receipt"],
 	"tools": [

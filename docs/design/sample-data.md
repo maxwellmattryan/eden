@@ -4,12 +4,12 @@ status: draft
 summary: One consistent fictional dataset for every mockup: an owner, facts, stock by location, a captured haul, recipes, a grocery list, ideas and projects, a calendar week with layers, a weather week, workouts and a weight series, places and listings, daily lines, notifications, feed and audit entries.
 read-this-if: You are drawing a mockup or seeding an empty state with sample data.
 depends-on: [product/domains/README]
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 ## The owner
 
-Rowan Hale, they/them, a developer in Austin, Texas. Home is a `home` Place in Hyde Park, Austin; `home-area` derives to Austin, Texas, US. Preferred name "Rowan". Locale `en`, second locale `ja` for screenshots of the Japanese UI. The week shown everywhere is Monday 2026-09-28 to Sunday 2026-10-04; "today" is Wednesday 2026-09-30, 07:40.
+Rowan Hale, they/them, a developer in Austin, Texas. Home is a `home` Place in Hyde Park, Austin, at 4301 Duval St, Austin, TX 78751 (`homeAddress`; `homeAddressJa` is a Shibuya address for the Japanese form); `home-area` derives to Duval St, Austin, Texas, 78751, United States (D-152). The address form's fields for four countries are `addressForms` (US, JP, DE, and BR for the plain layout), over the countries in `addressCountries`. Preferred name "Rowan". Locale `en`, second locale `ja` for screenshots of the Japanese UI. The week shown everywhere is Monday 2026-09-28 to Sunday 2026-10-04; "today" is Wednesday 2026-09-30, 07:40.
 
 ## Facts
 
@@ -37,7 +37,7 @@ Wednesday's tasks, as the Today widget shows them: "Book the dentist" (overdue s
 
 ## The Garden
 
-The Phase 1 default layout, one list the mockup and the app both read (`gardenLayout`): `weather-now` (Sky, S), `today` (Tasks, M), `expiring-soon` (Hearth, S), `cook-tonight` (Hearth, M), `resurfaced-idea` (Toolbench, S), `active-projects` (Toolbench, M), `sun-and-moon` (Sky, S), `daily-line` (neutral, M), `quick-log` (Vigor's weight, S). The activity feed is a column beside the grid on desktop, not a tile.
+The Phase 1 default layout, one list the mockup and the app both read (`gardenLayout`): `weather-now` (Sky, S), `today` (Tasks, M), `expiring-soon` (Hearth, S), `cook-tonight` (Hearth, M), `resurfaced-idea` (Toolbench, S), `active-projects` (Toolbench, M), `sun-and-moon` (Sky, S), `daily-line` (neutral, M), `quick-log` (Vigor's weight, S), `nearby-favorites` (Meadow, M), `upcoming-listings` (Meadow, M). The activity feed is a column beside the grid on desktop, not a tile.
 
 ## Hearth
 
@@ -117,7 +117,31 @@ Daily lines: Mon "Nothing in the world is permanent, and we are foolish when we 
 
 ## Meadow
 
-Places (venues with profiles): Cosmic Coffee (cozy, outdoors, work-friendly, alcohol served, 4.6), Nickel City (lively, dive), Zilker Park (outdoors, quiet), Cuvée Coffee (industrial, work-friendly, 4.4), Sour Duck Market (cozy, alcohol-free option, 4.5). Collections: "coworking", "date nights". Listings: Hot Luck food festival Sat 10-03 20:00 (interested → tentative outing), Blanton Museum late night Thu 10-01 18:00. Visit: Cosmic Coffee 09-26, "good porch, loud inside", 4.
+Home (`meadowHome`): Hyde Park, rounded to two decimals (-97.73, 30.31), shown as "Austin, Texas". Vibes by facet are `meadowFacets`, the bundled ones of D-133.
+
+Places (`meadowPlaces`, venues with profiles; coordinates in the file):
+
+| place | category | where, km from home | price | vibes | favourite | rating | hours (source, as of) |
+|---|---|---|---|---|---|---|---|
+| Cosmic Coffee + Beer Garden | cafe | 121 Pickle Rd, South Austin, 9.8 | 2 | work-friendly, unwind, cozy, outdoors, spacious, laptop crowd, social | yes | 4.6 (the search) | daily 07:00–24:00 (OpenStreetMap, Tue 09-29), open |
+| Nickel City | bar | 1133 E 11th St, East Austin, 4.6 | 1 | catch up, lively, late-night, locals, social | no | | daily 12:00–02:00 (its website, Mon 09-28), closed |
+| Zilker Park | park | Barton Springs Rd, Zilker, 5.9 | | read, unwind, calm, quiet, outdoors, spacious, kid-friendly, solo-friendly; alcohol-free | yes | | daily 05:00–22:00 (OpenStreetMap, Tue 09-29), open |
+| Cuvée Coffee | cafe | 48 East Ave, Rainey, 6.1 | 2 | deep work, work-friendly, calm, industrial, natural light, laptop crowd, solo-friendly; alcohol-free | no | 4.4 (the search) | Mon–Fri 07:00–17:00, Sat–Sun 08:00–17:00 (OpenStreetMap, Tue 09-29), open |
+| Sour Duck Market | restaurant | 1814 E Martin Luther King Jr Blvd, East Austin, 3.5 | 2 | catch up, date, cozy, outdoors, locals, kid-friendly; alcohol-free | yes | 4.5 (the search) | none |
+
+"Open" is as of Wednesday 07:40. Every place but Cuvée Coffee has a stand-in picture (a drawn data URL, never a photograph). Notes: Cosmic "Good porch, loud inside. Chickens out back."; Sour Duck "Alcohol-free options on tap. The patio fills by seven." The motif (`meadowMotif`) counts five places, three of them favourites.
+
+Collections (`meadowCollections`): "Coworking" (Cosmic, Cuvée; "Wifi that holds, somewhere to sit for three hours.") and "Date nights" (Sour Duck, Nickel City).
+
+Visits (`meadowVisits`): Cosmic Sat 09-26, 4, "Good porch, loud inside."; Zilker Park Sun 09-20, 5, "Read by the water until dark."; Sour Duck Fri 09-11, 4.
+
+Listings (`meadowListings`), each with why it fits and its source: Hot Luck food festival at Wild Onion Ranch, Sat 10-03 20:00, Food, $$$ (interested → tentative outing); Blanton late night at the Blanton Museum of Art, Thu 10-01 18:00, Art, free (not marked).
+
+Suggestions (`meadowSuggestions`) for the search "a quiet cafe to work in" (`meadowSearch`: Austin, Texas, claude-sonnet, an estimate of $0.12), none saved, each with a reason and a source: Flitch Coffee (641 Tillery St, East Austin), Bennu Coffee (2001 E Martin Luther King Jr Blvd, East Austin), Austin Central Library (710 W Cesar Chavez St, Downtown).
+
+The pasted list (`meadowImport`), six lines as a note's bullets, and the rows it becomes: Cosmic Coffee (already saved); Radio Coffee & Beer, with its note "good for groups", Mozart's and The Roosevelt Room (matched, each with suggested vibes); Lazarus Brewing (ambiguous, two addresses); "that taco truck on Manor" (not found).
+
+The map fixture (`meadowMap`): the ground a mock's map stands on (D-129), central Austin drawn by hand in degrees: square bounds, Lady Bird Lake, three parks, ten roads (I-35 and MoPac heavier than the streets) and six labels (Downtown, East Austin, Zilker, South Congress, Hyde Park, Lady Bird Lake).
 
 ## Notifications and feed
 

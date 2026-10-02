@@ -4,7 +4,7 @@ status: draft
 summary: The connector lifecycle, the catalog of every external service Eden will talk to with its phase and default access, per-device connections and their visible states, secrets, status surfaces, and failure handling.
 read-this-if: You are adding or designing anything that talks to a service outside the device.
 depends-on: [grants, privacy]
-updated: 2026-09-29
+updated: 2026-10-01
 ---
 
 ## Lifecycle
@@ -26,8 +26,12 @@ updated: 2026-09-29
 | ICS subscriptions | Almanac | URL | read | later |
 | Apple WeatherKit (macOS and iOS, D-57) | Sky | the app's entitlement | read | 1 |
 | AccuWeather (D-59) | Sky | API key, T3, per device | read | later |
-| map tiles, places provider, listings providers (OQ-4) | Meadow | key | read | 3 |
-| device location (precise) | Sky, Meadow | OS | per device | 3; Sky uses the home Place until then |
+| OpenFreeMap, map tiles and label glyphs (D-128, D-131) | Meadow | none | read | 3 |
+| Photon, a geocoder over OpenStreetMap (D-128) | Meadow | none | read | 3 |
+| Overpass, a place's hours from OpenStreetMap (D-128) | Meadow | none | read | 3 |
+| the AI provider's web search, for places and listings (D-128, D-132) | Meadow, through the Gardener | the Gardener's key | read | 3 |
+| Google's map, places or place card (OQ-24) | Meadow | API key, T3, per device | read | later |
+| device location (precise) | Sky, Meadow | OS | per device | 3, not built; Sky and Meadow use the rounded home until then (Handoffs) |
 | camera | Hearth, Toolbench | OS | per device | 1 |
 | OS notifications | substrate | OS | per device | 1 |
 | share sheet in (URLs, photos) | Hearth, Toolbench, Leaves | OS | n/a | 2 |
@@ -68,6 +72,11 @@ An expired or revoked token marks mirrors stale rather than deleting them, retri
 ## What goes out and what comes in
 
 Each connector documents, in its domain doc, the request parameters it sends (rounded coordinates for weather, a calendar id and time window for Google) and the mirror rows it creates. The general rules are in `substrate/privacy.md`.
+
+## Handoffs
+
+- **Google's place card.** Meadow's details come from sources registered for a slot, and the `card` slot is declared with no source. A Google source is a `DetailSource` on that slot, with its hosts in the CSP and its key in the keychain; how the key reaches it is OQ-24. Neither the views nor the store change (`engineering/meadow.md`, Handoffs).
+- **Precise location.** Not built on desktop or mobile: Meadow's map opens on the rounded home and a search looks around home or a place the owner named (D-131). What remains: `tauri-plugin-geolocation` under the crate's `mobile` feature, the permission strings of each platform, the `location-precise` device-capability grant (the id exists in the grants store; no manifest declares it), and a `device` kind on Meadow's `SearchArea` beside `home` and `named`. Details are in `engineering/meadow.md`, Handoffs.
 
 ## Non-goals
 

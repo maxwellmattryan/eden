@@ -21,6 +21,7 @@ export {
 	sentBytes,
 	sentSize,
 } from './attachments.js'
+export { withBreakpoint } from './cache.js'
 export * from './client.js'
 export * from './audit-page.js'
 export * from './audit-params.js'
@@ -33,12 +34,15 @@ export {
 	estimateCost,
 	formatCost,
 	formatUsd,
+	SEARCH_RESULT_TOKENS,
 	type Usage,
 } from './estimate.js'
 export { holdsPage, linksOf, normalLink, READ_PAGE, resolveLink, untrusted } from './links.js'
 export { openRequests, OPEN_REQUESTS_KEY, type OpenRequests } from './open-requests.js'
 export {
 	buildPack,
+	READ_ROWS_CHARS,
+	readRows,
 	WINDOW,
 	type Pack,
 	type PackAttachment,
@@ -46,6 +50,8 @@ export {
 	type PackReaders,
 	type PackRequest,
 	type PackRow,
+	type ReadRowsRequest,
+	type ReadRowsResult,
 	type SystemBlock,
 } from './pack.js'
 export {
@@ -60,6 +66,7 @@ export {
 	ANTHROPIC,
 	ANTHROPIC_SEED,
 	effectiveProvider,
+	effortEdit,
 	gradeMapOf,
 	modelLookup,
 	priceRatio,

@@ -4,7 +4,7 @@ status: draft
 summary: The single list of every resource a grant, a declared read or an audit entry can name: fact types, entity types and primitive kinds, each with an owner, a tier and a phase.
 read-this-if: You are declaring what an AI tool reads, writing a grant, adding an entity or a kind, or checking who owns a resource.
 depends-on: [privacy]
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 ## Rules
@@ -24,7 +24,7 @@ updated: 2026-10-01
 | id | owner | tier | phase | value | notes |
 |---|---|---|---|---|---|
 | `preferred-name` | substrate | T1 | 1 | string | what greetings and the Gardener call you |
-| `home-area` | substrate | T1 | 1 | city, region, country | derived from the `home` Place (D-38); provenance `system-derived` |
+| `home-area` | substrate | T1 | 1 | street (no house number or unit), city, region, postal code, country | derived from the `home` Place's address (D-38, D-141, D-152); provenance `system-derived` |
 
 ### Entity types
 
@@ -32,7 +32,7 @@ updated: 2026-10-01
 |---|---|---|---|---|
 | `task` | substrate | T1 | 1 | |
 | `event` | substrate | by kind | 1 | mirrored Events inherit their CalendarSource tier |
-| `place` | substrate | by kind | 1 | `address` field is T2 |
+| `place` | substrate | by kind | 1 | `address` field is T2; it holds the address's parts (D-138) |
 | `attachment` | substrate | by kind | 1 | T3 kinds live in the Vault |
 | `calendar-source` | substrate | T1 | 1 | local in Phase 1; Almanac adds external kinds |
 
@@ -148,12 +148,15 @@ updated: 2026-10-01
 | id | category | tier | notes |
 |---|---|---|---|
 | `favorite-vibe` | fact | T0 | |
-| `place-profile` | entity | T1 | overlay on a `venue` Place |
-| `vibe` | entity | T0 | taxonomy |
+| `place-profile` | entity | T1 | what Meadow keeps about a saved `venue` Place, linked `about` it (D-133) |
+| `vibe` | entity | T0 | a custom vibe only; the bundled ones are code (D-133) |
 | `collection` | entity | T1 | |
 | `listing` | entity | T0 | mirror |
 | `visit` | entity | T1 | |
+| `place-suggestion` | entity | T1 | mirror: a place found and not saved (D-133) |
+| `place-detail` | entity | T0 | mirror: one detail slot of a place, from one source (D-128) |
 | `outing` | kind (event) | T1 | tentative when interested, confirmed when going |
+| `place-photo` | kind (attachment) | T1 | a saved place's picture (D-133) |
 
 ## Wellspring (`health`), stub, after Phase 2
 

@@ -9,6 +9,8 @@ export interface Usage {
 	cacheRead: number
 	/** The input the provider wrote to its cache; none when it is left out. */
 	cacheWrite?: number
+	/** The web searches the provider ran for the request, each with a fee of its own (D-132); none when left out. */
+	searches?: number
 }
 
 const MILLION = 1_000_000
@@ -30,13 +32,37 @@ export function estimateCost(usage: Usage, pricing: Pricing): number {
 			usage.tokensOut * pricing.output +
 			usage.cacheRead * pricing.cacheRead +
 			(usage.cacheWrite ?? 0) * cacheWritePrice(pricing)) /
-		MILLION
+			MILLION +
+		(usage.searches ?? 0) * (pricing.search ?? 0)
 	)
 }
 
-/** The most a request may cost before it is sent: its estimated input and the whole of its output budget. */
-export function estimateBefore(estimatedInputTokens: number, maxTokens: number, pricing: Pricing): number {
-	return estimateCost({ tokensIn: estimatedInputTokens, tokensOut: maxTokens, cacheRead: 0 }, pricing)
+/**
+ * What one web search is allowed to put into a request's input, in tokens, when its cost is estimated before it is
+ * sent: the results come back as text the model reads, and they are counted as input. A round figure until it has
+ * been measured against real searches (`engineering/gardener.md`, "Budgets").
+ */
+export const SEARCH_RESULT_TOKENS = 6000
+
+/**
+ * The most a request may cost before it is sent: its estimated input and the whole of its output budget, and for a
+ * request that may search, the fee of every search it is allowed and what their results would add to the input.
+ */
+export function estimateBefore(
+	estimatedInputTokens: number,
+	maxTokens: number,
+	pricing: Pricing,
+	searches = 0
+): number {
+	return estimateCost(
+		{
+			tokensIn: estimatedInputTokens + searches * SEARCH_RESULT_TOKENS,
+			tokensOut: maxTokens,
+			cacheRead: 0,
+			searches,
+		},
+		pricing
+	)
 }
 
 /** USD to two decimals, no sign: `2.84`. */

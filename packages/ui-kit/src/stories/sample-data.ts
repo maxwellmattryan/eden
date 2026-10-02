@@ -870,6 +870,7 @@ const sidebarGroups = [
 	[
 		{ id: 'kitchen', name: 'Hearth', subtitle: 'Food, recipes, pantry, groceries', shortcut: '⌘4' },
 		{ id: 'weather', name: 'Sky', subtitle: 'Weather, forecasts, sun and moon', shortcut: '⌘5' },
+		{ id: 'places', name: 'Meadow', subtitle: 'Places, events, vibes, favourites', shortcut: '⌘6' },
 	],
 ]
 
@@ -889,6 +890,7 @@ const sidebarJaGroups = [
 	[
 		{ id: 'kitchen', name: '台所', subtitle: '食材、レシピ、買い物' },
 		{ id: 'weather', name: '空', subtitle: '天気、日の出と月' },
+		{ id: 'places', name: '野原', subtitle: '場所、イベント、雰囲気' },
 	],
 ]
 
@@ -1015,7 +1017,7 @@ export const todayHabit = {
 
 /** The Phase 1 default Garden (product/substrate/shell.md): the mockup and the app read this one list. */
 export type GardenWidgetSize = 's' | 'm' | 'l'
-export type GardenDomain = 'weather' | 'today' | 'kitchen' | 'toolbench' | 'fitness' | 'garden'
+export type GardenDomain = 'weather' | 'today' | 'kitchen' | 'toolbench' | 'fitness' | 'places' | 'garden'
 export interface GardenTile {
 	id: string
 	/** The contributing domain's plain id; `garden` for the neutral tiles the shell owns. */
@@ -1032,4 +1034,604 @@ export const gardenLayout: GardenTile[] = [
 	{ id: 'sun-and-moon', domain: 'weather', size: 's' },
 	{ id: 'daily-line', domain: 'garden', size: 'm' },
 	{ id: 'quick-log', domain: 'fitness', size: 's' },
+	{ id: 'nearby-favorites', domain: 'places', size: 'm' },
+	{ id: 'upcoming-listings', domain: 'places', size: 'm' },
 ]
+
+// ---- Meadow (design/sample-data.md, "Meadow") -----------------------------------------------------------------------
+
+/** A place on the ground, in degrees. */
+export interface SamplePoint {
+	lng: number
+	lat: number
+}
+
+/** A vibe belongs to one of four facets (D-133): within a facet a filter is any of, across facets all of. */
+export type VibeFacet = 'purpose' | 'mood' | 'setting' | 'crowd'
+export const meadowFacets: { id: VibeFacet; label: string; vibes: { id: string; label: string }[] }[] = [
+	{
+		id: 'purpose',
+		label: 'What I’m doing',
+		vibes: [
+			{ id: 'deep-work', label: 'Deep work' },
+			{ id: 'work-friendly', label: 'Work-friendly' },
+			{ id: 'read', label: 'Read' },
+			{ id: 'meet-people', label: 'Meet people' },
+			{ id: 'catch-up', label: 'Catch up' },
+			{ id: 'date', label: 'Date' },
+			{ id: 'unwind', label: 'Unwind' },
+			{ id: 'celebrate', label: 'Celebrate' },
+		],
+	},
+	{
+		id: 'mood',
+		label: 'How I feel',
+		vibes: [
+			{ id: 'calm', label: 'Calm' },
+			{ id: 'cozy', label: 'Cozy' },
+			{ id: 'lively', label: 'Lively' },
+			{ id: 'buzzing', label: 'Buzzing' },
+			{ id: 'romantic', label: 'Romantic' },
+			{ id: 'playful', label: 'Playful' },
+		],
+	},
+	{
+		id: 'setting',
+		label: 'The setting',
+		vibes: [
+			{ id: 'quiet', label: 'Quiet' },
+			{ id: 'spacious', label: 'Spacious' },
+			{ id: 'outdoors', label: 'Outdoors' },
+			{ id: 'natural-light', label: 'Natural light' },
+			{ id: 'intimate', label: 'Intimate' },
+			{ id: 'industrial', label: 'Industrial' },
+			{ id: 'late-night', label: 'Late-night' },
+		],
+	},
+	{
+		id: 'crowd',
+		label: 'The crowd',
+		vibes: [
+			{ id: 'solo-friendly', label: 'Solo-friendly' },
+			{ id: 'locals', label: 'Locals' },
+			{ id: 'laptop-crowd', label: 'Laptop crowd' },
+			{ id: 'social', label: 'Social' },
+			{ id: 'kid-friendly', label: 'Kid-friendly' },
+		],
+	},
+]
+
+export type PlaceCategory = 'cafe' | 'bar' | 'restaurant' | 'park' | 'museum' | 'venue'
+
+/**
+ * A stand-in for a place's picture, as a data URL (see `storePicture`): a ground and a mark in two colours, so the
+ * five places read apart in a list. A real place's photograph is not the kit's to ship.
+ */
+const placePicture = (ground: string, mark: string) =>
+	'data:image/svg+xml,' +
+	encodeURIComponent(
+		`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 10"><rect width="16" height="10" fill="${ground}"/><path d="M0 8 L5 4 L9 7 L12 5 L16 8 V10 H0Z" fill="${mark}"/><circle cx="12.5" cy="2.6" r="1.2" fill="${mark}"/></svg>`
+	)
+
+/** A saved place: the `venue` Place and what Meadow keeps about it, flattened for a mockup. */
+export interface SamplePlace {
+	id: string
+	name: string
+	category: PlaceCategory
+	point: SamplePoint
+	/** A public address line and the part of town. */
+	address: string
+	locality: string
+	/** How far from home, in kilometres. */
+	distanceKm: number
+	price?: 1 | 2 | 3 | 4
+	vibes: string[]
+	alcoholFree?: boolean
+	favourite: boolean
+	/** A rating from outside, with where it came from. */
+	rating?: { value: number; source: string }
+	/** Hours as they were read, whether that makes it open on Wednesday 07:40, and where they came from. */
+	hours?: { text: string; open: boolean; source: string; asOf: string }
+	picture?: string
+	notes?: string
+	website?: string
+}
+export const meadowPlaces: SamplePlace[] = [
+	{
+		id: 'p-01',
+		name: 'Cosmic Coffee + Beer Garden',
+		category: 'cafe',
+		point: { lng: -97.7626, lat: 30.2269 },
+		address: '121 Pickle Rd',
+		locality: 'South Austin',
+		distanceKm: 9.8,
+		price: 2,
+		vibes: ['work-friendly', 'unwind', 'cozy', 'outdoors', 'spacious', 'laptop-crowd', 'social'],
+		favourite: true,
+		rating: { value: 4.6, source: 'the search' },
+		hours: { text: 'Daily 07:00–24:00', open: true, source: 'OpenStreetMap', asOf: 'Tue 09-29' },
+		picture: placePicture('#dfe6d5', '#6f8a5b'),
+		notes: 'Good porch, loud inside. Chickens out back.',
+		website: 'https://www.cosmichospitalitygroup.com',
+	},
+	{
+		id: 'p-02',
+		name: 'Nickel City',
+		category: 'bar',
+		point: { lng: -97.7281, lat: 30.2686 },
+		address: '1133 E 11th St',
+		locality: 'East Austin',
+		distanceKm: 4.6,
+		price: 1,
+		vibes: ['catch-up', 'lively', 'late-night', 'locals', 'social'],
+		favourite: false,
+		hours: { text: 'Daily 12:00–02:00', open: false, source: 'its website', asOf: 'Mon 09-28' },
+		picture: placePicture('#e8d9cf', '#a2553f'),
+	},
+	{
+		id: 'p-03',
+		name: 'Zilker Park',
+		category: 'park',
+		point: { lng: -97.7669, lat: 30.2677 },
+		address: 'Barton Springs Rd',
+		locality: 'Zilker',
+		distanceKm: 5.9,
+		vibes: ['read', 'unwind', 'calm', 'quiet', 'outdoors', 'spacious', 'kid-friendly', 'solo-friendly'],
+		alcoholFree: true,
+		favourite: true,
+		hours: { text: 'Daily 05:00–22:00', open: true, source: 'OpenStreetMap', asOf: 'Tue 09-29' },
+		picture: placePicture('#d6e6ec', '#5f8f6a'),
+	},
+	{
+		id: 'p-04',
+		name: 'Cuvée Coffee',
+		category: 'cafe',
+		point: { lng: -97.7387, lat: 30.2563 },
+		address: '48 East Ave',
+		locality: 'Rainey',
+		distanceKm: 6.1,
+		price: 2,
+		vibes: ['deep-work', 'work-friendly', 'calm', 'industrial', 'natural-light', 'laptop-crowd', 'solo-friendly'],
+		alcoholFree: true,
+		favourite: false,
+		rating: { value: 4.4, source: 'the search' },
+		hours: { text: 'Mon–Fri 07:00–17:00, Sat–Sun 08:00–17:00', open: true, source: 'OpenStreetMap', asOf: 'Tue 09-29' },
+	},
+	{
+		id: 'p-05',
+		name: 'Sour Duck Market',
+		category: 'restaurant',
+		point: { lng: -97.7216, lat: 30.2799 },
+		address: '1814 E Martin Luther King Jr Blvd',
+		locality: 'East Austin',
+		distanceKm: 3.5,
+		price: 2,
+		vibes: ['catch-up', 'date', 'cozy', 'outdoors', 'locals', 'kid-friendly'],
+		alcoholFree: true,
+		favourite: true,
+		rating: { value: 4.5, source: 'the search' },
+		picture: placePicture('#ece3c8', '#b08a3c'),
+		notes: 'Alcohol-free options on tap. The patio fills by seven.',
+	},
+]
+
+/** Home, rounded to two decimals as every outgoing request rounds it (D-60): Hyde Park, Austin. */
+export const meadowHome = { name: 'Home', area: 'Austin, Texas', point: { lng: -97.73, lat: 30.31 } }
+
+export const meadowCollections = [
+	{
+		id: 'c-01',
+		name: 'Coworking',
+		placeIds: ['p-01', 'p-04'],
+		note: 'Wifi that holds, somewhere to sit for three hours.',
+	},
+	{ id: 'c-02', name: 'Date nights', placeIds: ['p-05', 'p-02'] },
+]
+
+export const meadowVisits = [
+	{ id: 'v-01', placeId: 'p-01', day: 'Sat 09-26', rating: 4, note: 'Good porch, loud inside.' },
+	{ id: 'v-02', placeId: 'p-03', day: 'Sun 09-20', rating: 5, note: 'Read by the water until dark.' },
+	{ id: 'v-03', placeId: 'p-05', day: 'Fri 09-11', rating: 4 },
+]
+
+/** What the search found for the weekend: each says why it fits and where it was read. */
+export const meadowListings = [
+	{
+		id: 'l-01',
+		title: 'Hot Luck food festival',
+		venue: 'Wild Onion Ranch',
+		point: { lng: -97.7936, lat: 30.2251 },
+		when: 'Sat 10-03 20:00',
+		category: 'Food',
+		price: '$$$',
+		url: 'https://hotluckfest.com',
+		why: 'Lively and outdoors, with plenty that is not shellfish.',
+		sources: [{ url: 'https://hotluckfest.com', title: 'Hot Luck' }],
+		state: 'interested' as const,
+	},
+	{
+		id: 'l-02',
+		title: 'Blanton late night',
+		venue: 'Blanton Museum of Art',
+		point: { lng: -97.7375, lat: 30.281 },
+		when: 'Thu 10-01 18:00',
+		category: 'Art',
+		price: 'Free',
+		url: 'https://blantonmuseum.org',
+		why: 'Calm, spacious and good on your own.',
+		sources: [{ url: 'https://blantonmuseum.org', title: 'Blanton Museum of Art' }],
+		state: undefined,
+	},
+]
+
+/** Three places the Gardener found for "a quiet cafe to work in": none is saved, each says why and where from. */
+export const meadowSuggestions = [
+	{
+		id: 's-01',
+		name: 'Flitch Coffee',
+		category: 'cafe' as PlaceCategory,
+		point: { lng: -97.7069, lat: 30.2593 },
+		address: '641 Tillery St',
+		locality: 'East Austin',
+		why: 'A trailer under the trees with shaded tables; quiet on weekday mornings.',
+		vibes: ['work-friendly', 'calm', 'outdoors', 'solo-friendly'],
+		sources: [{ url: 'https://www.flitchcoffee.com', title: 'Flitch Coffee' }],
+	},
+	{
+		id: 's-02',
+		name: 'Bennu Coffee',
+		category: 'cafe' as PlaceCategory,
+		point: { lng: -97.7193, lat: 30.2797 },
+		address: '2001 E Martin Luther King Jr Blvd',
+		locality: 'East Austin',
+		why: 'Open around the clock and built for long sessions, with outlets at most tables.',
+		vibes: ['deep-work', 'late-night', 'laptop-crowd'],
+		sources: [{ url: 'https://bennucoffee.com', title: 'Bennu Coffee' }],
+	},
+	{
+		id: 's-03',
+		name: 'Austin Central Library',
+		category: 'venue' as PlaceCategory,
+		point: { lng: -97.7519, lat: 30.2659 },
+		address: '710 W Cesar Chavez St',
+		locality: 'Downtown',
+		why: 'Six floors of quiet with a roof garden and daylight everywhere.',
+		vibes: ['deep-work', 'read', 'quiet', 'natural-light', 'spacious'],
+		sources: [{ url: 'https://library.austintexas.gov/central-library', title: 'Austin Public Library' }],
+	},
+]
+/** The line the search was asked with, and what it would cost, as the page says under its button. */
+export const meadowSearch = {
+	query: 'a quiet cafe to work in',
+	estimate: '$0.12',
+	model: 'claude-sonnet',
+	area: 'Austin, Texas',
+}
+
+/** A list pasted from a note, and the rows it becomes: found, found twice, and not found. */
+export const meadowImport = {
+	text: '- Cosmic Coffee\n- Radio Coffee & Beer — good for groups\n- Mozart’s\n- The Roosevelt Room\n- Lazarus Brewing\n- that taco truck on Manor',
+	rows: [
+		{ id: 'i-01', name: 'Cosmic Coffee', state: 'saved' as const, match: 'Cosmic Coffee + Beer Garden, 121 Pickle Rd' },
+		{
+			id: 'i-02',
+			name: 'Radio Coffee & Beer',
+			note: 'good for groups',
+			state: 'matched' as const,
+			match: 'Radio Coffee & Beer, 4204 Menchaca Rd',
+			vibes: ['work-friendly', 'social', 'outdoors'],
+		},
+		{
+			id: 'i-03',
+			name: 'Mozart’s',
+			state: 'matched' as const,
+			match: 'Mozart’s Coffee Roasters, 3825 Lake Austin Blvd',
+			vibes: ['read', 'calm', 'outdoors'],
+		},
+		{
+			id: 'i-04',
+			name: 'The Roosevelt Room',
+			state: 'matched' as const,
+			match: 'The Roosevelt Room, 307 W 5th St',
+			vibes: ['date', 'intimate', 'late-night'],
+		},
+		{
+			id: 'i-05',
+			name: 'Lazarus Brewing',
+			state: 'ambiguous' as const,
+			options: ['Lazarus Brewing Co., 1902 E 6th St', 'Lazarus Brewing Co., 4803 Airport Blvd'],
+		},
+		{ id: 'i-06', name: 'that taco truck on Manor', state: 'not-found' as const },
+	],
+}
+
+/** What the Meadow motif draws: the places saved, and how many of them are favourites. */
+export const meadowMotif = {
+	places: meadowPlaces.length,
+	favourites: meadowPlaces.filter((place) => place.favourite).length,
+}
+
+/**
+ * The ground a mockup's map stands on: central Austin, drawn by hand from a few lines, so a story needs no network
+ * and no WebGL (D-129). The bounds are square on the ground; everything is in degrees and the story's drawing turns
+ * it into its own units.
+ */
+export const meadowMap = {
+	bounds: { west: -97.7999, east: -97.6841, south: 30.218, north: 30.318 },
+	/** Lady Bird Lake, west to east. */
+	water: [
+		[
+			[-97.7999, 30.296],
+			[-97.787, 30.293],
+			[-97.779, 30.281],
+			[-97.771, 30.272],
+			[-97.759, 30.266],
+			[-97.747, 30.262],
+			[-97.738, 30.258],
+			[-97.727, 30.251],
+			[-97.714, 30.249],
+			[-97.701, 30.247],
+			[-97.6841, 30.244],
+		],
+	] as [number, number][][],
+	parks: [
+		[
+			[-97.778, 30.271],
+			[-97.768, 30.2705],
+			[-97.762, 30.2665],
+			[-97.764, 30.262],
+			[-97.774, 30.262],
+			[-97.78, 30.266],
+		],
+		[
+			[-97.742, 30.288],
+			[-97.731, 30.288],
+			[-97.731, 30.281],
+			[-97.742, 30.281],
+		],
+		[
+			[-97.717, 30.262],
+			[-97.708, 30.262],
+			[-97.708, 30.256],
+			[-97.717, 30.256],
+		],
+	] as [number, number][][],
+	/** The roads a resident would know the town by: the two highways heavier than the streets. */
+	roads: [
+		{
+			id: 'i-35',
+			major: true,
+			line: [
+				[-97.705, 30.318],
+				[-97.722, 30.296],
+				[-97.734, 30.27],
+				[-97.739, 30.252],
+				[-97.745, 30.218],
+			],
+		},
+		{
+			id: 'mopac',
+			major: true,
+			line: [
+				[-97.741, 30.318],
+				[-97.756, 30.298],
+				[-97.768, 30.283],
+				[-97.775, 30.266],
+				[-97.786, 30.245],
+				[-97.7999, 30.23],
+			],
+		},
+		{
+			id: 'lamar',
+			major: false,
+			line: [
+				[-97.731, 30.318],
+				[-97.742, 30.3],
+				[-97.751, 30.278],
+				[-97.757, 30.262],
+				[-97.766, 30.245],
+				[-97.777, 30.225],
+			],
+		},
+		{
+			id: 'congress',
+			major: false,
+			line: [
+				[-97.7405, 30.274],
+				[-97.745, 30.26],
+				[-97.751, 30.24],
+				[-97.757, 30.218],
+			],
+		},
+		{
+			id: 'guadalupe',
+			major: false,
+			line: [
+				[-97.727, 30.318],
+				[-97.736, 30.3],
+				[-97.742, 30.286],
+				[-97.745, 30.268],
+			],
+		},
+		{
+			id: 'sixth',
+			major: false,
+			line: [
+				[-97.772, 30.2745],
+				[-97.75, 30.2695],
+				[-97.73, 30.2635],
+				[-97.705, 30.2565],
+				[-97.6841, 30.2505],
+			],
+		},
+		{
+			id: 'mlk',
+			major: false,
+			line: [
+				[-97.752, 30.2835],
+				[-97.735, 30.2805],
+				[-97.71, 30.2795],
+				[-97.6841, 30.281],
+			],
+		},
+		{
+			id: 'thirty-eighth',
+			major: false,
+			line: [
+				[-97.752, 30.306],
+				[-97.735, 30.301],
+				[-97.716, 30.296],
+			],
+		},
+		{
+			id: 'oltorf',
+			major: false,
+			line: [
+				[-97.775, 30.241],
+				[-97.755, 30.2385],
+				[-97.735, 30.232],
+			],
+		},
+		{
+			id: 'ben-white',
+			major: true,
+			line: [
+				[-97.7999, 30.233],
+				[-97.77, 30.2275],
+				[-97.745, 30.219],
+			],
+		},
+	] as { id: string; major: boolean; line: [number, number][] }[],
+	labels: [
+		{ id: 'downtown', text: 'Downtown', at: [-97.7435, 30.2675] },
+		{ id: 'east', text: 'East Austin', at: [-97.712, 30.27] },
+		{ id: 'zilker', text: 'Zilker', at: [-97.771, 30.2585] },
+		{ id: 'soco', text: 'South Congress', at: [-97.75, 30.245] },
+		{ id: 'hyde-park', text: 'Hyde Park', at: [-97.728, 30.3055] },
+		{ id: 'lake', text: 'Lady Bird Lake', at: [-97.724, 30.2465] },
+	] as { id: string; text: string; at: [number, number] }[],
+}
+
+/** The countries an address form offers: the suggested ones first, then every one (a few stand in for all here). */
+export const addressCountries = [
+	{
+		label: 'Suggested',
+		options: [
+			{ value: 'US', label: 'United States' },
+			{ value: 'JP', label: 'Japan' },
+			{ value: 'DE', label: 'Germany' },
+		],
+	},
+	{
+		label: 'All countries and regions',
+		options: [
+			{ value: 'BR', label: 'Brazil' },
+			{ value: 'DE', label: 'Germany' },
+			{ value: 'JP', label: 'Japan' },
+			{ value: 'US', label: 'United States' },
+		],
+	},
+]
+
+type AddressSampleField = {
+	key: 'line1' | 'line2' | 'city' | 'region' | 'postalCode'
+	label: string
+	required?: boolean
+	error?: string
+	placeholder?: string
+	autocomplete?: string
+	inputmode?: 'numeric' | 'text'
+	options?: { value: string; label: string }[]
+}
+
+/** The address form as four countries ask it, and the owner's home (Hyde Park, Austin) written in the first. */
+export const addressForms: Record<'US' | 'JP' | 'DE' | 'BR', { countryLabel: string; rows: AddressSampleField[][] }> = {
+	US: {
+		countryLabel: 'Country or region',
+		rows: [
+			[{ key: 'line1', label: 'Street address', autocomplete: 'address-line1' }],
+			[{ key: 'line2', label: 'Apartment, suite or unit', autocomplete: 'address-line2' }],
+			[{ key: 'city', label: 'City', required: true, autocomplete: 'address-level2' }],
+			[
+				{
+					key: 'region',
+					label: 'State',
+					placeholder: 'Choose',
+					autocomplete: 'address-level1',
+					options: [
+						{ value: 'CA', label: 'California' },
+						{ value: 'NY', label: 'New York' },
+						{ value: 'TX', label: 'Texas' },
+					],
+				},
+				{ key: 'postalCode', label: 'ZIP code', placeholder: '78751', autocomplete: 'postal-code' },
+			],
+		],
+	},
+	JP: {
+		countryLabel: '国または地域',
+		rows: [
+			[
+				{ key: 'postalCode', label: '郵便番号', placeholder: '150-0001', autocomplete: 'postal-code' },
+				{
+					key: 'region',
+					label: '都道府県',
+					placeholder: '選択',
+					autocomplete: 'address-level1',
+					options: [
+						{ value: '13', label: '東京都' },
+						{ value: '26', label: '京都府' },
+						{ value: '27', label: '大阪府' },
+					],
+				},
+			],
+			[{ key: 'city', label: '市区町村', required: true, autocomplete: 'address-level2' }],
+			[{ key: 'line1', label: '町名・番地', autocomplete: 'address-line1' }],
+			[{ key: 'line2', label: '建物名・部屋番号', autocomplete: 'address-line2' }],
+		],
+	},
+	DE: {
+		countryLabel: 'Country or region',
+		rows: [
+			[{ key: 'line1', label: 'Street address', autocomplete: 'address-line1' }],
+			[{ key: 'line2', label: 'Apartment, suite or unit', autocomplete: 'address-line2' }],
+			[
+				{
+					key: 'postalCode',
+					label: 'Postal code',
+					placeholder: '10115',
+					inputmode: 'numeric',
+					autocomplete: 'postal-code',
+				},
+				{ key: 'city', label: 'City', required: true, autocomplete: 'address-level2' },
+			],
+		],
+	},
+	BR: {
+		countryLabel: 'Country or region',
+		rows: [
+			[{ key: 'line1', label: 'Street address', autocomplete: 'address-line1' }],
+			[{ key: 'line2', label: 'Apartment, suite or unit', autocomplete: 'address-line2' }],
+			[
+				{ key: 'postalCode', label: 'Postal code', autocomplete: 'postal-code' },
+				{ key: 'city', label: 'City', required: true, autocomplete: 'address-level2' },
+			],
+			[{ key: 'region', label: 'State or region', autocomplete: 'address-level1' }],
+		],
+	},
+}
+
+export const homeAddress = {
+	country: 'US',
+	line1: '4301 Duval St',
+	city: 'Austin',
+	region: 'TX',
+	postalCode: '78751',
+}
+export const homeAddressJa = {
+	country: 'JP',
+	postalCode: '150-0001',
+	region: '13',
+	city: '渋谷区',
+	line1: '神宮前1-2-3',
+}

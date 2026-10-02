@@ -1,6 +1,8 @@
 // What a store's own website fills in for it (product/domains/kitchen.md, "Grocery"; D-103, D-108): its picture, and
 // the phone number and the address its page gives, read on the device. The store's form and the Gardener's
 // `edit-stores` both ask through here, once a website has been saved on a store.
+import { defaultCountry, readAddress } from '@eden/shared/address'
+import { home } from '@eden/shared/home'
 import { storeSite } from './staging.svelte.js'
 import { kitchen, type Undo } from './store.svelte.js'
 
@@ -17,8 +19,11 @@ export function fetchStoreSite(id: string, url: string): Undo {
 		if (stopped || !store || store.place?.url !== url) return
 		if (image && !store.photo) undos.push(kitchen.setStorePhoto(id, image).undo)
 		const phone = store.place?.phone || details.phone
-		const address = store.place?.address || details.address
-		if (phone !== store.place?.phone || address !== store.place?.address)
+		// a page gives its address as one line: it is read into parts against the home's country, where it is
+		// written as that country writes one, and kept whole as the first line where it is not
+		const held = readAddress(store.place?.address)
+		const address = held ?? readAddress(details.address, defaultCountry({ home: home.current.address?.country }))
+		if (phone !== store.place?.phone || (!held && address))
 			undos.push(kitchen.updateStore(id, { place: { ...store.place, phone, address } }).undo)
 	})
 	return () => {

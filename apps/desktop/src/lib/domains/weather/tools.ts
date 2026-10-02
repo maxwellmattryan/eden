@@ -3,6 +3,7 @@
 // the owner's units (D-60): the home's area, never its coordinates.
 import { queryEvents, queryTasks } from '@eden/shared/data'
 import { addDays, dateIn, instantAt, timeIn } from '@eden/shared/dates'
+import { home } from '@eden/shared/home'
 import { settings } from '@eden/shared/settings'
 import {
 	goldenHourOf,
@@ -24,8 +25,8 @@ const MOMENTS: readonly MoonMoment[] = ['new', 'first-quarter', 'full', 'last-qu
 const RAIN_LIKELY = 40
 
 function place(): string {
-	const area = settings.home.area
-	return area ? [area.city, area.region, area.country].filter(Boolean).join(', ') : settings.home.label
+	const { area, label } = home.current
+	return area ? [area.city, area.region, area.country].filter(Boolean).join(', ') : label
 }
 
 function degrees(celsius: number): { value: number; unit: string } {
@@ -136,7 +137,7 @@ export const weatherTools: Record<string, ToolHandler> = {
 				if (!task)
 					return {
 						output: {
-							error: `No task has the id ${JSON.stringify(taskId)}. A task's id is the \`id\` of its row under \`task\` in the context.`,
+							error: `No task has the id ${JSON.stringify(taskId)}. A task's id is the \`id\` of its row under \`task\`, from \`read-rows\`.`,
 						},
 					}
 				const at = task.at ?? task.due
@@ -155,7 +156,7 @@ export const weatherTools: Record<string, ToolHandler> = {
 				if (!event)
 					return {
 						output: {
-							error: `No event has the id ${JSON.stringify(eventId)}. An event's id is the \`id\` of its row in the context.`,
+							error: `No event has the id ${JSON.stringify(eventId)}. An event's id is the \`id\` of its row, from \`read-rows\` or \`agenda\`.`,
 						},
 					}
 				from = event.startAt

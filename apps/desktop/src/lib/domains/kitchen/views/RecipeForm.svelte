@@ -9,8 +9,8 @@
 	import { formatIngredient, parseIngredient } from '@eden/shared/domains/kitchen'
 	import { t } from '@eden/shared/i18n'
 	import { linkedRecipePicture, recipePicture, type RecipePicture } from '../staging.svelte'
-	import PictureDrop from './PictureDrop.svelte'
-	import PictureInput from './PictureInput.svelte'
+	import PictureDrop from '$lib/components/PictureDrop.svelte'
+	import PictureInput from '$lib/components/PictureInput.svelte'
 	import type { RecipeDraft } from '../store.svelte'
 
 	type Props = {

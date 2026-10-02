@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { build, parseRegistryDoc } from './core.mjs'
 
 const messages = {
-	domains: { kitchen: { name: 'Hearth', subtitle: 'Food', tabs: { stock: 'Stock' }, add: 'Add' } },
+	domains: { kitchen: { name: 'Hearth', subtitle: 'Food', tabs: { stock: 'Stock' }, add: 'Add', word: 'Stock' } },
 	garden: {
 		widgets: { expiringSoon: 'Expiring soon', today: 'Today' },
 		empty: { expiringSoon: 'Nothing expiring.', today: 'Nothing due.' },
@@ -28,7 +28,9 @@ const manifest = () => ({
 	},
 	reads: ['favorite-supplement'],
 	widgets: [{ id: 'expiring-soon', sizes: ['s', 'm'], default: true, reads: ['stock-item'] }],
-	quickActions: [{ id: 'add-stock', label: 'domains.kitchen.add', icon: 'plus' }],
+	quickActions: [
+		{ id: 'add-stock', label: 'domains.kitchen.add', icon: 'plus', kind: 'text', keyword: 'domains.kitchen.word' },
+	],
 	tools: [{ id: 'suggest', access: 'read', reads: ['stock-item', 'favorite-supplement', 'task'] }],
 	signals: ['stock.low'],
 	intents: ['kitchen.add-to-grocery'],
@@ -156,10 +158,35 @@ describe('build', () => {
 		expect(result.shell.gardenDefault).toEqual(['today', 'expiring-soon'])
 		expect(result.ts).toContain('export const RESOURCES = [')
 		expect(result.rust).toContain(
-			'Resource { id: "passport", category: Category::Kind, primitive: Some("attachment"), owner: "substrate", tier: Tier::T3, phase: Some(2) },'
+			'Resource { id: "passport", category: Category::Kind, primitive: Some("attachment"), owner: "substrate", tier: Tier::T3, phase: Some(2), live: false },'
 		)
-		expect(result.rust).toContain('tier: Tier::ByKind, phase: Some(1)')
-		expect(result.rust).toContain('owner: "fitness", tier: Tier::T1, phase: None')
+		expect(result.rust).toContain('tier: Tier::ByKind, phase: Some(1), live: true')
+		expect(result.rust).toContain('owner: "fitness", tier: Tier::T1, phase: None, live: false')
+	})
+
+	it("makes a built domain's rows live at its own phase, and no others (D-130)", () => {
+		const result = build(
+			sources((given) => {
+				// Hearth built ahead of its phase: its rows are live, save the one it plans for later
+				kitchen(given).phase = 3
+				kitchen(given).resources.entities.push({ id: 'meal-plan', tier: 'T0', phase: 'later' })
+				// a row of the same phase whose owner is not built stays out of reach
+				given.planned.data.owners.fitness = { phase: 3, facts: [{ id: 'favorite-supplement', tier: 'T1' }] }
+				given.doc = undefined
+			})
+		)
+		expect(result.errors).toEqual([])
+		const live = (id) => result.resources.find((row) => row.id === id).live
+		expect(live('stock-item')).toBe(true)
+		expect(live('shop-day')).toBe(true)
+		expect(live('meal-plan')).toBe(false)
+		expect(live('favorite-supplement')).toBe(false)
+		// the substrate has no phase of its own: its rows are live at Phase 1 only
+		expect(live('home-area')).toBe(true)
+		expect(live('passport')).toBe(false)
+		expect(result.rust).toContain(
+			'id: "stock-item", category: Category::Entity, primitive: None, owner: "kitchen", tier: Tier::T0, phase: Some(3), live: true'
+		)
 	})
 
 	it('refuses an id that is registered twice, whatever its category', () => {
@@ -220,6 +247,33 @@ describe('build', () => {
 		expect(errors).toContainEqual(expect.stringMatching(/"export" names "task", which the domain does not own/))
 	})
 
+	it('refuses a quick action of no kind, without a keyword, or with what its kind does not have', () => {
+		const action = (given) => kitchen(given).quickActions[0]
+		expect(errorsOf((given) => delete action(given).kind)).toContainEqual(
+			expect.stringMatching(/the quick action "add-stock" has the kind undefined; one of text, number, check, launch/)
+		)
+		expect(errorsOf((given) => delete action(given).keyword)).toContainEqual(
+			expect.stringMatching(/the quick action "add-stock"'s keyword: undefined is not a locale key/)
+		)
+		expect(errorsOf((given) => (action(given).unit = 'kg'))).toContainEqual(
+			expect.stringMatching(/has a unit, which only a number has/)
+		)
+		expect(
+			errorsOf((given) => Object.assign(action(given), { kind: 'launch', placeholder: 'domains.kitchen.add' }))
+		).toContainEqual(expect.stringMatching(/has a placeholder, and a launch has no field/))
+		expect(errorsOf((given) => Object.assign(action(given), { kind: 'number', unit: 'kg' }))).toEqual([])
+	})
+
+	it('refuses a palette entry that logs a launch', () => {
+		const errors = errorsOf((given) => {
+			kitchen(given).quickActions[0].kind = 'launch'
+			kitchen(given).palette.entries = [{ verb: 'log', quickAction: 'add-stock' }]
+		})
+		expect(errors).toEqual([
+			'kitchen/manifest.json: a palette entry logs the quick action "add-stock", which is a launch and takes no value',
+		])
+	})
+
 	it('refuses a planned field and a field it does not know', () => {
 		const errors = errorsOf((given) => {
 			kitchen(given).dailyLine = true
@@ -263,7 +317,7 @@ describe('build', () => {
 
 		it('that needs what a model cannot have, or the same thing twice', () => {
 			expect(refused({ grade: 'light', needs: ['vision', 'audio'] })).toEqual([
-				'kitchen/manifest.json: the tool "suggest" needs: "audio" is not one of tools, vision',
+				'kitchen/manifest.json: the tool "suggest" needs: "audio" is not one of tools, vision, search',
 			])
 			expect(refused({ grade: 'light', needs: ['tools', 'tools'] })).toEqual([
 				'kitchen/manifest.json: the tool "suggest" needs: "tools" is listed twice',

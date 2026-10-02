@@ -1,7 +1,7 @@
 // The resource registry (D-35) on the frontend: the generated rows with their types and the questions asked of them.
 // It is the same table the crate holds (`src-tauri/src/substrate/registry.rs`), made by `yarn registry` from the
 // domains' manifests. A declared read, a grant or an audit entry names one of these ids and nothing else (D-31); a
-// write names a live one, a resource of Phase 1.
+// write names a live one (D-130): a resource of Phase 1, or one of a built domain's own phase.
 import { RESOURCES } from './generated.js'
 
 export { RESOURCES }
@@ -32,7 +32,7 @@ export interface Resource {
 	tier: Tier
 	/** When the resource first exists. */
 	phase: Phase
-	/** Whether a write may create it: the resources of Phase 1. */
+	/** Whether a write may create it (D-130): the resources of Phase 1, and those of a built domain's own phase. */
 	live: boolean
 }
 
@@ -57,7 +57,7 @@ export function tierOf(id: ResourceId): Tier {
 }
 
 /** Whether a row of this entity type may be created. */
-/** Whether the owner may assert a fact of this type: the fact types of Phase 1, their domain built or not. */
+/** Whether the owner may assert a fact of this type: the live fact types (D-130), their domain built or not. */
 export function isFact(id: string): boolean {
 	const row = byId.get(id)
 	return row?.category === 'fact' && row.live

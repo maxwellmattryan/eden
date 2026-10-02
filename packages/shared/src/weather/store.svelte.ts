@@ -16,6 +16,8 @@ import { applyBatch, queryEntities } from '../data/client.js'
 import { importLegacyDocument } from '../data/legacy.js'
 import type { BatchOp, Entity } from '../data/types.js'
 import { nowIso } from '../dates/index.js'
+import { forecastPlace } from '../home/rows.js'
+import { home } from '../home/store.svelte.js'
 import { coordinator } from '../refresh/index.js'
 import { settings } from '../settings/settings.svelte.js'
 import { emit, withdraw } from '../signals/runtime.js'
@@ -162,14 +164,14 @@ export class WeatherStore {
 		if (!data) return Infinity
 		const chosen = settings.weatherProvider
 		const from = data.forecast.fallbackFrom ?? data.forecast.provider
-		if (!samePlace(data.place, settings.home) || from !== chosen || !todayOf(data.forecast, Date.now())) return Infinity
+		if (!samePlace(data.place, home.current) || from !== chosen || !todayOf(data.forecast, Date.now())) return Infinity
 		return Date.now() - Date.parse(data.fetchedAt)
 	}
 
 	/** How old the alerts are; never answered for this place is as old as can be. */
 	get alertsAge(): number {
 		const data = this.data
-		if (!data?.alertsAt || !samePlace(data.place, settings.home)) return Infinity
+		if (!data?.alertsAt || !samePlace(data.place, home.current)) return Infinity
 		return Date.now() - Date.parse(data.alertsAt)
 	}
 
@@ -191,18 +193,27 @@ export class WeatherStore {
 
 	#read(): Promise<void> {
 		const failed = (what: string) => (error: unknown) => logError('weather', what, String(error)).catch(() => null)
-		return (this.#reading ??= importLegacyDocument<unknown>(DOCUMENT, legacyOps)
+		return (this.#reading ??= home
+			.load()
+			.then(() => importLegacyDocument<unknown>(DOCUMENT, legacyOps))
 			// an old document that could not be brought over is tried again at the next launch
 			.catch(failed('Could not import the old document'))
 			.then(() => this.#rows())
 			.then((rows) => {
-				this.data = skyFromRows(rows, $state.snapshot(settings.home), settings.weatherProvider)
+				this.data = skyFromRows(rows, forecastPlace($state.snapshot(home.current)), settings.weatherProvider)
 			})
 			// rows that cannot be read are a forecast not held: it is fetched, and the reason is in the log
 			.catch(failed('Could not read the mirror'))
 			.then(() => {
 				this.ready = true
 			}))
+	}
+
+	/** Reads the mirror again, after an import replaced the rows, and refreshes what is stale. */
+	async reload(): Promise<void> {
+		await this.#writing
+		this.#reading = null
+		await this.load()
 	}
 
 	/** Reads the mirror once, then refreshes whenever it is stale; every page that shows the sky calls this on mount. */
@@ -313,7 +324,7 @@ export class WeatherStore {
 
 	async #alerts(force: boolean): Promise<void> {
 		await this.#read()
-		const place = $state.snapshot(settings.home)
+		const place = forecastPlace($state.snapshot(home.current))
 		const held = (data: WeatherData | null): data is WeatherData => !!data && samePlace(data.place, place)
 		if (!held(this.data) || (this.data.alertsCovered === false && !force)) return
 		const answer = await fetchAlerts(place.latitude, place.longitude)
@@ -345,7 +356,7 @@ export class WeatherStore {
 	async refresh({ force = false }: { force?: boolean } = {}): Promise<void> {
 		if (this.loading) return
 		this.loading = true
-		const place = $state.snapshot(settings.home)
+		const place = forecastPlace($state.snapshot(home.current))
 		const previous = this.data && samePlace(this.data.place, place) ? $state.snapshot(this.data) : null
 		try {
 			const forecast = await this.#forecast(place)

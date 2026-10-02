@@ -60,8 +60,11 @@ export const FACT_SHAPES: Record<LiveFactId, FactShape> = {
 			kind: 'object',
 			join: ', ',
 			fields: [
+				// the street alone: never the house number or a unit (D-152)
+				{ key: 'street', shape: string(120) },
 				{ key: 'city', shape: string(120), required: true },
 				{ key: 'region', shape: string(120) },
+				{ key: 'postalCode', shape: string(20) },
 				{ key: 'country', shape: string(120) },
 			],
 		},
@@ -94,6 +97,8 @@ export const FACT_SHAPES: Record<LiveFactId, FactShape> = {
 		multi: true,
 	},
 	'owned-hardware': { shape: string(120), multi: true },
+	// the name is a vibe's id (a bundled one, or a custom vibe's row id), as Meadow writes it from saves and visits
+	'favorite-vibe': { shape: { kind: 'weighted' }, multi: true },
 	'preferred-tool': { shape: string(120), multi: true },
 	'medical-dietary-restriction': { shape: string(200), multi: true },
 }

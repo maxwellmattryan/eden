@@ -4,7 +4,7 @@ status: draft
 summary: The frame everything sits in: layout regions, the sidebar, the Garden dashboard and its widgets, the command palette, navigation history and the back affordance, the status bar, Quick Log surfaces, the notification center, mobile structure, keyboard model and global states.
 read-this-if: You are designing navigation, layout, the dashboard, or anything that appears on every screen.
 depends-on: [domain-manifest, tasks, signals-notifications]
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 ## Layout regions
@@ -21,7 +21,7 @@ The app mark and wordmark at the head, then three groups under rules: Today; Gar
 
 The dashboard (OQ-1). A four-column widget grid with tiles of size S (1×1), M (2×1) and L (2×2), an edit mode to add, remove, drag and resize, and a catalog built from manifests. A widget declares in the manifest the registry ids it reads and computes locally; a widget that needs the Gardener calls one of its domain's tools, so nothing runs a model just because the Garden opened. A quick-navigation row of domain tiles sits above the grid, and the activity feed occupies a column on wide screens.
 
-Default layout in Phase 1: weather-now (Sky), today (Tasks), expiring-soon and cook-tonight (Hearth), resurfaced-idea and active-projects (Toolbench), sun-and-moon (Sky), the daily line (neutral until Sanctuary), the activity feed. Widgets render their empty state until data exists.
+Default layout, eleven tiles: weather-now (Sky), today (Tasks), expiring-soon and cook-tonight (Hearth), resurfaced-idea and active-projects (Toolbench), sun-and-moon (Sky), the daily line (neutral until Sanctuary), quick-log, and nearby-favorites and upcoming-listings (Meadow, built ahead of its phase, D-130); the activity feed sits beside the grid. Widgets render their empty state until data exists.
 
 ## Command palette (Phase 1)
 
@@ -39,7 +39,7 @@ The grade switch is the kit's `StatusBarGardener` with `grades` and `onchangegra
 
 ## Quick Log surfaces (D-12)
 
-The **+** button and floating button open the Quick Log sheet listing the enabled domains' quick actions. ⌘K's **log** verb parses a one-liner. The Today view shows a Quick Log strip. The Garden has a quick-log widget with a sparkline for numeric logs (weight). Every quick log is a `write` with undo and an activity-feed entry, never a confirm sheet.
+The **+** button and floating button open the Quick Log sheet listing the enabled domains' quick actions. ⌘K's **log** verb parses a one-liner. The Today view shows a Quick Log strip. The Garden has a quick-log widget with a sparkline for numeric logs (weight). Every quick log is a `write` with undo and an activity-feed entry, never a confirm sheet. Built on desktop (D-145): the **+**, the sheet under ⌘⇧L and Today's strip. Not built: the palette's **log** (issue 23, handed off in `engineering/domain-module.md`), the phone's floating button and sheet (issue 19, handed off in `domains/kitchen.md`), and a numeric log, so the Garden's widget keeps its prompt until Vigor logs a weight (issue 6, `domains/fitness.md`).
 
 ## Capture entry points (D-13)
 

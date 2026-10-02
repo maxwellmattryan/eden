@@ -15,6 +15,7 @@
 	// (D-103), beside its name and in its row: its website's icon, fetched when the website is saved, or one the
 	// owner chose in its form, or the store glyph on a tile.
 	import {
+		AddressForm,
 		Button,
 		Chip,
 		DropTarget,
@@ -26,17 +27,28 @@
 		Sheet,
 		Thumbnail,
 		toast,
+		type AddressFormKey,
 		type ListRowData,
 		type MenuItem,
 	} from '@eden/ui-kit'
-	import { openExternal } from '@eden/shared/api'
+	import {
+		addressForm,
+		cleanAddress,
+		defaultCountry,
+		encodeAddress,
+		readAddress,
+		validateAddress,
+		type Address,
+	} from '@eden/shared/address'
+	import { home } from '@eden/shared/home'
+	import { PICTURE_ACCEPT, openExternal } from '@eden/shared/api'
 	import { STORE_SELLS, listEstimate, shopDayMorning } from '@eden/shared/domains/kitchen'
 	import { formatUsd } from '@eden/shared/gardener'
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { undoToast } from '$lib/shell/undo'
 	import { daysFromToday, daysSince, formatEventTime, todayIso } from '@eden/shared/dates'
-	import { PICTURE_ACCEPT, fitPicture, storeLogo } from '../staging.svelte'
+	import { fitPicture, storeLogo } from '../staging.svelte'
 	import { fetchStoreSite } from '../store-site'
 	import { categoryGlyph } from '../words'
 	import {
@@ -340,10 +352,13 @@
 
 	// A store's form, in its sheet (D-95): its name, what it sells, where it is (D-101), a note and its shop day,
 	// which is optional (D-98).
+	/** A store's address starts in the home's country, else the language's (D-137). */
+	const homeCountry = () => defaultCountry({ home: home.current.address?.country, locale: $locale ?? 'en' })
+	const startAddress = (given?: Address): Address => ({ ...given, country: given?.country ?? homeCountry() })
 	const blankPlace = () => ({
 		name: '',
 		sells: ['grocery'] as StoreSells[],
-		address: '',
+		address: startAddress(),
 		url: '',
 		phone: '',
 		note: '',
@@ -356,15 +371,28 @@
 	/** Opens the store's form blank: the header's Add store. */
 	export function addStore() {
 		place = blankPlace()
+		left = []
 		storeId = undefined
 		storeOpen = true
 	}
 	const placeFields = () => ({
 		sells: STORE_SELLS.filter((kind) => place.sells.includes(kind)),
-		where: { address: place.address.trim(), url: place.url.trim(), phone: place.phone.trim() },
+		where: { address: cleanAddress(place.address), url: place.url.trim(), phone: place.phone.trim() },
 		note: place.note.trim(),
 		shopDay: place.date ? `${place.date}T${place.time || '10:00'}:00` : undefined,
 	})
+	// The address as its country asks for one. None of it is required; a postal code that is not shaped as its
+	// country's are is said once the field is left, and holds Save until it is put right.
+	let left = $state<AddressFormKey[]>([])
+	const problems = $derived(validateAddress(place.address))
+	const shape = $derived(
+		addressForm(place.address, {
+			label: (id, values) => $t(`address.${id}`, { values }),
+			locale: $locale ?? 'en',
+			home: home.current.address?.country,
+			errors: Object.fromEntries(Object.entries(problems).filter(([key]) => left.includes(key as AddressFormKey))),
+		})
+	)
 	// A store's own picture, in its form: one the owner picks, fitted whole, the website's fetched again, or none.
 	// Each is its own write with its own undo (D-95).
 	async function choosePicture(store: GroceryStore, files: File[]) {
@@ -418,13 +446,15 @@
 		place = {
 			name: store.name,
 			sells: [...store.sells],
-			address: store.place?.address ?? '',
+			// one line from before addresses had parts is read against the home's country
+			address: startAddress(readAddress(store.place?.address, homeCountry())),
 			url: store.place?.url ?? '',
 			phone: store.place?.phone ?? '',
 			note: store.note ?? '',
 			date: shopDay?.slice(0, 10) ?? '',
 			time: shopDay?.slice(11, 16) ?? '',
 		}
+		left = []
 		storeId = id
 		storeOpen = true
 	}
@@ -436,7 +466,7 @@
 			name === store.name &&
 			sells.join() === store.sells.join() &&
 			note === (store.note ?? '') &&
-			where.address === (store.place?.address ?? '') &&
+			encodeAddress(where.address) === encodeAddress(readAddress(store.place?.address)) &&
 			where.url === (store.place?.url ?? '') &&
 			where.phone === (store.place?.phone ?? '')
 		if (!same) undos.push(kitchen.updateStore(store.id, { name, sells, note, place: where }).undo)
@@ -709,7 +739,14 @@
 					{/each}
 				</div>
 			</div>
-			<Field label={$t('domains.kitchen.grocery.pane.address')} bind:value={place.address} />
+			<AddressForm
+				bind:value={place.address}
+				country={shape.country}
+				countries={shape.countries}
+				countryLabel={$t('address.country')}
+				rows={shape.rows}
+				onblurfield={(key) => (left = [...left, key])}
+			/>
 			<div class="pair">
 				<Field label={$t('domains.kitchen.grocery.pane.website')} type="url" bind:value={place.url} />
 				<Field label={$t('domains.kitchen.grocery.pane.phone')} type="tel" bind:value={place.phone} />
@@ -763,7 +800,7 @@
 			variant="primary"
 			type="submit"
 			form="{uid}-store-form"
-			disabled={(!shown && !!storeId) || !place.name.trim()}
+			disabled={(!shown && !!storeId) || !place.name.trim() || Object.keys(problems).length > 0}
 		/>
 	{/snippet}
 </Sheet>

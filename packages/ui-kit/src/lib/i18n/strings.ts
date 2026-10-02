@@ -88,11 +88,11 @@ export interface UiStrings {
 		dismissedNotStored: string
 		cancelledNothingChanged: string
 		confirmed: (verb: string) => string
-		/** The eye button at the composer's foot. */
+		/** The eye button under a reply: what that reply read. */
 		canSee: string
 		/** The title of the panel the button opens. */
 		canSeeTitle: string
-		/** The panel's first section: the ids with rows to read. */
+		/** The panel's first section: the ids whose rows the reply read. */
 		inThisRequest: string
 		/** The spoken sentence beside a locked row when the app cannot ask for the grant. */
 		locked: (id: string) => string
@@ -243,6 +243,8 @@ export interface UiStrings {
 		title: string
 		quickActions: string
 		tookIt: string
+		/** The primary button of a launch, which opens a surface and saves nothing. */
+		open: string
 		last: (value: string, when: string) => string
 		/** The sparkline's legend. */
 		series: string
@@ -293,6 +295,14 @@ export interface UiStrings {
 	compass: {
 		/** The letter at the compass's north point. */
 		north: string
+	}
+	rating: {
+		/** One star's name in the group: "3 stars". */
+		stars: (count: number) => string
+		/** A rating shown and not changed: what was rated, the stars set and how many there are. */
+		outOf: (label: string, value: number, max: number) => string
+		/** A thing with no rating yet. */
+		none: (label: string) => string
 	}
 	iconButton: {
 		/** The accessible name of a bell with a badge: the label and its unread count. */
@@ -408,9 +418,9 @@ export const defaultStrings: UiStrings = {
 		dismissedNotStored: 'Dismissed. Not stored.',
 		cancelledNothingChanged: 'Cancelled. Nothing was changed.',
 		confirmed: (verb) => `${verb}. Done.`,
-		canSee: 'Can see',
-		canSeeTitle: 'What the Gardener can see',
-		inThisRequest: 'In your next message',
+		canSee: 'What this reply read',
+		canSeeTitle: 'What the Gardener read',
+		inThisRequest: 'For this reply',
 		locked: (id) => `${id}, not shared: needs your grant`,
 		canSeeSummary: (facts, types) => `${facts} facts across ${types} types`,
 		notShared: (count) => `${count} not shared`,
@@ -528,6 +538,7 @@ export const defaultStrings: UiStrings = {
 		title: 'Quick Log',
 		quickActions: 'Quick actions',
 		tookIt: 'Took it',
+		open: 'Open',
 		last: (value, when) => `Last ${value}, ${when}`,
 		series: 'Recent values',
 	},
@@ -569,6 +580,11 @@ export const defaultStrings: UiStrings = {
 	sparkline: (count, latest) => `${count} values, latest ${latest}`,
 	reference: (value) => `reference ${value}`,
 	compass: { north: 'N' },
+	rating: {
+		stars: (count) => (count === 1 ? '1 star' : `${count} stars`),
+		outOf: (label, value, max) => `${label}: ${value} of ${max}`,
+		none: (label) => `${label}: not rated`,
+	},
 	iconButton: {
 		withCount: (label, count) => `${label}, ${count} unread`,
 	},

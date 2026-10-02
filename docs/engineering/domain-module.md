@@ -4,7 +4,7 @@ status: draft
 summary: The domain manifest and the resource registry as code: the manifest.json a domain declares itself in, the builder that checks it and generates the registry for TypeScript and Rust, the bindings an app adds, the functions the shell composes itself with, model grades and the resolution of a tool to a model, where a domain's code lives, and how isolation is enforced.
 read-this-if: You are adding or changing a domain, a registry row, a widget, a quick action, an intent, a palette entry or a tool's grade, or anything in the shell that lists domains, or sending a request to a model.
 depends-on: [product/substrate/domain-manifest, product/substrate/registry, product/substrate/shell, engineering/app-scaffold, engineering/data-layer]
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 ## What this covers
@@ -47,7 +47,7 @@ All under `packages/shared/src/`, hand-edited and formatted by Prettier:
 | `resources` | consumed | `facts`, `entities`, `kinds`, each row an `id` and a `tier`; a kind names its `primitive` |
 | `reads` | consumed | the resources of other owners it consumes |
 | `widgets` | consumed | `id`, `sizes` (the default first), `default`, `reads`, and `planned` for a tile the domain's doc names and nobody has built |
-| `quickActions` | consumed | `id`, `label`, `icon` |
+| `quickActions` | consumed | `id`, `label`, `icon`, `kind` (`text`, `number`, `check`, or `launch`, which opens a surface and takes no value), `keyword` (the locale key of the word a one-liner names it by), and optionally `placeholder` (a locale key) and, on a number, `unit` (D-145) |
 | `intents` | consumed | each `<id>.<action>` (D-33) |
 | `palette` | consumed | `entries` that **run** a quick action or an intent, and `search`, the types of its own the palette searches. Going to the domain and to each tab is implied |
 | `export` | consumed | the types of its own in its export |
@@ -55,7 +55,7 @@ All under `packages/shared/src/`, hand-edited and formatted by Prettier:
 | `notificationKinds` | consumed | `id`, `channel` (`in-app`, `os`), `cadence`, `default`. With `signal` (one of the domain's own) it is a rule, and `when` is its condition: fields, each with the words it may be. Its words are `domains.<id>.notifications.<kind>.line` and, for `os`, `.title` |
 | `schedules` | consumed | `id` with `daily` (`HH:MM`) or `every` (seconds, sixty at least); the scheduler knows it as `<id of the domain>.<id>` |
 | `deviceCapabilities` | consumed | what it needs of the device; `os-notifications` is what an `os` rule needs |
-| `tools`, `captureSources` | consumed (`tools`), declared (`captureSources`) | checked and generated; the Gardener's runtime consumes `tools` (`engineering/gardener.md`) and Capture will consume `captureSources`. A tool is `id`, `access`, `confirm`, `reads`, and, when a model runs it, `grade` (`light`, `standard`, `deep`), `needs` (`tools`, `vision`) and `minContext` in tokens; no grade is a plain tool (D-74, "Model grades") |
+| `tools`, `captureSources` | consumed (`tools`), declared (`captureSources`) | checked and generated; the Gardener's runtime consumes `tools` (`engineering/gardener.md`) and Capture will consume `captureSources`. A tool is `id`, `access`, `confirm`, `reads`, and, when a model runs it, `grade` (`light`, `standard`, `deep`), `needs` (`tools`, `vision`, `search`) and `minContext` in tokens; no grade is a plain tool (D-74, "Model grades") |
 | `parent`, `integrations`, `dayAnnotations`, `dailyLine`, `mobile`, `settings` | planned | the builder refuses them until a domain consumes one. `settings` is Phase 1 in the manifest doc and waits for the Domains tab |
 
 The name, the subtitle, the glyph and a widget's title and prompt are derived from ids (`domains.<id>.name`, `domainGlyph(id)`, `garden.widgets.<widgetId>`, `garden.empty.<widgetId>`, the id in camelCase), so a manifest never repeats them.
@@ -83,14 +83,14 @@ Each error names the file and the id.
 4. A read that is not in the registry, in `reads`, a widget, a tool or a shell tile; a read of another domain's resource that `reads` does not declare; an `export` or `palette.search` id the domain does not own.
 5. A read of a T3 resource, anywhere (D-14, D-31).
 6. An intent that is not `<id>.<action>`; a tool access outside `read`, `write-draft`, `write`.
-7. A widget id used twice, by domains or by the shell; a quick action or a tool id used twice in a domain; a sidebar order used twice in a group.
+7. A widget id used twice, by domains or by the shell; a quick action or a tool id used twice in a domain; a sidebar order used twice in a group. A quick action with no `kind` or one it does not know, with no `keyword`, with a `unit` when it is not a number, or with a `placeholder` when it is a launch; a palette entry that **log**s a launch.
 8. A default widget the Garden's default layout does not place, and a layout id nothing declares.
 9. A locale key missing from `en.json` or `ja.json`, for anything that is not planned; an icon the kit does not list.
 10. A planned field, and a field it does not know.
 11. A rule that answers a signal the domain does not emit; a condition that is not fields, each with the words it may be, or one on a kind with no signal; an `os` rule in a domain that does not declare `os-notifications`.
 12. A schedule id used twice in a domain; a schedule that is neither `daily` nor `every`, or both; a `daily` that is not a time of day; an `every` that is not a whole number of seconds, sixty at least.
 13. A row that differs from `docs/product/substrate/registry.md`, in either direction: id, category, primitive, owner, tier, and phase where the doc gives one.
-14. A tool field outside `id`, `access`, `confirm`, `reads`, `grade`, `needs`, `minContext`, so a `model` or a `provider` on a tool, which names a grade, never a model (D-74); a grade outside `light`, `standard`, `deep`; a `needs` that is not a list, names something outside `tools` and `vision`, or names one twice; a `minContext` that is not a whole number above zero; `needs` or `minContext` on a tool with no grade.
+14. A tool field outside `id`, `access`, `confirm`, `reads`, `grade`, `needs`, `minContext`, so a `model` or a `provider` on a tool, which names a grade, never a model (D-74); a grade outside `light`, `standard`, `deep`; a `needs` that is not a list, names something outside `tools`, `vision` and `search`, or names one twice; a `minContext` that is not a whole number above zero; `needs` or `minContext` on a tool with no grade.
 
 The doc stays hand-written and the builder keeps it honest. It reads each table by its header names, takes the owner from the section's heading (`` ## Hearth (`kitchen`) ``) or the `owner` column, and the category from the `category` column or the heading above the table. The doc lists the four primitives among the substrate's entity types; in code they are their own category, so `task` is never an entity type.
 
@@ -104,7 +104,7 @@ The doc stays hand-written and the builder keeps it honest. It reads each table 
 | what a write may name | `isEntityType`, `isKind`, `kindsOf(primitive)` | `is_entity_type`, `is_kind`, `is_owner`, `entity_types_of`, `kinds_of` |
 | types | `ResourceId`, `FactId`, `EntityTypeId`, `KindId`, `KindOf<P>`, `Tier` | `Category`, `Tier`, `Resource` |
 
-A row is **live** when its phase is 1. A write names a live resource or is refused, in the crate and in the browser engine alike; a read, a grant or an audit entry may name any row (D-31), which is how Sky declares that it reads `workout-session` before Vigor exists. An import still accepts any well-formed id (`engineering/data-layer.md`). When a phase ships, the rule moves with it.
+A row is **live** when its phase is 1, or when its owner is built (it has a manifest) and the row is of the owner's phase (D-130). So Meadow, built ahead of its Phase 3, writes its own rows, and a row a built domain plans for a later phase still cannot be written. The builder works it out (`core.mjs`), since only it knows which owners are built, and writes `live` on every row of both generated files; neither registry derives it from the phase. A write names a live resource or is refused, in the crate and in the browser engine alike; a read, a grant or an audit entry may name any row (D-31), which is how Sky declares that it reads `workout-session` before Vigor exists. An import still accepts any well-formed id (`engineering/data-layer.md`).
 
 An entity URI resolves to its owner through `ownerOf`, so a link survives a change of owner (D-24): moving a resource is an edit to a manifest and to the doc, and no row changes.
 
@@ -112,9 +112,9 @@ An entity URI resolves to its owner through `ownerOf`, so a link survives a chan
 
 Each app has `src/lib/domains/manifest.ts` with `defineDomain(id, bindings)`, which joins a declaration to what the app binds. On desktop the widget bindings are typed over the declaration's built widget ids: a widget without a binding does not compile, and neither does a binding for a widget nobody declared. The phone binds a route and a live glyph, and its widgets when its Garden is built.
 
-`pack` is what the Gardener's context pack carries of a row, by entity type, for a type whose row is more than a request should pay for (D-85): the shell's pack readers apply it after the query, a type without an entry is sent whole, and `null` leaves a row out. Sky binds one for `forecast`.
+`pack` is what the Gardener is sent of a row, in a context pack or by `read-rows` (D-148), by entity type, for a type whose row is more than a request should pay for (D-85): the shell's pack readers apply it after the query, a type without an entry is sent whole, and `null` leaves a row out. Sky binds one for `forecast`.
 
-`labels` is what a row is called where the Gardener lists what it read (the "can see" chip, the audit log), by entity type, for a type whose rows hold no `name`, `title` or `label` of their own: `labelRows` (`apps/desktop/src/lib/shell/gardener/labels.ts`) asks it first and falls back to the row's name, then its id. Hearth binds one for `grocery-list`, which is called by its store, or "Miscellaneous" for the list of what is not filed.
+`labels` is what a row is called where the Gardener lists what it read (the eye under a reply, the audit log), and where `read-rows` answers a long type by its rows' names, by entity type, for a type whose rows hold no `name`, `title` or `label` of their own: `labelRows` (`apps/desktop/src/lib/shell/gardener/labels.ts`) asks it first and falls back to the row's name, then its id. Hearth binds one for `grocery-list`, which is called by its store, or "Miscellaneous" for the list of what is not filed.
 
 `subscribe` is where a domain hears its schedules and its signals and registers its mirrors with the refresh coordinator (`engineering/signals.md`). The shell calls it once when it starts, before any store is loaded, so what it binds reads rows and not the domain's store; its answer unbinds.
 
@@ -141,11 +141,17 @@ Each app has `src/lib/domains/manifest.ts` with `defineDomain(id, bindings)`, wh
 | `quickActions(declarations)` | the Quick Log's entries | Quick Log |
 | `handlerOf(declarations, intent)` | the domain that handles an intent, or nothing when it is disabled | intent routing |
 
+Quick Log on desktop is `apps/desktop/src/lib/shell/quick-log.ts` (D-145): `quickLogEntries` makes the kit's tabs from the declarations and from the readouts a domain binds (`quickActionReadouts`), `saveQuickLog` runs a field's handler (`quickActionHandlers`) on the domain's loaded store and shows the undo toast, or runs a launch (`quickActionLaunchers`), and `quick-log-ui.svelte.ts` holds the one sheet, which `QuickLogHost.svelte` mounts. The parser of a one-liner is pure, in `@eden/shared/quick-log`.
+
+Handoff, for the palette (#23): the **log** verb is `logLine(line)` in `shell/quick-log.ts`, which parses "log grocery oat milk" against the actions' keywords, labels and, for a domain with one field, its name, and saves; it answers `false` when the line names nothing, which the palette should say. **run** on a `quick-action` target is `runQuickLog('<domain>.<action>')` in `shell/quick-log-ui.svelte.ts`: a launch opens its surface (Hearth's capture), a field opens the sheet on its tab. No manifest declares a `log` entry yet; one that does must name a field, never a launch.
+
+Handoff, for the palette (#23): Meadow declares the intent `places.open` and a `go` entry for it (`domains.places.open`), and nothing dispatches either yet. `paletteIndex` already answers the entry; running it is the palette's, through `handlerOf`.
+
 The shell names no domain. Toolbench sits in the second group because its manifest says `group: "shell"`; Sky's glyph follows the conditions because its bindings carry `liveGlyph`. The rules and the schedules are composed the same way, by `rulesOf(declarations)` in `@eden/shared/signals` and by the runtime that declares each domain's `schedules` (`engineering/signals.md`).
 
 ## Model grades
 
-A tool declares a grade and what it needs of a model; which model runs it is resolved when it is asked for (D-74). `@eden/shared/gardener` holds that resolution. It is pure, never throws, and lives in TypeScript because what is derived from the manifests is the frontend's (D-72, D-73); whichever side sends a request is handed the provider and the model. If the tools are ever generated into the crate, `resolve.test.ts` ports as shared vectors.
+A tool declares a grade and what it needs of a model; which model runs it is resolved when it is asked for (D-74). `search` is a need like `tools` and `vision` (D-132): a flag on a model's row, held in three lists that move together (`ModelFlag` in `manifest/types.ts`, `MODEL_FLAGS` in `core.mjs`, the seed's flags in `gardener/providers.ts`). A tool that needs it is run as two requests, the first with the provider's own search tool (`engineering/gardener.md`, "A research request"). `@eden/shared/gardener` holds that resolution. It is pure, never throws, and lives in TypeScript because what is derived from the manifests is the frontend's (D-72, D-73); whichever side sends a request is handed the provider and the model. If the tools are ever generated into the crate, `resolve.test.ts` ports as shared vectors.
 
 | export | answers | consumer |
 |---|---|---|
@@ -188,5 +194,7 @@ A domain may import the shell and the substrate. What two domains would share go
 3. Run `yarn registry`. Fix what it refuses; update `docs/product/substrate/registry.md` when a row changed.
 4. Add `apps/*/src/lib/domains/<id>/manifest.ts` with `defineDomain`, list it in that app's `domains/index.ts`, and add its route.
 5. Add `src-tauri/src/domains/<id>/` when the domain needs the crate, and list it in `domains/mod.rs`.
+
+A domain built ahead of its phase keeps its `phase` (Meadow's is 3); being built is what makes its rows live.
 
 Adding a registry row to a built domain is steps 1 and 3. Adding a widget is a row in `widgets`, its two locale keys, its binding, and its id in `gardenDefault` when it is a default.

@@ -986,7 +986,7 @@ export function kitchenOpenDraft(
 	return false
 }
 
-/** What Hearth's quick actions write, by id; `capture-haul` is the tool itself, run from the page or the panel. */
+/** What Hearth's quick actions write, by id; `capture-haul` is a launch, which the manifest binds to the sheet. */
 export const kitchenQuickActions = {
 	'add-to-grocery': (value: string) => kitchen.addGrocery(value),
 }

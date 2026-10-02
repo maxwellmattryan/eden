@@ -4,7 +4,7 @@ status: draft
 summary: The phases from docs to a synced, multi-domain Eden, what each ships, what "done" means, what can slip, and the risks and external dependencies.
 read-this-if: You are planning, scoping, or deciding what to build next.
 depends-on: [vision, decisions, domains/README]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## Phases
@@ -14,7 +14,7 @@ updated: 2026-09-30
 | 0 | Docs and mockups | this doc set; Claude Design mockups of the shell, onboarding, settings, Hearth, Toolbench, Sky and the glyph family | every non-stub doc is at `review`; Phase 1 screens are mocked |
 | 1 | Trellis | the scaffold, the shell, the substrate every later phase stands on, and three domains | the owner runs groceries and ideas in Eden daily, the Garden shows today's weather and moon, export round-trips |
 | 2 | Roots | time and the first integration: Almanac, Google read-only, Vigor, Sanctuary, Council, local models, Vault v0, mobile | Google events show under a grant, a digest fires, a Council run previews its cost, the phone captures a haul |
-| 3 | Canopy | Meadow, end-to-end sync, Google write, push, import, one promoted candidate, the first externalised plugin | two devices sync, places render on a map, a candidate domain is live |
+| 3 | Canopy | Meadow (built ahead of its phase, see below), end-to-end sync, Google write, push, import, one promoted candidate, the first externalised plugin | two devices sync, places render on a map, a candidate domain is live |
 | after | | Orchard and Wellspring specs, plugins for others, more locales | |
 
 ## Phase 1, Trellis
@@ -41,7 +41,7 @@ Cut line: the seasons wheel, Japanese almanac layers and astrology can slip to P
 
 ## Phase 3, Canopy
 
-- Meadow with map tiles, a places provider, listings and the precise-location grant (OQ-4).
+- Meadow with map tiles, a places provider, listings and the precise-location grant. Built ahead of its phase, during Phase 1 (issue 8): the map, discovery, import, listings and outings on desktop and the read surfaces on the phone, on the providers of D-128; D-130 is why a Phase 3 domain's rows are live now. What stays in this phase is the precise-location grant, a keyed place card (OQ-24) and share-sheet capture (`domains/places.md`, Handoffs).
 - End-to-end encrypted cloud sync with accounts, devices and the vault key (D-21, OQ-12); import from a bundle on a new device.
 - Google Calendar write, per calendar, with recurrence exceptions.
 - Push through a relay (OQ-3).
@@ -61,7 +61,7 @@ Orchard and Wellspring get their full specs (their stubs name the triggers). Plu
 | Google OAuth app verification for calendar scopes | Phase 2 | start verification early; the owner's own project needs no verification for personal use |
 | vision quality for haul capture | Phase 1 | the verification sheet is the product; a receipt or the order's confirmation read beside the photo; D-86 |
 | passphrase loss with end-to-end sync | Phase 3 | recovery key shown once; local copy remains; OQ-12 |
-| provider cost and terms for maps and listings | Phase 3 | OQ-4; Meadow works with saved places and no provider |
+| provider cost and terms for maps and listings | Phase 3, met early | D-128: an open map with no key and discovery on the owner's key, each behind a seam; Meadow works with saved places and no provider |
 | Tauri mobile maturity and background limits | Phase 2 | mobile surfaces are few and read-heavy; background sync waits for Phase 3 |
 | content licensing for bundled texts and holidays | Phase 2 | public domain only until reviewed; OQ-5, OQ-14 |
 | substrate scope creep | every phase | phase tags on substrate sections; a manifest field ships only when a domain consumes it |

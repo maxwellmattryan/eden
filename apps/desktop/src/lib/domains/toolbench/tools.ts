@@ -57,19 +57,19 @@ function projectLines(id: string | undefined): string {
 /** Why an idea id cannot be worked on, or nothing. */
 function ideaProblem(input: unknown, required: boolean): string | undefined {
 	const id = str(input, 'ideaId')
-	if (!id) return required ? 'Pass `ideaId`: the `id` of a row under `idea` in the context.' : undefined
+	if (!id) return required ? 'Pass `ideaId`: the `id` of a row under `idea`, from `read-rows`.' : undefined
 	return toolbench.ideaById(id)
 		? undefined
-		: `No idea has the id ${JSON.stringify(id)}. An idea's id is the \`id\` of its row under \`idea\` in the context.`
+		: `No idea has the id ${JSON.stringify(id)}. An idea's id is the \`id\` of its row under \`idea\`, from \`read-rows\`.`
 }
 
 /** Why a project id cannot be worked on, or nothing. */
 function projectProblem(input: unknown, required: boolean): string | undefined {
 	const id = str(input, 'projectId')
-	if (!id) return required ? 'Pass `projectId`: the `id` of a row under `project` in the context.' : undefined
+	if (!id) return required ? 'Pass `projectId`: the `id` of a row under `project`, from `read-rows`.' : undefined
 	return toolbench.projectById(id)
 		? undefined
-		: `No project has the id ${JSON.stringify(id)}. A project's id is the \`id\` of its row under \`project\` in the context.`
+		: `No project has the id ${JSON.stringify(id)}. A project's id is the \`id\` of its row under \`project\`, from \`read-rows\`.`
 }
 
 export const toolbenchTools: Record<string, ToolHandler> = {

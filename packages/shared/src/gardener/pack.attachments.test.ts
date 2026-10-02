@@ -74,11 +74,15 @@ const image = (name: string) => ({
 	source: { type: 'base64', media_type: 'image/png', data: `img:${name}` },
 })
 const contentOf = (entry: unknown) => (entry as { content: unknown }).content
+/** What the newest message opens with: the clock, and whatever of the workspace goes with it. */
+const HEAD = { type: 'text', text: expect.stringContaining('Now: ') }
+/** The breakpoint on the settled history's last block (D-147). */
+const MARK = { cache_control: { type: 'ephemeral' } }
 
 describe('buildPack with attachments', () => {
 	it('leaves a message without files as it was', async () => {
 		const pack = await buildPack(request(), readers())
-		expect(pack.messages).toEqual([{ role: 'user', content: 'What is this?' }])
+		expect(pack.messages).toEqual([{ role: 'user', content: [HEAD, { type: 'text', text: 'What is this?' }] }])
 		expect(pack.attachments).toEqual([])
 		expect(pack.attached).toEqual([])
 		expect(pack.tier).toBe('T0')
@@ -92,6 +96,7 @@ describe('buildPack with attachments', () => {
 		]
 		const pack = await buildPack(request({ attachments: files }), readers())
 		expect(contentOf(pack.messages.at(-1))).toEqual([
+			HEAD,
 			image('basket.png'),
 			{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: 'pdf:manual.pdf' } },
 			// a text file is sent as text, scrubbed like the message
@@ -110,7 +115,7 @@ describe('buildPack with attachments', () => {
 
 	it('sends files alone when there are no words, and raises the tier to T1 for a photo', async () => {
 		const pack = await buildPack(request({ message: '', attachments: [file(1, 'basket.png', 'image/png')] }), readers())
-		expect(contentOf(pack.messages.at(-1))).toEqual([image('basket.png')])
+		expect(contentOf(pack.messages.at(-1))).toEqual([HEAD, image('basket.png')])
 		expect(pack.tier).toBe('T1')
 	})
 
@@ -138,16 +143,21 @@ describe('buildPack with attachments', () => {
 		const source = readers()
 		const pack = await buildPack(request({ thread, message: 'And the first one again?' }), source)
 		expect(pack.messages).toEqual([
-			{ role: 'user', content: [image('basket.png'), { type: 'text', text: 'What is in it?' }] },
+			// the turn ahead of each of the last two replies ends the settled history, as it stood and as it stands
+			{ role: 'user', content: [image('basket.png'), { type: 'text', text: 'What is in it?', ...MARK }] },
 			{ role: 'assistant', content: 'Leeks.' },
 			{
 				role: 'user',
 				content: [
-					{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: 'pdf:manual.pdf' } },
+					{
+						type: 'document',
+						source: { type: 'base64', media_type: 'application/pdf', data: 'pdf:manual.pdf' },
+						...MARK,
+					},
 				],
 			},
 			{ role: 'assistant', content: 'A manual.' },
-			{ role: 'user', content: 'And the first one again?' },
+			{ role: 'user', content: [HEAD, { type: 'text', text: 'And the first one again?' }] },
 		])
 		expect(source.read).toEqual([id(1), id(2)])
 		expect(pack.attached).toEqual(['basket.png', 'manual.pdf'])
@@ -170,6 +180,7 @@ describe('buildPack with attachments', () => {
 			{
 				role: 'user',
 				content: [
+					HEAD,
 					{ type: 'text', text: '[attachment unavailable: manual.pdf]' },
 					{ type: 'text', text: 'What is this?' },
 				],
@@ -201,9 +212,9 @@ describe('buildPack with attachments', () => {
 		expect(tight.messages).toHaveLength(5)
 		expect(contentOf(tight.messages[0])).toEqual([
 			{ type: 'text', text: '[attachment no longer sent: first.png]' },
-			{ type: 'text', text: 'One.' },
+			{ type: 'text', text: 'One.', ...MARK },
 		])
-		expect(contentOf(tight.messages[2])).toEqual([image('second.png'), { type: 'text', text: 'Two.' }])
+		expect(contentOf(tight.messages[2])).toEqual([image('second.png'), { type: 'text', text: 'Two.', ...MARK }])
 		// a file that is let go is never read
 		expect(source.read).toEqual([id(2), id(3)])
 		expect(tight.attached).toEqual(['second.png', 'third.png'])
@@ -211,7 +222,7 @@ describe('buildPack with attachments', () => {
 		// no room for anything: the turns go, the message keeps its file
 		const bare = await buildPack(request({ thread, attachments, tokenCap: 1, outputReserve: 0 }), readers())
 		expect(bare.messages).toHaveLength(1)
-		expect(contentOf(bare.messages[0])).toEqual([image('third.png'), { type: 'text', text: 'What is this?' }])
+		expect(contentOf(bare.messages[0])).toEqual([HEAD, image('third.png'), { type: 'text', text: 'What is this?' }])
 		expect(bare.attached).toEqual(['third.png'])
 	})
 
@@ -228,7 +239,7 @@ describe('buildPack with attachments', () => {
 		expect(pack.trimmed).toEqual(['thread'])
 		expect(contentOf(pack.messages[0])).toEqual([
 			{ type: 'text', text: '[attachment no longer sent: old.pdf]' },
-			{ type: 'text', text: 'One.' },
+			{ type: 'text', text: 'One.', ...MARK },
 		])
 		expect(pack.attached).toEqual(['new.pdf'])
 	})

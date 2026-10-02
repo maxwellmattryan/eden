@@ -4,8 +4,9 @@
 	import { expect, waitFor } from 'storybook/test'
 	import Sketch from './Sketch.svelte'
 	import { hearthEmbers } from '../../sketches/hearth-embers.js'
+	import { meadowSeeds } from '../../sketches/meadow-seeds.js'
 	import { skyField } from '../../sketches/sky-field.js'
-	import { hearthMotif, skyMotif } from '../../../stories/sample-data.js'
+	import { hearthMotif, meadowMotif, skyMotif } from '../../../stories/sample-data.js'
 
 	/** The backing store holds something: the sketch has drawn. */
 	function painted(canvas: HTMLCanvasElement): boolean {
@@ -23,7 +24,7 @@
 			docs: {
 				description: {
 					component:
-						'The kit’s one canvas. A sketch is a plain definition, `setup` and `draw`, in nannou’s shape; the component sizes the backing store, resolves the theme’s colours where it stands, drives the frames at no more than `fps`, rests while it is out of sight, and under reduced motion draws the sketch once as a still. It fills its container. The stories draw `skyField`, Sky’s motif: the wind as a flow field, and `hearthEmbers`, Hearth’s: the stock as sparks off a fire.',
+						'The kit’s one canvas. A sketch is a plain definition, `setup` and `draw`, in nannou’s shape; the component sizes the backing store, resolves the theme’s colours where it stands, drives the frames at no more than `fps`, rests while it is out of sight, and under reduced motion draws the sketch once as a still. It fills its container. The stories draw `skyField`, Sky’s motif: the wind as a flow field, `hearthEmbers`, Hearth’s: the stock as sparks off a fire, and `meadowSeeds`, Meadow’s: the saved places as seeds adrift.',
 				},
 			},
 		},
@@ -87,6 +88,23 @@
 	{template}
 	args={{ sketch: hearthEmbers, params: { ...hearthMotif, expiring: 0 } }}
 />
+
+<!-- Meadow's motif: five places saved, three of them favourites, which drift in the accent -->
+<Story
+	name="Seeds"
+	{template}
+	args={{ sketch: meadowSeeds, params: meadowMotif }}
+	play={async ({ canvasElement }) => {
+		const canvas = surface(canvasElement)
+		await waitFor(() => expect(painted(canvas)).toBe(true))
+	}}
+/>
+
+<!-- A full meadow: every seed is in the air -->
+<Story name="Seeds, full meadow" {template} args={{ sketch: meadowSeeds, params: { places: 120, favourites: 20 } }} />
+
+<!-- Nothing saved yet: a few still drift -->
+<Story name="Seeds, bare" {template} args={{ sketch: meadowSeeds, params: { places: 0, favourites: 0 } }} />
 
 <!-- A sketch that says something carries a name and is an image -->
 <Story

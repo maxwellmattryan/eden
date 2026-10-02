@@ -24,7 +24,8 @@
 	import { addDays, formatDate } from '@eden/shared/dates'
 	import { parseTask, TODAY_SECTIONS, type Language, type TodayItem, type TodaySection } from '@eden/shared/tasks'
 	import { undoToast } from '$lib/shell/undo'
-	import { quickLog, quickLogActions } from '$lib/shell/quick-log'
+	import { quickLogActions, quickLogKey } from '$lib/shell/quick-log'
+	import { runQuickLog } from '$lib/shell/quick-log-ui.svelte'
 	import { parsedChips } from './chips'
 	import { rowOf, type RowAction, type RowWords } from './rows'
 	import { seedTasks } from './seed'
@@ -140,14 +141,14 @@
 
 	<div class="body">
 		{#if strip.length}
-			<!-- the Quick Log strip: a chip opens its domain until the sheet exists (issue 27) -->
+			<!-- the Quick Log strip: a chip opens the sheet on its tab, and a launch opens its surface -->
 			<nav class="strip" aria-label={$t('today.quickLog')}>
 				{#each strip as entry (`${entry.domain}.${entry.id}`)}
 					<Chip
 						label={$t('today.quickLogChip', { values: { action: $t(entry.label), domain: $t(entry.context) } })}
 						icon={entry.icon}
 						tone="outline"
-						onclick={() => quickLog(entry)}
+						onclick={() => runQuickLog(quickLogKey(entry))}
 					/>
 				{/each}
 			</nav>

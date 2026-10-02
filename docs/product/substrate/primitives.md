@@ -4,7 +4,7 @@ status: draft
 summary: The four shared entity types every domain uses instead of inventing its own: Task, Event, Place, Attachment. Ids, kinds, mirrors and overlays, snapshots, typed links, and what happens to them when a domain is disabled or removed.
 read-this-if: You are touching anything with a time, a location, a to-do or a file, or wiring one domain's data to another's.
 depends-on: [privacy, registry]
-updated: 2026-09-27
+updated: 2026-10-01
 ---
 
 ## Purpose and boundary
@@ -30,7 +30,7 @@ Anything timed is an Event. Anything located is a Place. Anything to do is a Tas
 
 ## Place
 
-`name`, `kind`, `geo` (lat, lng), `address` (a T2 field, populated only for `home` and places the owner enters by hand), `category`, `phone`, `url`. Exactly one Place has kind `home` (D-38); the substrate derives the `home-area` fact from it. Provider places are mirrors; their PlaceProfile in Meadow is the overlay.
+`name`, `kind`, `geo` (lat, lng), `address` (a T2 field, populated only for `home` and places the owner enters by hand; its parts, D-137, kept as D-138 says), `category`, `phone`, `url`. Exactly one Place has kind `home` (D-38, D-141); the substrate derives the `home-area` fact from its address. A place the owner saved in Meadow is a `venue` Place of their own with its `place-profile`, not a mirror; what Meadow found and the owner has not saved is an entity mirror of this device (D-133).
 
 ## Task
 
@@ -44,7 +44,7 @@ Summarised here, detailed in `substrate/tasks.md`: `title`, `kind` (`todo`, `che
 
 A row that caches external state carries `mirror: true`, `source` and `externalId`, and is identified by that pair, not by its ULID. Mirrors live in the normal tables so layers and declared reads query one source, but they are **excluded from sync and export** and are re-fetched on each device (D-32). Connections are per device, so a mirror can exist on the phone and not on the desktop until that device connects (D-37).
 
-The owner's edits, tags, favorites, notes and links on a mirror are **overlays**: separate rows keyed by the same `source` + `externalId`. Overlays sync and export. When the mirror is re-fetched, the overlay reattaches by key.
+The owner's edits, tags, favorites, notes and links on a mirror are **overlays**: separate rows keyed by the same `source` + `externalId`. Overlays sync and export. When the mirror is re-fetched, the overlay reattaches by key. Meadow keeps no overlay: saving a found place makes the owner's rows and drops the mirror (D-133).
 
 ## Snapshots
 

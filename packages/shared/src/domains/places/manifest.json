@@ -1,0 +1,144 @@
+{
+	"id": "places",
+	"phase": 3,
+	"sidebar": {
+		"group": "domains",
+		"order": 30,
+		"visible": true
+	},
+	"tabs": ["map", "listings", "collections", "visits"],
+	"resources": {
+		"facts": [
+			{
+				"id": "favorite-vibe",
+				"tier": "T0"
+			}
+		],
+		"entities": [
+			{
+				"id": "place-profile",
+				"tier": "T1"
+			},
+			{
+				"id": "vibe",
+				"tier": "T0"
+			},
+			{
+				"id": "collection",
+				"tier": "T1"
+			},
+			{
+				"id": "listing",
+				"tier": "T0"
+			},
+			{
+				"id": "visit",
+				"tier": "T1"
+			},
+			{
+				"id": "place-suggestion",
+				"tier": "T1"
+			},
+			{
+				"id": "place-detail",
+				"tier": "T0"
+			}
+		],
+		"kinds": [
+			{
+				"id": "outing",
+				"primitive": "event",
+				"tier": "T1"
+			},
+			{
+				"id": "place-photo",
+				"primitive": "attachment",
+				"tier": "T1"
+			}
+		]
+	},
+	"reads": ["home-area", "dietary-preference", "allergy", "venue", "local-event"],
+	"widgets": [
+		{
+			"id": "nearby-favorites",
+			"sizes": ["m"],
+			"default": true,
+			"reads": ["place-profile", "venue", "home-area"]
+		},
+		{
+			"id": "upcoming-listings",
+			"sizes": ["m"],
+			"default": true,
+			"reads": ["listing", "outing"]
+		}
+	],
+	"quickActions": [],
+	"captureSources": [],
+	"tools": [
+		{
+			"id": "suggest-places",
+			"access": "read",
+			"grade": "standard",
+			"needs": ["search"],
+			"reads": ["place-profile", "venue", "vibe", "favorite-vibe", "home-area", "dietary-preference", "allergy"]
+		},
+		{
+			"id": "suggest-listings",
+			"access": "read",
+			"grade": "standard",
+			"needs": ["search"],
+			"reads": ["listing", "favorite-vibe", "home-area", "local-event", "outing"]
+		},
+		{
+			"id": "import-places",
+			"access": "write-draft",
+			"grade": "standard",
+			"reads": ["vibe", "favorite-vibe"]
+		},
+		{
+			"id": "add-to-calendar",
+			"access": "write",
+			"confirm": true,
+			"reads": ["listing"]
+		},
+		{
+			"id": "update-places",
+			"access": "write",
+			"confirm": true,
+			"reads": ["place-profile", "venue", "vibe", "collection"]
+		}
+	],
+	"signals": ["listing.matched", "visit.logged"],
+	"notificationKinds": [
+		{
+			"id": "matching-listings",
+			"channel": "in-app",
+			"cadence": "weekly",
+			"signal": "listing.matched"
+		},
+		{
+			"id": "outing-reminder",
+			"channel": "os",
+			"cadence": "per-outing"
+		}
+	],
+	"schedules": [
+		{
+			"id": "weekly",
+			"daily": "09:00"
+		}
+	],
+	"intents": ["places.open"],
+	"deviceCapabilities": [],
+	"palette": {
+		"entries": [
+			{
+				"verb": "go",
+				"intent": "places.open",
+				"label": "domains.places.open"
+			}
+		],
+		"search": []
+	},
+	"export": ["place-profile", "vibe", "collection", "visit"]
+}

@@ -1,7 +1,8 @@
 // Between what Sky holds and its rows (D-85): the forecast, the alerts, the air quality and the allergens are mirrors
 // (D-32) in the data layer, each named by its source and an external id. A refresh puts the rows the store holds and
-// drops every other row of Sky's types, so the rows are what the store holds, for one place at a time. Until the home
-// is a Place row the place is named by its rounded coordinates, the same two decimals that leave the device (D-60).
+// drops every other row of Sky's types, so the rows are what the store holds, for one place at a time. The place is
+// named by the home's rounded coordinates, the same two decimals that leave the device (D-60): a forecast is for that
+// point, so a home moved within it keeps its rows and one moved out of it is fetched anew (D-142).
 import type { BatchOp, Entity } from '../data/types.js'
 import type { EntityTypeId } from '../registry/index.js'
 import type { HomePlace } from '../types/index.js'

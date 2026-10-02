@@ -31,6 +31,8 @@
 		active?: boolean
 		/** A real toggle: its state, exposed as aria-pressed. Leave undefined for a plain button. */
 		pressed?: boolean
+		/** With `pressed`: the pressed ground is the accent fill instead of surface-3, eased in and out (a liked heart). */
+		pressedFill?: boolean
 		/** button unless the button submits a form. */
 		type?: 'button' | 'submit' | 'reset'
 		/**
@@ -49,6 +51,7 @@
 		size = 'md',
 		active = false,
 		pressed,
+		pressedFill = false,
 		type = 'button',
 		tooltip = false,
 		class: className = '',
@@ -65,7 +68,12 @@
 		'ed-icon-btn',
 		`ed-icon-btn-${size}`,
 		filled && `ed-icon-btn-fill ed-icon-btn-fill-${filled}`,
-		{ 'ed-icon-btn-fab': fab, 'ed-icon-btn-active': active, 'ed-icon-btn-danger': danger },
+		{
+			'ed-icon-btn-fab': fab,
+			'ed-icon-btn-active': active,
+			'ed-icon-btn-danger': danger,
+			'ed-icon-btn-pressed-fill': pressedFill,
+		},
 		className,
 	]}
 	{type}
@@ -130,6 +138,23 @@
 	.ed-icon-btn:not(:disabled):active {
 		background: var(--surface-3);
 		color: var(--text-primary);
+	}
+	/* A pressed fill: only the glyph fills with the accent while the toggle is on, the button's ground staying as an
+	   unpressed one; the fill and stroke ease over the micro duration */
+	.ed-icon-btn-pressed-fill :global(svg) {
+		transition:
+			fill var(--ed-duration-micro) var(--ed-ease-out),
+			stroke var(--ed-duration-micro) var(--ed-ease-out);
+	}
+	.ed-icon-btn-pressed-fill[aria-pressed='true'] {
+		background: transparent;
+	}
+	.ed-icon-btn-pressed-fill[aria-pressed='true']:not(:disabled):hover {
+		background: var(--surface-2);
+	}
+	.ed-icon-btn-pressed-fill[aria-pressed='true'] :global(svg) {
+		fill: var(--brand-primary);
+		stroke: var(--brand-primary);
 	}
 	/* The press (D-49): compress from the top, bottom edge fixed */
 	.ed-icon-btn:not(:disabled):active {

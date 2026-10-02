@@ -4,7 +4,7 @@ status: draft
 summary: The first-launch wizard step by step, each domain's first run and empty states, the guided tour, adding a domain later, and re-running onboarding from settings.
 read-this-if: You are designing first launch, empty states, or the moment a grant is first requested.
 depends-on: [grants, shell, profile]
-updated: 2026-09-27
+updated: 2026-10-01
 ---
 
 ## Goals
@@ -19,7 +19,7 @@ Get the owner to a useful Garden in under five minutes, ask for exactly the gran
 | 2 | Language | English or Japanese (D-20) | Crate's LanguageStep |
 | 3 | Appearance | light, dark or system; accent | Crate's AppearanceStep |
 | 4 | Your name | `preferred-name`, used by greetings and the Gardener | new |
-| 5 | Home | a Place of kind `home`; a city is enough, address optional; explains that `home-area` is derived and what reads it (D-38) | new |
+| 5 | Home | a Place of kind `home`; a city is enough, address optional; explains that `home-area` is derived and what reads it (D-38). The form is the change-home sheet's (D-143): the address form of D-137, Find and the map | new |
 | 6 | Domains | choose and order; Hearth, Toolbench and Sky preselected; later domains shown as "coming" | new |
 | 7 | Gardener | skip, enter a key for one provider, or (Phase 2, desktop) choose a local model; the default 10 USD monthly cap is shown and editable | new |
 | 8 | Privacy | the four tiers in one sentence each; what the Gardener can see, with the "can see" chip demonstrated; the two T2 grants Phase 1 asks for, `allergy` and `medical-dietary-restriction`, each with what it enables and what happens without it (D-25) | new |

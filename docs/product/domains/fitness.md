@@ -4,7 +4,7 @@ status: draft
 summary: Workouts and templates, an exercise library, gyms, goals, body metrics with a weight trend, supplements and doses, and a training schedule as routines. Owns the body until Wellspring exists. Id `fitness`, Phase 2.
 read-this-if: You are working on workouts, body metrics, weight logging, gyms or supplements.
 depends-on: [substrate/registry, substrate/primitives, substrate/tasks, substrate/grants, substrate/shell, substrate/ai]
-updated: 2026-09-30
+updated: 2026-10-02
 ---
 
 ## 1. Purpose
@@ -106,3 +106,7 @@ Open: OQ-8. A future `parent: health` is a manifest field, not a data move.
 ## Registry rows
 
 Appended under Vigor: facts `gym-preference` T1, `training-schedule` T1, `equipment` T1, `fitness-goal` T1, `favorite-supplement` T1, `training-limitation` T2, `current-weight` T2; entities `exercise` T0, `workout-template` T1, `workout-log` T1, `gym` T1, `training-goal` T1, `body-metric` T2, `supplement` T1, `intake-log` T1; kind `workout-session` (event, T1).
+
+## Handoffs
+
+- **The weight quick log (issue 6; D-12, D-145).** Quick Log is built and waits for a number. Declare the quick action in Vigor's manifest as `kind: "number"` with its `unit` and a `keyword` ("Weight"), and bind two things in the app's bindings: a handler in `quickActionHandlers` that writes a `body-metric` with source `quick-log` and answers its undo, and a readout in `quickActionReadouts` that answers `last`, `series` (seven days, oldest first) and `reference` (the average or the goal). The sheet's tab then shows the unit, the last value and the sparkline, the Garden's `quick-log` tile (`apps/desktop/src/lib/shell/garden/widgets/QuickLogTile.svelte`) draws the same series in place of its prompt, and "log weight 82.4" parses, with no change to the shell. The supplement dose is a `check` whose readout answers `options`.

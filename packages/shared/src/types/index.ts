@@ -32,25 +32,32 @@ export type { ModelGrade } from '../manifest/types.js'
 export type WeatherProvider = 'open-meteo' | 'weatherkit'
 export const weatherProviders: readonly WeatherProvider[] = ['open-meteo', 'weatherkit']
 
+/** The maps app "Open in Maps" hands a place to (product/domains/places.md, "Settings"). */
+export type MapsApp = 'apple' | 'google' | 'osm'
+export const mapsApps: readonly MapsApp[] = ['apple', 'google', 'osm']
+
 /**
- * The home place, as a setting until Places exist (D-38 makes it a Place of kind `home`): a label and the coordinates
- * Sky forecasts for. Only rounded coordinates ever leave the device (D-60).
+ * The home place as Sky forecasts for it: a label and coordinates. The home itself is the Place of kind `home`
+ * (D-38, D-141; `@eden/shared/home`). Only rounded coordinates ever leave the device (D-60).
  */
 export interface HomePlace {
 	label: string
 	latitude: number
 	longitude: number
-	/** The city, region and country the place is in, as the geocoder named them: what `home-area` is derived from
-	 * until the home Place carries it (D-38, D-72). Absent for a home that was never chosen. */
+	/** Where the place is, read from the home's address: what `home-area` is derived from (D-38, D-152). Absent for
+	 * a home with no city. */
 	area?: HomeArea
 }
 
 export interface HomeArea {
+	/** The street alone, without the house number or a unit (D-152); the fact carries it, Sky and Meadow do not. */
+	street?: string
 	city: string
 	region: string
+	postalCode?: string
 	country: string
 }
-/** Rowan's Hyde Park, Austin (design/sample-data.md), until onboarding asks. */
+/** Rowan's Hyde Park, Austin (design/sample-data.md): the sample home, shown until the owner chooses theirs. */
 export const DEFAULT_HOME: HomePlace = { label: 'Hyde Park', latitude: 30.305, longitude: -97.735 }
 
 export interface AppInfo {

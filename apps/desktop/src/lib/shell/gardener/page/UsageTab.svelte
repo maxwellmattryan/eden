@@ -93,6 +93,13 @@
 			values: buckets.map((bucket) => rows.find((row) => row.bucket === bucket && row.grade === grade)?.costUsd ?? 0),
 		}))
 	})
+	// How much of what was sent over the chart's stretch the provider read from its cache (D-147): the one figure
+	// that says whether the request's breakpoints are holding. Nothing when nothing was sent.
+	const cachedShare = $derived.by(() => {
+		const sent = sumUsage(usageOf(days, { fromDay: from }))
+		const all = sent.tokensIn + sent.cacheRead + sent.cacheWrite
+		return all > 0 ? Math.round((sent.cacheRead / all) * 100) : undefined
+	})
 	// a day and a week are named by their month and day, a month by its year and month, a year by itself
 	const bucketLabel = (bucket: string) => (by === 'day' || by === 'week' ? bucket.slice(5) : bucket)
 	const chartLabel = $derived(
@@ -187,6 +194,9 @@
 				/>
 			</header>
 			<BarChart {series} labels={buckets.map(bucketLabel)} format={money} label={chartLabel} />
+			{#if cachedShare !== undefined}
+				<p class="cached">{$t('gardenerPage.usage.cachedShare', { values: { percent: cachedShare } })}</p>
+			{/if}
 		</section>
 
 		<div class="tables">
@@ -238,6 +248,11 @@
 	}
 	.quiet {
 		margin: calc(-1 * var(--space-3)) 0 0;
+		font: var(--ed-t-body-sm);
+		color: var(--text-secondary);
+	}
+	.cached {
+		margin: 0;
 		font: var(--ed-t-body-sm);
 		color: var(--text-secondary);
 	}

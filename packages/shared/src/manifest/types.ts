@@ -22,8 +22,9 @@ export type SidebarGroupId = 'today' | 'shell' | 'domains'
 export type ToolAccess = 'read' | 'write-draft' | 'write'
 /** What a model-backed tool asks of a model, lowest first (D-74). Never "tier", which is sensitivity. */
 export type ModelGrade = 'light' | 'standard' | 'deep'
-/** What a tool may need of a model beyond text: to call plain tools, or to see an image. */
-export type ModelFlag = 'tools' | 'vision'
+/** What a tool may need of a model beyond text: to call plain tools, to see an image, or to search the web through
+ * a tool the provider runs on its own side (D-132). */
+export type ModelFlag = 'tools' | 'vision' | 'search'
 export type CaptureSource = 'photo' | 'receipt' | 'barcode' | 'share-sheet'
 export type DeviceCapability = 'camera' | 'location-precise' | 'os-notifications' | 'healthkit'
 export type NotificationChannel = 'in-app' | 'os'
@@ -60,11 +61,22 @@ export interface WidgetDeclaration {
 	empty: string
 }
 
+/** What a quick action is in the Quick Log sheet: a field of one of three kinds, or the way into a surface. */
+export type QuickActionKind = 'text' | 'number' | 'check' | 'launch'
+
 /** A Quick Log entry (D-12). */
 export interface QuickActionDeclaration {
 	id: string
 	label: string
 	icon: string
+	/** `launch` opens a surface of the domain's own and takes no value (Hearth's capture, D-13). */
+	kind: QuickActionKind
+	/** The locale key of the word a one-liner names the action by: "grocery" in "log grocery oat milk". */
+	keyword: string
+	/** The locale key of the field's placeholder. */
+	placeholder?: string
+	/** A number's unit, as written beside the field. */
+	unit?: string
 }
 
 /**

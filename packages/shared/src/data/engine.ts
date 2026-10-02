@@ -1015,8 +1015,8 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 
 		// The egress ledger (`egress.rs`, D-71): this browser's, by destination and local day.
 
-		/** Counts one request to the destination today, with the bytes it hands over. */
-		recordEgress(destination: string, bytesOut: number): void {
+		/** Counts a request to the destination today, or the several a batch stands for, with the bytes handed over. */
+		recordEgress(destination: string, bytesOut: number, requests = 1): void {
 			if (destination === VAULT_AI) throw new DataError('egress:never', 'nothing in the Vault goes to a model')
 			if (!isResourceId(destination)) {
 				throw new DataError('egress:invalid', `not a destination: ${JSON.stringify(destination)}`)
@@ -1026,11 +1026,13 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 				const first = shiftDay(day, -EGRESS_RETENTION_DAYS)
 				state.egress = state.egress.filter((row) => row.day >= first)
 				const row = state.egress.find((entry) => entry.destination === destination && entry.day === day)
+				// a batch of none is one request, and never more than the crate's `MAX_BATCH`
+				const count = Math.min(10_000, Math.max(1, Math.round(requests) || 1))
 				if (row) {
-					row.requests += 1
+					row.requests += count
 					row.bytesOut += Math.max(0, Math.round(bytesOut))
 				} else {
-					state.egress.push({ destination, day, requests: 1, bytesOut: Math.max(0, Math.round(bytesOut)) })
+					state.egress.push({ destination, day, requests: count, bytesOut: Math.max(0, Math.round(bytesOut)) })
 				}
 			})
 		},

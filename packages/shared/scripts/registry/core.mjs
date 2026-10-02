@@ -17,13 +17,15 @@ const SIZES = ['s', 'm', 'l']
 const ACCESS = ['read', 'write-draft', 'write']
 /** A model-backed tool's grade, lowest first, and what it may need of a model beyond text (D-74). */
 const GRADES = ['light', 'standard', 'deep']
-const MODEL_FLAGS = ['tools', 'vision']
+const MODEL_FLAGS = ['tools', 'vision', 'search']
 /** The fields a tool has; `grade`, `needs` and `minContext` only when a model runs it. */
 const TOOL_FIELDS = ['id', 'access', 'confirm', 'reads', 'grade', 'needs', 'minContext']
 const CAPTURE_SOURCES = ['photo', 'receipt', 'barcode', 'share-sheet']
 const DEVICE_CAPABILITIES = ['camera', 'location-precise', 'os-notifications', 'healthkit']
 const CHANNELS = ['in-app', 'os']
 const VERBS = ['go', 'create', 'ask', 'log', 'run']
+/** What a quick action is in the Quick Log sheet (D-12): a field of one of three kinds, or the way into a surface. */
+const QUICK_ACTION_KINDS = ['text', 'number', 'check', 'launch']
 const SIDEBAR_GROUPS = ['shell', 'domains']
 
 /** The fields a manifest has today, and the ones the manifest doc names that no Phase 1 domain consumes. */
@@ -127,7 +129,7 @@ export function build(sources) {
 
 	const resources = []
 	const seen = new Map()
-	function addRows(file, owner, ownerPhase, rows, category) {
+	function addRows(file, owner, ownerPhase, rows, category, built) {
 		for (const row of list(rows)) {
 			const id = row?.id
 			if (typeof id !== 'string' || !ID.test(id)) {
@@ -156,14 +158,16 @@ export function build(sources) {
 				const prefix = domainIds.find((domain) => id.startsWith(`${domain}-`))
 				if (prefix) fail(file, `the kind "${id}" carries the domain prefix "${prefix}-" (D-36)`)
 			}
-			resources.push({ id, category, primitive, owner, tier: row.tier, phase, live: phase === 1 })
+			// D-130: a row is live when it is of Phase 1, or when its owner is built and the row is of the owner's phase
+			const live = phase === 1 || (built && phase === ownerPhase)
+			resources.push({ id, category, primitive, owner, tier: row.tier, phase, live })
 		}
 	}
-	function addOwner(file, owner, phase, block) {
-		addRows(file, owner, phase, block?.facts, 'fact')
-		addRows(file, owner, phase, block?.primitives, 'primitive')
-		addRows(file, owner, phase, block?.entities, 'entity')
-		addRows(file, owner, phase, block?.kinds, 'kind')
+	function addOwner(file, owner, phase, block, built = false) {
+		addRows(file, owner, phase, block?.facts, 'fact', built)
+		addRows(file, owner, phase, block?.primitives, 'primitive', built)
+		addRows(file, owner, phase, block?.entities, 'entity', built)
+		addRows(file, owner, phase, block?.kinds, 'kind', built)
 	}
 
 	addOwner(sources.substrate.file, 'substrate', undefined, sources.substrate.data)
@@ -193,7 +197,7 @@ export function build(sources) {
 	if (new Set(order).size !== order.length) fail(sources.shell.file, '"domains" lists a domain twice')
 	const built = order.filter((id) => manifests.has(id)).map((id) => manifests.get(id))
 
-	for (const { file, data } of built) addOwner(file, data.id, data.phase, data.resources)
+	for (const { file, data } of built) addOwner(file, data.id, data.phase, data.resources, true)
 	for (const [owner, block] of Object.entries(sources.planned.data.owners ?? {})) {
 		if (!ID.test(owner) || !domainIds.includes(owner)) {
 			fail(sources.planned.file, `"${owner}" is not a domain with a glyph in the kit's icon-list.json`)
@@ -349,9 +353,26 @@ export function build(sources) {
 			else if (quickActions.some((other) => other.id === action.id))
 				fail(file, `the quick action "${action.id}" is declared twice`)
 			else {
-				localeKey(file, `the quick action "${action.id}"`, action.label)
-				icon(file, `the quick action "${action.id}"`, action.icon)
-				quickActions.push({ id: action.id, label: action.label, icon: action.icon })
+				const what = `the quick action "${action.id}"`
+				localeKey(file, what, action.label)
+				icon(file, what, action.icon)
+				if (!QUICK_ACTION_KINDS.includes(action.kind))
+					fail(file, `${what} has the kind ${JSON.stringify(action.kind)}; one of ${QUICK_ACTION_KINDS.join(', ')}`)
+				localeKey(file, `${what}'s keyword`, action.keyword)
+				if (action.placeholder !== undefined) localeKey(file, `${what}'s placeholder`, action.placeholder)
+				if (action.unit !== undefined && (action.kind !== 'number' || typeof action.unit !== 'string' || !action.unit))
+					fail(file, `${what} has a unit, which only a number has, as a word`)
+				if (action.kind === 'launch' && action.placeholder !== undefined)
+					fail(file, `${what} has a placeholder, and a launch has no field`)
+				quickActions.push({
+					id: action.id,
+					label: action.label,
+					icon: action.icon,
+					kind: action.kind,
+					keyword: action.keyword,
+					...(action.placeholder !== undefined ? { placeholder: action.placeholder } : {}),
+					...(action.unit !== undefined ? { unit: action.unit } : {}),
+				})
 			}
 		}
 
@@ -485,6 +506,8 @@ export function build(sources) {
 				const action = quickActions.find((other) => other.id === entry.quickAction)
 				if (!action)
 					fail(file, `a palette entry names the quick action "${entry.quickAction}", which the domain does not declare`)
+				else if (entry.verb === 'log' && action.kind === 'launch')
+					fail(file, `a palette entry logs the quick action "${action.id}", which is a launch and takes no value`)
 				else
 					entries.push({
 						id: `${domain}.${action.id}`,
@@ -719,7 +742,7 @@ function rust(resources) {
 		.map((row) => {
 			const primitive = row.primitive ? `Some("${row.primitive}")` : 'None'
 			const phase = row.phase === 'later' ? 'None' : `Some(${row.phase})`
-			return `    Resource { id: "${row.id}", category: Category::${pascal(row.category)}, primitive: ${primitive}, owner: "${row.owner}", tier: Tier::${pascal(row.tier)}, phase: ${phase} },`
+			return `    Resource { id: "${row.id}", category: Category::${pascal(row.category)}, primitive: ${primitive}, owner: "${row.owner}", tier: Tier::${pascal(row.tier)}, phase: ${phase}, live: ${row.live} },`
 		})
 		.join('\n')
 	return `// ${HEADER}

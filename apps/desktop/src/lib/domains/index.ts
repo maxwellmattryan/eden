@@ -4,10 +4,11 @@
 import { shell, type DomainDeclaration } from '@eden/shared/manifest'
 import { kitchenManifest } from './kitchen/manifest.js'
 import type { DomainManifest, WidgetDeclaration } from './manifest.js'
+import { placesManifest } from './places/manifest.js'
 import { toolbenchManifest } from './toolbench/manifest.js'
 import { weatherManifest } from './weather/manifest.js'
 
-const bound: DomainManifest[] = [kitchenManifest, toolbenchManifest, weatherManifest]
+const bound: DomainManifest[] = [kitchenManifest, toolbenchManifest, weatherManifest, placesManifest]
 
 export const manifests: DomainManifest[] = shell.domains.flatMap((id) => bound.filter((manifest) => manifest.id === id))
 
@@ -28,6 +29,7 @@ export type {
 	DomainRoute,
 	QuickAction,
 	QuickActionHandler,
+	QuickLogReadout,
 	WidgetBinding,
 	WidgetDeclaration,
 } from './manifest.js'

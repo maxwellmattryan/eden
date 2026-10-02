@@ -1,5 +1,6 @@
 // Hearth's shapes (product/domains/kitchen.md). The store holds them with their ids; a row's payload is the same
 // shape without the id, which the row carries itself.
+import type { Address } from '../../address/index.js'
 import type { EntityTypeId } from '../../registry/index.js'
 
 export type StockLocation = 'fridge' | 'freezer' | 'pantry' | 'counter' | 'household'
@@ -163,10 +164,11 @@ export interface GroceryStore {
 
 /**
  * What a Place will hold of a store (product/substrate/primitives.md, "Place"), under the names it has there, so
- * the move to a `venue` Place is a copy. The address is the owner's to type and is T2, as a Place's is.
+ * the move to a `venue` Place is a copy. The address is the owner's to type and is T2, as a Place's is: its parts
+ * (D-138), or one line from before it had them, which is read as the first line and written back in parts.
  */
 export interface StorePlace {
-	address?: string
+	address?: Address | string
 	url?: string
 	phone?: string
 }

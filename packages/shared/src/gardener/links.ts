@@ -64,15 +64,22 @@ export function resolveLink(url: string, links: readonly string[]): string | und
 	)
 }
 
-/** Whether the conversation holds a page that was read: from then on its writes are confirmed each time. */
-export function holdsPage(messages: readonly Pick<Message, 'blocks'>[]): boolean {
+/**
+ * Whether the conversation holds a page that was read, or what a web search returned, which is a page's words too
+ * (D-132): from then on its writes are confirmed each time. `searches` says whether a tool searches the web, by its
+ * domain and id; with none given, only a page that was read counts.
+ */
+export function holdsPage(
+	messages: readonly Pick<Message, 'blocks'>[],
+	searches: (domain: string, tool: string) => boolean = () => false
+): boolean {
 	return messages.some((message) =>
 		(message.blocks as MessageBlock[]).some(
 			(block) =>
 				block.kind === 'tool' &&
 				block.state === 'done' &&
-				block.call.domain === 'substrate' &&
-				block.call.tool === READ_PAGE
+				((block.call.domain === 'substrate' && block.call.tool === READ_PAGE) ||
+					searches(block.call.domain, block.call.tool))
 		)
 	)
 }

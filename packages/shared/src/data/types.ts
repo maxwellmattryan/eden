@@ -162,7 +162,7 @@ export type TaskRow = Row & { type: 'task' } & Stored<TaskFields, 'kind' | 'titl
 export type TaskInput = Input<TaskFields, 'kind' | 'title'>
 export type TaskPatch = Patch<TaskFields, 'kind' | 'title' | 'priority' | 'streak' | 'done'>
 
-export type EventKind = 'local-event' | 'shop-day'
+export type EventKind = 'local-event' | 'shop-day' | 'outing'
 export interface EventFields {
 	kind: EventKind
 	title: string
@@ -202,7 +202,7 @@ export type PlaceInput = Input<PlaceFields, 'kind' | 'name'>
 export type PlacePatch = Patch<PlaceFields, 'kind' | 'name'>
 
 export type AttachmentKind =
-	'document' | 'photo' | 'haul-photo' | 'item-photo' | 'recipe-photo' | 'store-photo' | 'render'
+	'document' | 'photo' | 'haul-photo' | 'item-photo' | 'recipe-photo' | 'store-photo' | 'place-photo' | 'render'
 export interface AttachmentRow extends Row {
 	type: 'attachment'
 	kind: AttachmentKind

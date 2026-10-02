@@ -1,13 +1,17 @@
 <script lang="ts">
-	// General: the language (D-20), then the measurement system, the week start and the clock every domain reads
-	// (D-58). Units and the clock show an example of the current choice, written by the formatters the domains use.
+	// General: the language (D-20), the home every domain measures from (D-143), then the measurement system, the
+	// week start and the clock every domain reads (D-58). Units and the clock show an example of the current choice, written by the formatters the domains use.
 	// Date formats, timezone and work hours follow.
-	import { Segmented } from '@eden/ui-kit'
+	import { Button, Segmented } from '@eden/ui-kit'
+	import { formatAddress } from '@eden/shared/address'
 	import { formatTime } from '@eden/shared/dates'
+	import { home } from '@eden/shared/home'
 	import { t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { clockFormats, languages, measurementSystems, weekStarts } from '@eden/shared/types'
 	import { distance, pressure, rainfall, speed } from '@eden/shared/weather'
+	import { homeUi } from '$lib/shell/home/home-ui.svelte'
+	import { settingsUi } from '../settings-ui.svelte'
 	import SettingsRow from './SettingsRow.svelte'
 
 	// half past six in the evening, on the device's own clock
@@ -30,6 +34,17 @@
 			),
 		].join(', ')
 	)
+	/** Where home is, in a line: its address, or its name while it has none. */
+	const homeExample = $derived(
+		home.chosen
+			? formatAddress(home.current.address, { locale: settings.language }) || home.current.label
+			: $t('settings.general.homeUnset')
+	)
+	/** One sheet at a time: Settings closes, and the home's sheet opens in its place. */
+	function changeHome() {
+		settingsUi.hide()
+		homeUi.show()
+	}
 	const clockExample = $derived(formatTime(SAMPLE_TIME, { lang: settings.language, clock: settings.clock }))
 </script>
 
@@ -40,6 +55,10 @@
 		label={$t('settings.general.language')}
 		onchange={(index) => settings.setLanguage(languages[index] ?? 'en')}
 	/>
+</SettingsRow>
+
+<SettingsRow label={$t('settings.general.home')} help={$t('settings.general.homeHelp')} example={homeExample}>
+	<Button label={$t(home.chosen ? 'home.card.change' : 'home.card.set')} icon="house" onclick={changeHome} />
 </SettingsRow>
 
 <SettingsRow

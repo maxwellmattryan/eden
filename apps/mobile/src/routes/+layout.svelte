@@ -12,6 +12,7 @@
 	import { env } from '$env/dynamic/public'
 	import { BottomTabBar, ToastHost, UiKitProvider, domainGlyph, type BottomTab, type GlyphId } from '@eden/ui-kit'
 	import { fileDropGuard } from '@eden/shared/api'
+	import { home } from '@eden/shared/home'
 	import { initializeI18n, locale, t, uiKitStrings } from '@eden/shared/i18n'
 	import { shell, tabBar } from '@eden/shared/manifest'
 	import { rememberPlace, rememberScroll, scrollOf, tabOf } from '@eden/shared/navigation'
@@ -78,6 +79,7 @@
 	onMount(() => {
 		const cleanupErrors = useGlobalErrorHandler()
 		settings.load()
+		void home.load()
 		void initializeI18n(settings.language)
 			.catch(() => null)
 			.then(dismissSplash)

@@ -11,7 +11,7 @@ updated: 2026-10-01
 
 | built | not yet |
 |---|---|
-| the scheduler with `once`, `daily` and `every`; signals with a key that emits once; rules from the manifests; the inbox rows; the alarm; the runtime in both apps; the refresh coordinator; the desktop bell as a plain list with mark-read; OS notifications on desktop behind the capability grant; Sky's alerts and forecast; Hearth's expiring digest, its weekly low-stock card and its shop-day reminder; the task signals, emitted by the frontend (D-75) | the substrate's own signals from the changes seam, the two task signals apart; the activity feed on signals; grouping, snooze and clearing in the inbox; rule toggles in Settings; quiet hours and digests; weekly and monthly triggers; the inbox and OS notifications on mobile; background execution on mobile; a measurement of the cadence in a hidden window |
+| the scheduler with `once`, `daily` and `every`; signals with a key that emits once; rules from the manifests; the inbox rows; the alarm; the runtime in both apps; the refresh coordinator; the desktop bell as a plain list with mark-read; OS notifications on desktop behind the capability grant; Sky's alerts and forecast; Hearth's expiring digest, its weekly low-stock card and its shop-day reminder; Meadow's weekly listings search (D-134); the task signals, emitted by the frontend (D-75) | the substrate's own signals from the changes seam, the two task signals apart; the activity feed on signals; grouping, snooze and clearing in the inbox; rule toggles in Settings; quiet hours and digests; weekly and monthly triggers; the inbox and OS notifications on mobile; background execution on mobile; a measurement of the cadence in a hidden window |
 
 D-73 records the decisions; this page is how they work.
 
@@ -177,6 +177,14 @@ Each active alert is emitted as `weather.alert` with its id as the key, so it is
 
 `ensureShopDay()` sets or cancels the one-shot from the lists as they are stored: when the shell starts, after a seed, its undo and a reload, when the owner sets or clears a shop day in a store's form, completes a list or deletes a store, and after a morning's reminders have been said. A shop day set once its morning has passed has no reminder: a list's row changes only when its shop day or its store does, so its `updatedAt` is when the day was set (`reminderMorning`). There is no weekly trigger yet, so `stock.low` rides the daily schedule and its key does the spacing: the first morning of a week on which something is low says so, and the later ones are dropped.
 
+**Meadow** (`packages/shared/src/domains/places/signals.ts`, with the pure parts in `listings.ts`) uses the same pattern for a model request nobody pressed (D-134).
+
+| schedule | on fire | rule |
+|---|---|---|
+| `places.weekly`, daily at 09:00 | on a Sunday, or on the Monday after when Sunday's did not run, runs the listings search once; when it found something, emits `listing.matched` with the count and the first title, keyed by the Sunday | `matching-listings`, in-app |
+
+Here the key alone is not enough, since what must happen once a week is the request and not only the card: `weeklyMorning` keeps the Sunday it last ran for on the device (`eden:places:weekly`) and `weeklyDue` reads it. A run the Gardener answered `busy` leaves the week open for the next morning; any other outcome settles it. The search and the owner's off switch are the app's, given to `bindPlacesSignals(search, on)` in the domain's `subscribe` binding, because the Gardener's runtime is not in `@eden/shared`. The phone binds no `subscribe` for Meadow, so the schedule is taken there and nothing hears it. What the search may and may not do is in `engineering/meadow.md`, "Listings and outings". `outing-reminder` is declared with no signal and answers nothing (#28).
+
 **Tasks** (`packages/shared/src/tasks/signals.ts`, with the pure part, `taskSignal`, in `rules.ts`). The data layer emits nothing for a task (D-75): the crate cannot see a routine's or a habit's completion, which lives in `progress`, and cannot evaluate the rules. So the frontend emits, once the write has landed, one signal per owner action:
 
 | signal | when | key | payload |
@@ -208,6 +216,7 @@ The one rule every later issue follows: any code that creates or completes a tas
 | `scripts/registry/core.test.mjs` | what the builder refuses of a rule and a schedule |
 | `weather/nws.test.ts` | the alert service's answers, from two captures |
 | `domains/kitchen/digest.test.ts` | the digest and the shop day's morning |
+| `domains/places/signals.test.ts`, `listings.test.ts` | the weekly morning: Sunday, the Monday after a busy one, off, said once, settled when skipped; the Sunday a day belongs to |
 | `tasks/rules.test.ts` | the two task signals: names, payloads, keys, the clipped title; `signals/rules.test.ts` that a task URI is T1 |
 
 The alarm, the runtime and the OS notification are not under test: they need a window. What is **not measured** is how punctual the alarm and the take are while the window is hidden. The alarm's thread is outside the webview, but macOS may still slow a hidden app (App Nap). Due times are wall-clock instants, so a slowed look is late and never lost. To measure: minimise the `yarn dev` window for twenty minutes and compare the `scheduler: something is due` lines in the log (`RUST_LOG=debug`), and the NWS count in Settings → Privacy, with five-minute steps.

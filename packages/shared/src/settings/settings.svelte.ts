@@ -16,19 +16,18 @@ import {
 import { GRADES } from '../gardener/types.js'
 import { setLanguage as setI18nLanguage } from '../i18n/index.js'
 import {
-	DEFAULT_HOME,
 	clockFormats,
 	fontSettings,
 	languages,
+	mapsApps,
 	measurementSystems,
 	themeSettings,
 	weatherProviders,
 	weekStarts,
 	type ClockFormat,
 	type FontSetting,
-	type HomeArea,
-	type HomePlace,
 	type Language,
+	type MapsApp,
 	type MeasurementSystem,
 	type ModelGrade,
 	type ThemeSetting,
@@ -46,6 +45,10 @@ export const storage = {
 	weekStart: 'eden:week-start',
 	clock: 'eden:clock',
 	weatherProvider: 'eden:weather-provider',
+	mapsApp: 'eden:maps-app',
+	placesDiscovery: 'eden:places-discovery',
+	placesWeekly: 'eden:places-weekly',
+	placesDetailsOff: 'eden:places-details-off',
 	home: 'eden:home',
 	gardenerGrade: 'eden:gardener-grade',
 	gardenerPanelWidth: 'eden:gardener-panel-width',
@@ -85,42 +88,9 @@ function oneOf<T extends string>(value: string | null, allowed: readonly T[], fa
 	return value !== null && (allowed as readonly string[]).includes(value) ? (value as T) : fallback
 }
 
-function isArea(value: unknown): value is HomeArea {
-	const area = value as HomeArea | null
-	return (
-		typeof area === 'object' &&
-		area !== null &&
-		typeof area.city === 'string' &&
-		typeof area.region === 'string' &&
-		typeof area.country === 'string'
-	)
-}
-
-function isHome(value: unknown): value is HomePlace {
-	const place = value as HomePlace | null
-	return (
-		typeof place === 'object' &&
-		place !== null &&
-		typeof place.label === 'string' &&
-		Number.isFinite(place.latitude) &&
-		Number.isFinite(place.longitude)
-	)
-}
-
-/** The home as it is kept: an area that is not one is dropped, the place itself stands. */
-function asHome(place: HomePlace): HomePlace {
-	const { label, latitude, longitude, area } = place
-	return isArea(area) ? { label, latitude, longitude, area } : { label, latitude, longitude }
-}
-
-function readHome(): HomePlace {
-	try {
-		const parsed: unknown = JSON.parse(read(storage.home) ?? 'null')
-		return isHome(parsed) ? asHome(parsed) : DEFAULT_HOME
-	} catch {
-		return DEFAULT_HOME
-	}
-}
+/** The home as a setting, from before it was a Place row (D-141): read once by the home store, then removed. */
+export const readLegacyHome = (): string | null => read(storage.home)
+export const clearLegacyHome = (): void => write(storage.home, null)
 
 export class Settings {
 	theme = $state<ThemeSetting>('system')
@@ -139,8 +109,14 @@ export class Settings {
 	clock = $state<ClockFormat>('24h')
 	/** The forecast provider Sky asks first (D-56). */
 	weatherProvider = $state<WeatherProvider>('open-meteo')
-	/** The home place Sky forecasts for, until Places exist (D-38). */
-	home = $state<HomePlace>(DEFAULT_HOME)
+	/** The maps app "Open in Maps" hands a place to; Apple's where the device is Apple's. */
+	mapsApp = $state<MapsApp>('google')
+	/** Whether Meadow may ask the Gardener to find places and listings (D-128). */
+	placesDiscovery = $state(true)
+	/** Whether Meadow's weekly listings search runs on its own (D-134). */
+	placesWeekly = $state(true)
+	/** The detail sources the owner turned off, by id (D-128): each is on until it is here. */
+	placesDetailsOff = $state<string[]>([])
 	/** The grade the Gardener's conversation runs at until the owner switches it on the chip (D-74). */
 	gardenerGrade = $state<ModelGrade>('standard')
 	/** The Gardener's dock, in px, as the owner last dragged it; null until they do, and the dock takes its default. */
@@ -172,11 +148,14 @@ export class Settings {
 		this.weekStart = oneOf(read(storage.weekStart), weekStarts, 'monday')
 		this.clock = oneOf(read(storage.clock), clockFormats, '24h')
 		this.weatherProvider = oneOf(read(storage.weatherProvider), weatherProviders, 'open-meteo')
+		this.mapsApp = oneOf(read(storage.mapsApp), mapsApps, this.systemMapsApp())
+		this.placesDiscovery = read(storage.placesDiscovery) !== 'off'
+		this.placesWeekly = read(storage.placesWeekly) !== 'off'
+		this.placesDetailsOff = (read(storage.placesDetailsOff) ?? '').split(',').filter(Boolean)
 		this.gardenerGrade = oneOf(read(storage.gardenerGrade), GRADES, 'standard')
 		this.gardenerPanelWidth = positiveInt(read(storage.gardenerPanelWidth))
 		this.sidebarWidth = positiveInt(read(storage.sidebarWidth))
 		this.sidebarCollapsed = read(storage.sidebarCollapsed) === 'on'
-		this.home = readHome()
 		this.resolvedTheme = this.resolveTheme(this.theme)
 		this.apply()
 		if (typeof window !== 'undefined' && window.matchMedia && !this.#media) {
@@ -285,6 +264,34 @@ export class Settings {
 		write(storage.weatherProvider, this.weatherProvider === 'open-meteo' ? null : this.weatherProvider)
 	}
 
+	/** Apple's Maps on an Apple device, where its links open the app; Google's elsewhere. */
+	systemMapsApp(): MapsApp {
+		const agent = typeof navigator === 'undefined' ? '' : navigator.userAgent
+		return /Mac|iPhone|iPad/.test(agent) ? 'apple' : 'google'
+	}
+
+	setMapsApp(app: MapsApp) {
+		this.mapsApp = oneOf(app, mapsApps, this.systemMapsApp())
+		write(storage.mapsApp, this.mapsApp === this.systemMapsApp() ? null : this.mapsApp)
+	}
+
+	setPlacesDiscovery(on: boolean) {
+		this.placesDiscovery = on
+		write(storage.placesDiscovery, on ? null : 'off')
+	}
+
+	setPlacesWeekly(on: boolean) {
+		this.placesWeekly = on
+		write(storage.placesWeekly, on ? null : 'off')
+	}
+
+	/** Turns one detail source on or off. */
+	setPlacesDetail(id: string, on: boolean) {
+		const off = this.placesDetailsOff.filter((entry) => entry !== id)
+		this.placesDetailsOff = on ? off : [...off, id]
+		write(storage.placesDetailsOff, this.placesDetailsOff.length ? this.placesDetailsOff.join(',') : null)
+	}
+
 	setGardenerGrade(grade: ModelGrade) {
 		this.gardenerGrade = oneOf(grade, GRADES, 'standard')
 		write(storage.gardenerGrade, this.gardenerGrade === 'standard' ? null : this.gardenerGrade)
@@ -303,11 +310,6 @@ export class Settings {
 	setSidebarCollapsed(collapsed: boolean) {
 		this.sidebarCollapsed = collapsed
 		write(storage.sidebarCollapsed, collapsed ? 'on' : null)
-	}
-
-	setHome(home: HomePlace) {
-		this.home = isHome(home) ? asHome(home) : DEFAULT_HOME
-		write(storage.home, JSON.stringify(this.home))
 	}
 
 	/** The choices as they are stored, by name: what an export bundle carries. A choice left at its default is absent. */

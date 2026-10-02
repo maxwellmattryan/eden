@@ -5,6 +5,7 @@ import {
 	ANTHROPIC,
 	ANTHROPIC_SEED,
 	effectiveProvider,
+	effortEdit,
 	gradeMapOf,
 	modelLookup,
 	priceRatio,
@@ -23,10 +24,30 @@ describe('the seed', () => {
 		expect(
 			ANTHROPIC_SEED.models.map(({ id, flags, contextTokens, pricing }) => [id, flags, contextTokens, pricing])
 		).toEqual([
-			['claude-haiku-4-5-20251001', ['tools', 'vision'], 200_000, { input: 1, output: 5, cacheRead: 0.1 }],
-			['claude-sonnet-5-5', ['tools', 'vision'], 1_000_000, { input: 2, output: 10, cacheRead: 0.2 }],
-			['claude-opus-5-5', ['tools', 'vision'], 1_000_000, { input: 4, output: 20, cacheRead: 0.2 }],
-			['claude-fable-5-1', ['tools', 'vision'], 1_000_000, { input: 10, output: 50, cacheRead: 0.25 }],
+			[
+				'claude-haiku-4-5-20251001',
+				['tools', 'vision', 'search'],
+				200_000,
+				{ input: 1, output: 5, cacheRead: 0.1, search: 0.01 },
+			],
+			[
+				'claude-sonnet-5-5',
+				['tools', 'vision', 'search'],
+				1_000_000,
+				{ input: 2, output: 10, cacheRead: 0.2, search: 0.01 },
+			],
+			[
+				'claude-opus-5-5',
+				['tools', 'vision', 'search'],
+				1_000_000,
+				{ input: 4, output: 20, cacheRead: 0.2, search: 0.01 },
+			],
+			[
+				'claude-fable-5-1',
+				['tools', 'vision', 'search'],
+				1_000_000,
+				{ input: 10, output: 50, cacheRead: 0.25, search: 0.01 },
+			],
 		])
 	})
 
@@ -38,6 +59,46 @@ describe('the seed', () => {
 		expect(validateProvider({ ...ANTHROPIC_SEED, models: [own, ...rest] })).toEqual([])
 		const wrong = { ...first, pricing: { ...first.pricing, cacheWrite: -1 } }
 		expect(validateProvider({ ...ANTHROPIC_SEED, models: [wrong, ...rest] })).toHaveLength(1)
+	})
+
+	it('prices a web search by the search, names the provider’s own search tool, and refuses a fee that is not one', () => {
+		for (const model of ANTHROPIC_SEED.models) expect(model.pricing.search).toBe(0.01)
+		expect(ANTHROPIC_SEED.serverTools?.search).toEqual({ type: 'web_search_20250305', name: 'web_search' })
+		const first = ANTHROPIC_SEED.models[0]!
+		const rest = ANTHROPIC_SEED.models.slice(1)
+		const free = { ...first, pricing: { input: 1, output: 5, cacheRead: 0.1 } }
+		expect(validateProvider({ ...ANTHROPIC_SEED, models: [free, ...rest] })).toEqual([])
+		const wrong = { ...first, pricing: { ...first.pricing, search: -0.01 } }
+		expect(validateProvider({ ...ANTHROPIC_SEED, models: [wrong, ...rest] })).toEqual([
+			'anthropic: the model "claude-haiku-4-5-20251001" costs -0.01 per search; a number, zero or more',
+		])
+		// the owner's edits keep the server tool, and may change what a search costs
+		const { provider } = effectiveProvider(ANTHROPIC_SEED, { models: [{ id: first.id, pricing: { search: 0.02 } }] })
+		expect(provider.serverTools).toEqual(ANTHROPIC_SEED.serverTools)
+		expect(provider.models[0]!.pricing).toMatchObject({ input: 1, search: 0.02 })
+	})
+
+	it('runs the models that reason at medium effort, and sends the light one none (D-146)', () => {
+		expect(ANTHROPIC_SEED.models.map((model) => model.effort)).toEqual([undefined, 'medium', 'medium', 'medium'])
+		expect(seeded('claude-haiku-4-5-20251001').efforts).toBeUndefined()
+		expect(seeded('claude-sonnet-5-5').efforts).toEqual(['low', 'medium', 'high', 'xhigh', 'max'])
+		const haiku = { ...seeded('claude-haiku-4-5-20251001'), effort: 'medium' }
+		expect(validateProvider({ ...ANTHROPIC_SEED, models: [haiku, ...ANTHROPIC_SEED.models.slice(1)] })).toEqual([
+			'anthropic: the model "claude-haiku-4-5-20251001" runs at the effort "medium", which it does not take',
+		])
+		// the owner's level is an edit over the seed, kept beside their other edits and gone where it says the same
+		const priced = { models: [{ id: 'claude-sonnet-5-5', pricing: { input: 3 } }] }
+		const low = effortEdit(ANTHROPIC_SEED, priced, 'claude-sonnet-5-5', 'low')
+		expect(low.models).toEqual([{ id: 'claude-sonnet-5-5', pricing: { input: 3 }, effort: 'low' }])
+		const { provider, refused } = effectiveProvider(ANTHROPIC_SEED, low)
+		expect(refused).toEqual([])
+		expect(provider.models[1]).toMatchObject({ effort: 'low', thinks: true, pricing: { input: 3 } })
+		expect(effortEdit(ANTHROPIC_SEED, low, 'claude-sonnet-5-5', 'medium')).toEqual(priced)
+		expect(effortEdit(ANTHROPIC_SEED, {}, 'claude-opus-5-5', 'medium').models).toEqual([])
+		// a level the model does not take is refused, and the seed's stands
+		const wrong = effectiveProvider(ANTHROPIC_SEED, { models: [{ id: 'claude-opus-5-5', effort: 'turbo' }] })
+		expect(wrong.refused).toHaveLength(1)
+		expect(wrong.provider.models[2]!.effort).toBe('medium')
 	})
 
 	it('maps Haiku, Sonnet and Opus to the three grades, and Fable to none', () => {
@@ -92,6 +153,11 @@ describe('the declared tools on the seed', () => {
 			'weather.forecast': [null, []],
 			'weather.rain-during-plan': [null, []],
 			'weather.sun-and-moon': [null, []],
+			'places.suggest-places': ['standard', ['search']],
+			'places.suggest-listings': ['standard', ['search']],
+			'places.import-places': ['standard', []],
+			'places.add-to-calendar': [null, []],
+			'places.update-places': [null, []],
 		})
 	})
 
@@ -157,6 +223,7 @@ describe('effectiveProvider', () => {
 			input: 5,
 			output: 20,
 			cacheRead: 0.2,
+			search: 0.01,
 		})
 		expect(provider.models.at(-1)).toEqual(added)
 		expect(provider.grades.standard).toBe('claude-next')

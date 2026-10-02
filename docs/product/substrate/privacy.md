@@ -4,7 +4,7 @@ status: draft
 summary: The sensitivity tiers T0–T3 and what each allows for storage, sync, AI and export; what never leaves the device; what third parties receive; the owner's controls; a one-screen threat model.
 read-this-if: Anything you are designing touches personal data, an external service, or the Gardener.
 depends-on: [decisions]
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 ## Principles (Phase 1)
@@ -42,7 +42,7 @@ Tiers attach to resources in `substrate/registry.md`:
 - Anything T3, including that Vault items exist. The AI subsystem has no vault reader, the manifest validator rejects a tool naming a vault resource, and the redaction step drops T3 fields as a third line of defense.
 - Any resource outside a tool's declared reads.
 - T2 resources without a standing or per-request grant.
-- Raw location beyond `home-area`.
+- Raw location beyond `home-area`: the house number, the unit and the exact point never, though the fact names the street and the postal code (D-152).
 - Content from mirrors is marked untrusted in the context pack, and tools with `act-external` always confirm, so a Google event title cannot instruct the Gardener into an action (D-8).
 
 ## Third parties and what each receives
@@ -57,6 +57,10 @@ Tiers attach to resources in `substrate/registry.md`:
 | the picture of a recipe page the owner linked | one request for the picture that page shows of the dish, made by the crate under the same checks when the draft opens (D-93); counted under `web-image` | anything from the workspace |
 | a picture the owner linked for a recipe | one request for the address, and, when it is a page, one for the page and one for the picture it names, made by the crate under the same checks (D-110); a grocer's product page is never requested; counted under `web-image` and `web-page` | anything from the workspace |
 | a store's website, which the owner gave or confirmed on the Gardener's card (D-108) | up to two requests for its page (as typed, then under `www.`) and up to five for its icon (those the page names, then the site's usual addresses), made by the crate under the same checks (D-103); the page's phone number and address are read on the device and go to no model; counted under `web-page` and `web-image` | anything from the workspace; no third-party icon service is asked |
+| the map's tile host (OpenFreeMap) | requests for the tiles and label glyphs of what the map shows, which say where the owner looks, not where they are (D-131); counted under `openfreemap`, in batches | anything from the workspace; the device's location, without the precise-location grant |
+| the geocoder (Photon) | a name and a rounded point to look near (D-131); for the home, when the owner presses Find, its street, city, region, postal code and country (D-140); counted under `photon` | anything else from the workspace; a house number; precise coordinates |
+| the hours source (Overpass) | a public OpenStreetMap id (D-131); counted under `overpass` | anything from the workspace |
+| a place's own page and the picture it names | one request for each when the owner opens the place, made by the crate under the same checks, only at an address that is whole one the search returned, the place's OpenStreetMap `website` or one the owner typed (D-135); counted under `web-page` and `web-image` | anything from the workspace; an address a model composed is never fetched |
 | a plugin (later) | exactly what its manifest declares under the same grants | anything undeclared |
 | crash reporting | nothing; logs stay local and are exported by hand (OQ-10) | |
 

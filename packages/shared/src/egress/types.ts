@@ -5,7 +5,8 @@
 /** Everywhere a request leaves for. A new destination is added here, to the CSP's `connect-src` in
  * `src-tauri/tauri.conf.json`, and to `settings.privacy.destinations` in both locales. `web-page` is a page the owner
  * gave the address of (`fetchPage` in `@eden/shared/api`) and `web-image` a picture (`fetchImage`): the crate fetches
- * each and records it, so neither has a CSP entry. */
+ * each and records it, so neither has a CSP entry. `openfreemap` is the map's tiles and label glyphs, counted in
+ * batches; `photon` finds a place by name and `overpass` reads its hours (D-131). */
 export const DESTINATIONS = [
 	'open-meteo',
 	'open-meteo-air-quality',
@@ -16,6 +17,9 @@ export const DESTINATIONS = [
 	'anthropic',
 	'web-page',
 	'web-image',
+	'openfreemap',
+	'photon',
+	'overpass',
 ] as const
 export type Destination = (typeof DESTINATIONS)[number]
 

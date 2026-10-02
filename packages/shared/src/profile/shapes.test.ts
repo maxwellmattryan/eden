@@ -5,11 +5,13 @@ import { FACT_SHAPES, LIVE_FACT_TYPES, formatValue, isLiveFact, optionKey, valid
 const label = (key: string) => `<${key}>`
 
 describe('the value shapes', () => {
-	it('cover the fact types of Phase 1 and no other', () => {
+	it('cover the live fact types and no other (D-130)', () => {
 		const live = RESOURCES.filter((row) => row.category === 'fact' && row.live).map((row) => row.id)
 		expect([...LIVE_FACT_TYPES]).toEqual(live)
 		expect(Object.keys(FACT_SHAPES).sort()).toEqual([...live].sort())
-		expect(live).toHaveLength(11)
+		expect(live).toHaveLength(12)
+		// Meadow is built ahead of its phase, so its fact is live; Vigor's is not
+		expect(isLiveFact('favorite-vibe')).toBe(true)
 		expect(isLiveFact('allergy') && !isLiveFact('gym-preference') && !isLiveFact('recipe')).toBe(true)
 	})
 
@@ -18,6 +20,10 @@ describe('the value shapes', () => {
 			['preferred-name', 'Rowan'],
 			['home-area', { city: 'Austin', region: 'Texas', country: 'United States' }],
 			['home-area', { city: 'Singapore' }],
+			[
+				'home-area',
+				{ street: 'Duval St', city: 'Austin', region: 'Texas', postalCode: '78751', country: 'United States' },
+			],
 			['allergy', { kind: 'food', substance: 'tree nuts', severity: 'severe' }],
 			['dietary-preference', 'low-sodium'],
 			['dietary-preference', 'no nightshades'],
@@ -69,6 +75,13 @@ describe('the value shapes', () => {
 		expect(formatValue('home-area', { city: 'Austin', region: 'Texas', country: 'United States' }, label)).toBe(
 			'Austin, Texas, United States'
 		)
+		expect(
+			formatValue(
+				'home-area',
+				{ street: 'Duval St', city: 'Austin', region: 'Texas', postalCode: '78751', country: 'United States' },
+				label
+			)
+		).toBe('Duval St, Austin, Texas, 78751, United States')
 		expect(formatValue('home-area', { city: 'Singapore', region: '', country: 'Singapore' }, label)).toBe(
 			'Singapore, Singapore'
 		)

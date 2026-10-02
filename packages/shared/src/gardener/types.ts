@@ -26,6 +26,17 @@ export interface Pricing {
 	cacheRead: number
 	/** What writing the input to the provider's cache costs; a quarter over the input price when a row has none (D-116). */
 	cacheWrite?: number
+	/**
+	 * What one web search costs, in USD for the one search, not per million (D-132): the provider's fee for running
+	 * the search on its own side, on top of the tokens its results put into the input. Nothing when a row has none.
+	 */
+	search?: number
+}
+
+/** A tool the provider runs on its own side, as its API names it. */
+export interface ServerTool {
+	type: string
+	name: string
 }
 
 export interface ModelRow {
@@ -40,6 +51,13 @@ export interface ModelRow {
 	 * limit: a request to it is given room for both.
 	 */
 	thinks?: boolean
+	/**
+	 * The effort levels it takes, as the provider's API names them, lowest first (D-146). A model with none is sent
+	 * no effort: not every model of every provider has the dial, and one without it refuses the field.
+	 */
+	efforts?: readonly string[]
+	/** The level a request to it is sent at, one of `efforts`; the provider's own default when a row has none. */
+	effort?: string
 }
 
 export interface ProviderRow {
@@ -48,6 +66,11 @@ export interface ProviderRow {
 	models: readonly ModelRow[]
 	/** The model id each grade runs on. A provider with one model maps all three to it. */
 	grades: Readonly<Record<ModelGrade, string>>
+	/**
+	 * The tools the provider runs itself, by what Eden asks of a model: `search` is its web search (D-132). Each
+	 * provider maps the need to its own tool; one with none cannot run a tool that needs it.
+	 */
+	serverTools?: { search?: ServerTool }
 }
 
 export type GradeMap = Readonly<Record<ModelGrade, ModelRef>>
@@ -77,6 +100,8 @@ export interface ModelEdit {
 	contextTokens?: number
 	pricing?: Partial<Pricing>
 	thinks?: boolean
+	efforts?: readonly string[]
+	effort?: string
 }
 
 /** What a model lacks that a tool needs: one of its flags, or the context size. */

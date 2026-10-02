@@ -47,7 +47,7 @@ Written: none. Read: `home-area` (substrate, T1) to default holiday countries an
 | `whats-on-date` | the same, plus `holiday-set`, `ephemeris`, `forecast` | read | none | plain |
 | `create-local-event` | `local-event` | write | confirm sheet naming date, time and place | plain |
 
-Until Almanac is built the Gardener makes no event of its own: no page shows one, so a `create-local-event` would write what the owner cannot see. The substrate's `agenda` (D-125) already answers a day's events with its tasks and Sky's reading; when these tools are built, `whats-on-date` either becomes it or adds what it lacks (`holiday-set`, `ephemeris`), and three things `agenda` leaves open are decided here: it does not expand an event's `recurrence`, it takes an all-day `endAt` as the event's last day, and it does not mark a mirrored event's title as untrusted.
+Until Almanac is built the Gardener makes no event of its own, with the one exception of D-136 (an `outing` from a listing, which Meadow's Listings tab shows): no page shows any other, so a `create-local-event` would write what the owner cannot see. The substrate's `agenda` (D-125) already answers a day's events with its tasks and Sky's reading; when these tools are built, `whats-on-date` either becomes it or adds what it lacks (`holiday-set`, `ephemeris`), and three things `agenda` leaves open are decided here: it does not expand an event's `recurrence`, it takes an all-day `endAt` as the event's last day, and it does not mark a mirrored event's title as untrusted.
 
 Never-do list: never sends invites or touches attendees; never writes to Google before Phase 3, and then only under a per-calendar grant (OQ-6); treats Google event content as untrusted data in any context pack.
 
@@ -98,6 +98,10 @@ Default view, week start (from General, D-58), work hours shading, holiday count
 Non-goals: invites and attendee management, scheduling links, calendars shared with other people, task management (that is Today).
 
 Open: OQ-6, OQ-14, OQ-16.
+
+## Handoffs
+
+- **Outings from Meadow** (for Almanac, #5): `outing` Events exist now, written by Meadow (`packages/shared/src/domains/places/outings.ts`). One is `tentative` when the owner marked its listing interested and `confirmed` when going; it carries the listing's `source` and `externalId` and a snapshot (title, start, end, venue name, point, url; D-133, D-37), so it renders on a device that never fetched the listing. Almanac draws a tentative one dashed and a confirmed one as any event. `find-free-time` and the other tools above already name `outing` in their reads. The `outing-reminder` notification is declared with no signal (#28).
 
 ## Registry rows
 

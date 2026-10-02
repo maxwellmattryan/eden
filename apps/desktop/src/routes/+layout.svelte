@@ -23,6 +23,7 @@
 		type SidebarEntry,
 	} from '@eden/ui-kit'
 	import { checkForUpdate } from '@eden/shared/api/updater'
+	import { home } from '@eden/shared/home'
 	import { initializeI18n, locale, t, uiKitStrings } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { dismissSplash, splashVisible } from '@eden/shared/stores'
@@ -35,12 +36,18 @@
 	import { declarations, manifestFor, manifests } from '$lib/domains'
 	import { grants } from '$lib/shell/grants.svelte'
 	import { inbox } from '$lib/shell/inbox.svelte'
+	import { profile } from '$lib/shell/profile/store.svelte'
 	import { FORECAST_RESOURCE, weather } from '@eden/shared/weather'
 	import { formatTime, formatWeekday, relativeDay } from '@eden/shared/dates'
 	import { detectOs, formatShortcut } from '@eden/shared/shortcuts'
 	import { useGlobalErrorHandler } from '$lib/hooks/useGlobalErrorHandler'
 	import SettingsSheet from '$lib/settings/SettingsSheet.svelte'
+	import ChangeHomeSheet from '$lib/shell/home/ChangeHomeSheet.svelte'
+	import { homeUi } from '$lib/shell/home/home-ui.svelte'
 	import { settingsUi } from '$lib/settings/settings-ui.svelte'
+	import QuickLogHost from '$lib/shell/QuickLogHost.svelte'
+	import { quickLogEntries, saveQuickLog } from '$lib/shell/quick-log'
+	import { quickLogUi } from '$lib/shell/quick-log-ui.svelte'
 	import ResizeHandle from '$lib/shell/ResizeHandle.svelte'
 	import GardenerDock from '$lib/shell/gardener/GardenerDock.svelte'
 	import { gardenerUi } from '$lib/shell/gardener/panel-ui.svelte'
@@ -283,9 +290,20 @@
 			: undefined
 	)
 
-	// ⌘, opens Settings; ⌘G the Gardener; ⌘B collapses the sidebar; ⌘1 to ⌘9 go to the sidebar positions (shell.md, keyboard model).
+	/** The status bar's + and the sheet show the same entries: the enabled domains' quick actions (D-12). */
+	const quickLogs = $derived(quickLogEntries($t))
+
+	// ⌘, opens Settings; ⌘G the Gardener; ⌘B collapses the sidebar; ⌘⇧L opens Quick Log; ⌘1 to ⌘9 go to the sidebar
+	// positions (shell.md, keyboard model).
 	function onkeydown(e: KeyboardEvent) {
-		if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return
+		if (!(e.metaKey || e.ctrlKey) || e.altKey) return
+		if (e.shiftKey) {
+			if (e.key === 'l' || e.key === 'L') {
+				e.preventDefault()
+				quickLogUi.show()
+			}
+			return
+		}
 		if (e.key === ',') {
 			e.preventDefault()
 			settingsUi.show()
@@ -315,6 +333,14 @@
 		let timer: ReturnType<typeof setInterval> | undefined
 		;(async () => {
 			settings.load()
+			// what follows the home (D-141): the area a model may know, and the forecast when it has moved
+			home.bind({
+				changed: (place, moved) => {
+					void profile.syncHomeArea(place)
+					if (moved) void weather.load()
+				},
+			})
+			void home.load()
 			// the panel comes back on the domain it was left on, while that domain is still one of the app's
 			if (gardenerUi.domain && !manifestFor(gardenerUi.domain)) gardenerUi.domain = undefined
 			await initializeI18n(settings.language)
@@ -394,12 +420,17 @@
 			gardener={gardenerChip}
 			notice={clampNotice}
 			inbox={notices}
-			logs={[]}
+			logs={quickLogs}
+			onlog={(log, value) => void saveQuickLog(log.id, value)}
 			oninboxclose={() => void inbox.markRead()}
 		/>
 	</div>
 	<ToastHost />
 	<SettingsSheet />
+	<QuickLogHost />
+	{#key homeUi.opened}
+		{#if homeUi.opened}<ChangeHomeSheet />{/if}
+	{/key}
 	{#each manifests as manifest (manifest.id)}
 		{#if manifest.overlay}
 			{@const Overlay = manifest.overlay}
