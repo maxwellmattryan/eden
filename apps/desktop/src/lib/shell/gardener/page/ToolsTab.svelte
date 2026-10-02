@@ -7,7 +7,7 @@
 	import { SUBSTRATE, type GardenerTool } from '@eden/shared/gardener'
 	import { t } from '@eden/shared/i18n'
 	import { manifestFor } from '$lib/domains'
-	import { handlerOf, tools } from '../handlers'
+	import { handlerOf, tools } from '@eden/shared/shell/gardener'
 	import ToolAbout from '../ToolAbout.svelte'
 
 	// the row that is unfolded, by its index in `shown`

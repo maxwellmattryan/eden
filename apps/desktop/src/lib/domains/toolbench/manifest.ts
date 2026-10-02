@@ -1,14 +1,11 @@
-// Toolbench's bindings (product/domains/toolbench.md): the page and its five tabs, the bodies of its two built
-// Garden tiles, its store. What Toolbench declares is in `@eden/shared/domains/toolbench/manifest.json`.
-import { toolbenchExtras } from '@eden/shared/domains/toolbench'
-import { get } from 'svelte/store'
+// Toolbench's surface on the desktop (product/domains/toolbench.md): the page and its five tabs, and the bodies of
+// its two built Garden tiles. What Toolbench declares is in `@eden/shared/domains/toolbench/manifest.json`; what it
+// does is its `logic.ts` there, which `defineDomain` joins to this.
 import { goto } from '$app/navigation'
 import { resolve } from '$app/paths'
-import { t } from '@eden/shared/i18n'
+import { defineDomain } from '@eden/shared/domains'
+import { toolbench } from '@eden/shared/domains/toolbench'
 import { declarationOf, type TabId } from '@eden/shared/manifest'
-import { defineDomain } from '../manifest.js'
-import { toolbench } from './store.svelte.js'
-import { toolbenchCommitDraft, toolbenchQuickActions, toolbenchTools } from './tools.js'
 import ActiveProjects from './widgets/ActiveProjects.svelte'
 import ResurfacedIdea from './widgets/ResurfacedIdea.svelte'
 
@@ -43,14 +40,4 @@ export const toolbenchManifest = defineDomain('toolbench', {
 			},
 		},
 	},
-	load: () => toolbench.load(),
-	reload: () => toolbench.reload(),
-	extras: async () => {
-		await toolbench.load()
-		return toolbenchExtras(toolbench.data())
-	},
-	seed: () => toolbench.seed(get(t)('domains.toolbench.name')),
-	tools: toolbenchTools,
-	quickActionHandlers: toolbenchQuickActions,
-	commitDraft: toolbenchCommitDraft,
 })

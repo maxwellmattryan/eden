@@ -36,11 +36,11 @@
 	import { undoToast } from '@eden/shared/shell'
 	import { formatDay, formatDayTime } from '@eden/shared/dates'
 	import { showPushed } from '@eden/shared/shell'
-	import { capture } from '../capture.svelte'
-	import { CAPTURE_ACCEPT } from '../staging.svelte'
-	import { categoryGlyph } from '../words'
+	import { capture } from '@eden/shared/domains/kitchen'
+	import { CAPTURE_ACCEPT } from '@eden/shared/domains/kitchen'
+	import { categoryGlyph } from '@eden/shared/domains/kitchen'
 	import StockEditSheet from './StockEditSheet.svelte'
-	import { LOCATIONS, kitchen, type StockItem, type StockLocation, type StockSort } from '../store.svelte'
+	import { LOCATIONS, kitchen, type StockItem, type StockLocation, type StockSort } from '@eden/shared/domains/kitchen'
 
 	type Props = {
 		/** The Expiring filter: only what is dated within the next two days. */

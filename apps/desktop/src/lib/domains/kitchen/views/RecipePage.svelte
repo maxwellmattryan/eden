@@ -9,7 +9,7 @@
 	import { MAX_SERVES, scalable, type Estimate, type IngredientStatus } from '@eden/shared/domains/kitchen'
 	import { formatUsd } from '@eden/shared/gardener'
 	import { t } from '@eden/shared/i18n'
-	import { kitchen, type Recipe } from '../store.svelte'
+	import { kitchen, type Recipe } from '@eden/shared/domains/kitchen'
 
 	type Props = {
 		recipe: Recipe

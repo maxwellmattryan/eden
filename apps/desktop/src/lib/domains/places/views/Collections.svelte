@@ -17,7 +17,7 @@
 	import { categoryGlyph, meadow, type Collection, type SavedPlace } from '@eden/shared/domains/places'
 	import { t } from '@eden/shared/i18n'
 	import { undoToast } from '@eden/shared/shell'
-	import { categoryNamer } from '../words'
+	import { categoryNamer } from '@eden/shared/domains/places'
 
 	type Props = {
 		/** A place was picked: the page shows it on the map. */

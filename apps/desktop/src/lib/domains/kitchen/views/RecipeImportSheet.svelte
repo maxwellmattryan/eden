@@ -5,9 +5,9 @@
 	// no model asked. What comes back opens in the Recipes view as a draft to check: nothing is stored here.
 	import { Button, Dropzone, Field, FileButton, FileChip, InlineError, Sheet, Spinner } from '@eden/ui-kit'
 	import { t } from '@eden/shared/i18n'
-	import { recipeImport } from '../recipe-draft.svelte'
-	import { CAPTURE_ACCEPT, sourceDetail } from '../staging.svelte'
-	import { failureOf, readerOf, refusalOf } from '../words'
+	import { recipeImport } from '@eden/shared/domains/kitchen'
+	import { CAPTURE_ACCEPT, sourceDetail } from '@eden/shared/domains/kitchen'
+	import { failureOf, readerOf, refusalOf } from '@eden/shared/domains/kitchen'
 
 	type Props = {
 		/** A draft was made: the page shows it. */

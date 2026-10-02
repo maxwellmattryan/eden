@@ -42,8 +42,8 @@
 	import ReplyEye from './ReplyEye.svelte'
 	import { sizeLabel } from '@eden/shared/shell/gardener'
 	import ToolAbout from './ToolAbout.svelte'
-	import { handlerOf, toolByWireName } from './handlers'
-	import { runtime } from './runtime.svelte'
+	import { handlerOf, toolByWireName } from '@eden/shared/shell/gardener'
+	import { runtime } from '@eden/shared/shell/gardener'
 
 	type Props = {
 		message: Message

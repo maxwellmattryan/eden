@@ -11,8 +11,8 @@
 	import { formatCost } from '@eden/shared/gardener'
 	import { locale, t } from '@eden/shared/i18n'
 	import { undoToast } from '@eden/shared/shell'
-	import { placesImport, type ImportRow } from '../import.svelte'
-	import { vibeNamer } from '../words'
+	import { placesImport, type ImportRow } from '@eden/shared/domains/places'
+	import { vibeNamer } from '@eden/shared/domains/places'
 
 	const uid = $props.id()
 	const lang = $derived($locale ?? 'en')

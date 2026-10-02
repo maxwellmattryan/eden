@@ -16,7 +16,7 @@
 	} from '@eden/ui-kit'
 	import { t } from '@eden/shared/i18n'
 	import { TOOLBENCH_TABS, type ToolbenchTab } from '../manifest'
-	import { IDEA_STATUSES, toolbench, type IdeaStatus } from '../store.svelte'
+	import { IDEA_STATUSES, toolbench, type IdeaStatus } from '@eden/shared/domains/toolbench'
 	import Ideas from './Ideas.svelte'
 
 	const uid = $props.id()

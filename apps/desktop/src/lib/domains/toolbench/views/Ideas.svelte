@@ -21,8 +21,8 @@
 	import { showPushed } from '@eden/shared/shell'
 	import { undoToast } from '@eden/shared/shell'
 	import { formatDay } from '@eden/shared/dates'
-	import { ideaChips } from '../parse'
-	import { IDEA_STATUSES, RESURFACE_DAYS, toolbench, type Idea, type IdeaStatus } from '../store.svelte'
+	import { ideaChips } from '@eden/shared/domains/toolbench'
+	import { IDEA_STATUSES, RESURFACE_DAYS, toolbench, type Idea, type IdeaStatus } from '@eden/shared/domains/toolbench'
 
 	type Props = {
 		/** The id the page's Capture action focuses. */

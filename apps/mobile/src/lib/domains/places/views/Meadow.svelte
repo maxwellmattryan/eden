@@ -27,7 +27,7 @@
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { createSurface, source } from '../map'
-	import { categoryNamer, vibeNamer } from '../words'
+	import { categoryNamer, vibeNamer } from '@eden/shared/domains/places'
 	import FilterSheet from './FilterSheet.svelte'
 	import PlaceSheet from './PlaceSheet.svelte'
 

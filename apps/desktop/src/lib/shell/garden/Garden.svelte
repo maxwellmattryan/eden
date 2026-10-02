@@ -42,8 +42,8 @@
 	import { feed as activity } from '@eden/shared/shell'
 	import { undoToast } from '@eden/shared/shell'
 	import { formatDate, formatTime, formatWeekday, nowIso, relativeDay } from '@eden/shared/dates'
-	import { TileDrag } from './tile-drag.svelte'
-	import { shellTiles } from './tiles'
+	import { TileDrag } from '@eden/shared/shell/garden'
+	import { shellTiles } from '@eden/shared/shell/garden'
 
 	const lang = $derived($locale ?? 'en')
 	const format = $derived({ lang, clock: settings.clock })

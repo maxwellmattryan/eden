@@ -5,8 +5,8 @@
 	import { cookTonight } from '@eden/shared/domains/kitchen'
 	import { t } from '@eden/shared/i18n'
 	import { WidgetRows } from '@eden/ui-kit'
-	import { forbidden } from '../safety.svelte'
-	import { kitchen } from '../store.svelte'
+	import { forbidden } from '@eden/shared/domains/kitchen'
+	import { kitchen } from '@eden/shared/domains/kitchen'
 
 	void forbidden.read()
 

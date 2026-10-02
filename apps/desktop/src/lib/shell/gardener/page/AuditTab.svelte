@@ -52,11 +52,11 @@
 	import { settings } from '@eden/shared/settings'
 	import { manifestFor } from '$lib/domains'
 	import { grants } from '@eden/shared/shell'
-	import { labelRows, registryLabel, type RowLabel } from '../labels'
+	import { labelRows, registryLabel, type RowLabel } from '@eden/shared/shell/gardener'
 	import { gardenerUi } from '@eden/shared/shell/gardener'
 	import { gardenerSetup } from '@eden/shared/shell/gardener'
 	import { threads } from '@eden/shared/shell/gardener'
-	import { gotoAudit } from './audit-link'
+	import { gotoAudit } from '@eden/shared/shell/gardener'
 	import FilterChip from '../../FilterChip.svelte'
 
 	const zone = Intl.DateTimeFormat().resolvedOptions().timeZone

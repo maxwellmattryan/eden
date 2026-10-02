@@ -51,7 +51,7 @@
 	import PictureDrop from '@eden/shared/components/PictureDrop.svelte'
 	import PictureInput from '@eden/shared/components/PictureInput.svelte'
 	import { undoToast } from '@eden/shared/shell'
-	import { vibeNamer } from '../words'
+	import { vibeNamer } from '@eden/shared/domains/places'
 
 	type Props = {
 		/** A place was added from the blank form; the page shows it. */

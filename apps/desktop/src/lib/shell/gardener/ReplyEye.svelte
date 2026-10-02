@@ -8,7 +8,7 @@
 	import { t } from '@eden/shared/i18n'
 	import { grants } from '@eden/shared/shell'
 	import { undoToast } from '@eden/shared/shell'
-	import { labelRows, registryLabel, type RowLabel } from './labels'
+	import { labelRows, registryLabel, type RowLabel } from '@eden/shared/shell/gardener'
 	import { GRANT_SUBJECT } from '@eden/shared/shell/gardener'
 
 	type Props = { block: Extract<MessageBlock, { kind: 'can-see' }> }

@@ -5,7 +5,7 @@
 	import { DetailSection, type DetailRow } from '@eden/ui-kit'
 	import type { GardenerTool } from '@eden/shared/gardener'
 	import { t } from '@eden/shared/i18n'
-	import { registryLabel } from './labels'
+	import { registryLabel } from '@eden/shared/shell/gardener'
 
 	type Props = {
 		tool: GardenerTool

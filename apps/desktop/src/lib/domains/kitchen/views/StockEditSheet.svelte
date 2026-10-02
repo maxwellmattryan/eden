@@ -10,11 +10,11 @@
 	import { CATEGORIES, categoriesFor, productLink } from '@eden/shared/domains/kitchen'
 	import { t } from '@eden/shared/i18n'
 	import { undoToast } from '@eden/shared/shell'
-	import { linkedPicture, squarePicture } from '../staging.svelte'
-	import { categoryGlyph } from '../words'
+	import { linkedPicture, squarePicture } from '@eden/shared/domains/kitchen'
+	import { categoryGlyph } from '@eden/shared/domains/kitchen'
 	import PictureDrop from '@eden/shared/components/PictureDrop.svelte'
 	import PictureInput from '@eden/shared/components/PictureInput.svelte'
-	import { LOCATIONS, kitchen, type StockItem, type StockLocation, type StockPatch } from '../store.svelte'
+	import { LOCATIONS, kitchen, type StockItem, type StockLocation, type StockPatch } from '@eden/shared/domains/kitchen'
 
 	type Props = {
 		/** An item was added from the blank form; the page shows it. */

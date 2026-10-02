@@ -3,7 +3,7 @@
 	import { SkyGlyph, Stat, useStrings } from '@eden/ui-kit'
 	import { locale, t } from '@eden/shared/i18n'
 	import { conditionLabel, weather } from '@eden/shared/weather'
-	import { updatedLine } from '$lib/domains/weather/updated'
+	import { updatedLine } from '@eden/shared/domains/weather'
 
 	const s = useStrings()
 	const lang = $derived($locale ?? 'en')

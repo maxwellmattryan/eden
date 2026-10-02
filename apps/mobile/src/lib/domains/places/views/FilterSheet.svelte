@@ -4,7 +4,7 @@
 	import { Button, Chip, Sheet } from '@eden/ui-kit'
 	import { FACETS, facetKey, isFiltering, meadow, vibesByFacet, type PlaceFilter } from '@eden/shared/domains/places'
 	import { t } from '@eden/shared/i18n'
-	import { vibeNamer } from '../words'
+	import { vibeNamer } from '@eden/shared/domains/places'
 
 	let { open = $bindable(false) }: { open?: boolean } = $props()
 

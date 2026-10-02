@@ -8,10 +8,10 @@
 	import { CATEGORIES } from '@eden/shared/domains/kitchen'
 	import { MAX_FILES } from '@eden/shared/gardener'
 	import { t } from '@eden/shared/i18n'
-	import { capture } from '../capture.svelte'
-	import { kitchen } from '../store.svelte'
-	import { CAPTURE_ACCEPT, sourceDetail, type CaptureRefusal } from '../staging.svelte'
-	import { failureOf, readerOf, refusalOf } from '../words'
+	import { capture } from '@eden/shared/domains/kitchen'
+	import { kitchen } from '@eden/shared/domains/kitchen'
+	import { CAPTURE_ACCEPT, sourceDetail, type CaptureRefusal } from '@eden/shared/domains/kitchen'
+	import { failureOf, readerOf, refusalOf } from '@eden/shared/domains/kitchen'
 
 	const reader = $derived(readerOf($t, capture.preview))
 	const files = $derived<CaptureFile[]>(

@@ -18,7 +18,7 @@
 	} from '@eden/shared/domains/places'
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
-	import { categoryNamer, vibeNamer } from '../words'
+	import { categoryNamer, vibeNamer } from '@eden/shared/domains/places'
 
 	type Props = {
 		/** The id of the place shown; none closes the sheet. */

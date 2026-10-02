@@ -23,8 +23,8 @@
 		type TonightPick,
 	} from '@eden/shared/domains/kitchen'
 	import { t } from '@eden/shared/i18n'
-	import { recipeBrowse } from '../recipe-browse.svelte'
-	import { kitchen, type Recipe } from '../store.svelte'
+	import { recipeBrowse } from '@eden/shared/domains/kitchen'
+	import { kitchen, type Recipe } from '@eden/shared/domains/kitchen'
 
 	type Props = {
 		/** The recipes the search and the filters leave, in the order asked for. */

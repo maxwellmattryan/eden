@@ -14,7 +14,7 @@
 	import { gardenerUi } from '@eden/shared/shell/gardener'
 	import { gardenerSetup } from '@eden/shared/shell/gardener'
 	import { threads } from '@eden/shared/shell/gardener'
-	import { gotoAudit } from './audit-link'
+	import { gotoAudit } from '@eden/shared/shell/gardener'
 
 	let totals = $state<Record<string, ThreadUsage>>({})
 

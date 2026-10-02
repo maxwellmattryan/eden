@@ -5,7 +5,7 @@
 	import { QuickAdd } from '@eden/ui-kit'
 	import { t } from '@eden/shared/i18n'
 	import { undoToast } from '@eden/shared/shell'
-	import { kitchen } from '../store.svelte'
+	import { kitchen } from '@eden/shared/domains/kitchen'
 
 	const open = $derived(kitchen.grocery.items.filter((item) => !item.done).length)
 

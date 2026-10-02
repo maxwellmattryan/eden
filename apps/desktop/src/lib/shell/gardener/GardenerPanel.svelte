@@ -58,7 +58,7 @@
 	} from '@eden/shared/shell/gardener'
 	import MessageBlocks from './MessageBlocks.svelte'
 	import { gardenerUi } from '@eden/shared/shell/gardener'
-	import { runtime } from './runtime.svelte'
+	import { runtime } from '@eden/shared/shell/gardener'
 	import { gardenerSetup } from '@eden/shared/shell/gardener'
 	import ThreadList from './ThreadList.svelte'
 	import { threads } from '@eden/shared/shell/gardener'

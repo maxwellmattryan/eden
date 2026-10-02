@@ -48,9 +48,9 @@
 	import { settings } from '@eden/shared/settings'
 	import { undoToast } from '@eden/shared/shell'
 	import { daysFromToday, daysSince, formatEventTime, todayIso } from '@eden/shared/dates'
-	import { fitPicture, storeLogo } from '../staging.svelte'
-	import { fetchStoreSite } from '../store-site'
-	import { categoryGlyph } from '../words'
+	import { fitPicture, storeLogo } from '@eden/shared/domains/kitchen'
+	import { fetchStoreSite } from '@eden/shared/domains/kitchen'
+	import { categoryGlyph } from '@eden/shared/domains/kitchen'
 	import {
 		kitchen,
 		type GroceryBlock,
@@ -59,7 +59,7 @@
 		type StockItem,
 		type StoreSells,
 		type Undo,
-	} from '../store.svelte'
+	} from '@eden/shared/domains/kitchen'
 
 	const uid = $props.id()
 	const lang = $derived($locale ?? 'en')

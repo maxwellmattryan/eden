@@ -1,7 +1,7 @@
 <script lang="ts">
 	// The resurfaced-idea tile: the active idea left alone the longest, with how long.
 	import { t } from '@eden/shared/i18n'
-	import { toolbench } from '../store.svelte'
+	import { toolbench } from '@eden/shared/domains/toolbench'
 </script>
 
 {#if toolbench.resurfaced}

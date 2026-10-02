@@ -6,7 +6,7 @@
 	import { WidgetRows } from '@eden/ui-kit'
 	import { formatTime } from '@eden/shared/dates'
 	import { weather } from '@eden/shared/weather'
-	import { updatedLine } from '$lib/domains/weather/updated'
+	import { updatedLine } from '@eden/shared/domains/weather'
 
 	const lang = $derived($locale ?? 'en')
 	const format = $derived({ lang, clock: settings.clock, timeZone: weather.timeZone })
