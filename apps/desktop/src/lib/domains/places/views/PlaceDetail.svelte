@@ -76,8 +76,10 @@
 		)
 	}
 	function remove() {
+		// The removal empties the `place` prop at once, so the name is read first
+		const name = place.name
 		const { undo } = meadow.removePlace(place.id)
-		undoToast($t('domains.places.toast.removed', { values: { name: place.name } }), undo)
+		undoToast($t('domains.places.toast.removed', { values: { name } }), undo)
 		onclose?.()
 	}
 
