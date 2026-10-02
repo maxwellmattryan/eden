@@ -1,6 +1,7 @@
 <script lang="ts">
 	// The picture of an item, a recipe or a place, with the buttons that change it: the picture, or a glyph on a tile of the
-	// same size; one button whose menu offers a file or a link; and Remove, last. A link is typed into a small panel
+	// same size; one button whose menu offers a file or a link (on the phone the camera first, D-TBD(file-camera));
+	// and Remove, last. A link is typed into a small panel
 	// that hangs from the button, fetched as soon as it is pasted, and the panel stays open until a picture came of it,
 	// so a wrong address can be corrected. The
 	// form says what a file or a link becomes; nothing is written here. A dropped or pasted picture comes in through
@@ -66,6 +67,7 @@
 			icon="image-plus"
 			accept={PICTURE_ACCEPT}
 			multiple={false}
+			camera
 			tooltip
 			onfiles={(files) => files[0] && onfile(files[0])}
 			sources={[

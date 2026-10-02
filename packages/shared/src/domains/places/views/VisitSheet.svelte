@@ -2,10 +2,11 @@
 	// Logging a visit (product/domains/places.md): the day, a rating out of five and a note, in a sheet over the page
 	// (D-95). Save is one write with one undo. The page opens it through `log(place)`.
 	import { Button, Field, Rating, Sheet } from '@eden/ui-kit'
-	import { todayIso } from '@eden/shared/dates'
-	import { meadow, type SavedPlace, type Visit } from '@eden/shared/domains/places'
-	import { t } from '@eden/shared/i18n'
-	import { undoToast } from '@eden/shared/shell'
+	import { todayIso } from '../../../dates/index.js'
+	import { meadow } from '../store.svelte.js'
+	import { type SavedPlace, type Visit } from '../types.js'
+	import { t } from '../../../i18n/index.js'
+	import { undoToast } from '../../../shell/index.js'
 
 	const uid = $props.id()
 	let open = $state(false)

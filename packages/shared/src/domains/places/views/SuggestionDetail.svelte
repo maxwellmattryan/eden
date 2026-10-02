@@ -4,29 +4,26 @@
 	// goes in seven days; Save makes it the owner's, Dismiss puts it out of sight. Everything it says came from web
 	// pages, so it says where from.
 	import { Button, Chip, IconButton, Spinner } from '@eden/ui-kit'
-	import { openExternal } from '@eden/shared/api'
-	import {
-		formatSpans,
-		isOpenAt,
-		mapsLink,
-		meadow,
-		priceLabel,
-		spansOn,
-		type Suggestion,
-	} from '@eden/shared/domains/places'
-	import { t } from '@eden/shared/i18n'
-	import { settings } from '@eden/shared/settings'
-	import { undoToast } from '@eden/shared/shell'
-	import { categoryNamer, vibeNamer } from '@eden/shared/domains/places'
+	import { openExternal } from '../../../api/index.js'
+	import { formatSpans, isOpenAt, spansOn } from '../hours.js'
+	import { mapsLink, priceLabel } from '../formats.js'
+	import { meadow } from '../store.svelte.js'
+	import { type Suggestion } from '../types.js'
+	import { t } from '../../../i18n/index.js'
+	import { settings } from '../../../settings/index.js'
+	import { undoToast } from '../../../shell/index.js'
+	import { categoryNamer, vibeNamer } from '../words.js'
 
 	type Props = {
 		suggestion: Suggestion
 		closable?: boolean
+		/** Drawn without its card, where a sheet already frames it (the phone's place sheet). */
+		flat?: boolean
 		onclose?: () => void
 		/** The place it became, once saved. */
 		onsaved?: (id: string) => void
 	}
-	let { suggestion, closable = false, onclose, onsaved }: Props = $props()
+	let { suggestion, closable = false, flat = false, onclose, onsaved }: Props = $props()
 
 	const uid = $props.id()
 	const candidate = $derived(suggestion.candidate)
@@ -57,7 +54,7 @@
 	}
 </script>
 
-<article class="detail" aria-labelledby="{uid}-name">
+<article class={['detail', flat && 'flat']} aria-labelledby="{uid}-name">
 	{#if picture}<img class="banner" src={picture} alt="" />{/if}
 	<div class="body">
 		<div class="head">
@@ -232,5 +229,20 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: var(--space-2);
+	}
+	/* in a sheet: the sheet is the card, and the picture is rounded inside it */
+	.flat {
+		border: 0;
+		border-radius: 0;
+		background: none;
+		overflow: visible;
+		gap: var(--space-3);
+	}
+	.flat .banner {
+		border-bottom: 0;
+		border-radius: var(--ed-radius-control);
+	}
+	.flat .body {
+		padding: 0;
 	}
 </style>

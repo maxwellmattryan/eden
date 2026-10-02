@@ -14,10 +14,12 @@
 		type ListRowData,
 		type MenuItem,
 	} from '@eden/ui-kit'
-	import { categoryGlyph, meadow, type Collection, type SavedPlace } from '@eden/shared/domains/places'
-	import { t } from '@eden/shared/i18n'
-	import { undoToast } from '@eden/shared/shell'
-	import { categoryNamer } from '@eden/shared/domains/places'
+	import { categoryGlyph } from '../categories.js'
+	import { meadow } from '../store.svelte.js'
+	import { type Collection, type SavedPlace } from '../types.js'
+	import { t } from '../../../i18n/index.js'
+	import { undoToast } from '../../../shell/index.js'
+	import { categoryNamer } from '../words.js'
 
 	type Props = {
 		/** A place was picked: the page shows it on the map. */

@@ -43,11 +43,11 @@
 	import { createSurface, source } from '../map'
 	import { categoryNamer, vibeNamer } from '@eden/shared/domains/places'
 	import FilterPanel from './FilterPanel.svelte'
-	import FindMore from './FindMore.svelte'
-	import Fold from './Fold.svelte'
-	import HomeCard from './HomeCard.svelte'
-	import PlaceDetail from './PlaceDetail.svelte'
-	import SuggestionDetail from './SuggestionDetail.svelte'
+	import FindMore from '@eden/shared/domains/places/views/FindMore.svelte'
+	import Fold from '@eden/shared/domains/places/views/Fold.svelte'
+	import HomeCard from '@eden/shared/domains/places/views/HomeCard.svelte'
+	import PlaceDetail from '@eden/shared/domains/places/views/PlaceDetail.svelte'
+	import SuggestionDetail from '@eden/shared/domains/places/views/SuggestionDetail.svelte'
 
 	type Props = {
 		onedit?: (place: SavedPlace) => void

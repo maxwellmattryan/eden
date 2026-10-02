@@ -6,7 +6,7 @@ import { resolve } from '$app/paths'
 import { defineDomain } from '@eden/shared/domains'
 import { meadow } from '@eden/shared/domains/places'
 import { declarationOf, type TabId } from '@eden/shared/manifest'
-import ImportSheet from './views/ImportSheet.svelte'
+import ImportSheet from '@eden/shared/domains/places/views/ImportSheet.svelte'
 import NearbyFavorites from '@eden/shared/domains/places/widgets/NearbyFavorites.svelte'
 import UpcomingListings from '@eden/shared/domains/places/widgets/UpcomingListings.svelte'
 

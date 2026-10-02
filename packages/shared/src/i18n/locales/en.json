@@ -446,6 +446,8 @@
 				"estimateSome": "about ${total}, {count} unpriced",
 				"allChecked": "Everything is checked. Complete the list once you are home.",
 				"anyStore": "Miscellaneous",
+				"allStores": "All",
+				"storeFilter": "Stand in one store",
 				"toBuy": "{count, plural, =0 {Nothing to buy} one {# item to buy} other {# items to buy}}",
 				"empty": {
 					"title": "Nothing to buy",
@@ -1070,7 +1072,7 @@
 				"fit": "Show all",
 				"offline": "Offline. Your places are shown on plain ground.",
 				"failed": "The map could not be drawn. Your places are shown on plain ground.",
-				"placing": "Click the map where {name} is.",
+				"placing": "Choose where {name} is on the map.",
 				"emptyText": "Add one by name, or add the sample places to look around."
 			},
 			"list": {
@@ -1305,13 +1307,6 @@
 				"taggedHelp": "Suggested by the Gardener. Turn off any that are wrong.",
 				"save": "{count, plural, =0 {Nothing to save yet} one {Save # place} other {Save # places}}",
 				"saved": "{count, plural, one {# place} other {# places}} saved."
-			},
-			"mobile": {
-				"map": "Map",
-				"nearby": "Nearby",
-				"listings": "Listings",
-				"emptyText": "Places you save on the desktop show here.",
-				"listingsText": "What Meadow finds for the days ahead shows here."
 			}
 		}
 	},

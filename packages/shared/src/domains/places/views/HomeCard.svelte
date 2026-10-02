@@ -2,22 +2,24 @@
 	// The home, read from its pin (D-143): what it is called, its address as its country writes one, and the way to
 	// change it. A home the owner has not chosen yet is the sample, and says so.
 	import { Button, IconButton } from '@eden/ui-kit'
-	import { formatAddress } from '@eden/shared/address'
-	import { home } from '@eden/shared/home'
-	import { locale, t } from '@eden/shared/i18n'
-	import { homeUi } from '@eden/shared/shell/home'
+	import { formatAddress } from '../../../address/index.js'
+	import { home } from '../../../home/index.js'
+	import { locale, t } from '../../../i18n/index.js'
+	import { homeUi } from '../../../shell/home/index.js'
 
 	type Props = {
 		closable?: boolean
+		/** Drawn without its card, where a sheet already frames it (the phone's place sheet). */
+		flat?: boolean
 		onclose?: () => void
 	}
-	let { closable = false, onclose }: Props = $props()
+	let { closable = false, flat = false, onclose }: Props = $props()
 
 	const uid = $props.id()
 	const lines = $derived(formatAddress(home.current.address, { style: 'lines', locale: $locale ?? 'en' }))
 </script>
 
-<article class="detail" aria-labelledby="{uid}-name">
+<article class={['detail', flat && 'flat']} aria-labelledby="{uid}-name">
 	<div class="head">
 		<h2 class="title" id="{uid}-name">{home.current.label}</h2>
 		{#if closable}
@@ -80,5 +82,12 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: var(--space-2);
+	}
+	/* in a sheet: the sheet is the card */
+	.flat {
+		padding: 0;
+		border: 0;
+		border-radius: 0;
+		background: none;
 	}
 </style>

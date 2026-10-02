@@ -4,15 +4,16 @@
 	// and the review, where a name found several times is chosen, one not found is placed by a click on the map, and
 	// the Gardener may tag vibes, each marked as suggested. No model is needed to import. Save is one change with one
 	// undo. It is the domain's overlay, so it opens over whatever page is showing.
-	import { goto } from '$app/navigation'
-	import { resolve } from '$app/paths'
 	import { Button, Chip, Field, InlineError, Sheet, Spinner } from '@eden/ui-kit'
-	import { FACETS, meadow, vibesByFacet } from '@eden/shared/domains/places'
-	import { formatCost } from '@eden/shared/gardener'
-	import { locale, t } from '@eden/shared/i18n'
-	import { undoToast } from '@eden/shared/shell'
-	import { placesImport, type ImportRow } from '@eden/shared/domains/places'
-	import { vibeNamer } from '@eden/shared/domains/places'
+	import { FACETS } from '../types.js'
+	import { meadow } from '../store.svelte.js'
+	import { vibesByFacet } from '../vibes.js'
+	import { formatCost } from '../../../gardener/index.js'
+	import { locale, t } from '../../../i18n/index.js'
+	import { navigation } from '../../../navigation/index.js'
+	import { undoToast } from '../../../shell/index.js'
+	import { placesImport, type ImportRow } from '../import.svelte.js'
+	import { vibeNamer } from '../words.js'
 
 	const uid = $props.id()
 	const lang = $derived($locale ?? 'en')
@@ -38,13 +39,13 @@
 	function place(row: ImportRow) {
 		placesImport.placeByHand(row.id)
 		// the map is where a place is put: go there if another page is showing
-		void goto(resolve('/places/[[tab]]', {}))
+		void navigation.open({ place: 'places' })
 	}
 	function save() {
 		const { places, undo } = placesImport.save()
 		if (!places.length) return
 		undoToast($t('domains.places.import.saved', { values: { count: places.length } }), undo)
-		void goto(resolve('/places/[[tab]]', {}))
+		void navigation.open({ place: 'places' })
 	}
 </script>
 

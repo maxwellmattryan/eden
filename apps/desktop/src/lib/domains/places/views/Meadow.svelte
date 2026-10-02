@@ -24,12 +24,12 @@
 	import { placesImport } from '@eden/shared/domains/places'
 	import { PLACES_TABS, type PlacesTab } from '../manifest'
 	import { seedData } from '@eden/shared/domains/places'
-	import Collections from './Collections.svelte'
-	import Listings from './Listings.svelte'
+	import Collections from '@eden/shared/domains/places/views/Collections.svelte'
+	import Listings from '@eden/shared/domains/places/views/Listings.svelte'
 	import MapTab from './MapTab.svelte'
-	import PlaceEditSheet from './PlaceEditSheet.svelte'
-	import VisitSheet from './VisitSheet.svelte'
-	import Visits from './Visits.svelte'
+	import PlaceEditSheet from '@eden/shared/domains/places/views/PlaceEditSheet.svelte'
+	import VisitSheet from '@eden/shared/domains/places/views/VisitSheet.svelte'
+	import Visits from '@eden/shared/domains/places/views/Visits.svelte'
 
 	let editSheet = $state<PlaceEditSheet>()
 	let visitSheet = $state<VisitSheet>()

@@ -4,36 +4,32 @@
 	// for reading and for acting; the forms are sheets (D-95). The map page lays it over the map's edge when it is
 	// wide and shows it as a pushed view when it is narrow, so it knows nothing of where it stands.
 	import { Button, Chip, IconButton, Menu, Rating, toast, type MenuItem } from '@eden/ui-kit'
-	import { openExternal } from '@eden/shared/api'
-	import { formatAgo, formatDateOf } from '@eden/shared/dates'
-	import {
-		distanceLabel,
-		formatSpans,
-		lacksPicture,
-		mapsLink,
-		placeAddress,
-		meadow,
-		openNow,
-		priceLabel,
-		spansOn,
-		type SavedPlace,
-	} from '@eden/shared/domains/places'
-	import { locale, t } from '@eden/shared/i18n'
-	import { settings } from '@eden/shared/settings'
-	import { undoToast } from '@eden/shared/shell'
-	import { categoryNamer, vibeNamer } from '@eden/shared/domains/places'
+	import { openExternal } from '../../../api/index.js'
+	import { formatAgo, formatDateOf } from '../../../dates/index.js'
+	import { distanceLabel, mapsLink, placeAddress, priceLabel } from '../formats.js'
+	import { formatSpans, spansOn } from '../hours.js'
+	import { lacksPicture } from '../details/backfill.js'
+	import { meadow } from '../store.svelte.js'
+	import { openNow } from '../filter.js'
+	import { type SavedPlace } from '../types.js'
+	import { locale, t } from '../../../i18n/index.js'
+	import { settings } from '../../../settings/index.js'
+	import { undoToast } from '../../../shell/index.js'
+	import { categoryNamer, vibeNamer } from '../words.js'
 
 	type Props = {
 		place: SavedPlace
 		/** Shows the cross that closes it: over the map, where no back arrow stands. */
 		closable?: boolean
+		/** Drawn without its card, where a sheet already frames it (the phone's place sheet). */
+		flat?: boolean
 		onclose?: () => void
 		onedit?: (place: SavedPlace) => void
 		onvisit?: (place: SavedPlace) => void
 		/** The owner asks to put the place on the map by a click. */
 		onplace?: (place: SavedPlace) => void
 	}
-	let { place, closable = false, onclose, onedit, onvisit, onplace }: Props = $props()
+	let { place, closable = false, flat = false, onclose, onedit, onvisit, onplace }: Props = $props()
 
 	const uid = $props.id()
 	const vibeName = $derived(vibeNamer($t, meadow.vibes))
@@ -143,7 +139,7 @@
 	}
 </script>
 
-<article class="detail" aria-labelledby="{uid}-name">
+<article class={['detail', flat && 'flat']} aria-labelledby="{uid}-name">
 	{#if picture}<img class="banner" src={picture} alt="" />{/if}
 	<div class="body">
 		<div class="head">
@@ -406,5 +402,20 @@
 	}
 	.anchor {
 		display: inline-flex;
+	}
+	/* in a sheet: the sheet is the card, and the picture is rounded inside it */
+	.flat {
+		border: 0;
+		border-radius: 0;
+		background: none;
+		overflow: visible;
+		gap: var(--space-3);
+	}
+	.flat .banner {
+		border-bottom: 0;
+		border-radius: var(--ed-radius-control);
+	}
+	.flat .body {
+		padding: 0;
 	}
 </style>

@@ -4,21 +4,18 @@
 	// a tentative `outing` Event and Going confirms it (D-133). The weekly search runs on Sunday on its own, with a
 	// setting to turn it off (D-134); the foot of the page says so, and when the listings were last found.
 	import { Button, Chip, EmptyState, InlineError, Notice, Spinner } from '@eden/ui-kit'
-	import { openExternal } from '@eden/shared/api'
-	import { formatAgo, formatEventTime, formatWeekdayOf, formatDateOf } from '@eden/shared/dates'
-	import {
-		areaWords,
-		markOf,
-		meadow,
-		type Availability,
-		type Listing,
-		type OutingMark,
-	} from '@eden/shared/domains/places'
-	import { formatCost } from '@eden/shared/gardener'
-	import { locale, t } from '@eden/shared/i18n'
-	import { settings } from '@eden/shared/settings'
-	import { settingsUi } from '@eden/shared/shell/settings'
-	import { undoToast } from '@eden/shared/shell'
+	import { openExternal } from '../../../api/index.js'
+	import { formatAgo, formatEventTime, formatWeekdayOf, formatDateOf } from '../../../dates/index.js'
+	import { areaWords } from '../home.js'
+	import { markOf, type OutingMark } from '../outings.js'
+	import { meadow } from '../store.svelte.js'
+	import { type Availability } from '../discovery.js'
+	import { type Listing } from '../types.js'
+	import { formatCost } from '../../../gardener/index.js'
+	import { locale, t } from '../../../i18n/index.js'
+	import { settings } from '../../../settings/index.js'
+	import { settingsUi } from '../../../shell/settings/index.js'
+	import { undoToast } from '../../../shell/index.js'
 
 	const lang = $derived($locale ?? 'en')
 	const format = $derived({ lang, clock: settings.clock })

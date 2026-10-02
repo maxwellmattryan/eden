@@ -3,10 +3,12 @@
 	// Each is a day, a rating out of five and a note; a click on the place's name shows it on the map. A visit is
 	// logged from a place, so the empty state says where.
 	import { EmptyState, IconButton, Rating, Thumbnail } from '@eden/ui-kit'
-	import { formatDateOf } from '@eden/shared/dates'
-	import { categoryGlyph, meadow, type SavedPlace, type Visit } from '@eden/shared/domains/places'
-	import { locale, t } from '@eden/shared/i18n'
-	import { undoToast } from '@eden/shared/shell'
+	import { formatDateOf } from '../../../dates/index.js'
+	import { categoryGlyph } from '../categories.js'
+	import { meadow } from '../store.svelte.js'
+	import { type SavedPlace, type Visit } from '../types.js'
+	import { locale, t } from '../../../i18n/index.js'
+	import { undoToast } from '../../../shell/index.js'
 
 	type Props = {
 		onopen?: (place: SavedPlace) => void

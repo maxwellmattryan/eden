@@ -1,9 +1,24 @@
 <script lang="ts">
-	// The filter on the phone, in a sheet from the foot: the three practical toggles and the four facets of vibes
-	// (D-133). Every change narrows the map and the list at once; the filter is this device's, as on the desktop.
-	import { Button, Chip, Sheet } from '@eden/ui-kit'
-	import { FACETS, facetKey, isFiltering, meadow, vibesByFacet, type PlaceFilter } from '@eden/shared/domains/places'
+	// The filter on the phone, in a sheet from the foot: the same filter as the desktop's panel (D-133), a line of
+	// free text, the three practical toggles, then category, price, distance and collection as groups of chips under
+	// a label each (category and price any of, distance and collection one of), and the four facets of vibes. The
+	// desktop's chips open menus; here every choice is on the sheet, so nothing opens over it. Every change narrows
+	// the map and the list at once; the filter is this device's, as on the desktop.
+	import { Button, Chip, Field, Sheet } from '@eden/ui-kit'
+	import {
+		FACETS,
+		PLACE_CATEGORIES,
+		PRICE_LEVELS,
+		categoryKey,
+		facetKey,
+		isFiltering,
+		meadow,
+		priceLabel,
+		vibesByFacet,
+		type PlaceFilter,
+	} from '@eden/shared/domains/places'
 	import { t } from '@eden/shared/i18n'
+	import { settings } from '@eden/shared/settings'
 	import { vibeNamer } from '@eden/shared/domains/places'
 
 	let { open = $bindable(false) }: { open?: boolean } = $props()
@@ -11,17 +26,33 @@
 	const uid = $props.id()
 	const filter = $derived(meadow.filter)
 	const set = (change: Partial<PlaceFilter>) => meadow.setFilter({ ...filter, ...change })
+	const toggled = <T,>(list: readonly T[], value: T): T[] =>
+		list.includes(value) ? list.filter((entry) => entry !== value) : [...list, value]
 	const vibeName = $derived(vibeNamer($t, meadow.vibes))
 	const facets = $derived(vibesByFacet(meadow.vibes))
-	const toggle = (id: string) =>
-		set({ vibes: filter.vibes.includes(id) ? filter.vibes.filter((vibe) => vibe !== id) : [...filter.vibes, id] })
+
+	/** The distances on offer, in kilometres, as the desktop's panel offers them; in miles where the owner uses them. */
+	const DISTANCES = [2, 5, 10, 25]
+	const imperial = $derived(settings.measurement === 'imperial')
+	const far = (km: number) =>
+		imperial
+			? $t('domains.places.filter.withinMiles', { values: { count: Math.round(km * 0.621371) } })
+			: $t('domains.places.filter.withinKm', { values: { count: km } })
 </script>
 
-<Sheet bind:open labelledby="{uid}-title">
+<!-- the sheet takes focus itself, so the keyboard does not rise over the chips until the text field is touched -->
+<Sheet bind:open labelledby="{uid}-title" initialFocus="container">
 	{#snippet header()}
 		<h2 class="title" id="{uid}-title">{$t('domains.places.filter.label')}</h2>
 	{/snippet}
 	<div class="body">
+		<Field
+			label={$t('domains.places.filter.text')}
+			placeholder={$t('domains.places.filter.textPlaceholder')}
+			icon="search"
+			value={filter.text}
+			oninput={(event) => set({ text: event.currentTarget.value })}
+		/>
 		<div class="chips">
 			<Chip
 				label={$t('domains.places.filter.openNow')}
@@ -48,6 +79,72 @@
 				onselect={(on) => set({ favourites: on })}
 			/>
 		</div>
+		<div class="facet" role="group" aria-labelledby="{uid}-category">
+			<h3 class="label" id="{uid}-category">{$t('domains.places.filter.category')}</h3>
+			<div class="chips">
+				{#each PLACE_CATEGORIES as id (id)}
+					<Chip
+						label={$t(categoryKey(id))}
+						selectable
+						selected={filter.categories.includes(id)}
+						onselect={() => set({ categories: toggled(filter.categories, id) })}
+					/>
+				{/each}
+			</div>
+		</div>
+		<div class="facet" role="group" aria-labelledby="{uid}-price">
+			<h3 class="label" id="{uid}-price">{$t('domains.places.filter.price')}</h3>
+			<div class="chips">
+				{#each PRICE_LEVELS as level (level)}
+					<Chip
+						label={priceLabel(level)}
+						selectable
+						selected={filter.prices.includes(level)}
+						onselect={() => set({ prices: toggled(filter.prices, level) })}
+					/>
+				{/each}
+			</div>
+		</div>
+		<div class="facet" role="group" aria-labelledby="{uid}-distance">
+			<h3 class="label" id="{uid}-distance">{$t('domains.places.filter.distance')}</h3>
+			<div class="chips">
+				<Chip
+					label={$t('domains.places.filter.anyDistance')}
+					selectable
+					selected={filter.maxKm === undefined}
+					onselect={() => set({ maxKm: undefined })}
+				/>
+				{#each DISTANCES as km (km)}
+					<Chip
+						label={far(km)}
+						selectable
+						selected={filter.maxKm === km}
+						onselect={(on) => set({ maxKm: on ? km : undefined })}
+					/>
+				{/each}
+			</div>
+		</div>
+		{#if meadow.collections.length}
+			<div class="facet" role="group" aria-labelledby="{uid}-collection">
+				<h3 class="label" id="{uid}-collection">{$t('domains.places.filter.collection')}</h3>
+				<div class="chips">
+					<Chip
+						label={$t('domains.places.filter.anyCollection')}
+						selectable
+						selected={filter.collection === undefined}
+						onselect={() => set({ collection: undefined })}
+					/>
+					{#each meadow.collections as collection (collection.id)}
+						<Chip
+							label={collection.name}
+							selectable
+							selected={filter.collection === collection.id}
+							onselect={(on) => set({ collection: on ? collection.id : undefined })}
+						/>
+					{/each}
+				</div>
+			</div>
+		{/if}
 		{#each FACETS as facet (facet)}
 			<div class="facet" role="group" aria-labelledby="{uid}-{facet}">
 				<h3 class="label" id="{uid}-{facet}">{$t(facetKey(facet))}</h3>
@@ -57,7 +154,7 @@
 							label={vibe.label ?? vibeName(vibe.id)}
 							selectable
 							selected={filter.vibes.includes(vibe.id)}
-							onselect={() => toggle(vibe.id)}
+							onselect={() => set({ vibes: toggled(filter.vibes, vibe.id) })}
 						/>
 					{/each}
 				</div>

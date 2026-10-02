@@ -4,10 +4,12 @@
 	// anything leaves; pressing the button is the consent, as Read is in a capture (D-86). With no key the saved
 	// places still filter, and this says what finding new ones needs.
 	import { Button, InlineError, Notice, Spinner } from '@eden/ui-kit'
-	import { areaWords, meadow, type Availability } from '@eden/shared/domains/places'
-	import { formatCost } from '@eden/shared/gardener'
-	import { locale, t } from '@eden/shared/i18n'
-	import { settingsUi } from '@eden/shared/shell/settings'
+	import { areaWords } from '../home.js'
+	import { meadow } from '../store.svelte.js'
+	import { type Availability } from '../discovery.js'
+	import { formatCost } from '../../../gardener/index.js'
+	import { locale, t } from '../../../i18n/index.js'
+	import { settingsUi } from '../../../shell/settings/index.js'
 
 	const uid = $props.id()
 	const lang = $derived($locale ?? 'en')

@@ -26,32 +26,21 @@
 		defaultCountry,
 		validateAddress,
 		type Address,
-	} from '@eden/shared/address'
-	import { linkedSizedPicture, sizedPicture, type SizedPicture } from '@eden/shared/api'
-	import {
-		FACETS,
-		PLACE_CATEGORIES,
-		PRICE_LEVELS,
-		categoryFromOsm,
-		categoryGlyph,
-		categoryKey,
-		facetKey,
-		instant,
-		meadow,
-		priceLabel,
-		vibesByFacet,
-		type Facet,
-		type PlaceDraft,
-		type PriceLevel,
-		type SavedPlace,
-	} from '@eden/shared/domains/places'
-	import type { GeocodeHit } from '@eden/shared/geo'
-	import { home } from '@eden/shared/home'
-	import { locale, t } from '@eden/shared/i18n'
-	import PictureDrop from '@eden/shared/components/PictureDrop.svelte'
-	import PictureInput from '@eden/shared/components/PictureInput.svelte'
-	import { undoToast } from '@eden/shared/shell'
-	import { vibeNamer } from '@eden/shared/domains/places'
+	} from '../../../address/index.js'
+	import { linkedSizedPicture, sizedPicture, type SizedPicture } from '../../../api/index.js'
+	import { FACETS, PRICE_LEVELS, type Facet, type PlaceDraft, type PriceLevel, type SavedPlace } from '../types.js'
+	import { PLACE_CATEGORIES, categoryFromOsm, categoryGlyph, categoryKey } from '../categories.js'
+	import { facetKey, vibesByFacet } from '../vibes.js'
+	import { instant } from '../rows.js'
+	import { meadow } from '../store.svelte.js'
+	import { priceLabel } from '../formats.js'
+	import type { GeocodeHit } from '../../../geo/index.js'
+	import { home } from '../../../home/index.js'
+	import { locale, t } from '../../../i18n/index.js'
+	import PictureDrop from '../../../components/PictureDrop.svelte'
+	import PictureInput from '../../../components/PictureInput.svelte'
+	import { undoToast } from '../../../shell/index.js'
+	import { vibeNamer } from '../words.js'
 
 	type Props = {
 		/** A place was added from the blank form; the page shows it. */
