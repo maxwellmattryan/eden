@@ -7,11 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.0-staging.1] - 2026-10-02
+
 ### Added
 
 - The data layer: the workspace is one encrypted database (SQLCipher) with its key in a file on desktop, the Keychain on iOS and the Keystore on Android; tasks, events, places, attachments, domain entities and typed links as rows with hybrid logical clock stamps and tombstones; the substrate API as commands behind `@eden/shared/data`, with the same API over localStorage in the browser
 - Export and import in Settings, Sync and data: the whole workspace or one domain as a zip archive of plain files with a manifest of hashes and a README, the domain's data as CSV and Markdown beside the rows; import by merge (the newer row stays) or by replace (after a backup of the workspace)
-
 - Toolbench on desktop: Ideas (status chips with counts, quick-add that files a trailing area, the list with the days an idea has rested, the detail pane with the log and the stored brainstorm thread); Projects, Lab, Studio and Notes show their empty states
 - Sky on desktop: the current reading, a scrolling strip of the next twelve hours, the week, sun and moon computed on-device, active NWS alerts and the home chip, live from Open-Meteo for the home place (a setting until Places exist); offline shows the last good forecast with the time it is from and the status-bar banner. Temperature units are a General setting
 - Hearth on desktop: Stock (the four locations sorted by expiry, the Expiring and Low stock filters, quick-add, the detail pane with the storage tip, select mode) and Grocery (grouped by store, check off, origin badges, quick-add, Clear checked). Every write has an undo toast and lands in the Garden feed
@@ -32,3 +33,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Hearth and Toolbench keep their data in the workspace database, one row for each record. What they held before is brought over once on first launch and the old document is removed. A write that fails is held and sent again on retry, with the writes behind it in order
 - Hearth has no Tips tab: a tip is a line on a stock item or a recipe, shown as an info button beside its name (D-87)
 - Cook tonight on the Garden is worked out on the device from the recipes, the stock and the allergy filter, with no model asked
+
+[Unreleased]: https://github.com/maxwellmattryan/eden/compare/v0.1.0-staging.1...HEAD
+[0.1.0-staging.1]: https://github.com/maxwellmattryan/eden/releases/tag/v0.1.0-staging.1

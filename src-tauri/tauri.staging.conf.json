@@ -9,14 +9,32 @@
 			"icons/staging/128x128@2x.png",
 			"icons/staging/icon.icns",
 			"icons/staging/icon.ico"
-		]
+		],
+		"windows": {
+			"wix": {
+				"version": "0.1.0.1"
+			}
+		}
 	},
 	"app": {
-		"windows": [{ "title": "Eden [STAGING]", "dragDropEnabled": false, "width": 1280, "height": 820, "minWidth": 960, "minHeight": 600, "resizable": true }]
+		"windows": [
+			{
+				"title": "Eden [STAGING]",
+				"dragDropEnabled": false,
+				"width": 1280,
+				"height": 820,
+				"minWidth": 960,
+				"minHeight": 600,
+				"resizable": true
+			}
+		]
 	},
 	"plugins": {
 		"updater": {
-			"endpoints": ["https://storage.googleapis.com/eden-releases/staging/latest.json"]
+			"endpoints": [
+				"https://storage.googleapis.com/eden-releases/staging/latest.json"
+			]
 		}
-	}
+	},
+	"version": "0.1.0-staging.1"
 }

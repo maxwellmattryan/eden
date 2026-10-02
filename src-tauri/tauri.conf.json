@@ -46,7 +46,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "PLACEHOLDER: run `yarn tauri signer generate -w ~/.tauri/eden.key` and paste the public key (docs/engineering/release.md)",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJCNjczMkZCRDlENDUzODYKUldTR1U5VForekpudXptWkxrOFcrQllSWlozRkZaODlFekpIRnRHY0hPak85MFlPU2NzU1BWZUcK",
       "dialog": false
     }
   }
