@@ -32,6 +32,10 @@ export type { ModelGrade } from '../manifest/types.js'
 export type WeatherProvider = 'open-meteo' | 'weatherkit'
 export const weatherProviders: readonly WeatherProvider[] = ['open-meteo', 'weatherkit']
 
+/** The maps app "Open in Maps" hands a place to (product/domains/places.md, "Settings"). */
+export type MapsApp = 'apple' | 'google' | 'osm'
+export const mapsApps: readonly MapsApp[] = ['apple', 'google', 'osm']
+
 /**
  * The home place, as a setting until Places exist (D-38 makes it a Place of kind `home`): a label and the coordinates
  * Sky forecasts for. Only rounded coordinates ever leave the device (D-60).

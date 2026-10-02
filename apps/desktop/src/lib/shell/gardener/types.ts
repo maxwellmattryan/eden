@@ -31,6 +31,10 @@ export type ToolFailure =
 	| 'unreadable'
 	| 'empty'
 	| 'no-files'
+	/** The provider would not run the web search (D-132); the output carries its own words. */
+	| 'search-refused'
+	/** The web search ran and brought nothing back. */
+	| 'search-failed'
 
 /** What a handler knows of the request it serves. */
 export interface ToolContext {
@@ -55,6 +59,24 @@ export interface ToolContext {
 	files?: ToolFiles
 	/** The `https` addresses the owner wrote in this conversation: the ones `read-page` fetches without asking. */
 	links: string[]
+	/**
+	 * What the tool's research request found (D-132), there for its `prompt` and its `parse`: the notes, which are
+	 * untrusted text, and the addresses the searches returned, which are the only ones the tool may use.
+	 */
+	research?: { notes: string; sources: { url: string; title: string }[] }
+}
+
+/**
+ * The research a searching tool does first (D-132): its own request, with the provider's web search among its
+ * tools. The provider runs the searches; Eden caps how many and loops nothing.
+ */
+export interface Research {
+	/** The most searches the request may make. */
+	maxUses: number
+	/** What to look for, as the research request's message. */
+	prompt: (input: unknown, ctx: ToolContext) => Promise<string> | string
+	/** Where the owner is, as coarsely as a city: what the provider may use to place its results. Never a coordinate. */
+	location?: (input: unknown, ctx: ToolContext) => { city?: string; region?: string; timezone?: string } | undefined
 }
 
 /** What a tool answers: what the model reads, the card the panel shows, the rows it touched (for the audit). */
@@ -92,6 +114,8 @@ export interface Delegate {
 	filesOptional?: (input: unknown) => boolean
 	/** How many tokens the answer may take; the runtime's default otherwise. */
 	maxTokens?: number
+	/** The tool searches the web first: `prompt` then reads `ctx.research` and wraps the notes as untrusted. */
+	research?: Research
 }
 
 export type ToolHandler =

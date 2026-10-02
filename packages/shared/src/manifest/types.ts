@@ -22,8 +22,9 @@ export type SidebarGroupId = 'today' | 'shell' | 'domains'
 export type ToolAccess = 'read' | 'write-draft' | 'write'
 /** What a model-backed tool asks of a model, lowest first (D-74). Never "tier", which is sensitivity. */
 export type ModelGrade = 'light' | 'standard' | 'deep'
-/** What a tool may need of a model beyond text: to call plain tools, or to see an image. */
-export type ModelFlag = 'tools' | 'vision'
+/** What a tool may need of a model beyond text: to call plain tools, to see an image, or to search the web through
+ * a tool the provider runs on its own side (D-132). */
+export type ModelFlag = 'tools' | 'vision' | 'search'
 export type CaptureSource = 'photo' | 'receipt' | 'barcode' | 'share-sheet'
 export type DeviceCapability = 'camera' | 'location-precise' | 'os-notifications' | 'healthkit'
 export type NotificationChannel = 'in-app' | 'os'

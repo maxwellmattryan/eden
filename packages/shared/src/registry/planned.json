@@ -54,18 +54,6 @@
 			],
 			"kinds": []
 		},
-		"places": {
-			"phase": 3,
-			"facts": [{ "id": "favorite-vibe", "tier": "T0" }],
-			"entities": [
-				{ "id": "place-profile", "tier": "T1" },
-				{ "id": "vibe", "tier": "T0" },
-				{ "id": "collection", "tier": "T1" },
-				{ "id": "listing", "tier": "T0" },
-				{ "id": "visit", "tier": "T1" }
-			],
-			"kinds": [{ "id": "outing", "primitive": "event", "tier": "T1" }]
-		},
 		"health": {
 			"phase": "later",
 			"facts": [

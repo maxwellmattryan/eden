@@ -116,7 +116,18 @@
 		"terminal",
 		"id-card",
 		"wrench",
-		"clipboard-list"
+		"clipboard-list",
+		"map",
+		"locate-fixed",
+		"star",
+		"heart",
+		"bookmark",
+		"phone",
+		"globe",
+		"ticket",
+		"calendar-plus",
+		"clipboard-paste",
+		"wine-off"
 	],
 	"custom": {
 		"seed": [

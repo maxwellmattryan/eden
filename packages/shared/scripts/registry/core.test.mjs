@@ -156,10 +156,35 @@ describe('build', () => {
 		expect(result.shell.gardenDefault).toEqual(['today', 'expiring-soon'])
 		expect(result.ts).toContain('export const RESOURCES = [')
 		expect(result.rust).toContain(
-			'Resource { id: "passport", category: Category::Kind, primitive: Some("attachment"), owner: "substrate", tier: Tier::T3, phase: Some(2) },'
+			'Resource { id: "passport", category: Category::Kind, primitive: Some("attachment"), owner: "substrate", tier: Tier::T3, phase: Some(2), live: false },'
 		)
-		expect(result.rust).toContain('tier: Tier::ByKind, phase: Some(1)')
-		expect(result.rust).toContain('owner: "fitness", tier: Tier::T1, phase: None')
+		expect(result.rust).toContain('tier: Tier::ByKind, phase: Some(1), live: true')
+		expect(result.rust).toContain('owner: "fitness", tier: Tier::T1, phase: None, live: false')
+	})
+
+	it("makes a built domain's rows live at its own phase, and no others (D-130)", () => {
+		const result = build(
+			sources((given) => {
+				// Hearth built ahead of its phase: its rows are live, save the one it plans for later
+				kitchen(given).phase = 3
+				kitchen(given).resources.entities.push({ id: 'meal-plan', tier: 'T0', phase: 'later' })
+				// a row of the same phase whose owner is not built stays out of reach
+				given.planned.data.owners.fitness = { phase: 3, facts: [{ id: 'favorite-supplement', tier: 'T1' }] }
+				given.doc = undefined
+			})
+		)
+		expect(result.errors).toEqual([])
+		const live = (id) => result.resources.find((row) => row.id === id).live
+		expect(live('stock-item')).toBe(true)
+		expect(live('shop-day')).toBe(true)
+		expect(live('meal-plan')).toBe(false)
+		expect(live('favorite-supplement')).toBe(false)
+		// the substrate has no phase of its own: its rows are live at Phase 1 only
+		expect(live('home-area')).toBe(true)
+		expect(live('passport')).toBe(false)
+		expect(result.rust).toContain(
+			'id: "stock-item", category: Category::Entity, primitive: None, owner: "kitchen", tier: Tier::T0, phase: Some(3), live: true'
+		)
 	})
 
 	it('refuses an id that is registered twice, whatever its category', () => {
@@ -263,7 +288,7 @@ describe('build', () => {
 
 		it('that needs what a model cannot have, or the same thing twice', () => {
 			expect(refused({ grade: 'light', needs: ['vision', 'audio'] })).toEqual([
-				'kitchen/manifest.json: the tool "suggest" needs: "audio" is not one of tools, vision',
+				'kitchen/manifest.json: the tool "suggest" needs: "audio" is not one of tools, vision, search',
 			])
 			expect(refused({ grade: 'light', needs: ['tools', 'tools'] })).toEqual([
 				'kitchen/manifest.json: the tool "suggest" needs: "tools" is listed twice',

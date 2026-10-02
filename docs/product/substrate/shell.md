@@ -21,7 +21,7 @@ The app mark and wordmark at the head, then three groups under rules: Today; Gar
 
 The dashboard (OQ-1). A four-column widget grid with tiles of size S (1×1), M (2×1) and L (2×2), an edit mode to add, remove, drag and resize, and a catalog built from manifests. A widget declares in the manifest the registry ids it reads and computes locally; a widget that needs the Gardener calls one of its domain's tools, so nothing runs a model just because the Garden opened. A quick-navigation row of domain tiles sits above the grid, and the activity feed occupies a column on wide screens.
 
-Default layout in Phase 1: weather-now (Sky), today (Tasks), expiring-soon and cook-tonight (Hearth), resurfaced-idea and active-projects (Toolbench), sun-and-moon (Sky), the daily line (neutral until Sanctuary), the activity feed. Widgets render their empty state until data exists.
+Default layout, eleven tiles: weather-now (Sky), today (Tasks), expiring-soon and cook-tonight (Hearth), resurfaced-idea and active-projects (Toolbench), sun-and-moon (Sky), the daily line (neutral until Sanctuary), quick-log, and nearby-favorites and upcoming-listings (Meadow, built ahead of its phase, D-130); the activity feed sits beside the grid. Widgets render their empty state until data exists.
 
 ## Command palette (Phase 1)
 

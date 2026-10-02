@@ -1,6 +1,6 @@
 {
 	"note": "What the shell declares for itself: the built domains in their Phase 1 order, the places of the sidebar that are not domains and the two actions pinned at its foot (D-64, D-77), the phone's tab bar with the two domains pinned until the owner chooses, the Garden tiles no domain owns, and the Garden's default layout (product/substrate/shell.md).",
-	"domains": ["kitchen", "toolbench", "weather"],
+	"domains": ["kitchen", "toolbench", "weather", "places"],
 	"sidebar": {
 		"groups": ["today", "shell", "domains"],
 		"entries": [
@@ -27,6 +27,8 @@
 		"active-projects",
 		"sun-and-moon",
 		"daily-line",
-		"quick-log"
+		"quick-log",
+		"nearby-favorites",
+		"upcoming-listings"
 	]
 }

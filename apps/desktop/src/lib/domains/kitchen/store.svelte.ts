@@ -4,7 +4,7 @@
 // write hands back an undo, so the page can show the undo toast in place of a confirm sheet (D-12); each write also
 // lands in the Garden's activity feed. A change to several rows (a haul, a recipe cooked, a bulk move) is one batch
 // and one undo.
-import { SvelteMap, SvelteSet } from 'svelte/reactivity'
+import { SvelteMap } from 'svelte/reactivity'
 import { logError } from '@eden/shared/api'
 import {
 	applyBatch,
@@ -184,7 +184,10 @@ export class KitchenStore {
 	readonly photos = new SvelteMap<string, string>()
 	/** The recipes' pictures in full (D-93), by the Attachment's id: object URLs, read when a recipe is first opened. */
 	readonly #images = new SvelteMap<string, string>()
-	readonly #reading = new SvelteSet<string>()
+	// a plain set, never read reactively: a picture is asked for from inside a `$derived`, where writing state is
+	// forbidden (state_unsafe_mutation)
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity
+	readonly #reading = new Set<string>()
 
 	#loading: Promise<void> | undefined
 	readonly #queue = new WriteQueue(

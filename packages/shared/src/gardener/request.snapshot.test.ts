@@ -7,7 +7,7 @@ import { buildPack, type PackReaders } from './pack.js'
 import { ANTHROPIC_SEED } from './providers.js'
 import { toApiTool, toolIndex, toolsFor } from './tools.js'
 
-const NAMES: Record<string, string> = { kitchen: 'Hearth', toolbench: 'Toolbench', weather: 'Sky' }
+const NAMES: Record<string, string> = { kitchen: 'Hearth', toolbench: 'Toolbench', weather: 'Sky', places: 'Meadow' }
 
 const empty: PackReaders = {
 	facts: async () => [],
@@ -65,6 +65,30 @@ describe('what a request carries', () => {
 		)
 		const text = pack.system.map((block) => block.text).join('\n\n--- not cached below ---\n\n')
 		await expect(`${text}\n`).toMatchFileSnapshot('./__snapshots__/system-prompt.delegated.txt')
+	})
+
+	it('the system prompt of a research request', async () => {
+		const pack = await buildPack(
+			{
+				reads: ['place-profile', 'venue', 'favorite-vibe', 'home-area', 'dietary-preference'],
+				thread: [],
+				message: 'Find a quiet cafe to work in, in Austin, Texas.',
+				tools: [],
+				model: ANTHROPIC_SEED.models[1]!,
+				outputReserve: 2048,
+				tokenCap: null,
+				subject: 'anthropic',
+				now: Date.UTC(2026, 8, 30, 14, 40),
+				zone: 'America/Chicago',
+				lang: 'en',
+				domains: declarations.map((domain) => ({ id: domain.id, name: NAMES[domain.id] ?? domain.id })),
+				grade: 'standard',
+				mode: 'research',
+			},
+			empty
+		)
+		const text = pack.system.map((block) => block.text).join('\n\n--- not cached below ---\n\n')
+		await expect(`${text}\n`).toMatchFileSnapshot('./__snapshots__/system-prompt.research.txt')
 	})
 
 	it('the tools, as the API is given them', async () => {

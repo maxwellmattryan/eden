@@ -20,6 +20,7 @@ import {
 	clockFormats,
 	fontSettings,
 	languages,
+	mapsApps,
 	measurementSystems,
 	themeSettings,
 	weatherProviders,
@@ -29,6 +30,7 @@ import {
 	type HomeArea,
 	type HomePlace,
 	type Language,
+	type MapsApp,
 	type MeasurementSystem,
 	type ModelGrade,
 	type ThemeSetting,
@@ -46,6 +48,10 @@ export const storage = {
 	weekStart: 'eden:week-start',
 	clock: 'eden:clock',
 	weatherProvider: 'eden:weather-provider',
+	mapsApp: 'eden:maps-app',
+	placesDiscovery: 'eden:places-discovery',
+	placesWeekly: 'eden:places-weekly',
+	placesDetailsOff: 'eden:places-details-off',
 	home: 'eden:home',
 	gardenerGrade: 'eden:gardener-grade',
 	gardenerPanelWidth: 'eden:gardener-panel-width',
@@ -139,6 +145,14 @@ export class Settings {
 	clock = $state<ClockFormat>('24h')
 	/** The forecast provider Sky asks first (D-56). */
 	weatherProvider = $state<WeatherProvider>('open-meteo')
+	/** The maps app "Open in Maps" hands a place to; Apple's where the device is Apple's. */
+	mapsApp = $state<MapsApp>('google')
+	/** Whether Meadow may ask the Gardener to find places and listings (D-128). */
+	placesDiscovery = $state(true)
+	/** Whether Meadow's weekly listings search runs on its own (D-134). */
+	placesWeekly = $state(true)
+	/** The detail sources the owner turned off, by id (D-128): each is on until it is here. */
+	placesDetailsOff = $state<string[]>([])
 	/** The home place Sky forecasts for, until Places exist (D-38). */
 	home = $state<HomePlace>(DEFAULT_HOME)
 	/** The grade the Gardener's conversation runs at until the owner switches it on the chip (D-74). */
@@ -172,6 +186,10 @@ export class Settings {
 		this.weekStart = oneOf(read(storage.weekStart), weekStarts, 'monday')
 		this.clock = oneOf(read(storage.clock), clockFormats, '24h')
 		this.weatherProvider = oneOf(read(storage.weatherProvider), weatherProviders, 'open-meteo')
+		this.mapsApp = oneOf(read(storage.mapsApp), mapsApps, this.systemMapsApp())
+		this.placesDiscovery = read(storage.placesDiscovery) !== 'off'
+		this.placesWeekly = read(storage.placesWeekly) !== 'off'
+		this.placesDetailsOff = (read(storage.placesDetailsOff) ?? '').split(',').filter(Boolean)
 		this.gardenerGrade = oneOf(read(storage.gardenerGrade), GRADES, 'standard')
 		this.gardenerPanelWidth = positiveInt(read(storage.gardenerPanelWidth))
 		this.sidebarWidth = positiveInt(read(storage.sidebarWidth))
@@ -283,6 +301,34 @@ export class Settings {
 	setWeatherProvider(provider: WeatherProvider) {
 		this.weatherProvider = oneOf(provider, weatherProviders, 'open-meteo')
 		write(storage.weatherProvider, this.weatherProvider === 'open-meteo' ? null : this.weatherProvider)
+	}
+
+	/** Apple's Maps on an Apple device, where its links open the app; Google's elsewhere. */
+	systemMapsApp(): MapsApp {
+		const agent = typeof navigator === 'undefined' ? '' : navigator.userAgent
+		return /Mac|iPhone|iPad/.test(agent) ? 'apple' : 'google'
+	}
+
+	setMapsApp(app: MapsApp) {
+		this.mapsApp = oneOf(app, mapsApps, this.systemMapsApp())
+		write(storage.mapsApp, this.mapsApp === this.systemMapsApp() ? null : this.mapsApp)
+	}
+
+	setPlacesDiscovery(on: boolean) {
+		this.placesDiscovery = on
+		write(storage.placesDiscovery, on ? null : 'off')
+	}
+
+	setPlacesWeekly(on: boolean) {
+		this.placesWeekly = on
+		write(storage.placesWeekly, on ? null : 'off')
+	}
+
+	/** Turns one detail source on or off. */
+	setPlacesDetail(id: string, on: boolean) {
+		const off = this.placesDetailsOff.filter((entry) => entry !== id)
+		this.placesDetailsOff = on ? off : [...off, id]
+		write(storage.placesDetailsOff, this.placesDetailsOff.length ? this.placesDetailsOff.join(',') : null)
 	}
 
 	setGardenerGrade(grade: ModelGrade) {

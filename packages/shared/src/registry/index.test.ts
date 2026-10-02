@@ -45,7 +45,7 @@ describe('the registry', () => {
 
 	it('lists the live kinds of a primitive, whoever owns them', () => {
 		expect(kindsOf('task')).toEqual(['todo', 'checklist', 'routine', 'habit', 'reminder'])
-		expect(kindsOf('event')).toEqual(['local-event', 'shop-day'])
+		expect(kindsOf('event')).toEqual(['local-event', 'shop-day', 'outing'])
 		expect(kindsOf('place')).toEqual(['home', 'venue'])
 		expect(kindsOf('attachment')).toEqual([
 			'document',
@@ -55,6 +55,7 @@ describe('the registry', () => {
 			'recipe-photo',
 			'store-photo',
 			'render',
+			'place-photo',
 		])
 	})
 

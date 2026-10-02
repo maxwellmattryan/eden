@@ -445,6 +445,96 @@ export const RESOURCES = [
 		"live": true
 	},
 	{
+		"id": "favorite-vibe",
+		"category": "fact",
+		"primitive": null,
+		"owner": "places",
+		"tier": "T0",
+		"phase": 3,
+		"live": true
+	},
+	{
+		"id": "place-profile",
+		"category": "entity",
+		"primitive": null,
+		"owner": "places",
+		"tier": "T1",
+		"phase": 3,
+		"live": true
+	},
+	{
+		"id": "vibe",
+		"category": "entity",
+		"primitive": null,
+		"owner": "places",
+		"tier": "T0",
+		"phase": 3,
+		"live": true
+	},
+	{
+		"id": "collection",
+		"category": "entity",
+		"primitive": null,
+		"owner": "places",
+		"tier": "T1",
+		"phase": 3,
+		"live": true
+	},
+	{
+		"id": "listing",
+		"category": "entity",
+		"primitive": null,
+		"owner": "places",
+		"tier": "T0",
+		"phase": 3,
+		"live": true
+	},
+	{
+		"id": "visit",
+		"category": "entity",
+		"primitive": null,
+		"owner": "places",
+		"tier": "T1",
+		"phase": 3,
+		"live": true
+	},
+	{
+		"id": "place-suggestion",
+		"category": "entity",
+		"primitive": null,
+		"owner": "places",
+		"tier": "T1",
+		"phase": 3,
+		"live": true
+	},
+	{
+		"id": "place-detail",
+		"category": "entity",
+		"primitive": null,
+		"owner": "places",
+		"tier": "T0",
+		"phase": 3,
+		"live": true
+	},
+	{
+		"id": "outing",
+		"category": "kind",
+		"primitive": "event",
+		"owner": "places",
+		"tier": "T1",
+		"phase": 3,
+		"live": true
+	},
+	{
+		"id": "place-photo",
+		"category": "kind",
+		"primitive": "attachment",
+		"owner": "places",
+		"tier": "T1",
+		"phase": 3,
+		"live": true
+	},
+	{
 		"id": "layer",
 		"category": "entity",
 		"primitive": null,
@@ -712,69 +802,6 @@ export const RESOURCES = [
 		"owner": "spirit",
 		"tier": "T2",
 		"phase": 2,
-		"live": false
-	},
-	{
-		"id": "favorite-vibe",
-		"category": "fact",
-		"primitive": null,
-		"owner": "places",
-		"tier": "T0",
-		"phase": 3,
-		"live": false
-	},
-	{
-		"id": "place-profile",
-		"category": "entity",
-		"primitive": null,
-		"owner": "places",
-		"tier": "T1",
-		"phase": 3,
-		"live": false
-	},
-	{
-		"id": "vibe",
-		"category": "entity",
-		"primitive": null,
-		"owner": "places",
-		"tier": "T0",
-		"phase": 3,
-		"live": false
-	},
-	{
-		"id": "collection",
-		"category": "entity",
-		"primitive": null,
-		"owner": "places",
-		"tier": "T1",
-		"phase": 3,
-		"live": false
-	},
-	{
-		"id": "listing",
-		"category": "entity",
-		"primitive": null,
-		"owner": "places",
-		"tier": "T0",
-		"phase": 3,
-		"live": false
-	},
-	{
-		"id": "visit",
-		"category": "entity",
-		"primitive": null,
-		"owner": "places",
-		"tier": "T1",
-		"phase": 3,
-		"live": false
-	},
-	{
-		"id": "outing",
-		"category": "kind",
-		"primitive": "event",
-		"owner": "places",
-		"tier": "T1",
-		"phase": 3,
 		"live": false
 	},
 	{
@@ -1858,6 +1885,199 @@ export const DECLARATIONS = {
 			"search": []
 		},
 		"export": []
+	},
+	"places": {
+		"id": "places",
+		"phase": 3,
+		"name": "domains.places.name",
+		"subtitle": "domains.places.subtitle",
+		"sidebar": {
+			"group": "domains",
+			"order": 30,
+			"visible": true
+		},
+		"tabs": [
+			{
+				"id": "map",
+				"label": "domains.places.tabs.map"
+			},
+			{
+				"id": "listings",
+				"label": "domains.places.tabs.listings"
+			},
+			{
+				"id": "collections",
+				"label": "domains.places.tabs.collections"
+			},
+			{
+				"id": "visits",
+				"label": "domains.places.tabs.visits"
+			}
+		],
+		"resources": [
+			"favorite-vibe",
+			"place-profile",
+			"vibe",
+			"collection",
+			"listing",
+			"visit",
+			"place-suggestion",
+			"place-detail",
+			"outing",
+			"place-photo"
+		],
+		"reads": [
+			"home-area",
+			"dietary-preference",
+			"allergy",
+			"venue",
+			"local-event"
+		],
+		"widgets": [
+			{
+				"id": "nearby-favorites",
+				"sizes": [
+					"m"
+				],
+				"default": true,
+				"planned": false,
+				"reads": [
+					"place-profile",
+					"venue",
+					"home-area"
+				],
+				"title": "garden.widgets.nearbyFavorites",
+				"empty": "garden.empty.nearbyFavorites"
+			},
+			{
+				"id": "upcoming-listings",
+				"sizes": [
+					"m"
+				],
+				"default": true,
+				"planned": false,
+				"reads": [
+					"listing",
+					"outing"
+				],
+				"title": "garden.widgets.upcomingListings",
+				"empty": "garden.empty.upcomingListings"
+			}
+		],
+		"quickActions": [],
+		"captureSources": [],
+		"tools": [
+			{
+				"id": "suggest-places",
+				"access": "read",
+				"confirm": false,
+				"reads": [
+					"place-profile",
+					"venue",
+					"vibe",
+					"favorite-vibe",
+					"home-area",
+					"dietary-preference",
+					"allergy"
+				],
+				"grade": "standard",
+				"needs": [
+					"search"
+				],
+				"minContext": null
+			},
+			{
+				"id": "suggest-listings",
+				"access": "read",
+				"confirm": false,
+				"reads": [
+					"listing",
+					"favorite-vibe",
+					"home-area",
+					"local-event",
+					"outing"
+				],
+				"grade": "standard",
+				"needs": [
+					"search"
+				],
+				"minContext": null
+			},
+			{
+				"id": "import-places",
+				"access": "write-draft",
+				"confirm": false,
+				"reads": [
+					"vibe",
+					"favorite-vibe"
+				],
+				"grade": "standard",
+				"needs": [],
+				"minContext": null
+			},
+			{
+				"id": "add-to-calendar",
+				"access": "write",
+				"confirm": true,
+				"reads": [
+					"listing"
+				],
+				"grade": null,
+				"needs": [],
+				"minContext": null
+			}
+		],
+		"signals": [
+			"listing.matched",
+			"visit.logged"
+		],
+		"notificationKinds": [
+			{
+				"id": "matching-listings",
+				"channel": "in-app",
+				"cadence": "weekly",
+				"default": true,
+				"signal": "listing.matched",
+				"when": null
+			},
+			{
+				"id": "outing-reminder",
+				"channel": "os",
+				"cadence": "per-outing",
+				"default": true,
+				"signal": null,
+				"when": null
+			}
+		],
+		"schedules": [
+			{
+				"id": "weekly",
+				"name": "places.weekly",
+				"daily": "09:00",
+				"every": null
+			}
+		],
+		"intents": [
+			"places.open"
+		],
+		"deviceCapabilities": [],
+		"palette": {
+			"entries": [
+				{
+					"id": "places.open",
+					"verb": "go",
+					"label": "domains.places.open",
+					"intent": "places.open"
+				}
+			],
+			"search": []
+		},
+		"export": [
+			"place-profile",
+			"vibe",
+			"collection",
+			"visit"
+		]
 	}
 } as const
 
@@ -1866,7 +2086,8 @@ export const SHELL = {
 	"domains": [
 		"kitchen",
 		"toolbench",
-		"weather"
+		"weather",
+		"places"
 	],
 	"sidebar": {
 		"groups": [
@@ -1968,6 +2189,8 @@ export const SHELL = {
 		"active-projects",
 		"sun-and-moon",
 		"daily-line",
-		"quick-log"
+		"quick-log",
+		"nearby-favorites",
+		"upcoming-listings"
 	]
 } as const

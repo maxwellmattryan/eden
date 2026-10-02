@@ -29,6 +29,8 @@
 			'sun-and-moon': '太陽と月',
 			'daily-line': '今日の一行',
 			'quick-log': '体重',
+			'nearby-favorites': '近くのお気に入り',
+			'upcoming-listings': '今週末',
 		},
 		empty: {
 			'weather-now': '自宅の場所を設定すると空が見えます。',
@@ -40,6 +42,8 @@
 			'sun-and-moon': '自宅の場所を設定すると光が見えます。',
 			'daily-line': '足るを知る',
 			'quick-log': '体重を記録すると線が始まります。',
+			'nearby-favorites': '場所を保存してお気に入りにしてください。',
+			'upcoming-listings': '今週末の催しはまだ見つかっていません。',
 			feed: 'まだ何も起きていません。',
 		},
 		actions: {
@@ -48,6 +52,8 @@
 			'resurfaced-idea': 'アイデアを開く',
 			'active-projects': 'プロジェクトを開く',
 			'quick-log': '体重を記録',
+			'nearby-favorites': '地図を開く',
+			'upcoming-listings': '催しを開く',
 		},
 		untouched: (days) => `${days}日間手つかず`,
 		minutes: (minutes) => `${minutes}分`,
@@ -79,7 +85,7 @@
 			docs: {
 				description: {
 					component:
-						'The dashboard (product/substrate/shell.md), mocked from kit components under D-54. A quick-navigation row of domain tiles, the Phase 1 default grid read from `gardenLayout` in the sample data (weather-now, today, expiring-soon, cook-tonight, resurfaced-idea, active-projects, sun-and-moon, the neutral daily line, the weight quick log), and the activity feed in a column of its own on desktop. Rendered inside the AppFrame: the Sidebar with subtitles on, the status bar at the foot, and on the phone the bottom tabs. Widgets show a one-line prompt until data exists; offline, the Sky widgets say when their forecast is from.',
+						'The dashboard (product/substrate/shell.md), mocked from kit components under D-54. A quick-navigation row of domain tiles, the Phase 1 default grid read from `gardenLayout` in the sample data (weather-now, today, expiring-soon, cook-tonight, resurfaced-idea, active-projects, sun-and-moon, the neutral daily line, the weight quick log, Meadow’s favourites nearby and this weekend’s listings), and the activity feed in a column of its own on desktop. Rendered inside the AppFrame: the Sidebar with subtitles on, the status bar at the foot, and on the phone the bottom tabs. Widgets show a one-line prompt until data exists; offline, the Sky widgets say when their forecast is from.',
 				},
 			},
 		},

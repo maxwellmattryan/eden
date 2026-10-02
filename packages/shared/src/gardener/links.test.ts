@@ -76,6 +76,16 @@ describe('holdsPage', () => {
 		expect(holdsPage([message('gardener', [read('done', 'read-page', 'kitchen')])])).toBe(false)
 		expect(holdsPage([])).toBe(false)
 	})
+
+	it('is true once a tool that searches the web has answered, since what a search returns is a page’s words (D-132)', () => {
+		const searches = (domain: string, tool: string) => domain === 'places' && tool === 'suggest-places'
+		const found = [message('gardener', [read('done', 'suggest-places', 'places')])]
+		expect(holdsPage(found, searches)).toBe(true)
+		// only a tool the caller says searches, and only once it answered
+		expect(holdsPage(found)).toBe(false)
+		expect(holdsPage([message('gardener', [read('failed', 'suggest-places', 'places')])], searches)).toBe(false)
+		expect(holdsPage([message('gardener', [read('done', 'forecast', 'weather')])], searches)).toBe(false)
+	})
 })
 
 describe('untrusted', () => {

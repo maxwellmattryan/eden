@@ -294,6 +294,14 @@ export interface UiStrings {
 		/** The letter at the compass's north point. */
 		north: string
 	}
+	rating: {
+		/** One star's name in the group: "3 stars". */
+		stars: (count: number) => string
+		/** A rating shown and not changed: what was rated, the stars set and how many there are. */
+		outOf: (label: string, value: number, max: number) => string
+		/** A thing with no rating yet. */
+		none: (label: string) => string
+	}
 	iconButton: {
 		/** The accessible name of a bell with a badge: the label and its unread count. */
 		withCount: (label: string, count: number) => string
@@ -569,6 +577,11 @@ export const defaultStrings: UiStrings = {
 	sparkline: (count, latest) => `${count} values, latest ${latest}`,
 	reference: (value) => `reference ${value}`,
 	compass: { north: 'N' },
+	rating: {
+		stars: (count) => (count === 1 ? '1 star' : `${count} stars`),
+		outOf: (label, value, max) => `${label}: ${value} of ${max}`,
+		none: (label) => `${label}: not rated`,
+	},
 	iconButton: {
 		withCount: (label, count) => `${label}, ${count} unread`,
 	},

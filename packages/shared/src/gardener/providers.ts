@@ -16,13 +16,16 @@ import {
 
 export const ANTHROPIC: ProviderId = 'anthropic'
 
-const EVERY_FLAG: readonly ModelFlag[] = ['tools', 'vision']
+const EVERY_FLAG: readonly ModelFlag[] = ['tools', 'vision', 'search']
+/** What the provider charges for one web search: ten dollars a thousand (D-132), on top of the tokens. */
+const SEARCH_FEE = 0.01
 
 /**
  * Anthropic's models, from the provider's docs on 2026-09-30: dated ids wherever one exists, and the pricing per
  * million tokens. Fable is listed for the owner to choose and mapped to no grade: it costs two and a half times Opus.
  * No row prices a cache write: it is the five-minute one, the only kind the pack asks for, at a quarter over the
- * row's input price, so an input price the owner edits carries it along (D-116).
+ * row's input price, so an input price the owner edits carries it along (D-116). Every row prices a web search,
+ * which the provider charges for by the search (D-132).
  */
 export const ANTHROPIC_SEED: ProviderRow = {
 	id: ANTHROPIC,
@@ -31,31 +34,34 @@ export const ANTHROPIC_SEED: ProviderRow = {
 			id: 'claude-haiku-4-5-20251001',
 			flags: EVERY_FLAG,
 			contextTokens: 200_000,
-			pricing: { input: 1, output: 5, cacheRead: 0.1 },
+			pricing: { input: 1, output: 5, cacheRead: 0.1, search: SEARCH_FEE },
 		},
 		{
 			id: 'claude-sonnet-5-5',
 			flags: EVERY_FLAG,
 			contextTokens: 1_000_000,
-			pricing: { input: 2, output: 10, cacheRead: 0.2 },
+			pricing: { input: 2, output: 10, cacheRead: 0.2, search: SEARCH_FEE },
 			thinks: true,
 		},
 		{
 			id: 'claude-opus-5-5',
 			flags: EVERY_FLAG,
 			contextTokens: 1_000_000,
-			pricing: { input: 4, output: 20, cacheRead: 0.2 },
+			pricing: { input: 4, output: 20, cacheRead: 0.2, search: SEARCH_FEE },
 			thinks: true,
 		},
 		{
 			id: 'claude-fable-5-1',
 			flags: EVERY_FLAG,
 			contextTokens: 1_000_000,
-			pricing: { input: 10, output: 50, cacheRead: 0.25 },
+			pricing: { input: 10, output: 50, cacheRead: 0.25, search: SEARCH_FEE },
 			thinks: true,
 		},
 	],
 	grades: { light: 'claude-haiku-4-5-20251001', standard: 'claude-sonnet-5-5', deep: 'claude-opus-5-5' },
+	// the basic web search, which every model here takes; the newer variant filters its results with code the
+	// provider runs, and the light model does not take it
+	serverTools: { search: { type: 'web_search_20250305', name: 'web_search' } },
 }
 
 /** Every seeded provider. */
@@ -101,6 +107,10 @@ function modelProblems(provider: ProviderId, row: ModelEdit): string[] {
 	const write = row.pricing?.cacheWrite
 	if (write !== undefined && !(typeof write === 'number' && Number.isFinite(write) && write >= 0))
 		problems.push(`${what} costs ${JSON.stringify(write)} per million cacheWrite tokens; a number, zero or more`)
+	// a row with no search fee costs a search at nothing, as a row from before searches were priced does
+	const search = row.pricing?.search
+	if (search !== undefined && !(typeof search === 'number' && Number.isFinite(search) && search >= 0))
+		problems.push(`${what} costs ${JSON.stringify(search)} per search; a number, zero or more`)
 	return problems
 }
 
@@ -161,7 +171,10 @@ export function effectiveProvider(
 		if (models.some((row) => row.id === model)) grades[grade] = model
 		else refused.push(`${seed.id}: the ${grade} grade names "${model}", which the provider does not list`)
 	}
-	return { provider: { id: seed.id, models, grades }, refused }
+	return {
+		provider: { id: seed.id, models, grades, ...(seed.serverTools ? { serverTools: seed.serverTools } : {}) },
+		refused,
+	}
 }
 
 /**

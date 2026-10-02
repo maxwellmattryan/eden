@@ -116,7 +116,7 @@ Ids made within one process only ever grow, so the order of ids is the order of 
 
 ## The registry
 
-`substrate/registry.rs` answers from the rows in `substrate/registry_generated.rs`, which `yarn registry` writes from the domains' manifests and checks against `product/substrate/registry.md` (`engineering/domain-module.md`): every fact type, entity type and kind, with its owner, its tier and its phase. A create names a live type or kind, one of Phase 1, or is refused. A per-domain bundle holds what the registry says the domain owns. An import accepts any well-formed id, so a bundle from a newer build loses nothing; the types this build does not know are named in the import's summary.
+`substrate/registry.rs` answers from the rows in `substrate/registry_generated.rs`, which `yarn registry` writes from the domains' manifests and checks against `product/substrate/registry.md` (`engineering/domain-module.md`): every fact type, entity type and kind, with its owner, its tier and its phase. A create names a live type or kind or is refused: one of Phase 1, or one of a built domain's own phase (D-130). `live` is a field of each generated row, worked out by the builder, and `Resource::live()` answers it. A per-domain bundle holds what the registry says the domain owns. An import accepts any well-formed id, so a bundle from a newer build loses nothing; the types this build does not know are named in the import's summary.
 
 ## Grants
 
@@ -137,11 +137,11 @@ A resource on the never-automated list (`NEVER_AUTOMATED`, the same seven ids in
 
 ## The egress ledger
 
-`substrate/egress.rs` keeps one row per destination and local day with the count of requests and the bytes out. Bytes out are what Eden hands over: for a WebView request the encoded URL and the body (`requestBytes` in `@eden/shared/egress`), never the headers, which are the platform's and not visible; for WeatherKit the rounded coordinates and the day counts, recorded by `weatherkit_forecast` itself; for the updater its endpoint, which `get_app_info` reads from the build's config as `updaterEndpoint` so the frontend wrapper can count the check; for a page the crate fetches the address of each hop, recorded by `fetch_page` itself (D-88). Recording is fire-and-forget from the frontend: a request is not held up, and a ledger that cannot be written is not an error the caller sees.
+`substrate/egress.rs` keeps one row per destination and local day with the count of requests and the bytes out. Bytes out are what Eden hands over: for a WebView request the encoded URL and the body (`requestBytes` in `@eden/shared/egress`), never the headers, which are the platform's and not visible; for WeatherKit the rounded coordinates and the day counts, recorded by `weatherkit_forecast` itself; for the updater its endpoint, which `get_app_info` reads from the build's config as `updaterEndpoint` so the frontend wrapper can count the check; for a page the crate fetches the address of each hop, recorded by `fetch_page` itself (D-88). Recording is fire-and-forget from the frontend: a request is not held up, and a ledger that cannot be written is not an error the caller sees. An entry may stand for several requests (D-131): `recordEgress(destination, bytesOut, requests = 1)` and `record_egress`'s optional `requests` add that many to the day's count in one write (`record_many`), none counting as one and ten thousand at most. The map is the one caller that batches, entering its tile and glyph requests every two seconds (`engineering/meadow.md`, "Egress").
 
 The ledger is this device's (D-71): `Workspace::open` sweeps days older than ninety, no bundle carries it and no replace clears it. The destination `vault-ai` is refused by the store and by the schema, and Settings → Privacy draws that row at zero.
 
-A new destination is four edits: the CSP's `connect-src` in `src-tauri/tauri.conf.json`, `DESTINATIONS` in `packages/shared/src/egress/types.ts`, and its label under `settings.privacy.destinations` in `en.json` and `ja.json`. `web-page` is the one destination with no CSP entry: the crate fetches the page and records it (`fetch_page`, D-88), so the webview still reaches no host but the ones it names. In the browser the engine keeps both the grants and the ledger in its document, so `yarn dev:web` shows the tab as the app does.
+A new destination is four edits: the CSP's `connect-src` in `src-tauri/tauri.conf.json`, `DESTINATIONS` in `packages/shared/src/egress/types.ts`, and its label under `settings.privacy.destinations` in `en.json` and `ja.json`. `web-page` and `web-image` are the two destinations with no CSP entry: the crate fetches the page or the picture and records it (`fetch_page`, `fetch_image`; D-88), so the webview still reaches no host but the ones it names. `weatherkit`, `updater` and `anthropic` are the crate's too. In the browser the engine keeps both the grants and the ledger in its document, so `yarn dev:web` shows the tab as the app does.
 
 ## The profile
 
@@ -149,7 +149,7 @@ A new destination is four edits: the CSP's `connect-src` in `src-tauri/tauri.con
 
 | rule | what holds |
 |---|---|
-| type | a fact type of Phase 1, else `fact:invalid`; a T3 tier is `fact:never` |
+| type | a live fact type (D-130), else `fact:invalid`; a T3 tier is `fact:never` |
 | confidence | required for `domain-derived` and `ai-inferred`, allowed for `system-derived`, refused for `user-asserted` and `integration`; 0 to 1 |
 | source | required for `integration`; an entity URI or an integration id otherwise |
 | `system-derived` | the substrate's own types only (`home-area`); one live row per type, which `assert` renews in place |
@@ -159,7 +159,7 @@ A new destination is four edits: the CSP's `connect-src` in `src-tauri/tauri.con
 | history | an edit that changes the value, the note or the window keeps what the fact held, under the edit's stamp, thirty days; `Workspace::open` sweeps the rest |
 | delete and restore | the tombstone, and its lifting: what an undo calls |
 
-`home-area` derives from the home the owner chose in Sky: `HomePlace.area` (city, region, country from the geocoder) becomes the one `system-derived` row, renewed when the home moves, through the shell's profile store. It moves onto the home Place when the Place picker exists. A Gardener proposal is shell state (`FactProposal`), never a row: the page shows it as a `ProposalCard`, and only an accept writes the fact, as `ai-inferred` with its confidence.
+`home-area` derives from the home the owner chose in Sky: `HomePlace.area` (city, region, country from the geocoder) becomes the one `system-derived` row, renewed when the home moves, through the shell's profile store. It moves onto the home Place when the Place picker exists; Meadow then reads home from that row through its one reader (`readHome`; `engineering/meadow.md`, Handoffs). A Gardener proposal is shell state (`FactProposal`), never a row: the page shows it as a `ProposalCard`, and only an accept writes the fact, as `ai-inferred` with its confidence.
 
 ## The IPC boundary
 
@@ -192,7 +192,7 @@ Every command is one read or one write of the workspace; a write is one transact
 | `revoke` | `id` | the grant, ended |
 | `query_grants` | `filter`: `{ subject?, resource?, resourceType?, includeRevoked? }` | the grants, by id |
 | `check_grant` | `query`: `{ subject, resource, resourceType, access }` | `{ allowed, reason, grantId? }` |
-| `record_egress` | `destination`, `bytesOut` | nothing |
+| `record_egress` | `destination`, `bytesOut`, `requests?` (how many the entry stands for; one unless given) | nothing |
 | `query_egress` | `filter`: `{ from?, to? }` | the rows, latest day first |
 | `assert_fact` | `input`: `{ id?, type, value, provenance, confidence?, validFrom?, validUntil?, source?, note? }` | the fact; a `system-derived` fact of the type already there is renewed in place |
 | `update_fact` | `id`, `patch` | the fact; what it held goes to the history |
@@ -305,7 +305,7 @@ Sky's store (`packages/shared/src/weather/store.svelte.ts`, shared by both apps)
 
 Handoffs:
 
-- For the home Place (the issue that makes home a Place row, D-38): the place key becomes the Place's id, each of Sky's rows takes an `at` link to it, and `placeKey` is the one function to change. Rows keyed by coordinates are then dropped by the first write, which drops what it does not want.
+- For the home Place (the issue that makes home a Place row, D-38): the place key becomes the Place's id, each of Sky's rows takes an `at` link to it, and `placeKey` is the one function to change. Rows keyed by coordinates are then dropped by the first write, which drops what it does not want. Meadow's part is one function too: `readHome()` in `packages/shared/src/domains/places/home.ts` reads the Place's point, and the map's home pin becomes that row (`engineering/meadow.md`, Handoffs).
 - For the first primitive mirrors (calendar events, Phase 2): `putMirror`, `dropMirror` and the seven-day sweep write and remove `entities` only. A mirrored Event needs the same pair over `events`, and its own retention, since a calendar's past is not stale after a week.
 
 ### Tasks

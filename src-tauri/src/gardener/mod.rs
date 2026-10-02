@@ -52,13 +52,19 @@ pub enum GardenerEvent {
     /// frontend sends it back unchanged while the request continues through its tool rounds.
     #[serde(rename_all = "camelCase")]
     Thinking { block: Value },
-    /// Sent once at the start with the input side, and once at the end with the output side.
+    /// One block of a tool the provider ran on its own side (D-132), handed over when it closes: the call with its
+    /// input, or its result as the addresses and titles it returned, or its error code.
+    #[serde(rename_all = "camelCase")]
+    ServerBlock { block: Value },
+    /// Sent once at the start with the input side, and once at the end with the output side and the searches the
+    /// provider made, each of which has a price of its own.
     #[serde(rename_all = "camelCase")]
     Usage {
         input: u64,
         output: u64,
         cache_read: u64,
         cache_write: u64,
+        searches: u64,
     },
     /// Why the stream ended: the provider's stop reason, or `cancelled`.
     #[serde(rename_all = "camelCase")]
@@ -113,10 +119,18 @@ mod tests {
             output: 2,
             cache_read: 3,
             cache_write: 4,
+            searches: 5,
         };
         assert_eq!(
             serde_json::to_value(&event).unwrap(),
-            serde_json::json!({ "type": "usage", "input": 1, "output": 2, "cacheRead": 3, "cacheWrite": 4 })
+            serde_json::json!({ "type": "usage", "input": 1, "output": 2, "cacheRead": 3, "cacheWrite": 4, "searches": 5 })
+        );
+        let event = GardenerEvent::ServerBlock {
+            block: serde_json::json!({ "type": "server_tool_use" }),
+        };
+        assert_eq!(
+            serde_json::to_value(&event).unwrap(),
+            serde_json::json!({ "type": "server_block", "block": { "type": "server_tool_use" } })
         );
         let event = GardenerEvent::Start {
             message_id: "msg_1".into(),

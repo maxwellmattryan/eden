@@ -1,7 +1,8 @@
 //! The resource registry (D-35): every fact type, entity type and kind, with its owner, its tier and its phase. The
 //! rows are generated from the domains' manifests (`packages/shared/src/domains/<id>/manifest.json`, and
 //! `registry/substrate.json` and `registry/planned.json` beside them) by `yarn registry`, which checks them against
-//! docs/product/substrate/registry.md. A write names a live resource, one of Phase 1, or is refused; a row that
+//! docs/product/substrate/registry.md. A write names a live resource (D-130: one of Phase 1, or one of a built
+//! domain's own phase) or is refused; a row that
 //! arrives by import keeps whatever well-formed id it has, so a bundle from a newer build loses nothing.
 
 #[path = "registry_generated.rs"]
@@ -40,14 +41,19 @@ pub struct Resource {
     /// A domain id, or `substrate`.
     pub owner: &'static str,
     pub tier: Tier,
-    /// When the resource first exists; `None` is later than Phase 3.
+    /// When the resource first exists; `None` is later than Phase 3. The row says it; what a write may name is
+    /// `live`, which the builder works out from it.
+    #[allow(dead_code)]
     pub phase: Option<u8>,
+    /// Whether a write may create it (D-130): the resources of Phase 1, and those of a built domain's own phase.
+    /// The builder works it out, since only it knows which domains are built.
+    pub live: bool,
 }
 
 impl Resource {
-    /// Whether a write may create it: the resources of Phase 1.
+    /// Whether a write may create it.
     pub fn live(&self) -> bool {
-        self.phase == Some(1)
+        self.live
     }
 }
 
@@ -62,7 +68,7 @@ fn live(category: Category) -> impl Iterator<Item = &'static Resource> {
         .filter(move |row| row.category == category && row.live())
 }
 
-/// Whether the owner may assert a fact of this type: the fact types of Phase 1, their domain built or not.
+/// Whether the owner may assert a fact of this type: the live fact types (D-130), their domain built or not.
 pub fn is_fact(id: &str) -> bool {
     live(Category::Fact).any(|row| row.id == id)
 }
@@ -166,5 +172,17 @@ mod tests {
             Some(Tier::T3)
         );
         assert!(resource("kitchen.recipe").is_none());
+    }
+
+    #[test]
+    fn a_built_domain_writes_its_rows_at_its_own_phase() {
+        // Meadow is Phase 3 and built (D-130): its rows are live, where Vigor's of Phase 2 are not
+        let profile = resource("place-profile").expect("registered");
+        assert_eq!((profile.owner, profile.phase), ("places", Some(3)));
+        assert!(profile.live() && is_entity_type("place-profile"));
+        assert!(is_fact("favorite-vibe") && is_owner("places"));
+        assert!(is_kind("event", "outing") && is_kind("attachment", "place-photo"));
+        assert!(entity_types_of("places").contains(&"place-suggestion"));
+        assert!(!is_entity_type("workout-log") && !is_owner("fitness"));
     }
 }

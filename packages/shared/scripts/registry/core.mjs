@@ -17,7 +17,7 @@ const SIZES = ['s', 'm', 'l']
 const ACCESS = ['read', 'write-draft', 'write']
 /** A model-backed tool's grade, lowest first, and what it may need of a model beyond text (D-74). */
 const GRADES = ['light', 'standard', 'deep']
-const MODEL_FLAGS = ['tools', 'vision']
+const MODEL_FLAGS = ['tools', 'vision', 'search']
 /** The fields a tool has; `grade`, `needs` and `minContext` only when a model runs it. */
 const TOOL_FIELDS = ['id', 'access', 'confirm', 'reads', 'grade', 'needs', 'minContext']
 const CAPTURE_SOURCES = ['photo', 'receipt', 'barcode', 'share-sheet']
@@ -127,7 +127,7 @@ export function build(sources) {
 
 	const resources = []
 	const seen = new Map()
-	function addRows(file, owner, ownerPhase, rows, category) {
+	function addRows(file, owner, ownerPhase, rows, category, built) {
 		for (const row of list(rows)) {
 			const id = row?.id
 			if (typeof id !== 'string' || !ID.test(id)) {
@@ -156,14 +156,16 @@ export function build(sources) {
 				const prefix = domainIds.find((domain) => id.startsWith(`${domain}-`))
 				if (prefix) fail(file, `the kind "${id}" carries the domain prefix "${prefix}-" (D-36)`)
 			}
-			resources.push({ id, category, primitive, owner, tier: row.tier, phase, live: phase === 1 })
+			// D-130: a row is live when it is of Phase 1, or when its owner is built and the row is of the owner's phase
+			const live = phase === 1 || (built && phase === ownerPhase)
+			resources.push({ id, category, primitive, owner, tier: row.tier, phase, live })
 		}
 	}
-	function addOwner(file, owner, phase, block) {
-		addRows(file, owner, phase, block?.facts, 'fact')
-		addRows(file, owner, phase, block?.primitives, 'primitive')
-		addRows(file, owner, phase, block?.entities, 'entity')
-		addRows(file, owner, phase, block?.kinds, 'kind')
+	function addOwner(file, owner, phase, block, built = false) {
+		addRows(file, owner, phase, block?.facts, 'fact', built)
+		addRows(file, owner, phase, block?.primitives, 'primitive', built)
+		addRows(file, owner, phase, block?.entities, 'entity', built)
+		addRows(file, owner, phase, block?.kinds, 'kind', built)
 	}
 
 	addOwner(sources.substrate.file, 'substrate', undefined, sources.substrate.data)
@@ -193,7 +195,7 @@ export function build(sources) {
 	if (new Set(order).size !== order.length) fail(sources.shell.file, '"domains" lists a domain twice')
 	const built = order.filter((id) => manifests.has(id)).map((id) => manifests.get(id))
 
-	for (const { file, data } of built) addOwner(file, data.id, data.phase, data.resources)
+	for (const { file, data } of built) addOwner(file, data.id, data.phase, data.resources, true)
 	for (const [owner, block] of Object.entries(sources.planned.data.owners ?? {})) {
 		if (!ID.test(owner) || !domainIds.includes(owner)) {
 			fail(sources.planned.file, `"${owner}" is not a domain with a glyph in the kit's icon-list.json`)
@@ -719,7 +721,7 @@ function rust(resources) {
 		.map((row) => {
 			const primitive = row.primitive ? `Some("${row.primitive}")` : 'None'
 			const phase = row.phase === 'later' ? 'None' : `Some(${row.phase})`
-			return `    Resource { id: "${row.id}", category: Category::${pascal(row.category)}, primitive: ${primitive}, owner: "${row.owner}", tier: Tier::${pascal(row.tier)}, phase: ${phase} },`
+			return `    Resource { id: "${row.id}", category: Category::${pascal(row.category)}, primitive: ${primitive}, owner: "${row.owner}", tier: Tier::${pascal(row.tier)}, phase: ${phase}, live: ${row.live} },`
 		})
 		.join('\n')
 	return `// ${HEADER}

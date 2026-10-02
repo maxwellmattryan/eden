@@ -37,8 +37,10 @@ pub async fn record_egress(
     workspace: State<'_, Workspace>,
     destination: String,
     bytes_out: u64,
+    requests: Option<u64>,
 ) -> Result<()> {
-    workspace.write(|ctx| egress::record(ctx.conn, &destination, bytes_out))
+    workspace
+        .write(|ctx| egress::record_many(ctx.conn, &destination, bytes_out, requests.unwrap_or(1)))
 }
 
 #[tauri::command]

@@ -7,7 +7,8 @@
 		"sampleAdded": "サンプルデータを追加しました。",
 		"close": "閉じる",
 		"save": "保存",
-		"cancel": "キャンセル"
+		"cancel": "キャンセル",
+		"done": "完了"
 	},
 	"shell": {
 		"garden": "庭",
@@ -49,7 +50,9 @@
 			"sunAndMoon": "太陽と月",
 			"dailyLine": "今日の一行",
 			"quickLog": "体重",
-			"groceryQuickAdd": "買い物リスト"
+			"groceryQuickAdd": "買い物リスト",
+			"nearbyFavorites": "近くのお気に入り",
+			"upcomingListings": "今週末"
 		},
 		"empty": {
 			"weatherNow": "自宅の場所を設定すると空が見えます。",
@@ -62,7 +65,9 @@
 			"dailyLine": "足るを知る",
 			"quickLog": "体重を記録すると線が始まります。",
 			"feed": "まだ何も起きていません。",
-			"groceryQuickAdd": "次に必要なものを追加しましょう。"
+			"groceryQuickAdd": "次に必要なものを追加しましょう。",
+			"nearbyFavorites": "場所を保存してお気に入りにしてください。",
+			"upcomingListings": "今週末の催しはまだ見つかっていません。"
 		},
 		"actions": {
 			"today": "今日を開く",
@@ -70,7 +75,9 @@
 			"resurfacedIdea": "アイデアを開く",
 			"activeProjects": "プロジェクトを開く",
 			"quickLog": "体重を記録",
-			"groceryQuickAdd": "リストを開く"
+			"groceryQuickAdd": "リストを開く",
+			"nearbyFavorites": "地図を開く",
+			"upcomingListings": "催しを開く"
 		},
 		"untouched": "{days}日間手つかず",
 		"minutes": "{minutes}分",
@@ -122,7 +129,21 @@
 			"recipeSaved": "{name}をレシピに保存",
 			"recipeRemoved": "{name}をレシピから削除",
 			"recipeCooked": "{name}を作りました",
-			"stockTaken": "在庫を確認: {count}件"
+			"stockTaken": "在庫を確認: {count}件",
+			"placeSaved": "{name}を野原に保存",
+			"placesImported": "{count}件の場所を取り込み",
+			"placeChanged": "{name}を変更",
+			"placeRemoved": "{name}を削除",
+			"placeFavourited": "{name}をお気に入りに",
+			"placeUnfavourited": "{name}をお気に入りから外した",
+			"visitLogged": "{name}を訪問",
+			"visitRemoved": "{name}への訪問を削除",
+			"collectionAdded": "コレクション「{name}」を追加",
+			"collectionGrew": "{count}件の場所を{name}に追加",
+			"collectionRemoved": "コレクション「{name}」を削除",
+			"outingInterested": "{title}に興味あり",
+			"outingGoing": "{title}に行く",
+			"outingRemoved": "{title}をカレンダーから外した"
 		},
 		"profile": "Edenが知っていること"
 	},
@@ -858,6 +879,334 @@
 					"line": "{headline}"
 				}
 			}
+		},
+		"places": {
+			"name": "野原",
+			"subtitle": "場所、イベント、雰囲気、お気に入り",
+			"tabs": {
+				"map": "地図",
+				"listings": "催し",
+				"collections": "コレクション",
+				"visits": "訪問"
+			},
+			"tabsLabel": "野原のセクション",
+			"open": "場所を開く",
+			"notifications": {
+				"matchingListings": {
+					"line": "{count, plural, one {今週は{first}が好みに合います} other {今週は{first}ほか#件が好みに合います}}。毎週の検索で見つかりました。"
+				}
+			},
+			"saveFailed": "変更を保存できませんでした。",
+			"motif": "保存した場所 {places}件、お気に入り {favourites}件",
+			"add": {
+				"label": "追加",
+				"place": "場所を追加",
+				"import": "リストを取り込む"
+			},
+			"facets": {
+				"purpose": "すること",
+				"mood": "気分",
+				"setting": "場所の感じ",
+				"crowd": "集まる人"
+			},
+			"vibes": {
+				"deepWork": "集中作業",
+				"workFriendly": "作業しやすい",
+				"read": "読書",
+				"meetPeople": "人と出会う",
+				"catchUp": "近況を話す",
+				"date": "デート",
+				"unwind": "くつろぐ",
+				"celebrate": "お祝い",
+				"calm": "穏やか",
+				"cozy": "居心地がいい",
+				"lively": "にぎやか",
+				"buzzing": "活気がある",
+				"romantic": "ロマンチック",
+				"playful": "遊び心",
+				"quiet": "静か",
+				"spacious": "広々",
+				"outdoors": "屋外",
+				"naturalLight": "自然光",
+				"intimate": "こぢんまり",
+				"industrial": "インダストリアル",
+				"lateNight": "深夜まで",
+				"soloFriendly": "ひとりで入りやすい",
+				"locals": "地元の人",
+				"laptopCrowd": "ノートPCの人が多い",
+				"social": "交流しやすい",
+				"kidFriendly": "子ども連れ歓迎"
+			},
+			"categories": {
+				"cafe": "カフェ",
+				"restaurant": "レストラン",
+				"bar": "バー",
+				"park": "公園",
+				"museum": "美術館・博物館",
+				"music": "音楽・公演",
+				"shop": "店",
+				"library": "図書館",
+				"venue": "場所"
+			},
+			"sources": {
+				"osm": "OpenStreetMap",
+				"osm-hours": "OpenStreetMap",
+				"website": "その場所のページ",
+				"search": "ウェブ検索",
+				"sample": "サンプルデータ",
+				"manual": "自分"
+			},
+			"filter": {
+				"label": "絞り込み",
+				"text": "探しているもの",
+				"textPlaceholder": "作業できる静かなカフェ",
+				"category": "種類",
+				"categories": "{count}種類",
+				"price": "価格",
+				"distance": "距離",
+				"anyDistance": "距離を問わない",
+				"withinKm": "{count} km以内",
+				"withinMiles": "{count} マイル以内",
+				"collection": "コレクション",
+				"anyCollection": "すべてのコレクション",
+				"openNow": "営業中",
+				"alcoholFree": "ノンアルコール",
+				"favourites": "お気に入り",
+				"clear": "絞り込みを解除"
+			},
+			"map": {
+				"label": "地図",
+				"pins": "保存した場所",
+				"pinsFiltered": "絞り込みに合う場所",
+				"group": "{count}件の場所",
+				"fit": "すべて表示",
+				"offline": "オフラインです。場所は無地の上に表示しています。",
+				"failed": "地図を描けませんでした。場所は無地の上に表示しています。",
+				"placing": "{name}の場所を地図でクリックしてください。",
+				"emptyText": "名前で追加するか、サンプルの場所を入れて見てみましょう。"
+			},
+			"list": {
+				"saved": "保存済み",
+				"favourite": "お気に入り",
+				"noPoint": "地図にありません",
+				"noneFit": {
+					"title": "合う場所がありません",
+					"text": "絞り込みをゆるめてみてください。"
+				}
+			},
+			"detail": {
+				"distance": "{distance}先",
+				"noPoint": "まだ地図にありません。下のメニューから配置できます。",
+				"open": "営業中",
+				"closed": "営業時間外",
+				"closedToday": "本日休業",
+				"hoursSource": "営業時間は{source}から、{when}に取得。行く前にご確認ください。",
+				"vibes": "雰囲気",
+				"why": "合う理由",
+				"visits": "訪問",
+				"inCollections": "{names}に入っています",
+				"favourite": "お気に入りに追加",
+				"unfavourite": "お気に入りから外す",
+				"logVisit": "訪問を記録",
+				"edit": "編集",
+				"openInMaps": "マップで開く",
+				"collect": "コレクションに追加",
+				"more": "{name}のその他の操作",
+				"website": "ウェブサイトを開く",
+				"placeOnMap": "地図に配置する",
+				"delete": "削除",
+				"readingHours": "営業時間を取得中",
+				"hoursFrom": "営業時間は{source}から。行く前にご確認ください。",
+				"noHours": "この場所の営業時間は取得できませんでした。",
+				"checkFirst": "行く前にご確認ください。"
+			},
+			"form": {
+				"addTitle": "場所を追加",
+				"editTitle": "場所を編集",
+				"add": "追加",
+				"name": "名前",
+				"category": "場所の種類",
+				"noCategory": "未設定",
+				"address": "住所",
+				"locality": "地区",
+				"website": "ウェブサイト",
+				"phone": "電話",
+				"price": "価格",
+				"noPrice": "未設定",
+				"alcoholFree": "ノンアルコール",
+				"alcoholFreeHelp": "お酒を出さない、またはお酒以外の選択肢が充実している。",
+				"notes": "メモ",
+				"notesPlaceholder": "覚えておきたいこと",
+				"vibes": "雰囲気",
+				"customVibe": "自分の言葉の雰囲気",
+				"customVibePlaceholder": "犬連れ歓迎",
+				"customFacet": "雰囲気の種類",
+				"addVibe": "雰囲気を追加",
+				"choosePicture": "写真を選ぶ",
+				"removePicture": "写真を削除",
+				"pictureFailed": "その写真を読み込めませんでした。",
+				"find": "地図で探す",
+				"findAgain": "もう一度探す",
+				"findHelp": "検索エリアの近くで名前を調べます。送るのは名前だけです。",
+				"located": "地図に配置しました。",
+				"notFound": "その名前では見つかりませんでした。追加したあとで地図に配置できます。",
+				"matches": "その名前の場所"
+			},
+			"visit": {
+				"title": "{name}への訪問",
+				"day": "日付",
+				"rating": "あなたの評価",
+				"note": "メモ",
+				"notePlaceholder": "どんな感じだったか",
+				"save": "訪問を記録"
+			},
+			"visits": {
+				"delete": "{name}への訪問を削除",
+				"empty": {
+					"title": "訪問はまだありません",
+					"text": "行ったあとに、その場所からメモと評価を付けて記録します。野原が好みを覚えていきます。"
+				}
+			},
+			"collections": {
+				"new": "新しいコレクション",
+				"add": "追加",
+				"editTitle": "コレクションを編集",
+				"edit": "{name}を編集",
+				"name": "名前",
+				"note": "メモ",
+				"delete": "コレクションを削除",
+				"all": "すべての場所",
+				"addTo": "追加先",
+				"remove": "コレクションから外す",
+				"empty": {
+					"title": "コレクションはまだありません",
+					"text": "仕事をする場所、人を連れて行く場所、ひとりになれる場所。合うものをまとめましょう。"
+				},
+				"none": {
+					"title": "まだ何もありません",
+					"text": "場所をここにドラッグするか、メニューから追加してください。"
+				}
+			},
+			"listings": {
+				"empty": {
+					"title": "今週末の催しはまだありません",
+					"text": "好みに合う催しがここに集まります。"
+				},
+				"find": "催しを探す",
+				"interested": "興味あり",
+				"going": "行く",
+				"open": "ページを開く",
+				"from": "出典: {sources}。",
+				"marked": {
+					"interested": "仮の予定としてカレンダーに入っています。",
+					"going": "予定としてカレンダーに入っています。"
+				},
+				"noKey": "催しは庭師が探すため、キーが必要です。すでに選んだ予定はここに残ります。",
+				"sends": "これからの日程、好みの雰囲気、「{area}」をウェブ検索付きで{provider}に送ります。現在地は送りません。最大{cost}。",
+				"foundAt": "{when}に見つかりました。",
+				"weeklyOn": "野原は毎週日曜に一度探します。設定の「連携」でオフにできます。",
+				"weeklyOff": "毎週の検索はオフです。",
+				"toast": {
+					"interested": "{title}に興味ありとしました。",
+					"going": "{title}に行く予定にしました。",
+					"cleared": "{title}をカレンダーから外しました。"
+				}
+			},
+			"toast": {
+				"added": "{name}を保存しました。",
+				"edited": "{name}を変更しました。",
+				"removed": "{name}を削除しました。",
+				"placed": "{name}を地図に配置しました。",
+				"favourited": "{name}をお気に入りにしました。",
+				"unfavourited": "{name}をお気に入りから外しました。",
+				"pictured": "{name}の写真を変更しました。",
+				"unpictured": "{name}の写真を削除しました。",
+				"visited": "{name}への訪問を記録しました。",
+				"visitRemoved": "{name}への訪問を削除しました。",
+				"collected": "{name}を{collection}に追加しました。",
+				"collectedMany": "{count}件の場所を{collection}に追加しました。",
+				"uncollected": "{name}を{collection}から外しました。",
+				"collectionAdded": "{name}を追加しました。",
+				"collectionEdited": "{name}を変更しました。",
+				"collectionRemoved": "{name}を削除しました。",
+				"dismissed": "{name}を非表示にしました。"
+			},
+			"find": {
+				"title": "もっと探す",
+				"button": "もっと探す",
+				"searching": "検索中",
+				"searchingWeb": "ウェブを検索中",
+				"sends": "「{brief}」と「{area}」をウェブ検索付きで{provider}に送ります。現在地は送りません。最大{cost}。",
+				"offline": "オフラインです。検索には接続が必要です。",
+				"off": "新しい場所の検索は設定でオフになっています。",
+				"unplaced": "地図に配置できなかった場所が{count}件あります: {names}。",
+				"noKey": {
+					"title": "この端末にキーがありません",
+					"detail": "保存した場所の絞り込みはキーなしで使えます。新しい場所を探すには庭師に尋ねるため、キーが必要です。"
+				},
+				"openSettings": "設定を開く"
+			},
+			"failure": {
+				"off": "新しい場所の検索は設定でオフになっています。",
+				"no-key": "この端末にキーがないため、庭師に尋ねられません。",
+				"unavailable": "ウェブ検索ができるモデルが設定されていません。",
+				"budget": "月の上限を超えてしまいます。設定の「庭師」で上限を上げられます。",
+				"busy": "庭師は別のリクエストを処理中です。少ししてからもう一度お試しください。",
+				"network": "検索に接続できませんでした。何も保存されていません。",
+				"refusal": "モデルがこの検索を断りました。",
+				"cancelled": "検索を中止しました。",
+				"search-refused": "プロバイダーがウェブ検索を実行しませんでした。",
+				"search-failed": "検索結果がありませんでした。何も保存されていません。",
+				"unreadable": "回答を読み取れませんでした。何も保存されていません。",
+				"empty": "出典のある場所が見つかりませんでした。"
+			},
+			"suggestion": {
+				"save": "保存",
+				"dismiss": "非表示にする",
+				"found": "検索結果",
+				"list": "庭師が見つけた場所",
+				"from": "ウェブ検索で見つかりました。出典:",
+				"notSaved": "まだ保存されていません。7日後にこの端末から消えます。"
+			},
+			"import": {
+				"title": "リストを取り込む",
+				"list": "リスト",
+				"placeholder": "- Cosmic Coffee\n- Radio Coffee & Beer — 大人数向き",
+				"help": "1行に1か所。箇条書き、番号、チェックボックスはそのまま読み取ります。ダッシュの後のメモは残します。",
+				"sends": "それぞれの名前を、OpenStreetMapの地名検索Photonで検索エリアの近くから探します。モデルには尋ねず、保存するまで何も保存されません。",
+				"find": "これらの場所を探す",
+				"looking": "検索中",
+				"progress": "{total}件中{done}件を検索しました",
+				"rows": "リストの場所",
+				"state": {
+					"looking": "検索中",
+					"matched": "見つかりました",
+					"saved": "保存済み",
+					"ambiguous": "どれですか?",
+					"notFound": "見つかりません",
+					"placed": "手動で配置"
+				},
+				"matches": "{name}の候補",
+				"place": "地図に配置する",
+				"placeAgain": "配置し直す",
+				"vibes": "雰囲気",
+				"leaveOut": "除外する",
+				"keep": "含める",
+				"tag": "庭師に雰囲気を付けてもらう",
+				"tagging": "タグ付け中",
+				"tagged": "雰囲気を提案しました",
+				"tagHelp": "任意です。名前とメモだけを送ります。検索はしません。最大{cost}。",
+				"taggedHelp": "庭師の提案です。違うものは外してください。",
+				"save": "{count, plural, =0 {保存できる場所はまだありません} other {#件を保存}}",
+				"saved": "{count}件の場所を保存しました。"
+			},
+			"mobile": {
+				"map": "地図",
+				"nearby": "近く",
+				"listings": "催し",
+				"emptyText": "デスクトップで保存した場所がここに表示されます。",
+				"listingsText": "これからの日程で野原が見つけた催しがここに表示されます。"
+			}
 		}
 	},
 	"profile": {
@@ -908,7 +1257,8 @@
 			"skill": "スキル",
 			"owned-hardware": "所有する機材",
 			"preferred-tool": "好みのツール",
-			"medical-dietary-restriction": "医療上の食事制限"
+			"medical-dietary-restriction": "医療上の食事制限",
+			"favorite-vibe": "好きな雰囲気"
 		},
 		"fields": {
 			"city": "市",
@@ -1113,7 +1463,27 @@
 			"weatherProvider": "天気の提供元",
 			"weatherProviderHelp": "空の予報の取得先です。接続できないときは Open-Meteo が代わりになります。",
 			"weatherSources": "空の情報源",
-			"weatherSourcesHelp": "空が利用する情報源です。送信されるのは丸めた座標だけです。"
+			"weatherSourcesHelp": "空が利用する情報源です。送信されるのは丸めた座標だけです。",
+			"places": {
+				"discovery": "庭師と場所を探す",
+				"discoveryHelp": "野原の「もっと探す」と催しは、あなたのキーで庭師にウェブ検索を頼みます。保存した場所はこれなしで使えます。",
+				"weekly": "毎週日曜に催しを探す",
+				"weeklyHelp": "誰も押さない週1回の検索です。月の上限に数えられ、超える場合は行いません。",
+				"details": "場所の詳細",
+				"detailsHelp": "場所を開いたときに、営業時間と写真をどこから取得するか。",
+				"sources": {
+					"osm-hours": "OpenStreetMapの営業時間",
+					"website": "その場所のページの営業時間",
+					"website-photo": "その場所のページの写真"
+				},
+				"mapsApp": "「マップで開く」で使うアプリ",
+				"mapsAppHelp": "場所を渡す地図アプリ。",
+				"maps": {
+					"apple": "Appleマップ",
+					"google": "Googleマップ",
+					"osm": "OpenStreetMap"
+				}
+			}
 		},
 		"sync": {
 			"exportAll": "すべてを書き出す",
@@ -1202,7 +1572,10 @@
 				"anthropic": "Anthropic",
 				"vault-ai": "金庫 → AI",
 				"web-page": "取り込んだウェブページ",
-				"web-image": "リンクした写真"
+				"web-image": "リンクした写真",
+				"openfreemap": "OpenFreeMap(地図タイル)",
+				"photon": "Photon(名前で場所を探す)",
+				"overpass": "Overpass(営業時間)"
 			},
 			"never": {
 				"label": "自動化しないこと",
@@ -1323,12 +1696,17 @@
 		},
 		"more": {
 			"title": "その他",
-			"text": "工房、庭師、設定。"
+			"text": "工房、野原、庭師、設定。"
 		},
 		"profile": {
 			"title": "Edenはまだあなたのことを知りません",
 			"text": "あなたが伝えたことと各ドメインが学んだことが、出どころとともにここに集まります。",
 			"action": "事実を追加"
+		},
+		"places": {
+			"title": "場所はまだありません",
+			"text": "メモのリストを貼り付けると野原がひとつずつ探します。庭師に新しい場所を尋ねることもできます。",
+			"action": "リストを取り込む"
 		}
 	},
 	"uiKit": {
@@ -1559,6 +1937,11 @@
 			"missing": "このデバイスにはもうありません",
 			"failed": "追加できませんでした",
 			"fromFile": "ファイルから"
+		},
+		"rating": {
+			"stars": "星{0}つ",
+			"outOf": "{0}: {2}段階中{1}",
+			"none": "{0}: 未評価"
 		}
 	},
 	"gardener": {

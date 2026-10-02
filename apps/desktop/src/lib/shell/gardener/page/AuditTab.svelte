@@ -57,7 +57,7 @@
 	import { gardenerSetup } from '../setup.svelte'
 	import { threads } from '../threads.svelte'
 	import { gotoAudit } from './audit-link'
-	import FilterChip from './FilterChip.svelte'
+	import FilterChip from '../../FilterChip.svelte'
 
 	const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
 

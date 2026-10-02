@@ -19,7 +19,7 @@ import type { DraftCard } from '@eden/shared/gardener'
 import type { ToolHandler } from '../shell/gardener/types.js'
 
 /** The route ids a domain may own; a page with tabs takes the tab as an optional parameter. */
-export type DomainRoute = '/kitchen/[[tab]]' | '/toolbench/[[tab]]' | '/weather'
+export type DomainRoute = '/kitchen/[[tab]]' | '/toolbench/[[tab]]' | '/weather' | '/places/[[tab]]'
 
 /** What the app binds to a declared widget; the tile computes locally from the domain's store, never from a model. */
 export interface WidgetBinding {

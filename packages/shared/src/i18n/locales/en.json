@@ -7,7 +7,8 @@
 		"sampleAdded": "Sample data added.",
 		"close": "Close",
 		"save": "Save",
-		"cancel": "Cancel"
+		"cancel": "Cancel",
+		"done": "Done"
 	},
 	"shell": {
 		"garden": "Garden",
@@ -49,7 +50,9 @@
 			"sunAndMoon": "Sun and moon",
 			"dailyLine": "Daily line",
 			"quickLog": "Weight",
-			"groceryQuickAdd": "Grocery list"
+			"groceryQuickAdd": "Grocery list",
+			"nearbyFavorites": "Favourites nearby",
+			"upcomingListings": "This weekend"
 		},
 		"empty": {
 			"weatherNow": "Set a home place to see the sky.",
@@ -62,7 +65,9 @@
 			"dailyLine": "Tend what you can reach.",
 			"quickLog": "Log a weight to start the line.",
 			"feed": "Nothing has happened yet.",
-			"groceryQuickAdd": "Add what you need next."
+			"groceryQuickAdd": "Add what you need next.",
+			"nearbyFavorites": "Save a place and mark it a favourite.",
+			"upcomingListings": "Nothing found for the weekend yet."
 		},
 		"actions": {
 			"today": "Open Today",
@@ -70,7 +75,9 @@
 			"resurfacedIdea": "Open idea",
 			"activeProjects": "Open projects",
 			"quickLog": "Log weight",
-			"groceryQuickAdd": "Open the list"
+			"groceryQuickAdd": "Open the list",
+			"nearbyFavorites": "Open the map",
+			"upcomingListings": "Open listings"
 		},
 		"untouched": "{days, plural, one {# day untouched} other {# days untouched}}",
 		"minutes": "{minutes} min",
@@ -122,7 +129,21 @@
 			"recipeSaved": "{name} saved to recipes",
 			"recipeRemoved": "{name} removed from recipes",
 			"recipeCooked": "Cooked {name}",
-			"stockTaken": "Took stock: {count, plural, one {# item} other {# items}}"
+			"stockTaken": "Took stock: {count, plural, one {# item} other {# items}}",
+			"placeSaved": "{name} saved to Meadow",
+			"placesImported": "{count, plural, one {# place} other {# places}} imported",
+			"placeChanged": "{name} changed",
+			"placeRemoved": "{name} deleted",
+			"placeFavourited": "{name} marked a favourite",
+			"placeUnfavourited": "{name} no longer a favourite",
+			"visitLogged": "Visited {name}",
+			"visitRemoved": "Visit to {name} deleted",
+			"collectionAdded": "Collection {name} added",
+			"collectionGrew": "{count, plural, one {# place} other {# places}} added to {name}",
+			"collectionRemoved": "Collection {name} deleted",
+			"outingInterested": "Interested in {title}",
+			"outingGoing": "Going to {title}",
+			"outingRemoved": "{title} taken off the calendar"
 		},
 		"profile": "What Eden knows"
 	},
@@ -858,6 +879,334 @@
 					"line": "{headline}"
 				}
 			}
+		},
+		"places": {
+			"name": "Meadow",
+			"subtitle": "Places, events, vibes, favourites",
+			"tabs": {
+				"map": "Map",
+				"listings": "Listings",
+				"collections": "Collections",
+				"visits": "Visits"
+			},
+			"tabsLabel": "Meadow sections",
+			"open": "Open a place",
+			"notifications": {
+				"matchingListings": {
+					"line": "{count, plural, one {{first} fits your vibes this week} other {{first} and # more fit your vibes this week}}. Found by the weekly search."
+				}
+			},
+			"saveFailed": "Couldn't save your changes.",
+			"motif": "{places, plural, one {# place saved} other {# places saved}}, {favourites, plural, one {# favourite} other {# favourites}}",
+			"add": {
+				"label": "Add",
+				"place": "Add a place",
+				"import": "Import a list"
+			},
+			"facets": {
+				"purpose": "What I’m doing",
+				"mood": "How I feel",
+				"setting": "The setting",
+				"crowd": "The crowd"
+			},
+			"vibes": {
+				"deepWork": "Deep work",
+				"workFriendly": "Work-friendly",
+				"read": "Read",
+				"meetPeople": "Meet people",
+				"catchUp": "Catch up",
+				"date": "Date",
+				"unwind": "Unwind",
+				"celebrate": "Celebrate",
+				"calm": "Calm",
+				"cozy": "Cozy",
+				"lively": "Lively",
+				"buzzing": "Buzzing",
+				"romantic": "Romantic",
+				"playful": "Playful",
+				"quiet": "Quiet",
+				"spacious": "Spacious",
+				"outdoors": "Outdoors",
+				"naturalLight": "Natural light",
+				"intimate": "Intimate",
+				"industrial": "Industrial",
+				"lateNight": "Late-night",
+				"soloFriendly": "Solo-friendly",
+				"locals": "Locals",
+				"laptopCrowd": "Laptop crowd",
+				"social": "Social",
+				"kidFriendly": "Kid-friendly"
+			},
+			"categories": {
+				"cafe": "Cafe",
+				"restaurant": "Restaurant",
+				"bar": "Bar",
+				"park": "Park",
+				"museum": "Museum",
+				"music": "Music and shows",
+				"shop": "Shop",
+				"library": "Library",
+				"venue": "Place"
+			},
+			"sources": {
+				"osm": "OpenStreetMap",
+				"osm-hours": "OpenStreetMap",
+				"website": "its own page",
+				"search": "a web search",
+				"sample": "the sample data",
+				"manual": "you"
+			},
+			"filter": {
+				"label": "Filters",
+				"text": "Looking for",
+				"textPlaceholder": "A quiet cafe to work in",
+				"category": "Category",
+				"categories": "{count} categories",
+				"price": "Price",
+				"distance": "Distance",
+				"anyDistance": "Any distance",
+				"withinKm": "Within {count} km",
+				"withinMiles": "Within {count} mi",
+				"collection": "Collection",
+				"anyCollection": "Any collection",
+				"openNow": "Open now",
+				"alcoholFree": "Alcohol-free",
+				"favourites": "Favourites",
+				"clear": "Clear filters"
+			},
+			"map": {
+				"label": "Map",
+				"pins": "Your places",
+				"pinsFiltered": "Places that fit the filter",
+				"group": "{count} places",
+				"fit": "Show all",
+				"offline": "Offline. Your places are shown on plain ground.",
+				"failed": "The map could not be drawn. Your places are shown on plain ground.",
+				"placing": "Click the map where {name} is.",
+				"emptyText": "Add one by name, or add the sample places to look around."
+			},
+			"list": {
+				"saved": "Saved",
+				"favourite": "Favourite",
+				"noPoint": "not on the map",
+				"noneFit": {
+					"title": "No saved place fits",
+					"text": "Loosen the filter to see more."
+				}
+			},
+			"detail": {
+				"distance": "{distance} away",
+				"noPoint": "Not on the map yet. Place it from the menu below.",
+				"open": "Open now",
+				"closed": "Closed now",
+				"closedToday": "Closed today",
+				"hoursSource": "Hours from {source}, read {when}. Check before you go.",
+				"vibes": "Vibes",
+				"why": "Why it fits",
+				"visits": "Visits",
+				"inCollections": "In {names}",
+				"favourite": "Add to favourites",
+				"unfavourite": "Remove from favourites",
+				"logVisit": "Log a visit",
+				"edit": "Edit",
+				"openInMaps": "Open in Maps",
+				"collect": "Add to a collection",
+				"more": "More actions for {name}",
+				"website": "Open its website",
+				"placeOnMap": "Place it on the map",
+				"delete": "Delete",
+				"readingHours": "Reading its hours",
+				"hoursFrom": "Hours from {source}. Check before you go.",
+				"noHours": "No hours could be read for this place.",
+				"checkFirst": "Check before you go."
+			},
+			"form": {
+				"addTitle": "Add a place",
+				"editTitle": "Edit place",
+				"add": "Add",
+				"name": "Name",
+				"category": "Kind of place",
+				"noCategory": "Not set",
+				"address": "Address",
+				"locality": "Part of town",
+				"website": "Website",
+				"phone": "Phone",
+				"price": "Price",
+				"noPrice": "Not set",
+				"alcoholFree": "Alcohol-free",
+				"alcoholFreeHelp": "Serves no alcohol, or has good choices without it.",
+				"notes": "Notes",
+				"notesPlaceholder": "What is worth remembering about it",
+				"vibes": "Vibes",
+				"customVibe": "A vibe of your own",
+				"customVibePlaceholder": "Dog-friendly",
+				"customFacet": "Which kind of vibe it is",
+				"addVibe": "Add vibe",
+				"choosePicture": "Choose a picture",
+				"removePicture": "Remove the picture",
+				"pictureFailed": "That picture could not be read.",
+				"find": "Find on the map",
+				"findAgain": "Find again",
+				"findHelp": "Looks the name up near your search area. Only the name is sent.",
+				"located": "On the map.",
+				"notFound": "Not found by that name. You can place it on the map after adding it.",
+				"matches": "Places by that name"
+			},
+			"visit": {
+				"title": "A visit to {name}",
+				"day": "Day",
+				"rating": "Your rating",
+				"note": "Note",
+				"notePlaceholder": "What it was like",
+				"save": "Log visit"
+			},
+			"visits": {
+				"delete": "Delete the visit to {name}",
+				"empty": {
+					"title": "No visits yet",
+					"text": "After you have been somewhere, log it from the place with a note and a rating. It is how Meadow learns what you like."
+				}
+			},
+			"collections": {
+				"new": "New collection",
+				"add": "Add",
+				"editTitle": "Edit collection",
+				"edit": "Edit {name}",
+				"name": "Name",
+				"note": "Note",
+				"delete": "Delete collection",
+				"all": "All places",
+				"addTo": "Add to",
+				"remove": "Remove from collection",
+				"empty": {
+					"title": "No collections yet",
+					"text": "Gather places that go together: where you work, where you take people, where you go to be alone."
+				},
+				"none": {
+					"title": "Nothing in it yet",
+					"text": "Drag a place here, or add one from its menu."
+				}
+			},
+			"listings": {
+				"empty": {
+					"title": "Nothing for the weekend yet",
+					"text": "What is on that fits your vibes gathers here."
+				},
+				"find": "Find listings",
+				"interested": "Interested",
+				"going": "Going",
+				"open": "Open page",
+				"from": "From {sources}.",
+				"marked": {
+					"interested": "On your calendar as a tentative outing.",
+					"going": "On your calendar as an outing."
+				},
+				"noKey": "Listings are found by the Gardener, which needs a key. Outings you already marked stay here.",
+				"sends": "Sends the days ahead, the vibes you lean to and “{area}” to {provider} with a web search, never where you are. Up to {cost}.",
+				"foundAt": "Found {when}.",
+				"weeklyOn": "Meadow looks every Sunday, once. Turn this off in Settings, under Integrations.",
+				"weeklyOff": "The weekly search is off.",
+				"toast": {
+					"interested": "Interested in {title}.",
+					"going": "Going to {title}.",
+					"cleared": "{title} is off your calendar."
+				}
+			},
+			"toast": {
+				"added": "{name} saved.",
+				"edited": "{name} changed.",
+				"removed": "{name} deleted.",
+				"placed": "{name} placed on the map.",
+				"favourited": "{name} is a favourite.",
+				"unfavourited": "{name} is no longer a favourite.",
+				"pictured": "Picture changed for {name}.",
+				"unpictured": "Picture removed from {name}.",
+				"visited": "Visit to {name} logged.",
+				"visitRemoved": "Visit to {name} deleted.",
+				"collected": "{name} added to {collection}.",
+				"collectedMany": "{count, plural, one {# place} other {# places}} added to {collection}.",
+				"uncollected": "{name} removed from {collection}.",
+				"collectionAdded": "{name} added.",
+				"collectionEdited": "{name} changed.",
+				"collectionRemoved": "{name} deleted.",
+				"dismissed": "{name} dismissed."
+			},
+			"find": {
+				"title": "Find more",
+				"button": "Find more",
+				"searching": "Searching",
+				"searchingWeb": "Searching the web",
+				"sends": "Sends “{brief}” and “{area}” to {provider} with a web search, never where you are. Up to {cost}.",
+				"offline": "Offline. A search needs a connection.",
+				"off": "Finding new places is turned off in Settings.",
+				"unplaced": "{count, plural, one {One more could not be placed on the map} other {# more could not be placed on the map}}: {names}.",
+				"noKey": {
+					"title": "No key on this device",
+					"detail": "Your saved places filter without one. Finding new places asks the Gardener, which needs a key."
+				},
+				"openSettings": "Open settings"
+			},
+			"failure": {
+				"off": "Finding new places is turned off in Settings.",
+				"no-key": "There is no key on this device, so the Gardener cannot be asked.",
+				"unavailable": "No model that can search the web is set up for this.",
+				"budget": "This would pass your monthly cap. Raise it in Settings, under Gardener.",
+				"busy": "The Gardener is busy with another request. Try again in a moment.",
+				"network": "The search could not be reached. Nothing was saved.",
+				"refusal": "The model declined this search.",
+				"cancelled": "The search was stopped.",
+				"search-refused": "The provider would not run a web search.",
+				"search-failed": "The search came back with nothing. Nothing was saved.",
+				"unreadable": "The answer could not be read. Nothing was saved.",
+				"empty": "The search found no place it could name with a source."
+			},
+			"suggestion": {
+				"save": "Save",
+				"dismiss": "Dismiss",
+				"found": "Found",
+				"list": "Found by the Gardener",
+				"from": "Found by a web search, from",
+				"notSaved": "Not saved yet; it goes from this device in seven days."
+			},
+			"import": {
+				"title": "Import a list",
+				"list": "Your list",
+				"placeholder": "- Cosmic Coffee\n- Radio Coffee & Beer — good for groups",
+				"help": "One place to a line. Bullets, numbers and checkboxes are read as they are; a note after a dash is kept.",
+				"sends": "Each name is looked up near your search area with Photon, a geocoder over OpenStreetMap. No model is asked, and nothing is saved until you say so.",
+				"find": "Find these places",
+				"looking": "Looking up",
+				"progress": "Looked up {done} of {total}",
+				"rows": "Places in your list",
+				"state": {
+					"looking": "Looking up",
+					"matched": "Found",
+					"saved": "Already saved",
+					"ambiguous": "Which one?",
+					"notFound": "Not found",
+					"placed": "Placed by hand"
+				},
+				"matches": "Matches for {name}",
+				"place": "Place it on the map",
+				"placeAgain": "Place it again",
+				"vibes": "Vibes",
+				"leaveOut": "Leave out",
+				"keep": "Keep",
+				"tag": "Tag vibes with the Gardener",
+				"tagging": "Tagging",
+				"tagged": "Vibes suggested",
+				"tagHelp": "Optional. Sends the names and their notes, with no search. Up to {cost}.",
+				"taggedHelp": "Suggested by the Gardener. Turn off any that are wrong.",
+				"save": "{count, plural, =0 {Nothing to save yet} one {Save # place} other {Save # places}}",
+				"saved": "{count, plural, one {# place} other {# places}} saved."
+			},
+			"mobile": {
+				"map": "Map",
+				"nearby": "Nearby",
+				"listings": "Listings",
+				"emptyText": "Places you save on the desktop show here.",
+				"listingsText": "What Meadow finds for the days ahead shows here."
+			}
 		}
 	},
 	"profile": {
@@ -908,7 +1257,8 @@
 			"skill": "Skill",
 			"owned-hardware": "Owned hardware",
 			"preferred-tool": "Preferred tool",
-			"medical-dietary-restriction": "Medical dietary restriction"
+			"medical-dietary-restriction": "Medical dietary restriction",
+			"favorite-vibe": "Favourite vibe"
 		},
 		"fields": {
 			"city": "City",
@@ -1113,7 +1463,27 @@
 			"weatherProvider": "Weather provider",
 			"weatherProviderHelp": "Where Sky's forecast comes from. If it can't be reached, Open-Meteo stands in.",
 			"weatherSources": "Sky's sources",
-			"weatherSourcesHelp": "What Sky draws on. Only rounded coordinates are sent."
+			"weatherSourcesHelp": "What Sky draws on. Only rounded coordinates are sent.",
+			"places": {
+				"discovery": "Find places with the Gardener",
+				"discoveryHelp": "Meadow’s Find more and its listings ask the Gardener to search the web, with your key. Your saved places work without it.",
+				"weekly": "Look for listings every Sunday",
+				"weeklyHelp": "One search a week that nobody presses, counted against your monthly cap and skipped when it would pass it.",
+				"details": "Details of a place",
+				"detailsHelp": "Where a place’s hours and picture are read from when you open it.",
+				"sources": {
+					"osm-hours": "Hours from OpenStreetMap",
+					"website": "Hours from its own page",
+					"website-photo": "The picture its own page shows"
+				},
+				"mapsApp": "Open in Maps uses",
+				"mapsAppHelp": "Which maps app a place is handed to.",
+				"maps": {
+					"apple": "Apple Maps",
+					"google": "Google Maps",
+					"osm": "OpenStreetMap"
+				}
+			}
 		},
 		"sync": {
 			"exportAll": "Export everything",
@@ -1202,7 +1572,10 @@
 				"anthropic": "Anthropic",
 				"vault-ai": "Vault → AI",
 				"web-page": "Web pages you import",
-				"web-image": "Pictures you link"
+				"web-image": "Pictures you link",
+				"openfreemap": "OpenFreeMap (map tiles)",
+				"photon": "Photon (finding a place by name)",
+				"overpass": "Overpass (opening hours)"
 			},
 			"never": {
 				"label": "Never automated",
@@ -1323,12 +1696,17 @@
 		},
 		"more": {
 			"title": "More",
-			"text": "Toolbench, the Gardener and settings."
+			"text": "Toolbench, Meadow, the Gardener and settings."
 		},
 		"profile": {
 			"title": "Eden knows nothing about you yet",
 			"text": "What you tell it, and what its domains learn, gathers here with where each fact came from.",
 			"action": "Add a fact"
+		},
+		"places": {
+			"title": "No places yet",
+			"text": "Paste a list from your notes and Meadow finds each one, or ask the Gardener for somewhere new.",
+			"action": "Import a list"
 		}
 	},
 	"uiKit": {},

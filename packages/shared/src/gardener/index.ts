@@ -33,6 +33,7 @@ export {
 	estimateCost,
 	formatCost,
 	formatUsd,
+	SEARCH_RESULT_TOKENS,
 	type Usage,
 } from './estimate.js'
 export { holdsPage, linksOf, normalLink, READ_PAGE, resolveLink, untrusted } from './links.js'

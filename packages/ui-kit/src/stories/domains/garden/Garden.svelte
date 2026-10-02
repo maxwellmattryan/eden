@@ -36,6 +36,8 @@
 			'sun-and-moon': 'Sun and moon',
 			'daily-line': 'Daily line',
 			'quick-log': 'Weight',
+			'nearby-favorites': 'Favourites nearby',
+			'upcoming-listings': 'This weekend',
 		},
 		empty: {
 			'weather-now': 'Set a home place to see the sky.',
@@ -47,6 +49,8 @@
 			'sun-and-moon': 'Set a home place to see the light.',
 			'daily-line': 'Tend what you can reach.',
 			'quick-log': 'Log a weight to start the line.',
+			'nearby-favorites': 'Save a place and mark it a favourite.',
+			'upcoming-listings': 'Nothing found for the weekend yet.',
 			feed: 'Nothing has happened yet.',
 		},
 		actions: {
@@ -55,6 +59,8 @@
 			'resurfaced-idea': 'Open idea',
 			'active-projects': 'Open projects',
 			'quick-log': 'Log weight',
+			'nearby-favorites': 'Open the map',
+			'upcoming-listings': 'Open listings',
 		},
 		untouched: (days) => `${days} days untouched`,
 		minutes: (minutes) => `${minutes} min`,
@@ -95,6 +101,8 @@
 		feed,
 		gardenLayout,
 		ideas,
+		meadowListings,
+		meadowPlaces,
 		projects,
 		recipes,
 		sidebar,
@@ -165,6 +173,8 @@
 	const idle = ideas[3]!
 	const neutral = dailyLines[1]!
 	const latest = weightSeries[weightSeries.length - 1]!
+	/** The favourites, nearest home first. */
+	const favourites = meadowPlaces.filter((place) => place.favourite).sort((a, b) => a.distanceKm - b.distanceKm)
 
 	const widgetProps = (tile: GardenTile) => ({
 		title: copy.widgets[tile.id] ?? tile.id,
@@ -237,6 +247,24 @@
 	{:else if tile.id === 'quick-log'}
 		<Stat value={String(latest)} unit={copy.weight} />
 		<Sparkline values={weightSeries} reference={weightAverage} width={220} height={40} />
+	{:else if tile.id === 'nearby-favorites'}
+		<ul class="rows">
+			{#each favourites as place (place.id)}
+				<li>
+					<span class="row-text">{place.name}<span class="row-note">{place.locality}</span></span>
+					<span class="row-meta">{place.distanceKm} km</span>
+				</li>
+			{/each}
+		</ul>
+	{:else if tile.id === 'upcoming-listings'}
+		<ul class="rows">
+			{#each meadowListings as listing (listing.id)}
+				<li>
+					<span class="row-text">{listing.title}<span class="row-note">{listing.venue}</span></span>
+					<span class="row-meta">{listing.when}</span>
+				</li>
+			{/each}
+		</ul>
 	{/if}
 {/snippet}
 

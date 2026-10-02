@@ -94,6 +94,8 @@ export const FACT_SHAPES: Record<LiveFactId, FactShape> = {
 		multi: true,
 	},
 	'owned-hardware': { shape: string(120), multi: true },
+	// the name is a vibe's id (a bundled one, or a custom vibe's row id), as Meadow writes it from saves and visits
+	'favorite-vibe': { shape: { kind: 'weighted' }, multi: true },
 	'preferred-tool': { shape: string(120), multi: true },
 	'medical-dietary-restriction': { shape: string(200), multi: true },
 }

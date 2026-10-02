@@ -73,7 +73,7 @@ export interface PackRequest {
 	/** The reply is read in the panel, so the persona asks for Markdown; a delegated request leaves it off. */
 	markdown?: boolean
 	/** A chat with the owner (the default), or one tool's delegated request, which has a system prompt of its own. */
-	mode?: 'chat' | 'delegated'
+	mode?: 'chat' | 'delegated' | 'research'
 	/** A delegated reply held to a JSON schema. */
 	json?: boolean
 }
@@ -315,7 +315,9 @@ export async function buildPack(request: PackRequest, readers: PackReaders): Pro
 		if (primitive !== 'task')
 			return [...(await readers.primitives(primitive, { ...(kinds ? { kinds } : {}), from, to }))]
 		const rows = await readers.primitives(primitive, kinds ? { kinds } : {})
-		return request.mode === 'delegated' ? [...rows] : tasksForPack(rows, request.now, request.zone, focus)
+		return request.mode === 'delegated' || request.mode === 'research'
+			? [...rows]
+			: tasksForPack(rows, request.now, request.zone, focus)
 	}
 
 	const factIds = passed.filter((row) => row.category === 'fact').map((row) => row.id)

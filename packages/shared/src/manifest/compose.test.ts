@@ -19,23 +19,23 @@ describe('sidebarGroups', () => {
 	it('groups Today; Garden and Toolbench; then the domains, with the Gardener pinned (D-64, D-77)', () => {
 		const groups = sidebarGroups(declarations, shell)
 		expect(groups.map((group) => group.id)).toEqual(['today', 'shell', 'domains'])
-		expect(ids(groups)).toEqual([['today'], ['garden', 'toolbench'], ['kitchen', 'weather']])
+		expect(ids(groups)).toEqual([['today'], ['garden', 'toolbench'], ['kitchen', 'weather', 'places']])
 		expect(shell.sidebar.pinned.map((entry) => entry.id)).toEqual(['gardener', 'settings'])
 		expect(shell.sidebar.pinned[0]).toMatchObject({ id: 'gardener', name: 'shell.gardener', key: 'G' })
 		expect(groups[2]?.items[0]).toMatchObject({ kind: 'domain', name: 'domains.kitchen.name', place: true })
 	})
 
 	it("follows the owner's order, and keeps the rest in their declared one", () => {
-		expect(ids(sidebarGroups(declarations, shell, { order: ['weather'] }))[2]).toEqual(['weather', 'kitchen'])
+		expect(ids(sidebarGroups(declarations, shell, { order: ['weather'] }))[2]).toEqual(['weather', 'kitchen', 'places'])
 		expect(ids(sidebarGroups(declarations, shell, { order: ['weather', 'kitchen', 'toolbench'] }))).toEqual([
 			['today'],
 			['garden', 'toolbench'],
-			['weather', 'kitchen'],
+			['weather', 'kitchen', 'places'],
 		])
 	})
 
 	it('leaves out what the owner hid, and a group with nothing in it', () => {
-		const groups = sidebarGroups(declarations, shell, { hidden: ['kitchen', 'weather', 'toolbench'] })
+		const groups = sidebarGroups(declarations, shell, { hidden: ['kitchen', 'weather', 'toolbench', 'places'] })
 		expect(ids(groups)).toEqual([['today'], ['garden']])
 	})
 
@@ -53,6 +53,7 @@ describe('shortcutPositions', () => {
 			['toolbench', 3],
 			['kitchen', 4],
 			['weather', 5],
+			['places', 6],
 		])
 	})
 
@@ -69,14 +70,14 @@ describe('tabBar', () => {
 	it('pins Hearth and Sky after Garden and Today, and keeps the rest behind More', () => {
 		const bar = tabBar(declarations, shell)
 		expect(idsOf(bar.tabs)).toEqual(['garden', 'today', 'kitchen', 'weather'])
-		expect(idsOf(bar.more)).toEqual(['toolbench', 'gardener', 'settings'])
+		expect(idsOf(bar.more)).toEqual(['toolbench', 'places', 'gardener', 'settings'])
 		expect(shell.tabs.more).toEqual({ id: 'more', name: 'shell.more' })
 	})
 
 	it("pins the owner's two, and no more than two", () => {
 		const bar = tabBar(declarations, shell, ['toolbench', 'weather', 'kitchen'])
 		expect(idsOf(bar.tabs)).toEqual(['garden', 'today', 'toolbench', 'weather'])
-		expect(idsOf(bar.more)).toEqual(['kitchen', 'gardener', 'settings'])
+		expect(idsOf(bar.more)).toEqual(['kitchen', 'places', 'gardener', 'settings'])
 	})
 
 	it('leaves out a pinned domain that is not enabled', () => {
@@ -95,6 +96,8 @@ describe('the Garden', () => {
 			'active-projects',
 			'weather-now',
 			'sun-and-moon',
+			'nearby-favorites',
+			'upcoming-listings',
 			'today',
 			'daily-line',
 			'quick-log',
@@ -112,7 +115,7 @@ describe('the Garden', () => {
 		expect(catalog.find((widget) => widget.id === 'quick-log')).toMatchObject({ owner: 'shell', glyph: 'fitness' })
 	})
 
-	it('lays out the Phase 1 default: nine tiles in the order of the mockup, each at its first size', () => {
+	it('lays out the default: eleven tiles in the order of the mockup, each at its first size', () => {
 		const layout = defaultLayout(declarations, shell)
 		expect(layout.map((tile) => [tile.id, tile.glyph, tile.size])).toEqual([
 			['weather-now', 'weather', 's'],
@@ -124,13 +127,15 @@ describe('the Garden', () => {
 			['sun-and-moon', 'weather', 's'],
 			['daily-line', 'garden', 'm'],
 			['quick-log', 'fitness', 's'],
+			['nearby-favorites', 'places', 'm'],
+			['upcoming-listings', 'places', 'm'],
 		])
 	})
 
 	it("drops a disabled domain's tiles from the layout", () => {
 		const layout = defaultLayout(without('kitchen'), shell)
 		expect(layout.map((tile) => tile.id)).not.toContain('expiring-soon')
-		expect(layout).toHaveLength(7)
+		expect(layout).toHaveLength(9)
 	})
 })
 
@@ -153,6 +158,13 @@ describe('paletteIndex', () => {
 			'go.toolbench.studio',
 			'go.toolbench.notes',
 			'go.weather',
+			'go.places',
+			'go.places.map',
+			'go.places.listings',
+			'go.places.collections',
+			'go.places.visits',
+			// an intent the domain handles; nothing dispatches it until the palette runs intents (#23)
+			'go.places.open',
 		])
 		expect(index.entries.find((entry) => entry.id === 'go.kitchen.recipes')).toEqual({
 			id: 'go.kitchen.recipes',

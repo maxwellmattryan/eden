@@ -14,7 +14,15 @@ import {
 	TEXT_MAX_BYTES,
 	type AttachmentBlock,
 } from '@eden/shared/gardener'
-import { fetchImage, fetchPage, logError, webErrorCode } from '@eden/shared/api'
+import {
+	cropDataUrl,
+	fetchImage,
+	fetchPage,
+	logError,
+	sizedPicture,
+	webErrorCode,
+	type SizedPicture,
+} from '@eden/shared/api'
 import {
 	emlToText,
 	guessedIcons,
@@ -111,25 +119,8 @@ async function redraw(file: Blob): Promise<Blob> {
 	}
 }
 
-/** An item's picture is small: it is shown at a row's height and a pane's width, and kept in its row (D-90). */
-const PICTURE_EDGE = 192
 /** The room left around an item when it is cut from a photo, as a share of the item's own size. */
 const PICTURE_MARGIN = 0.06
-
-async function pictureOf(bitmap: ImageBitmap, x: number, y: number, width: number, height: number): Promise<string> {
-	const scale = Math.min(1, PICTURE_EDGE / Math.max(width, height))
-	const canvas = new OffscreenCanvas(Math.max(1, Math.round(width * scale)), Math.max(1, Math.round(height * scale)))
-	const context = canvas.getContext('2d')
-	if (!context) throw new Error('no 2d context')
-	context.fillStyle = '#fff'
-	context.fillRect(0, 0, canvas.width, canvas.height)
-	context.drawImage(bitmap, x, y, width, height, 0, 0, canvas.width, canvas.height)
-	const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.8 })
-	const bytes = new Uint8Array(await blob.arrayBuffer())
-	let binary = ''
-	for (let at = 0; at < bytes.length; at += 0x8000) binary += String.fromCharCode(...bytes.subarray(at, at + 0x8000))
-	return `data:image/jpeg;base64,${btoa(binary)}`
-}
 
 /**
  * An item's picture cut from a photo: the box the model drew around it, with a little room, as a small JPEG data
@@ -149,7 +140,7 @@ export async function cutPicture(
 		const right = Math.min(1, box.right + marginX) * bitmap.width
 		const bottom = Math.min(1, box.bottom + marginY) * bitmap.height
 		if (right - left < 8 || bottom - top < 8) return undefined
-		return await pictureOf(bitmap, left, top, right - left, bottom - top)
+		return await cropDataUrl(bitmap, left, top, right - left, bottom - top)
 	} catch {
 		return undefined
 	} finally {
@@ -185,7 +176,7 @@ export async function fitPicture(picture: Blob, least = 0): Promise<string | und
 		const side = Math.max(bitmap.width, bitmap.height)
 		if (side < least) return undefined
 		// drawn from a square around the picture: what falls outside it is the white the canvas starts with
-		return await pictureOf(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side)
+		return await cropDataUrl(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side)
 	} catch {
 		return undefined
 	} finally {
@@ -285,7 +276,7 @@ export async function squarePicture(photo: Blob): Promise<string | undefined> {
 	try {
 		bitmap = await createImageBitmap(photo)
 		const side = Math.min(bitmap.width, bitmap.height)
-		return await pictureOf(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side)
+		return await cropDataUrl(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side)
 	} catch {
 		return undefined
 	} finally {
@@ -293,40 +284,11 @@ export async function squarePicture(photo: Blob): Promise<string | undefined> {
 	}
 }
 
-/** A recipe's picture is shown across its page: kept at no more than this on its long edge (D-93). */
-const RECIPE_EDGE = 1600
-
-/** A recipe's picture as it is kept: the whole of it, sized for the page, and the small square its row shows. */
-export interface RecipePicture {
-	image: Blob
-	thumbnail: string
-}
+/** A recipe's picture as it is kept (D-93): the whole of it, sized for the page, and the small square its row shows. */
+export type RecipePicture = SizedPicture
 
 /** A picture for a recipe, from a photo the owner chose or one its page showed. HEIC is taken like any other. */
-export async function recipePicture(photo: Blob): Promise<RecipePicture | undefined> {
-	let bitmap: ImageBitmap | undefined
-	try {
-		bitmap = await createImageBitmap(photo)
-		const scale = Math.min(1, RECIPE_EDGE / Math.max(bitmap.width, bitmap.height))
-		const canvas = new OffscreenCanvas(
-			Math.max(1, Math.round(bitmap.width * scale)),
-			Math.max(1, Math.round(bitmap.height * scale))
-		)
-		const context = canvas.getContext('2d')
-		if (!context) return undefined
-		context.fillStyle = '#fff'
-		context.fillRect(0, 0, canvas.width, canvas.height)
-		context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
-		const image = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 })
-		const side = Math.min(bitmap.width, bitmap.height)
-		const thumbnail = await pictureOf(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side)
-		return { image, thumbnail }
-	} catch {
-		return undefined
-	} finally {
-		bitmap?.close()
-	}
-}
+export const recipePicture = (photo: Blob): Promise<RecipePicture | undefined> => sizedPicture(photo)
 
 /**
  * The picture a link the owner pasted means for a recipe (D-110), fetched by the app: the picture at the address,

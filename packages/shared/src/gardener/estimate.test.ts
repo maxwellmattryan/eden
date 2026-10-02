@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { cacheWritePrice, estimateBefore, estimateCost, formatCost, formatUsd } from './estimate.js'
+import {
+	cacheWritePrice,
+	estimateBefore,
+	estimateCost,
+	formatCost,
+	formatUsd,
+	SEARCH_RESULT_TOKENS,
+} from './estimate.js'
 
 const sonnet = { input: 2, output: 10, cacheRead: 0.2 }
 
@@ -25,6 +32,28 @@ describe('estimates', () => {
 	it('estimates the most a request may cost before it is sent', () => {
 		expect(estimateBefore(12_000, 4_000, sonnet)).toBeCloseTo(0.064, 6)
 		expect(estimateBefore(0, 0, sonnet)).toBe(0)
+	})
+
+	it('charges each web search its fee, on top of the tokens (D-132)', () => {
+		const searching = { ...sonnet, search: 0.01 }
+		// the fee is for the search, not per million
+		expect(estimateCost({ tokensIn: 0, tokensOut: 0, cacheRead: 0, searches: 3 }, searching)).toBeCloseTo(0.03, 9)
+		expect(estimateCost({ tokensIn: 1_000_000, tokensOut: 0, cacheRead: 0, searches: 2 }, searching)).toBeCloseTo(
+			2.02,
+			9
+		)
+		// a row from before searches were priced costs one at nothing, and a usage that names none ran none
+		expect(estimateCost({ tokensIn: 0, tokensOut: 0, cacheRead: 0, searches: 3 }, sonnet)).toBe(0)
+		expect(estimateCost({ tokensIn: 0, tokensOut: 0, cacheRead: 0 }, searching)).toBe(0)
+	})
+
+	it('estimates a searching request at every search it may make and what their results add to the input', () => {
+		const searching = { ...sonnet, search: 0.01 }
+		const plain = estimateBefore(2_000, 1_000, searching)
+		const withFive = estimateBefore(2_000, 1_000, searching, 5)
+		const results = (5 * SEARCH_RESULT_TOKENS * searching.input) / 1_000_000
+		expect(withFive).toBeCloseTo(plain + 5 * 0.01 + results, 9)
+		expect(estimateBefore(2_000, 1_000, searching, 0)).toBe(plain)
 	})
 
 	it('formats USD to two decimals and small amounts in cents', () => {

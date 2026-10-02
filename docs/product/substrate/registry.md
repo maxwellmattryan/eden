@@ -148,12 +148,15 @@ updated: 2026-10-01
 | id | category | tier | notes |
 |---|---|---|---|
 | `favorite-vibe` | fact | T0 | |
-| `place-profile` | entity | T1 | overlay on a `venue` Place |
-| `vibe` | entity | T0 | taxonomy |
+| `place-profile` | entity | T1 | what Meadow keeps about a saved `venue` Place, linked `about` it (D-133) |
+| `vibe` | entity | T0 | a custom vibe only; the bundled ones are code (D-133) |
 | `collection` | entity | T1 | |
 | `listing` | entity | T0 | mirror |
 | `visit` | entity | T1 | |
+| `place-suggestion` | entity | T1 | mirror: a place found and not saved (D-133) |
+| `place-detail` | entity | T0 | mirror: one detail slot of a place, from one source (D-128) |
 | `outing` | kind (event) | T1 | tentative when interested, confirmed when going |
+| `place-photo` | kind (attachment) | T1 | a saved place's picture (D-133) |
 
 ## Wellspring (`health`), stub, after Phase 2
 

@@ -34,6 +34,7 @@ import {
 	type Pack,
 	type PackReaders,
 	type Resolution,
+	type ServerBlock,
 	type Thread,
 	type ToolState,
 } from '@eden/shared/gardener'
@@ -68,6 +69,7 @@ import {
 	GRANT_SUBJECT,
 	parseJson,
 	type Delegate,
+	type Research,
 	type ToolContext,
 	type ToolFailure,
 	type ToolFiles,
@@ -109,7 +111,18 @@ interface Usage {
 	cacheRead: number
 	/** What the provider wrote to its cache, billed at a rate of its own (D-116). */
 	cacheWrite?: number
+	/** The web searches the provider ran, each with a fee of its own (D-132). */
+	searches?: number
 }
+
+/** A tool that searches the web, by its domain and id: what it answers is a page's words (D-132). */
+const searchesWeb = (domain: string, tool: string) =>
+	everyTool.some(
+		(entry) => entry.domain === domain && entry.declaration.id === tool && entry.declaration.needs.includes('search')
+	)
+/** What a research request's notes may run to, and what they are allowed for when the second request is estimated. */
+const RESEARCH_OUTPUT = 3072
+const NOTES_TOKENS = 2500
 
 /** An entry with the owner's day it was made on, which the usage rollup files it under (D-115). */
 const dated = (entry: AuditEntryInput): AuditEntryInput => ({
@@ -125,6 +138,8 @@ interface StreamOutcome {
 	stop: string
 	refusal: string | null
 	error?: { status: number | null; message: string }
+	/** The blocks of a tool the provider ran itself (D-132): its calls and what each returned. */
+	server: ServerBlock[]
 }
 
 const sum = (a: Usage, b: Usage): Usage => ({
@@ -132,6 +147,7 @@ const sum = (a: Usage, b: Usage): Usage => ({
 	tokensOut: a.tokensOut + b.tokensOut,
 	cacheRead: a.cacheRead + b.cacheRead,
 	cacheWrite: (a.cacheWrite ?? 0) + (b.cacheWrite ?? 0),
+	...((a.searches ?? 0) + (b.searches ?? 0) ? { searches: (a.searches ?? 0) + (b.searches ?? 0) } : {}),
 })
 
 export class GardenerRuntime {
@@ -344,7 +360,7 @@ export class GardenerRuntime {
 		if (given.length) ctx.files = { blocks: given }
 		// the addresses the owner wrote are theirs to have read; a thread that already read a page is guarded
 		ctx.links = linksOf(prior, message)
-		if (holdsPage(prior)) this.#pageRead.add(thread.id)
+		if (holdsPage(prior, searchesWeb)) this.#pageRead.add(thread.id)
 		const surface = gardenerUi.domain ? `${gardenerUi.domain}-chat` : 'global-chat'
 		// an image or a PDF, the message's or an earlier turn's, needs a model that sees
 		const needs = hasVisual(prior, attachments) ? (['tools', 'vision'] as const) : (['tools'] as const)
@@ -509,7 +525,7 @@ export class GardenerRuntime {
 			access: tool.declaration.access,
 			input: pending.input,
 		}
-		if (holdsPage(threads.messages)) this.#pageRead.add(thread.id)
+		if (holdsPage(threads.messages, searchesWeb)) this.#pageRead.add(thread.id)
 		try {
 			const { result } = await this.#runCall(call, reply.id, this.#context(requestId, thread))
 			const reply2 =
@@ -561,6 +577,7 @@ export class GardenerRuntime {
 				usage: { tokensIn: 0, tokensOut: 0, cacheRead: 0 },
 				stop: 'end_turn',
 				refusal: null,
+				server: [],
 			}
 			let textIndex = -1
 			const onEvent = (event: GardenerEvent) => {
@@ -602,8 +619,11 @@ export class GardenerRuntime {
 						tokensOut: event.output,
 						cacheRead: event.cacheRead,
 						cacheWrite: event.cacheWrite,
+						...(event.searches ? { searches: event.searches } : {}),
 					}
 					counted?.(outcome.usage)
+				} else if (event.type === 'server_block') {
+					outcome.server.push(event.block)
 				} else if (event.type === 'stop') {
 					outcome.stop = event.reason
 					outcome.refusal = event.refusal
@@ -702,7 +722,12 @@ export class GardenerRuntime {
 			else if (failure === undefined) settle('done', { output: result.output })
 			else settle('failed', { output: result.output, error: failure })
 			// from here on this conversation holds text written outside Eden
-			if (failure === undefined && tool.domain === SUBSTRATE && call.tool === READ_PAGE && ctx.threadId)
+			// a page that was read, or what a search returned, is in the conversation from here on (D-126, D-132)
+			if (
+				failure === undefined &&
+				ctx.threadId &&
+				((tool.domain === SUBSTRATE && call.tool === READ_PAGE) || searchesWeb(tool.domain, call.tool))
+			)
 				this.#pageRead.add(ctx.threadId)
 			if (result.card)
 				this.#addBlock(replyId, {
@@ -792,7 +817,17 @@ export class GardenerRuntime {
 			...readers,
 			attachment: async () => undefined,
 		})
-		const estimateUsd = estimateBefore(pack.estimatedInputTokens, maxTokens, model.pricing)
+		const research = handler.delegate.research
+		// a searching tool is two requests: the one that searches, with every search it may make, and the one that reads
+		const estimateUsd = research
+			? estimateBefore(
+					pack.estimatedInputTokens,
+					RESEARCH_OUTPUT + (model.thinks ? THINKING_ROOM.delegated : 0),
+					model.pricing,
+					research.maxUses
+				) + estimateBefore(pack.estimatedInputTokens + NOTES_TOKENS, maxTokens, model.pricing)
+			: estimateBefore(pack.estimatedInputTokens, maxTokens, model.pricing)
+		if (research && !gardenerSetup.provider.serverTools?.search) return { unavailable: 'unavailable' }
 		const state = budgetState({
 			spentThisMonth: gardenerSetup.spentThisMonth,
 			capUsd: gardenerSetup.capUsd,
@@ -815,10 +850,12 @@ export class GardenerRuntime {
 		model: ModelRow,
 		maxTokens: number,
 		from: PackReaders,
-		files?: ToolFiles
+		files?: ToolFiles,
+		/** The research request's own message, when the pack is that request's (D-132). */
+		research?: string
 	): Promise<Pack> {
 		const given = files ?? (delegate.files ? await delegate.files(input, ctx) : undefined)
-		const prompt = await delegate.prompt(input, ctx)
+		const prompt = research ?? (await delegate.prompt(input, ctx))
 		const focus = [...ctx.focus, ...((await delegate.focus?.(input, ctx)) ?? [])]
 		return buildPack(
 			{
@@ -838,8 +875,8 @@ export class GardenerRuntime {
 				domainName: tool.domain !== 'substrate' ? get(t)(`domains.${tool.domain}.name`) : undefined,
 				domains: enabledDomains(),
 				grade: resolution.grade,
-				mode: 'delegated',
-				json: !!delegate.schema,
+				mode: research === undefined ? 'delegated' : 'research',
+				json: research === undefined && !!delegate.schema,
 			},
 			// files a page staged are read by the page's own reader; stored ones by the workspace's
 			given?.read && from === readers ? { ...from, attachment: given.read } : from
@@ -900,6 +937,18 @@ export class GardenerRuntime {
 		if (delegate.files && !files?.blocks.length && !delegate.filesOptional?.(input))
 			return { output: { error: NO_FILES }, failure: 'no-files' }
 		const maxTokens = (delegate.maxTokens ?? DELEGATED_OUTPUT) + (model.thinks ? THINKING_ROOM.delegated : 0)
+		// A searching tool is two requests (D-132): the research request searches and answers notes, and this one
+		// reads them. The budget and the confirm were settled for both before the first was sent.
+		let researched = false
+		if (delegate.research) {
+			const found = await this.#research(tool, delegate, delegate.research, input, ctx, resolution, model, maxTokens, {
+				confirmed: options.confirmed ?? false,
+				direct: options.direct ?? false,
+			})
+			if ('failure' in found) return found.failure
+			ctx = { ...ctx, research: found }
+			researched = true
+		}
 		const pack = await this.#delegatedPack(tool, delegate, input, ctx, resolution, model, maxTokens, readers, files)
 		// the files are counted with the prompt: the pack estimates each from its size
 		const inputTokens = pack.estimatedInputTokens
@@ -931,15 +980,9 @@ export class GardenerRuntime {
 			image: null,
 			attachments: pack.attachments,
 		}
-		if (!(await this.#budgetAllows(estimate, requestId, resolution, audit)))
-			return {
-				output: {
-					error:
-						"This tool was not run: it would pass the owner's monthly spending cap. They can raise the cap in Settings, under Gardener.",
-				},
-				failure: 'budget',
-			}
-		if (options.confirmed) {
+		if (!researched && !(await this.#budgetAllows(estimate, requestId, resolution, audit)))
+			return { output: { error: OVER_CAP }, failure: 'budget' }
+		if (options.confirmed || researched) {
 			// the page showed the estimate and the owner pressed on: that is the confirm, whatever the grade
 			audit.confirmOutcome = 'confirmed'
 		} else if (resolution.confirm) {
@@ -998,6 +1041,141 @@ export class GardenerRuntime {
 				failure: 'unreadable',
 			}
 		return delegate.parse(outcome.text, input, { ...ctx, files })
+	}
+
+	/**
+	 * The research request of a searching tool (D-132): the tool's declared reads and its research prompt, with the
+	 * provider's web search among its tools and a cap on its uses. The provider runs the searches on its own side,
+	 * so nothing loops here. It answers the notes and the addresses the searches returned, or why there are none.
+	 * The budget check and the confirm are made once, here, for this request and the one that reads its notes.
+	 */
+	async #research(
+		tool: GardenerTool,
+		delegate: Delegate,
+		research: Research,
+		input: unknown,
+		ctx: ToolContext,
+		resolution: Extract<Resolution, { kind: 'model' }>,
+		model: ModelRow,
+		readingTokens: number,
+		options: { confirmed: boolean; direct: boolean }
+	): Promise<{ notes: string; sources: { url: string; title: string }[] } | { failure: ToolResult }> {
+		const fail = (failure: ToolFailure, error: string, cancelled = false): { failure: ToolResult } => ({
+			failure: { output: { error, ...(cancelled ? { cancelled: true } : {}) }, failure },
+		})
+		const serverTool = gardenerSetup.provider.serverTools?.search
+		if (!serverTool) return fail('unavailable', UNAVAILABLE)
+		const maxTokens = RESEARCH_OUTPUT + (model.thinks ? THINKING_ROOM.delegated : 0)
+		const prompt = await research.prompt(input, ctx)
+		const pack = await this.#delegatedPack(
+			tool,
+			delegate,
+			input,
+			ctx,
+			resolution,
+			model,
+			maxTokens,
+			readers,
+			undefined,
+			prompt
+		)
+		const inputTokens = pack.estimatedInputTokens
+		// both requests: this one with every search it may make, and the one that reads the notes
+		const estimate =
+			estimateBefore(inputTokens, maxTokens, model.pricing, research.maxUses) +
+			estimateBefore(inputTokens + NOTES_TOKENS, readingTokens, model.pricing)
+		const requestId = newId()
+		const audit: AuditEntryInput = {
+			id: requestId,
+			at: Date.now(),
+			surface: 'delegated',
+			threadId: ctx.threadId || null,
+			parentRequestId: ctx.requestId || null,
+			tool: tool.declaration.id,
+			domain: tool.domain === 'substrate' ? null : tool.domain,
+			declaredGrade: resolution.declared,
+			grade: resolution.grade,
+			source: resolution.source,
+			provider: resolution.provider,
+			model: resolution.model,
+			reads: pack.reads as AuditRead[],
+			entities: [...pack.entities],
+			tools: [],
+			confirmOutcome: null,
+			tokensIn: 0,
+			tokensOut: 0,
+			cacheRead: 0,
+			costUsd: 0,
+			outcome: 'ok',
+			grants: [...pack.grants],
+			image: null,
+		}
+		if (!(await this.#budgetAllows(estimate, requestId, resolution, audit))) return fail('budget', OVER_CAP)
+		if (options.confirmed) {
+			audit.confirmOutcome = 'confirmed'
+		} else if (resolution.confirm) {
+			const ok = !options.direct && (await this.#confirmCost(resolution.model, tool.declaration.id, estimate))
+			audit.confirmOutcome = ok ? 'confirmed' : 'cancelled'
+			if (!ok) {
+				audit.outcome = 'declined'
+				await this.#record(audit)
+				return fail('cancelled', DECLINED, true)
+			}
+		}
+		const location = research.location?.(input, ctx)
+		const request: GardenerRequest = {
+			id: requestId,
+			model: resolution.model,
+			maxTokens,
+			system: pack.system,
+			messages: pack.messages,
+			tools: [
+				{
+					...serverTool,
+					max_uses: research.maxUses,
+					...(location && Object.keys(location).length ? { user_location: { type: 'approximate', ...location } } : {}),
+				},
+			],
+		}
+		const estimated: Usage = { tokensIn: inputTokens, tokensOut: 0, cacheRead: 0 }
+		unsettled.open({ ...audit, ...estimated, costUsd: estimateCost(estimated, model.pricing) })
+		const outcome = await this.#stream(request, undefined, (usage) =>
+			unsettled.count(requestId, { ...usage, costUsd: estimateCost(usage, model.pricing) })
+		)
+		const calls = outcome.server.filter((block) => block.type === 'server_tool_use')
+		const results = outcome.server.flatMap((block) => ('results' in block ? [block] : []))
+		audit.tokensIn = outcome.usage.tokensIn
+		audit.tokensOut = outcome.usage.tokensOut
+		audit.cacheRead = outcome.usage.cacheRead
+		audit.cacheWrite = outcome.usage.cacheWrite ?? 0
+		// the search's fee is part of the request's cost, so the cap and the usage page count it with no column of its own
+		audit.costUsd = estimateCost({ ...outcome.usage, searches: outcome.usage.searches ?? calls.length }, model.pricing)
+		// the entry lists the search once for each time the provider ran it
+		audit.tools = calls.map(() => ({ id: serverTool.name, access: 'read', confirm: null }))
+		if (outcome.error) audit.outcome = 'error'
+		else if (outcome.stop === 'refusal') audit.outcome = 'refusal'
+		else if (outcome.stop === 'max_tokens') audit.outcome = 'max-tokens'
+		else if (outcome.stop === 'cancelled') audit.outcome = 'cancelled'
+		await this.#record(audit)
+		if (outcome.error) {
+			// the provider refused the request as it was sent (web search turned off for the organisation, say): its
+			// own words are what the owner can act on
+			if (outcome.error.status === 400 || outcome.error.status === 403)
+				return fail('search-refused', outcome.error.message)
+			return fail('network', outcome.error.message)
+		}
+		if (outcome.stop === 'refusal')
+			return fail('refusal', 'The model declined this request. Tell the owner; do not retry it.')
+		if (outcome.stop === 'cancelled') return fail('cancelled', 'The owner stopped this.', true)
+		const notes = outcome.text.trim()
+		const sources = results.flatMap((block) => block.results)
+		// no notes, or notes with no search behind them, is no research: a turn the provider paused with nothing
+		// written, a search that failed, a model that answered from memory
+		if (!notes || !sources.length) {
+			const error = results.find((block) => block.error)?.error
+			return fail('search-failed', `The web search brought nothing back${error ? ` (${error})` : ''}. Tell the owner.`)
+		}
+		return { notes, sources }
 	}
 
 	async #record(entry: AuditEntryInput): Promise<void> {
@@ -1159,6 +1337,8 @@ function errorOf(output: unknown): string | undefined {
 
 const noSuchTool = (name: string) => `There is no tool named ${name}. Use only the tools this request offers.`
 const DECLINED = 'The owner declined this. Do not retry it unless they ask.'
+const OVER_CAP =
+	"This tool was not run: it would pass the owner's monthly spending cap. They can raise the cap in Settings, under Gardener."
 const UNAVAILABLE =
 	'This tool is unavailable: no model the owner has set up can run it. Tell them; they can change models in Settings, under Gardener.'
 const NO_FILES =

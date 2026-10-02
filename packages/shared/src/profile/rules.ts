@@ -54,14 +54,14 @@ export function checkProvenance(
 }
 
 /**
- * What the store refuses to hold: a type that is not a fact of Phase 1, anything T3, a value that is nothing, and a
+ * What the store refuses to hold: a type that is not a live fact (D-130), anything T3, a value that is nothing, and a
  * provenance that does not fit its fields. Answers the code and the detail, or nothing.
  */
 export function validateFact(input: FactInput): Refusal | undefined {
 	const row = resource(input.type)
 	if (!row || row.category !== 'fact') return invalid(`not a fact type: ${JSON.stringify(input.type)}`)
 	if (row.tier === 'T3') return ['fact:never', `${input.type} is T3 and is never a fact`]
-	if (!row.live) return invalid(`not a fact type of Phase 1: ${input.type}`)
+	if (!row.live) return invalid(`not a live fact type: ${input.type}`)
 	if (input.value === null || input.value === undefined) return invalid('a fact holds a value')
 	const provenance = checkProvenance(input, row.owner)
 	if (provenance) return invalid(provenance)

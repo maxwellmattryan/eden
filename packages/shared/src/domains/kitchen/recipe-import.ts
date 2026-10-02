@@ -2,9 +2,13 @@
 // is in schema.org's `Recipe` (most recipe sites do, as JSON-LD) is read here with no model asked; anything else is
 // text the `import-recipe` tool is given, and `recipeDraft` reads the model's answer into the same shape. A draft is
 // never stored: the owner checks it in the Recipes view and saves it there.
+import { httpsAddress, jsonLdNodes, pageImage, pageSiteName } from '../../api/html.js'
 import { parseIngredient } from './parse.js'
 import { decodeEntities, htmlToText } from './sources.js'
 import type { Ingredient, Recipe } from './types.js'
+
+// The page readers both Hearth and Meadow use live in the shared HTML module; they are still exported from here.
+export { httpsAddress, jsonLdNodes, pageImage, pageSiteName }
 
 /**
  * A recipe before it is a row: everything but the id. It has no picture of its own yet; `imageUrl` is where its
@@ -29,19 +33,6 @@ export function durationMinutes(value: unknown): number {
 	if (!match) return 0
 	const [, days, hours, minutes] = match
 	return Math.round(Number(days ?? 0) * 1440 + Number(hours ?? 0) * 60 + Number(minutes ?? 0))
-}
-
-/** Every object in a JSON-LD document, through arrays and `@graph`. */
-function nodes(value: unknown, found: Record<string, unknown>[] = [], depth = 0): Record<string, unknown>[] {
-	if (depth > 6 || !value || typeof value !== 'object') return found
-	if (Array.isArray(value)) {
-		for (const entry of value) nodes(entry, found, depth + 1)
-		return found
-	}
-	const node = value as Record<string, unknown>
-	found.push(node)
-	if (node['@graph']) nodes(node['@graph'], found, depth + 1)
-	return found
 }
 
 const isRecipe = (node: Record<string, unknown>) =>
@@ -78,32 +69,6 @@ const tagsOf = (value: unknown): string[] =>
 		.filter((tag) => tag && tag.length <= 24)
 		.slice(0, 5)
 
-/** Every object a page describes in JSON-LD, across its scripts; a script that does not parse is passed over. */
-export function jsonLdNodes(html: string): Record<string, unknown>[] {
-	const scripts = html.matchAll(
-		/<script\b[^>]*type\s*=\s*["']?application\/ld\+json["']?[^>]*>([\s\S]*?)<\/script\s*>/gi
-	)
-	const found: Record<string, unknown>[] = []
-	for (const [, body] of scripts) {
-		try {
-			nodes(JSON.parse(body!.trim()), found)
-		} catch {
-			continue
-		}
-	}
-	return found
-}
-
-/** An `https` address a page names, absolute; nothing for any other kind of address. */
-export function httpsAddress(value: string, base?: string): string | undefined {
-	try {
-		const url = new URL(value.trim(), base)
-		return url.protocol === 'https:' ? url.href : undefined
-	} catch {
-		return undefined
-	}
-}
-
 /** The picture of schema.org's `image`: an address, an `ImageObject`, or a list of either, the first that reads. */
 function imageOf(value: unknown, base?: string, depth = 0): string | undefined {
 	if (depth > 3 || !value) return undefined
@@ -134,41 +99,9 @@ function namesOf(value: unknown, depth = 0): string[] {
 /** A credit as it is kept: one line, of a length a name has. */
 const credit = (names: string[]): string => [...new Set(names)].slice(0, 3).join(', ').slice(0, 120)
 
-/** The `content` of a page's `<meta>` by its `property` or `name`, whichever order its attributes come in. */
-function meta(html: string, key: string): string {
-	for (const [tag] of html.matchAll(/<meta\b[^>]*>/gi)) {
-		const named = /\b(?:property|name)\s*=\s*["']?([^"'\s>]+)/i.exec(tag)?.[1]
-		if (named?.toLowerCase() !== key) continue
-		const content = /\bcontent\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(tag)
-		const value = clean(content?.[1] ?? content?.[2])
-		if (value) return value
-	}
-	return ''
-}
-
-/** The picture a page shows of itself when it is shared (`og:image`): the fallback where its recipe names none. */
-export function pageImage(html: string, url?: string): string | undefined {
-	const named = meta(html, 'og:image:secure_url') || meta(html, 'og:image') || meta(html, 'twitter:image')
-	return named ? httpsAddress(named, url) : undefined
-}
-
-/** What a page calls itself (`og:site_name`). */
-export const pageSiteName = (html: string): string => meta(html, 'og:site_name').slice(0, 120)
-
 /** The recipe a page describes in JSON-LD, or nothing when it describes none with both ingredients and steps. */
 export function recipeFromJsonLd(html: string, url?: string): RecipeDraft | undefined {
-	const scripts = html.matchAll(
-		/<script\b[^>]*type\s*=\s*["']?application\/ld\+json["']?[^>]*>([\s\S]*?)<\/script\s*>/gi
-	)
-	for (const [, body] of scripts) {
-		let parsed: unknown
-		try {
-			parsed = JSON.parse(body!.trim())
-		} catch {
-			continue
-		}
-		const node = nodes(parsed).find(isRecipe)
-		if (!node) continue
+	for (const node of jsonLdNodes(html).filter(isRecipe)) {
 		const lines = Array.isArray(node.recipeIngredient) ? node.recipeIngredient.map(clean).filter(Boolean) : []
 		const made = steps(node.recipeInstructions)
 		const name = clean(node.name)

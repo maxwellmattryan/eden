@@ -102,6 +102,15 @@ describe('engine', () => {
 			{ destination: 'open-meteo', day: '2026-09-29', requests: 2, bytesOut: 200 },
 		])
 		expect(engine.queryEgress({ from: '2026-09-30' })).toHaveLength(1)
+		// a batch stands for several requests in one write (D-131); a batch of none is one
+		engine.recordEgress('openfreemap', 4200, 24)
+		engine.recordEgress('openfreemap', 800, 0)
+		expect(engine.queryEgress({ from: '2026-09-30' })).toContainEqual({
+			destination: 'openfreemap',
+			day: '2026-09-30',
+			requests: 25,
+			bytesOut: 5000,
+		})
 		expect(engine.queryEgress({ to: '2026-09-29' })).toHaveLength(2)
 		expect(codeOf(() => engine.recordEgress('vault-ai', 1))).toBe('egress:never')
 		expect(codeOf(() => engine.recordEgress('Open Meteo', 1))).toBe('egress:invalid')
