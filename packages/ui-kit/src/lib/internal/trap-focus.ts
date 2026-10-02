@@ -1,4 +1,5 @@
 import type { Attachment } from 'svelte/attachments'
+import { DOCKED } from './above-modals.js'
 import { focusables, textControls } from './focusable.js'
 
 export interface TrapOptions {
@@ -38,6 +39,10 @@ export function trapFocus(get: () => TrapOptions = () => ({})): Attachment<HTMLE
 			target?.focus({ preventScroll: true })
 		})
 
+		/** What `aboveModals` has docked beside the layer in its dialog and can take focus: the toast's buttons. */
+		const docked = () =>
+			[...(el.closest('dialog')?.querySelectorAll(`:scope > [${DOCKED}]`) ?? [])].flatMap((host) => focusables(host))
+
 		const onKeyDown = (e: KeyboardEvent) => {
 			if (e.key !== 'Tab') return
 			const items = focusables(el)
@@ -53,6 +58,8 @@ export function trapFocus(get: () => TrapOptions = () => ({})): Attachment<HTMLE
 				e.preventDefault()
 				last.focus()
 			} else if (!e.shiftKey && active === last) {
+				// a toast docked in the same modal dialog follows the layer in the document: Tab goes on to it by itself
+				if (docked().length) return
 				e.preventDefault()
 				first.focus()
 			}

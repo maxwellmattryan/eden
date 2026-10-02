@@ -13,7 +13,9 @@
 <script lang="ts">
 	// What a chart says about the point under the pointer: the bucket or the moment, then a figure for each series
 	// there. The kit's charts share it (BarChart, TrendChart, Sparkline) and it is not exported: a chart shows it while
-	// it is being read and takes it away when the pointer leaves. It looks like the tooltip, but it is not one: it
+	// it is being read and takes it away when the pointer leaves; on touch a tap pins it on a point, a horizontal scrub
+	// moves it and it stays until a tap elsewhere (`internal/chart-read.ts`, D-TBD(chart-touch)). It looks like the
+	// tooltip, but it is not one: it
 	// follows the pointer from point to point inside the chart, it holds several lines, and it shows at once. It sits
 	// above the point, centred on it and kept inside the chart's width, and takes no pointer of its own. The figures it
 	// shows are the chart's own, which the chart's sentence and its axes (and a BarChart's table) already carry, so it

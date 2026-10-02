@@ -121,6 +121,25 @@
 	}}
 />
 
+<!-- a row with another way to its actions (a list row, whose held press opens its menu): no hold under reduced
+     motion, and the buttons out of the tab order; the drag is unchanged -->
+<Story
+	name="No hold"
+	args={{ trailing: remove, hold: false, tabbable: false }}
+	{template}
+	play={async ({ canvasElement, userEvent, args }) => {
+		if (!canvasElement.querySelector('.ed-canvas')) return
+		const canvas = canvasOf(canvasElement)
+		const el = content(canvasElement)
+		const onaction = args.leading!.onaction
+		const before = calls(onaction)
+		await drag(userEvent, el, 140)
+		await expect(onaction).toHaveBeenCalledTimes(before + 1)
+		await settled(el)
+		for (const button of canvas.getAllByRole('button')) await expect(button).toHaveAttribute('tabindex', '-1')
+	}}
+/>
+
 <!-- on desktop the row renders unchanged: no actions, no gesture; the hover cluster and the context menu serve instead -->
 <Story
 	name="Desktop passthrough"

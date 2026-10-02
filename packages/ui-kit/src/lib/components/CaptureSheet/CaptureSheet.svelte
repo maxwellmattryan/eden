@@ -92,6 +92,7 @@
 	// The sheet holds no draft of its own: `phase`, `files` and `rows` are the parent's, every edit is a callback, and
 	// nothing is stored until the parent acts on `oncommit`. Discard, Escape and the scrim call `onclose`. On mobile
 	// the sheet is full height and each row takes several lines; `layout` reads the platform once unless it is forced.
+	// There the file button offers the camera too, and a haul's collect step has a field for pasted text.
 	import type { Snippet } from 'svelte'
 	import type { ClipboardEventHandler, HTMLDialogAttributes } from 'svelte/elements'
 	import { tick, untrack } from 'svelte'
@@ -291,6 +292,18 @@
 		}
 	}
 
+	// The phone has no page to paste onto and nothing to drop, so in the stacked layout a haul's collect step carries
+	// a field for the text (D-TBD(capture-paste-field)): what is typed or pasted there goes to `onpastetext` on Add,
+	// the callback a paste anywhere in the sheet already feeds, and the field empties. The wide layout keeps
+	// paste-anywhere and shows no field; taking stock reads photos only, so it shows none either.
+	let pasted = $state('')
+	const pastes = $derived(stacked && kind === 'haul' && !!onpastetext)
+	function addPasted() {
+		if (!pasted.trim()) return
+		onpastetext?.(pasted)
+		pasted = ''
+	}
+
 	/**
 	 * Removing a row or a staged file takes its remove button away, and the focus that button held would fall out of
 	 * the sheet. The item that holds focus is noted first; once it is gone the focus goes to the same button on the
@@ -363,6 +376,7 @@
 	bind:open
 	size={stacked ? 'full' : 'lg'}
 	labelledby={titleId}
+	initialFocus={pastes ? 'container' : 'auto'}
 	onclose={closed}
 	onpaste={paste}
 	class="ed-capture {className}"
@@ -583,9 +597,16 @@
 							tooltip
 							accept={rules?.accept}
 							multiple={rules?.maxFiles !== 1}
+							camera={stacked}
 							onfiles={take}
 						/>
 					</div>
+					{#if pastes}
+						<div class="ed-capture-paste">
+							<Field label={s.capture.pasteLabel} bind:value={pasted} multiline rows={3} />
+							<Button label={s.add} disabled={!pasted.trim()} onclick={addPasted} />
+						</div>
+					{/if}
 					{@render staged(true)}
 				</div>
 			</Dropzone>
@@ -667,6 +688,17 @@
 	}
 	.ed-capture-invite {
 		border: 1px dashed var(--stroke-hover);
+	}
+	/* the phone's paste field: the text, then Add at its end */
+	.ed-capture-paste {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: var(--space-2);
+		min-width: 0;
+	}
+	.ed-capture-paste > :global(:first-child) {
+		align-self: stretch;
 	}
 	.ed-capture-lead {
 		margin: 0;

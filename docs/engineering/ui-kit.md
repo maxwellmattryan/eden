@@ -4,7 +4,7 @@ status: draft
 summary: "`@eden/ui-kit` in `packages/ui-kit`: how it is built and consumed, the token pipeline and its generated files, the root attributes, fonts, icons, component conventions and internal primitives, the strings boundary, Storybook as the acceptance surface, and the gates CI runs."
 read-this-if: You are adding or changing a component, a token or an icon, or wiring an app to the kit.
 depends-on: [design/visual-language, design/ux-patterns, design/brand]
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 ## Where it lives
@@ -22,7 +22,7 @@ The package is SvelteKit-shaped because `svelte-package`, `svelte-check` and the
 @import '@eden/ui-kit/tailwind.css';
 ```
 
-Plus, once each: the pre-paint script `@eden/ui-kit/prepaint.js` as a blocking `<script>` in `<head>`, `UiKitProvider` around the root with the app's translations, and `ToastHost` near the root. Components come from the barrel (`import { Button } from '@eden/ui-kit'`), which has no side effects. `faces.css` and the alternate fonts are not exported: they exist only for Storybook (D-39).
+Plus, once each: the pre-paint script `@eden/ui-kit/prepaint.js` as a blocking `<script>` in `<head>`, `UiKitProvider` around the root with the app's translations, and `ToastHost` near the root (one host: it moves itself into an open modal sheet, so a toast raised there is seen and pressed over it). Components come from the barrel (`import { Button } from '@eden/ui-kit'`), which has no side effects. `faces.css` and the alternate fonts are not exported: they exist only for Storybook (D-39).
 
 The Tailwind mapping uses `@theme inline`, so a utility such as `bg-brand` compiles to `background-color: var(--brand-primary)` and follows the accent at runtime. The Tailwind palette is wiped (`--color-*: initial`): there is no `bg-red-500`, only token names. `dark`, `mobile` and `compact` are custom variants keyed on the root attributes.
 
@@ -134,6 +134,8 @@ Newsreader (upright and italic), Inter and Geist Mono ship from `src/lib/fonts`,
 | `roving(get)` | one tab stop per group, arrows, Home and End, optional first-letter typeahead |
 | `measure(cb)` | rect now, on resize and after fonts load |
 | `portal(target)` | fallback for a WebView without the popover API, behind `hasTopLayer()` |
+| `aboveModals()` | keeps an element above every modal dialog: a `<dialog>` opened with `showModal()` makes everything outside itself inert, a top-layer popover included, so while one is open the element is moved inside the top-most one (the one opened last; a closing one does not count) and it goes back where it was mounted when none is. It watches the document for `open`, so a dialog the kit did not make counts. The element must not be its component's root. `ToastHost` uses it for its strip, and `trapFocus` lets Tab go on from a sheet's last control to what is docked beside it |
+| `chartRead(get)` | how a chart is read (D-117): a mouse reads the place under it and the readout goes when it leaves; a finger pins it with a tap, moves it with a horizontal scrub and leaves it until a press outside, with `touch-action: pan-y` so the page still scrolls. The one document listener, for the press outside, is held only while a reading is pinned. `TrendChart`, `BarChart`, `Sparkline` and `SunArc` share it |
 | `PausableTimer` | the toast's eight seconds, paused while hovered or focused |
 | `platformOf(el)` | the nearest `data-platform`, desktop by default |
 | `runSketch(canvas, options)` | the engine under `Sketch`: sizes the backing store to the element and the screen (twice the density at most), resolves the sketch's colour tokens where the canvas stands and again when the theme changes, drives the frames, rests while the canvas is out of sight or paused; `motionReduced(el)` reads the zeroed duration tokens, so the stylesheet stays the one place that knows about reduced motion |

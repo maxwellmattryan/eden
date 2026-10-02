@@ -1,7 +1,7 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
 	import { expect } from 'storybook/test'
-	import { canvasOf, hasCanvas, pointAcross } from '../../../storybook/play.js'
+	import { canvasOf, hasCanvas, pointAcross, touchAcross } from '../../../storybook/play.js'
 	import { skyHours, weightSeries } from '../../../stories/sample-data.js'
 	import TrendChart from './TrendChart.svelte'
 
@@ -44,6 +44,31 @@
 		await expect(tip).toHaveTextContent(hours.at(-1)!)
 		await expect(tip).toHaveTextContent(degrees(temps.at(-1)!))
 		await expect(chart.querySelector('.ed-trend-guide')).not.toBeNull()
+	}}
+/>
+
+<!-- A finger: a tap pins the readout on the point tapped, a horizontal scrub moves it, and it stays once the finger
+     is lifted, until a press anywhere outside the chart. A vertical drag is the page's to scroll (touch-action: pan-y) -->
+<Story
+	name="Pinned by touch"
+	play={async ({ canvasElement, userEvent }) => {
+		if (!hasCanvas(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		await canvas.findByRole('img', { name: sentence })
+		const chart = canvasElement.querySelector<HTMLElement>('.ed-canvas .ed-trend')!
+		await expect(getComputedStyle(chart).touchAction).toBe('pan-y')
+		// a tap at the first hour: read, and still read once the finger is up
+		await touchAcross(userEvent, chart, 0.01)
+		await expect(chart.querySelector('.ed-chart-tip')).toHaveTextContent(hours[0]!)
+		// a scrub from there to the last hour moves the reading, which stays where the finger left it
+		await touchAcross(userEvent, chart, 0.3, 0.6, 0.99)
+		const tip = chart.querySelector('.ed-chart-tip')!
+		await expect(tip).toHaveTextContent(hours.at(-1)!)
+		await expect(tip).toHaveTextContent(degrees(temps.at(-1)!))
+		await expect(chart.querySelector('.ed-trend-guide')).not.toBeNull()
+		// a press elsewhere takes it away
+		await userEvent.pointer({ keys: '[TouchA]', target: canvasElement.querySelector('.ed-canvas')! })
+		await expect(chart.querySelector('.ed-chart-tip')).toBeNull()
 	}}
 />
 

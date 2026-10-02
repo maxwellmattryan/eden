@@ -5,7 +5,7 @@
 	// accessible sentence.
 	import type { HTMLAttributes } from 'svelte/elements'
 	import { useStrings } from '../../i18n/context.js'
-	import { pointerAt } from '../../internal/pointer.js'
+	import { chartRead, type ChartPlace } from '../../internal/chart-read.js'
 	import ChartTip from '../ChartTip/ChartTip.svelte'
 	import { nearestIndex } from '../ChartTip/nearest.js'
 	import { sparkline } from './sparkline.js'
@@ -57,25 +57,21 @@
 	let read = $state<number>()
 	let scale = $state(1)
 	const reading = $derived(read === undefined ? undefined : geo.points[read])
-	function point(event: PointerEvent & { currentTarget: EventTarget & HTMLElement }) {
-		scale = event.currentTarget.offsetWidth / width || 1
-		const at = nearestIndex(
-			geo.points.map((one) => one.x),
-			pointerAt(event).x / scale
-		)
+	// A finger pins the readout, scrubs it and leaves it until a tap elsewhere (`chartRead`, D-TBD(chart-touch)).
+	function point(place: ChartPlace | undefined, el: HTMLElement) {
+		scale = el.offsetWidth / width || 1
+		const at = place
+			? nearestIndex(
+					geo.points.map((one) => one.x),
+					place.x / scale
+				)
+			: -1
 		read = at < 0 ? undefined : at
 	}
 </script>
 
 <div class="ed-spark-wrap {className}" style:width="{width}px" {...rest}>
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		class="ed-spark-plot"
-		onpointermove={hover ? point : undefined}
-		onpointerdown={hover ? point : undefined}
-		onpointerleave={hover ? () => (read = undefined) : undefined}
-		onpointercancel={hover ? () => (read = undefined) : undefined}
-	>
+	<div class="ed-spark-plot" {@attach chartRead(() => ({ on: hover, onread: point }))}>
 		<svg class="ed-spark" viewBox="0 0 {width} {height}" role="img" aria-label={name} focusable="false">
 			<line class="ed-spark-axis" x1={geo.axis.x1} x2={geo.axis.x2} y1={geo.axis.y} y2={geo.axis.y} />
 			{#if geo.area}<path class="ed-spark-area" d={geo.area} />{/if}

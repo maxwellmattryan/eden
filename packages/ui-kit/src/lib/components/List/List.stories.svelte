@@ -1,8 +1,10 @@
 <script module lang="ts">
 	import type { ComponentProps } from 'svelte'
 	import { defineMeta } from '@storybook/addon-svelte-csf'
-	import { expect, fn, userEvent, waitFor } from 'storybook/test'
-	import { canvasOf } from '../../../storybook/play.js'
+	import type { SvelteRenderer } from '@storybook/svelte'
+	import type { PlayFunctionContext } from 'storybook/internal/csf'
+	import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
+	import { canvasOf, hasCanvas } from '../../../storybook/play.js'
 	import { defaultStrings } from '$lib/i18n/strings.js'
 	import { grocery, ideas, stock } from '../../../stories/sample-data.js'
 	import EmptyState from '../EmptyState/EmptyState.svelte'
@@ -63,6 +65,22 @@
 
 	const ondelete = fn()
 
+	/** The swipe stories: rows with no menu of their own, so the two swipe actions are their menu. */
+	const bare: ListRowData[] = fridge.slice(0, 4).map((row) => ({ ...row, actions: undefined }))
+	const swipeDone = fn()
+	const swipeDelete = fn()
+	const calls = (spy: unknown) => (spy as ReturnType<typeof fn>).mock.calls.length
+	/** Presses on a row's content, moves the pointer `dx` to the right (left when negative) and lets go. */
+	const drag = (user: PlayFunctionContext<SvelteRenderer>['userEvent'], content: HTMLElement, dx: number) =>
+		user.pointer([
+			{ keys: '[MouseLeft>]', target: content, coords: { x: 100, y: 20 } },
+			{ coords: { x: 100 + dx / 2, y: 21 } },
+			{ coords: { x: 100 + dx, y: 22 } },
+			{ keys: '[/MouseLeft]' },
+		])
+	const contentOf = (row: HTMLElement) => row.querySelector<HTMLElement>('.ed-swipe-content')!
+	const labels = (items: HTMLElement[]) => items.map((item) => item.textContent?.trim())
+
 	const { Story } = defineMeta({
 		title: 'Components/Data/List',
 		component: List,
@@ -94,6 +112,30 @@
 	function remove(item: MenuItem, row: ListRowData) {
 		if (item.id === 'delete') staying = staying.filter((entry) => entry.id !== row.id)
 	}
+
+	/** The swipe stories' rows: Done and Delete take a row away, so it collapses as it would in the app. */
+	let swiping = $state<ListRowData[]>(bare)
+	const take = (row: ListRowData) => (swiping = swiping.filter((entry) => entry.id !== row.id))
+	const leading = (row: ListRowData) => ({
+		label: 'Done',
+		icon: 'check' as const,
+		onaction: () => {
+			swipeDone(row)
+			take(row)
+		},
+	})
+	const trailing = (row: ListRowData) => ({
+		label: 'Delete',
+		icon: 'trash' as const,
+		onaction: () => {
+			swipeDelete(row)
+			take(row)
+		},
+	})
+	/** The checklist that swipes: a tap, the checkbox and the leading swipe all check a row. */
+	let checked = $state<string[]>(groceries.filter((row) => row.done).map((row) => row.id))
+	const check = (row: ListRowData) =>
+		(checked = checked.includes(row.id) ? checked.filter((id) => id !== row.id) : [...checked, row.id])
 </script>
 
 {#snippet template(args: ComponentProps<typeof List>)}
@@ -335,6 +377,135 @@
 
 <!-- The phone: 44 px rows, the larger text, the menu as a bottom sheet -->
 <Story name="Mobile" parameters={{ platforms: ['mobile'] }} {template} />
+
+<!-- Rows that swipe on the phone: a drag to the right past the action's width is Done, to the left Delete; a short
+     drag settles back; a tap still opens the row. The rows have no menu of their own, so the two actions are their
+     menu, with no ⋯ button: a held press or Shift+F10 opens it, which is the way in under reduced motion too -->
+<Story
+	name="Swipe"
+	parameters={{ platforms: ['mobile'] }}
+	args={{ selectable: false, onopen: fn() }}
+	play={async ({ canvasElement, userEvent: user, args }) => {
+		if (!hasCanvas(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		const rows = () => canvas.getAllByRole('row')
+		await expect(rows()).toHaveLength(bare.length)
+		await expect(canvas.queryByRole('button', { name: strings.actionsFor(bare[0]!.primary) })).toBeNull()
+		// the buttons behind a row are not tab stops: the list is one
+		await expect(rows()[0]!.querySelectorAll('.ed-swipe-action[tabindex="-1"]')).toHaveLength(2)
+		// the travelling content covers the row from edge to edge, on a ground of its own, so it hides the actions
+		const [rowBox, contentBox] = [rows()[0]!.getBoundingClientRect(), contentOf(rows()[0]!).getBoundingClientRect()]
+		await expect(Math.round(contentBox.width)).toBe(Math.round(rowBox.width))
+		await expect(rowBox.height - contentBox.height).toBeLessThanOrEqual(1)
+		await expect(getComputedStyle(contentOf(rows()[0]!)).backgroundColor).not.toBe('rgba(0, 0, 0, 0)')
+		const [done, removed, opened] = [calls(swipeDone), calls(swipeDelete), calls(args.onopen)]
+		// a short drag settles back and fires nothing
+		await drag(user, contentOf(rows()[0]!), 30)
+		await expect(swipeDone).toHaveBeenCalledTimes(done)
+		// past the action's width: Done, and the row leaves
+		await drag(user, contentOf(rows()[0]!), 140)
+		await expect(swipeDone).toHaveBeenCalledTimes(done + 1)
+		await expect(swipeDone).toHaveBeenLastCalledWith(bare[0])
+		await waitFor(() => expect(rows()).toHaveLength(bare.length - 1))
+		// a drag is never a tap, and a tap still opens
+		await expect(args.onopen).toHaveBeenCalledTimes(opened)
+		await user.click(rows()[0]!)
+		await expect(args.onopen).toHaveBeenLastCalledWith(bare[1])
+		// to the left: Delete
+		await drag(user, contentOf(rows()[0]!), -140)
+		await expect(swipeDelete).toHaveBeenCalledTimes(removed + 1)
+		await expect(swipeDelete).toHaveBeenLastCalledWith(bare[1])
+		await waitFor(() => expect(rows()).toHaveLength(bare.length - 2))
+		// without a swipe: the row's menu holds both, the trailing one last and destructive
+		rows()[0]!.focus()
+		await user.keyboard('{Shift>}{F10}{/Shift}')
+		const menu = await canvas.findByRole('menu')
+		await expect(labels(within(menu).getAllByRole('menuitem'))).toEqual(['Done', 'Delete'])
+		await user.click(within(menu).getByRole('menuitem', { name: 'Done' }))
+		await waitFor(() => expect(swipeDone).toHaveBeenLastCalledWith(bare[2]))
+		// a swipe action is its own callback, never the list's onaction
+		await expect(args.onaction).not.toHaveBeenCalled()
+	}}
+>
+	{#snippet template(args)}
+		<div class="col"><List {...args} count={swiping.length} rows={swiping} {leading} {trailing} /></div>
+	{/snippet}
+</Story>
+
+<!-- A checklist that swipes, as Grocery is on the phone: a tap checks, the leading swipe checks, the trailing one
+     deletes, and the rows keep their own menu, so the ⋯ button stays and its menu is theirs as written. A press on
+     the ⋯ button or the checkbox is theirs, never the swipe's -->
+<Story
+	name="Swipe with a menu"
+	parameters={{ platforms: ['mobile'] }}
+	args={{ header: heb.name, count: groceries.length, selectable: false }}
+	play={async ({ canvasElement, userEvent: user }) => {
+		if (!hasCanvas(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		const rows = canvas.getAllByRole('row')
+		const open = groceries.findIndex((row) => !row.done)
+		const box = within(rows[open]!).getByRole('checkbox')
+		await expect(box).not.toBeChecked()
+		// a tap on the row checks it; the checkbox unchecks it again
+		await user.click(rows[open]!)
+		await expect(box).toBeChecked()
+		await user.click(box)
+		await expect(box).not.toBeChecked()
+		// the leading swipe checks too
+		await drag(user, contentOf(rows[open]!), 140)
+		await expect(box).toBeChecked()
+		// the ⋯ button's press is its own: the menu opens, and it is the row's menu as written
+		const removed = calls(swipeDelete)
+		await user.click(within(rows[open]!).getByRole('button', { name: strings.actionsFor(groceries[open]!.primary) }))
+		const menu = await canvas.findByRole('menu')
+		await expect(labels(within(menu).getAllByRole('menuitem'))).toEqual(groceryActions.map((item) => item.label))
+		await user.keyboard('{Escape}')
+		await waitFor(() => expect(canvas.queryByRole('menu')).toBeNull())
+		await expect(box).toBeChecked()
+		await drag(user, contentOf(rows[open]!), -140)
+		await expect(swipeDelete).toHaveBeenCalledTimes(removed + 1)
+	}}
+>
+	{#snippet template(args)}
+		<div class="col">
+			<List
+				{...args}
+				rows={groceries.map((row) => ({ ...row, checkable: true, done: checked.includes(row.id) }))}
+				onpick={check}
+				oncheck={check}
+				leading={(row) => ({ label: row.done ? 'Uncheck' : 'Check off', icon: 'check', onaction: () => check(row) })}
+				trailing={(row) => ({ label: 'Delete', icon: 'trash', onaction: () => swipeDelete(row) })}
+			/>
+		</div>
+	{/snippet}
+</Story>
+
+<!-- The same props on desktop: nothing swipes and nothing is drawn behind the rows. A row with no menu of its own
+     gets one from the two actions, with its ⋯ button, so Done and Delete are a click, a right-click or Shift+F10 away -->
+<Story
+	name="Swipe props on desktop"
+	parameters={{ platforms: ['desktop'] }}
+	args={{ selectable: false }}
+	play={async ({ canvasElement, userEvent: user, args }) => {
+		if (!hasCanvas(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		const rows = () => canvas.getAllByRole('row')
+		await expect(canvasElement.querySelector('.ed-swipe-content, .ed-swipe-action')).toBeNull()
+		const removed = calls(swipeDelete)
+		await user.click(canvas.getByRole('button', { name: strings.actionsFor(bare[0]!.primary) }))
+		const menu = await canvas.findByRole('menu')
+		await expect(labels(within(menu).getAllByRole('menuitem'))).toEqual(['Done', 'Delete'])
+		await user.click(within(menu).getByRole('menuitem', { name: 'Delete' }))
+		await waitFor(() => expect(swipeDelete).toHaveBeenCalledTimes(removed + 1))
+		await expect(swipeDelete).toHaveBeenLastCalledWith(bare[0])
+		await waitFor(() => expect(rows()).toHaveLength(bare.length - 1))
+		await expect(args.onaction).not.toHaveBeenCalled()
+	}}
+>
+	{#snippet template(args)}
+		<div class="col"><List {...args} count={swiping.length} rows={swiping} {leading} {trailing} /></div>
+	{/snippet}
+</Story>
 
 <style>
 	.col {

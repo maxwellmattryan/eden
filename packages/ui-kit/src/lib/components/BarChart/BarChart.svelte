@@ -4,13 +4,14 @@
 	// stacked on one another (the first three given; a fourth would be more than the eye tells apart). It draws as
 	// TrendChart draws: round figures up the side on hairlines, a label under every bar that has room, the container's
 	// width and its own height. A bar under the pointer is read out above itself (`hover`): its bucket, a figure for
-	// each series, and their sum when there is more than one. Colour is not the only carrier: the legend names each
+	// each series, and their sum when there is more than one; a finger pins the readout with a tap, moves it with a
+	// horizontal scrub and leaves it standing until a tap elsewhere (D-TBD(chart-touch)). Colour is not the only carrier: the legend names each
 	// series beside its swatch, the SVG carries one sentence, and the same numbers stand as a table for a reader who
 	// cannot see the drawing or point at it.
 	import type { HTMLAttributes } from 'svelte/elements'
 	import { useStrings } from '../../i18n/context.js'
 	import { measure } from '../../internal/measure.js'
-	import { pointerAt } from '../../internal/pointer.js'
+	import { chartRead, type ChartPlace } from '../../internal/chart-read.js'
 	import ChartTip, { type ChartTipRow } from '../ChartTip/ChartTip.svelte'
 	import { nearestIndex } from '../ChartTip/nearest.js'
 	import { bars, MAX_SERIES, type BarSeries } from './bars.js'
@@ -63,14 +64,16 @@
 
 	const s = useStrings()
 	const SWATCHES = ['primary', 'series-2', 'series-3'] as const
-	// the bar being read: the one nearest the pointer across the plot
+	// the bar being read: the one nearest the pointer across the plot, or the one a finger pinned (`chartRead`)
 	let read = $state<number>()
 	const reading = $derived(read === undefined ? undefined : geo.bars[read])
-	function point(event: PointerEvent & { currentTarget: EventTarget & HTMLElement }) {
-		const at = nearestIndex(
-			geo.bars.map((bar) => bar.centre),
-			pointerAt(event).x
-		)
+	function point(place: ChartPlace | undefined) {
+		const at = place
+			? nearestIndex(
+					geo.bars.map((bar) => bar.centre),
+					place.x
+				)
+			: -1
 		read = at < 0 ? undefined : at
 	}
 	/** The bar's figures as the stack reads from its top down, then their sum when there is more than one. */
@@ -83,14 +86,10 @@
 </script>
 
 <div class={['ed-bars', className]} {...rest}>
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="ed-bars-plot"
 		style:height="{height}px"
-		onpointermove={hover ? point : undefined}
-		onpointerdown={hover ? point : undefined}
-		onpointerleave={hover ? () => (read = undefined) : undefined}
-		onpointercancel={hover ? () => (read = undefined) : undefined}
+		{@attach chartRead(() => ({ on: hover, onread: point }))}
 		{@attach measure((rect) => (width = Math.round(rect.width)))}
 	>
 		{#if width > 0}

@@ -5,9 +5,14 @@
 	// leaving, in the same place. The strip ignores the pointer; only the toast takes it. While the pointer or keyboard focus is on the
 	// toast the store's clock pauses, and it runs again once both have left. Each toast is a fresh element keyed on its
 	// id, so a replacement announces again, and a dismiss from an older toast cannot remove the one that replaced it.
+	// A modal Sheet is a <dialog> in the top layer, and everything outside it is inert: a toast left in the page would
+	// sit behind the scrim, unpressable. So while a modal dialog is open the strip is moved inside the top-most one
+	// (`aboveModals`, D-TBD(toast-over-modal)), where it is seen over the sheet and its action can be pressed, and it
+	// goes back to its anchor when none is open. One host serves the page and every sheet; it looks the same in both.
 	import type { HTMLAttributes } from 'svelte/elements'
 	import type { TransitionConfig } from 'svelte/transition'
 	import { quintOut } from 'svelte/easing'
+	import { aboveModals } from '../internal/above-modals.js'
 	import Toast from './Toast.svelte'
 	import { toastStore, type ToastStore } from './toast.svelte.js'
 
@@ -47,27 +52,33 @@
 	}
 </script>
 
-<div class={['ed-toast-host', className]} {...rest}>
-	{#key store.current?.id}
-		{#if store.current}
-			{@const item = store.current}
-			<div class="ed-toast-enter" out:sink|global>
-				<Toast
-					message={item.message}
-					action={item.action}
-					error={item.error}
-					ondismiss={() => dismiss(item.id)}
-					onpointerenter={pause}
-					{onpointerleave}
-					onfocusin={pause}
-					{onfocusout}
-				/>
-			</div>
-		{/if}
-	{/key}
+<!-- the anchor stays where the host is mounted; the strip inside it is what moves into an open modal dialog -->
+<div class="ed-toast-anchor">
+	<div class={['ed-toast-host', className]} {@attach aboveModals()} {...rest}>
+		{#key store.current?.id}
+			{#if store.current}
+				{@const item = store.current}
+				<div class="ed-toast-enter" out:sink|global>
+					<Toast
+						message={item.message}
+						action={item.action}
+						error={item.error}
+						ondismiss={() => dismiss(item.id)}
+						onpointerenter={pause}
+						{onpointerleave}
+						onfocusin={pause}
+						{onfocusout}
+					/>
+				</div>
+			{/if}
+		{/key}
+	</div>
 </div>
 
 <style>
+	.ed-toast-anchor {
+		display: contents;
+	}
 	.ed-toast-host {
 		position: fixed;
 		left: 0;
