@@ -1,6 +1,6 @@
 [package]
 name = "eden-app"
-version = "0.1.0-staging.2"
+version = "0.1.0-staging.3"
 description = "Eden, a personal digital garden: the Tauri shell for the desktop and mobile apps."
 authors = ["Matthew Maxwell"]
 edition = "2021"
