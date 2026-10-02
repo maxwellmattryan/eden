@@ -1,7 +1,7 @@
 // Sky's surface on the phone (product/domains/weather.md, "Mobile"): the one view. What Sky declares is in
 // `@eden/shared/domains/weather/manifest.json`; what it does (its store, the glyph that follows the conditions) is
-// its `logic.ts` there, which `defineDomain` joins to this. Its two built Garden tiles are the bodies the desktop
-// mounts.
+// its `logic.ts` there, which `defineDomain` joins to this. The view and its two built Garden tiles are the ones the
+// desktop mounts.
 import { goto } from '$app/navigation'
 import { resolve } from '$app/paths'
 import { defineDomain } from '@eden/shared/domains'

@@ -1,16 +1,12 @@
 // Toolbench's surface on the desktop (product/domains/toolbench.md): the page and its five tabs, and the bodies of
 // its two built Garden tiles. What Toolbench declares is in `@eden/shared/domains/toolbench/manifest.json`; what it
-// does is its `logic.ts` there, which `defineDomain` joins to this.
+// does is its `logic.ts` there, which `defineDomain` joins to this. The page itself is shared; the phone mounts it.
 import { goto } from '$app/navigation'
 import { resolve } from '$app/paths'
 import { defineDomain } from '@eden/shared/domains'
 import { toolbench } from '@eden/shared/domains/toolbench'
-import { declarationOf, type TabId } from '@eden/shared/manifest'
 import ActiveProjects from '@eden/shared/domains/toolbench/widgets/ActiveProjects.svelte'
 import ResurfacedIdea from '@eden/shared/domains/toolbench/widgets/ResurfacedIdea.svelte'
-
-export type ToolbenchTab = TabId<'toolbench'>
-export const TOOLBENCH_TABS: readonly ToolbenchTab[] = declarationOf('toolbench').tabs.map((tab) => tab.id)
 
 export const toolbenchManifest = defineDomain('toolbench', {
 	routes: {

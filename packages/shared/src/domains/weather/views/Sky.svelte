@@ -6,8 +6,10 @@
 	// sun stands on its wave where the minute puts it. Every time is the place's, on the owner's clock. The page is the same whatever
 	// the provider (D-56): the attribution follows it, and a note says so when the chosen one could not answer. Home
 	// is changed from the location menu, which opens the shell's change-home sheet (D-143).
-	// Offline, an InlineError names the last good forecast and the status bar carries the banner; the numbers stay,
-	// since a mirror is still worth reading.
+	// Offline, an InlineError names the last good forecast and the desktop's status bar carries the banner; the
+	// numbers stay, since a mirror is still worth reading. Both apps mount this view: the phone reads it through the
+	// narrow page (D-112), with its own few rules under `[data-platform='mobile']` at the foot of the styles, so the
+	// desktop's docked narrow page is unchanged (D-TBD(sky-phone)).
 	import {
 		Badge,
 		Banner,
@@ -39,13 +41,13 @@
 		type SkyFieldParams,
 	} from '@eden/ui-kit'
 	import { cubicOut } from 'svelte/easing'
-	import { openExternal } from '@eden/shared/api'
-	import { updatedLine } from '@eden/shared/domains/weather'
-	import { homeUi } from '@eden/shared/shell/home'
-	import { home } from '@eden/shared/home'
-	import { locale, t } from '@eden/shared/i18n'
-	import { settings } from '@eden/shared/settings'
-	import { dayOfMonth, formatHour, hourOfDay, formatMoment, formatTime, formatWeekdayOf } from '@eden/shared/dates'
+	import { openExternal } from '../../../api/index.js'
+	import { updatedLine } from '../updated.js'
+	import { homeUi } from '../../../shell/home/index.js'
+	import { home } from '../../../home/index.js'
+	import { locale, t } from '../../../i18n/index.js'
+	import { settings } from '../../../settings/index.js'
+	import { dayOfMonth, formatHour, hourOfDay, formatMoment, formatTime, formatWeekdayOf } from '../../../dates/index.js'
 	import {
 		airCategory,
 		compass,
@@ -62,7 +64,7 @@
 		type Measure,
 		type UvCategory,
 		type WeatherAlert,
-	} from '@eden/shared/weather'
+	} from '../../../weather/index.js'
 
 	const uid = $props.id()
 	const s = useStrings()
@@ -1309,5 +1311,22 @@
 		margin: 0;
 		font: var(--ed-t-body);
 		letter-spacing: var(--ed-t-body-tracking);
+	}
+
+	/* The phone (D-TBD(sky-phone)): no status bar to leave a breath above, since the shell's own foot holds the tab
+	   bar and the floating button; the day's two shapes stacked, each the page's width, so twenty-four hours stay
+	   readable; the details two abreast, their labels free to wrap where a language runs long */
+	:global([data-platform='mobile']) .page {
+		margin-bottom: 0;
+	}
+	:global([data-platform='mobile']) .now-charts {
+		flex-basis: 100%;
+		grid-auto-flow: row;
+	}
+	:global([data-platform='mobile']) .tiles {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	:global([data-platform='mobile']) .tile dt {
+		white-space: normal;
 	}
 </style>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte'
-	import Toolbench from '$lib/domains/toolbench/views/Toolbench.svelte'
+	import { page } from '$app/state'
+	import Toolbench from '@eden/shared/domains/toolbench/views/Toolbench.svelte'
 	import { toolbench } from '@eden/shared/domains/toolbench'
 
 	onMount(() => {
@@ -8,4 +9,4 @@
 	})
 </script>
 
-<Toolbench />
+<Toolbench tab={page.params.tab} />

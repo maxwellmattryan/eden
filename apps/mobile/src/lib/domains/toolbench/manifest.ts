@@ -1,6 +1,6 @@
 // Toolbench's surface on the phone (product/domains/toolbench.md, "Mobile"): the page and its tabs. What Toolbench
 // declares is in `@eden/shared/domains/toolbench/manifest.json`; what it does is its `logic.ts` there, which
-// `defineDomain` joins to this. Its two built Garden tiles are the bodies the desktop mounts.
+// `defineDomain` joins to this. The page and its two built Garden tiles are the ones the desktop mounts.
 import { goto } from '$app/navigation'
 import { resolve } from '$app/paths'
 import { defineDomain } from '@eden/shared/domains'

@@ -1,5 +1,12 @@
 <script lang="ts">
-	import DomainPage from '$lib/shell/DomainPage.svelte'
+	import { onMount } from 'svelte'
+	import { page } from '$app/state'
+	import Toolbench from '@eden/shared/domains/toolbench/views/Toolbench.svelte'
+	import { toolbench } from '@eden/shared/domains/toolbench'
+
+	onMount(() => {
+		void toolbench.load()
+	})
 </script>
 
-<DomainPage id="toolbench" />
+<Toolbench tab={page.params.tab} />

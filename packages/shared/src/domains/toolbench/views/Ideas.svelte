@@ -2,7 +2,8 @@
 	// Toolbench's Ideas view, ported from Domains/Toolbench/Ideas: the quick-add line that files an idea in five
 	// seconds, the inbox as a List with the area, the status and the days an idea has rested, and the selected idea in
 	// a detail pane with its fields, its log and its brainstorm thread. The thread shows stored messages; the button
-	// opens the Gardener on the idea and runs its brainstorm, which appends to the thread (D-76).
+	// opens the Gardener on the idea and runs its brainstorm, which appends to the thread (D-76). Both apps mount it;
+	// on the phone it is the narrow page throughout, and Android's back returns from a pushed idea to the list.
 	import {
 		BackButton,
 		Badge,
@@ -16,13 +17,15 @@
 		type ListRowData,
 		type MenuItem,
 	} from '@eden/ui-kit'
-	import { t } from '@eden/shared/i18n'
-	import { gardenerUi } from '@eden/shared/shell/gardener'
-	import { showPushed } from '@eden/shared/shell'
-	import { undoToast } from '@eden/shared/shell'
-	import { formatDay } from '@eden/shared/dates'
-	import { ideaChips } from '@eden/shared/domains/toolbench'
-	import { IDEA_STATUSES, RESURFACE_DAYS, toolbench, type Idea, type IdeaStatus } from '@eden/shared/domains/toolbench'
+	import { t } from '../../../i18n/index.js'
+	import { gardenerUi } from '../../../shell/gardener/panel-ui.svelte.js'
+	import { showPushed } from '../../../shell/index.js'
+	import { undoToast } from '../../../shell/index.js'
+	import { formatDay } from '../../../dates/index.js'
+	import { holdBack } from '../../../navigation/index.js'
+	import { ideaChips } from '../parse.js'
+	import { IDEA_STATUSES, type Idea, type IdeaStatus } from '../types.js'
+	import { RESURFACE_DAYS, toolbench } from '../store.svelte.js'
 
 	type Props = {
 		/** The id the page's Capture action focuses. */
@@ -80,6 +83,8 @@
 		selected = id
 		void showPushed(() => back)
 	}
+	// The phone's back press closes the pushed idea before it leaves the page; desktop never asks
+	$effect(() => (picked ? holdBack(() => ((selected = undefined), true)) : undefined))
 
 	function act(action: string, id: string) {
 		const idea = toolbench.ideas.find((entry) => entry.id === id)

@@ -1,3 +1,3 @@
-// Sky's tools and freshness words: filled as the files move in (mobile parity, F3). Its model stays in
-// ../../weather.
+// Sky's freshness words; its tools are bound through `logic.ts`, its view and its Garden tiles' bodies are
+// components each app mounts by deep path. Its model stays in ../../weather.
 export { updatedLine } from './updated.js'
