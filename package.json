@@ -21,7 +21,7 @@
 		"build": "yarn registry:check && yarn workspace @eden/ui-kit run build && yarn workspace @eden/desktop run build && yarn workspace @eden/mobile run build",
 		"build:production": "cross-env EDEN_ENV=production tauri build --config src-tauri/tauri.prod.conf.json --features desktop",
 		"build:staging": "cross-env EDEN_ENV=staging tauri build --config src-tauri/tauri.staging.conf.json --features desktop",
-		"build:ios:adhoc": "cross-env EDEN_ENV=production tauri ios build --config src-tauri/tauri.prod.conf.json --export-method ad-hoc --features mobile",
+		"build:ios:adhoc": "cross-env EDEN_ENV=production tauri ios build --config src-tauri/tauri.prod.conf.json --export-method release-testing --features mobile",
 		"build:android:apk": "cross-env EDEN_ENV=production tauri android build --apk true --features mobile",
 		"check": "yarn workspace @eden/ui-kit run check && yarn workspace @eden/shared run check && yarn workspace @eden/desktop run check && yarn workspace @eden/mobile run check",
 		"check:cargo": "cargo check --manifest-path src-tauri/Cargo.toml --features desktop && cargo check --manifest-path src-tauri/Cargo.toml --target aarch64-apple-ios --no-default-features --features mobile",

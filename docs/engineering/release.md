@@ -4,7 +4,7 @@ status: draft
 summary: The owner's checklist for shipping Eden: the GCS bucket and its service account, the updater key, Apple signing and notarization, iOS ad-hoc distribution from the BBX team, the Android keystore, GitHub Pages for the download page, the secrets the release workflow reads, and the tag-to-release flow.
 read-this-if: You are setting up the release accounts and secrets, cutting a release, or changing the release workflow.
 depends-on: [engineering/app-scaffold]
-updated: 2026-09-29
+updated: 2026-10-02
 ---
 
 ## Shape
@@ -21,7 +21,7 @@ Every step below is gated in the workflow: with no secrets a run still produces 
 | `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | updater artifacts on macOS and Windows | the updater key section |
 | `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY` | macOS code signing | the macOS section |
 | `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` | macOS notarization; `APPLE_TEAM_ID` is also the iOS team | the macOS section |
-| `IOS_DIST_CERTIFICATE_P12_BASE64`, `IOS_DIST_CERTIFICATE_PASSWORD`, `IOS_PROVISIONING_PROFILE_BASE64`, `IOS_PROVISIONING_PROFILE_NAME` | the iOS ad-hoc build | the iOS section |
+| `IOS_DIST_CERTIFICATE_P12_BASE64`, `IOS_DIST_CERTIFICATE_PASSWORD`, `IOS_PROVISIONING_PROFILE_BASE64`, `IOS_PROVISIONING_PROFILE_NAME`, `IOS_PROVISIONING_PROFILE_BASE64_STAGING`, `IOS_PROVISIONING_PROFILE_NAME_STAGING` | the iOS ad-hoc build; the `_STAGING` pair on a staging tag | the iOS section |
 | `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | the Android APK (job off until `gen/android` exists) | the Android section |
 
 `GITHUB_TOKEN` is the workflow's own.
@@ -59,7 +59,7 @@ The identifier is `com.palekodama.eden` (D-69).
 
 1. An Apple Distribution certificate on the BBX team (`APPLE_TEAM_ID`), exported as `.p12`: `IOS_DIST_CERTIFICATE_P12_BASE64`, `IOS_DIST_CERTIFICATE_PASSWORD`.
 2. App IDs registered on the team: `com.palekodama.eden` and `com.palekodama.eden.staging` (Xcode registers `com.palekodama.eden.dev` itself the first time `yarn dev:ios` runs on a device). An App ID is unique across all of Apple: once registered on the BBX team it cannot be registered by a personal team until it is deleted here, which is why the ad-hoc route matters.
-3. Every device that will install builds registered by UDID; an ad-hoc provisioning profile per App ID listing them. The profile file: `IOS_PROVISIONING_PROFILE_BASE64` (`base64 -i profile.mobileprovision`); its name as shown in the portal: `IOS_PROVISIONING_PROFILE_NAME`. Today the workflow carries one profile; a staging release therefore needs the profile of the App ID the tag targets, or a second pair of secrets when both channels ship (an issue).
+3. Every device that will install builds registered by UDID; an ad-hoc provisioning profile per App ID listing them. The profile file: `IOS_PROVISIONING_PROFILE_BASE64` (`base64 -i profile.mobileprovision`); its name as shown in the portal: `IOS_PROVISIONING_PROFILE_NAME`. The staging App ID's profile goes in the `_STAGING` pair, which a staging tag reads; with a pair absent that channel's iOS build is skipped. The build exports with `--export-method release-testing`, the name Xcode and the Tauri CLI give ad-hoc.
 4. Never create an App Store Connect record for either App ID: that would tie the identifier to the BBX team's store presence. Ad-hoc installs happen from the download page on the device: Safari opens the `itms-services://` link, the manifest names the IPA in the bucket.
 
 `scripts/write-ios-signing.mjs` rewrites the committed pbxproj on the runner to manual signing with that profile; the committed project keeps automatic signing for `yarn dev:ios`.

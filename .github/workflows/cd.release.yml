@@ -386,7 +386,8 @@ jobs:
         id: signing
         env:
           HAS_CERT: ${{ secrets.IOS_DIST_CERTIFICATE_P12_BASE64 != '' }}
-          HAS_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 != '' && secrets.IOS_PROVISIONING_PROFILE_NAME != '' }}
+          # One ad-hoc profile per App ID, so the staging channel reads its own pair.
+          HAS_PROFILE: ${{ needs.validate.outputs.channel == 'staging' && (secrets.IOS_PROVISIONING_PROFILE_BASE64_STAGING != '' && secrets.IOS_PROVISIONING_PROFILE_NAME_STAGING != '') || (secrets.IOS_PROVISIONING_PROFILE_BASE64 != '' && secrets.IOS_PROVISIONING_PROFILE_NAME != '') }}
         run: |
           if [[ "$HAS_CERT" == "true" && "$HAS_PROFILE" == "true" ]]; then
             echo "signed=true" >> "$GITHUB_OUTPUT"
@@ -405,7 +406,7 @@ jobs:
       - name: Configure manual signing
         if: steps.signing.outputs.signed == 'true'
         env:
-          IOS_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
+          IOS_PROVISIONING_PROFILE_NAME: ${{ needs.validate.outputs.channel == 'staging' && secrets.IOS_PROVISIONING_PROFILE_NAME_STAGING || secrets.IOS_PROVISIONING_PROFILE_NAME }}
         run: node scripts/write-ios-signing.mjs
 
       - name: Build the IPA
@@ -416,8 +417,9 @@ jobs:
           APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_TEAM_ID }}
           IOS_CERTIFICATE: ${{ secrets.IOS_DIST_CERTIFICATE_P12_BASE64 }}
           IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DIST_CERTIFICATE_PASSWORD }}
-          IOS_MOBILE_PROVISION: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
-        run: yarn tauri ios build --config src-tauri/tauri.${{ needs.validate.outputs.config }}.conf.json --export-method ad-hoc --features mobile
+          IOS_MOBILE_PROVISION: ${{ needs.validate.outputs.channel == 'staging' && secrets.IOS_PROVISIONING_PROFILE_BASE64_STAGING || secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+        # `release-testing` is what Xcode and the Tauri CLI call ad-hoc.
+        run: yarn tauri ios build --config src-tauri/tauri.${{ needs.validate.outputs.config }}.conf.json --export-method release-testing --features mobile
 
       # The OTA manifest Safari opens through itms-services: the IPA's final URL in the bucket, the channel's bundle id
       # (the base identifier from tauri.conf.json plus the overlay's suffix), the version and the title.
