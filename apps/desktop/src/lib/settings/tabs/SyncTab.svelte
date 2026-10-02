@@ -18,6 +18,7 @@
 		type ImportSummary,
 	} from '@eden/shared/data'
 	import { formatDate } from '@eden/shared/dates'
+	import { home } from '@eden/shared/home'
 	import { t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { manifests } from '$lib/domains'
@@ -114,6 +115,8 @@
 			if (mode === 'replace' && result.scope.kind === 'full' && result.settings) {
 				await settings.restore(result.settings)
 			}
+			// the home first: Sky and Meadow read theirs from it
+			await home.reload()
 			await Promise.all([
 				...manifests.map((manifest) => manifest.reload?.()),
 				grants.reload(),

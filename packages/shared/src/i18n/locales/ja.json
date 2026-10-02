@@ -8,7 +8,74 @@
 		"close": "閉じる",
 		"save": "保存",
 		"cancel": "キャンセル",
-		"done": "完了"
+		"done": "完了",
+		"picture": {
+			"fromLink": "リンクから",
+			"link": "リンクから写真を設定",
+			"fetch": "写真を取得"
+		}
+	},
+	"address": {
+		"country": "国または地域",
+		"line1": "番地・通り",
+		"line2": "建物名・部屋番号",
+		"jp": {
+			"line1": "町名・番地",
+			"line2": "建物名・部屋番号"
+		},
+		"city": {
+			"city": "市区町村",
+			"town": "市町村",
+			"suburb": "地区",
+			"municipality": "市区町村"
+		},
+		"region": {
+			"state": "州",
+			"province": "州・県",
+			"prefecture": "都道府県",
+			"county": "郡",
+			"region": "州・地域"
+		},
+		"postal": {
+			"zip": "郵便番号",
+			"postcode": "郵便番号",
+			"postalCode": "郵便番号",
+			"eircode": "Eircode"
+		},
+		"error": {
+			"required": "保存には必要です。",
+			"postal": "{example} のように入力してください。"
+		},
+		"group": {
+			"suggested": "おすすめ",
+			"all": "すべての国と地域"
+		},
+		"chooseRegion": "選択"
+	},
+	"home": {
+		"title": "自宅を変更",
+		"titleFirst": "自宅を設定",
+		"name": "名前",
+		"defaultName": "自宅",
+		"find": "地図で探す",
+		"findAgain": "もう一度探す",
+		"findHelp": "通り、市区町村、郵便番号を {source} に送ります。番地は送りません。",
+		"notFound": "その住所では見つかりませんでした。市区町村を確認するか、地図をクリックして自宅を置いてください。",
+		"matches": "見つかった場所",
+		"map": "自宅の場所",
+		"mapHelp": "地図をクリックして、ピンを自宅の上に置きます。正確な位置はこの端末にだけ残ります。",
+		"mapEmpty": "住所を探すか、地図をクリックして自宅を置いてください。",
+		"mapFailed": "地図を開けませんでした。「探す」で自宅を置けます。",
+		"toast": {
+			"changed": "自宅を変更しました",
+			"failed": "自宅を保存できませんでした。"
+		},
+		"card": {
+			"change": "自宅を変更",
+			"set": "自宅を設定",
+			"sample": "サンプルの自宅です。設定すると、距離と天気予報がそこを基準にします。",
+			"noAddress": "住所はまだありません。"
+		}
 	},
 	"shell": {
 		"garden": "庭",
@@ -187,11 +254,6 @@
 				"lowStock": {
 					"line": "{count, plural, =1 {{first}が残りわずかです} =2 {{first}と{second}が残りわずかです} other {{first}ほか{more}件が残りわずかです}}"
 				}
-			},
-			"picture": {
-				"fromLink": "リンクから",
-				"link": "リンクから写真を設定",
-				"fetch": "写真を取得"
 			},
 			"categories": {
 				"produce": "野菜・果物",
@@ -822,16 +884,7 @@
 			},
 			"scale": "{name} {value}、{category}",
 			"place": {
-				"change": "自宅を変更…",
-				"title": "自宅を変更",
-				"find": "場所を探す",
-				"placeholder": "市区町村の名前",
-				"helper": "送信されるのは入力した名前だけで、送信先は Open-Meteo です。",
-				"results": "場所",
-				"result": "{name} · {region}",
-				"none": "その名前の場所は見つかりませんでした。",
-				"failed": "{source} に接続できませんでした。",
-				"searching": "検索中…"
+				"change": "自宅を変更…"
 			},
 			"motif": {
 				"wind": "{from}の風、{speed} {unit}。上が北です。",
@@ -1045,6 +1098,8 @@
 				"choosePicture": "写真を選ぶ",
 				"removePicture": "写真を削除",
 				"pictureFailed": "その写真を読み込めませんでした。",
+				"pictureLinkHelp": "画像そのもののアドレス、または画像のあるページ。",
+				"pictureLinkFailed": "このリンクから写真を取得できませんでした。",
 				"find": "地図で探す",
 				"findAgain": "もう一度探す",
 				"findHelp": "検索エリアの近くで名前を調べます。送るのは名前だけです。",
@@ -1400,6 +1455,9 @@
 		"general": {
 			"language": "言語",
 			"languageHelp": "すぐに反映されます。",
+			"home": "自宅",
+			"homeHelp": "空の予報と牧草地の距離の基準になる場所です。",
+			"homeUnset": "未設定",
 			"english": "English",
 			"japanese": "日本語",
 			"measurement": "単位",

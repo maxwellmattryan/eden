@@ -30,7 +30,7 @@ Anything timed is an Event. Anything located is a Place. Anything to do is a Tas
 
 ## Place
 
-`name`, `kind`, `geo` (lat, lng), `address` (a T2 field, populated only for `home` and places the owner enters by hand), `category`, `phone`, `url`. Exactly one Place has kind `home` (D-38); the substrate derives the `home-area` fact from it. A place the owner saved in Meadow is a `venue` Place of their own with its `place-profile`, not a mirror; what Meadow found and the owner has not saved is an entity mirror of this device (D-133).
+`name`, `kind`, `geo` (lat, lng), `address` (a T2 field, populated only for `home` and places the owner enters by hand; its parts, D-137, kept as D-138 says), `category`, `phone`, `url`. Exactly one Place has kind `home` (D-38, D-141); the substrate derives the `home-area` fact from its address. A place the owner saved in Meadow is a `venue` Place of their own with its `place-profile`, not a mirror; what Meadow found and the owner has not saved is an entity mirror of this device (D-133).
 
 ## Task
 

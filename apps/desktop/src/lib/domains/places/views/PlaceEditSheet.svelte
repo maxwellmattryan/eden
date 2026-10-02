@@ -1,25 +1,33 @@
 <script lang="ts">
-	// A place's form, in a sheet over the page (D-95): its picture with the buttons that change it, then its name, what
-	// kind of place it is, where it is, its website and phone, its price, whether it serves no alcohol, the owner's
-	// notes, and its vibes by facet with a line to add one of the owner's own. Save writes the fields as one change
+	// A place's form, in a sheet over the page (D-95): its picture with the button that changes it from a file or a link
+	// (D-110), then its name, what kind of place it is, where it is, its website and phone, its price, whether it
+	// serves no alcohol, the owner's notes, and its vibes by facet with a line to add one of the owner's own. Save
+	// writes the fields as one change
 	// with one undo; Cancel, Escape and the scrim leave them as they were. The picture is not one of the fields:
 	// choosing or removing it is its own write with its own undo, as a recipe's is (D-93). The page opens it through
 	// `edit(place)`, and blank through `add()`, where Add writes the place and the picture chosen for it as one change.
 	import {
+		AddressForm,
 		Button,
 		Chip,
 		Field,
-		FileButton,
-		Icon,
-		IconButton,
 		Menu,
 		Segmented,
 		Sheet,
 		Toggle,
 		toast,
+		type AddressFormKey,
 		type MenuItem,
 	} from '@eden/ui-kit'
-	import { sizedPicture, type SizedPicture } from '@eden/shared/api'
+	import {
+		addressForm,
+		addressFromHit,
+		cleanAddress,
+		defaultCountry,
+		validateAddress,
+		type Address,
+	} from '@eden/shared/address'
+	import { linkedSizedPicture, sizedPicture, type SizedPicture } from '@eden/shared/api'
 	import {
 		FACETS,
 		PLACE_CATEGORIES,
@@ -38,7 +46,10 @@
 		type SavedPlace,
 	} from '@eden/shared/domains/places'
 	import type { GeocodeHit } from '@eden/shared/geo'
+	import { home } from '@eden/shared/home'
 	import { locale, t } from '@eden/shared/i18n'
+	import PictureDrop from '$lib/components/PictureDrop.svelte'
+	import PictureInput from '$lib/components/PictureInput.svelte'
 	import { undoToast } from '$lib/shell/undo'
 	import { vibeNamer } from '../words'
 
@@ -49,16 +60,20 @@
 	let { onadded }: Props = $props()
 
 	const uid = $props.id()
-	const PICTURES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', '.jpg', '.jpeg', '.png', '.webp', '.heic']
 
 	let open = $state(false)
 	let editing = $state<string>()
 	/** The place as the store holds it now, so a picture set from here shows at once. */
 	const place = $derived(meadow.placeById(editing))
+	/** An address starts in the home's country, else the language's: the form shows that country's fields. */
+	const startAddress = (given?: Address): Address => ({
+		...given,
+		country: given?.country ?? defaultCountry({ home: home.current.address?.country, locale: $locale ?? 'en' }),
+	})
 	const blank = () => ({
 		name: '',
 		category: '' as string,
-		addressLine: '',
+		address: startAddress(),
 		locality: '',
 		url: '',
 		phone: '',
@@ -79,7 +94,7 @@
 			...blank(),
 			name: given.name ?? '',
 			category: given.category ?? '',
-			addressLine: given.addressLine ?? '',
+			address: startAddress(given.address),
 			locality: given.locality ?? '',
 			url: given.url ?? '',
 			price: given.price ?? 0,
@@ -88,6 +103,7 @@
 			vibes: [...(given.vibes ?? [])],
 		}
 		preset = given
+		left = []
 		pending = undefined
 		editing = undefined
 		hits = []
@@ -100,7 +116,7 @@
 		form = {
 			name: target.name,
 			category: target.category ?? '',
-			addressLine: target.addressLine ?? '',
+			address: startAddress(target.address),
 			locality: target.locality ?? '',
 			url: target.url ?? '',
 			phone: target.phone ?? '',
@@ -110,6 +126,7 @@
 			vibes: [...target.vibes],
 		}
 		preset = {}
+		left = []
 		pending = undefined
 		editing = target.id
 		open = true
@@ -121,7 +138,7 @@
 			...base,
 			name: form.name.trim(),
 			category: form.category || undefined,
-			addressLine: form.addressLine.trim() || undefined,
+			address: cleanAddress(form.address),
 			locality: form.locality.trim() || undefined,
 			url: form.url.trim() || undefined,
 			phone: form.phone.trim() || undefined,
@@ -169,22 +186,53 @@
 	function take(hit: GeocodeHit) {
 		preset = { ...preset, point: hit.point, providerIds: { ...(preset.providerIds ?? {}), osm: hit.externalId } }
 		if (!form.category) form.category = categoryFromOsm(hit.kind)
-		if (!form.addressLine && hit.addressLine) form.addressLine = hit.addressLine
+		// what the lookup knows of the address fills only what is empty, and names the country when nothing was typed
+		const found = addressFromHit(hit)
+		if (found) {
+			const typed = cleanAddress(form.address) !== undefined
+			if (!typed && found.country) form.address.country = found.country
+			for (const key of ['line1', 'city', 'region', 'postalCode'] as const) {
+				if (!form.address[key]?.trim() && found[key]) form.address[key] = found[key]
+			}
+		}
 		if (!form.locality && hit.locality) form.locality = hit.locality
 		hits = []
 	}
 
+	// The address, as its country asks for one (D-137). None of it is required of a place; a postal code that is
+	// not shaped as its country's are is said once the field is left, and holds Save until it is put right.
+	let left = $state<AddressFormKey[]>([])
+	const problems = $derived(validateAddress(form.address))
+	const shape = $derived(
+		addressForm(form.address, {
+			label: (id, values) => $t(`address.${id}`, { values }),
+			locale: $locale ?? 'en',
+			home: home.current.address?.country,
+			errors: Object.fromEntries(Object.entries(problems).filter(([key]) => left.includes(key as AddressFormKey))),
+		})
+	)
+
 	// The picture
 	const picture = $derived(place ? meadow.image(place) : pending?.thumbnail)
-	async function choose(file: File) {
-		const sized = await sizedPicture(file)
-		if (!sized) return toast({ message: $t('domains.places.form.pictureFailed') })
+	function keep(sized: SizedPicture) {
 		if (!place) {
 			pending = sized
 			return
 		}
 		const { undo } = meadow.setPhoto(place.id, sized)
 		undoToast($t('domains.places.toast.pictured', { values: { name: place.name } }), undo)
+	}
+	async function choose(file: File) {
+		const sized = await sizedPicture(file)
+		if (sized) keep(sized)
+		else toast({ message: $t('domains.places.form.pictureFailed') })
+	}
+	/** A link the owner pasted (D-110): the picture at the address, or the one its page names. */
+	async function link(address: string) {
+		const sized = await linkedSizedPicture(address)
+		if (sized) keep(sized)
+		else toast({ message: $t('domains.places.form.pictureLinkFailed') })
+		return !!sized
 	}
 	function unpicture() {
 		if (!place) {
@@ -232,151 +280,150 @@
 			{$t(place ? 'domains.places.form.editTitle' : 'domains.places.form.addTitle')}
 		</h2>
 	{/snippet}
-	<form
-		class="form"
-		id="{uid}-form"
-		onsubmit={(event) => {
-			event.preventDefault()
-			if (place) save(place)
-			else create()
-		}}
-	>
-		<div class="picture-row">
-			{#if picture}
-				<img class="picture" src={picture} alt="" />
-			{:else}
-				<span class="picture picture-glyph" aria-hidden="true"><Icon name={categoryGlyph(form.category)} /></span>
-			{/if}
-			<FileButton
-				label={$t('domains.places.form.choosePicture')}
-				icon="image-plus"
-				accept={PICTURES}
-				multiple={false}
-				tooltip
-				onfiles={(files) => files[0] && void choose(files[0])}
+	<PictureDrop onfile={(file) => void choose(file)}>
+		<form
+			class="form"
+			id="{uid}-form"
+			onsubmit={(event) => {
+				event.preventDefault()
+				if (place) save(place)
+				else create()
+			}}
+		>
+			<PictureInput
+				{picture}
+				glyph={categoryGlyph(form.category)}
+				chooseLabel={$t('domains.places.form.choosePicture')}
+				removeLabel={$t('domains.places.form.removePicture')}
+				linkHelp={$t('domains.places.form.pictureLinkHelp')}
+				onfile={(file) => void choose(file)}
+				onlink={link}
+				onremove={unpicture}
 			/>
-			{#if picture}
-				<IconButton icon="trash" danger label={$t('domains.places.form.removePicture')} tooltip onclick={unpicture} />
-			{/if}
-		</div>
 
-		<Field label={$t('domains.places.form.name')} bind:value={form.name} required />
-		{#if !place}
+			<Field label={$t('domains.places.form.name')} bind:value={form.name} required />
+			{#if !place}
+				<div class="row">
+					<div class="where">
+						<Button
+							label={$t(located ? 'domains.places.form.findAgain' : 'domains.places.form.find')}
+							icon="locate-fixed"
+							disabled={finding || !form.name.trim()}
+							onclick={find}
+						/>
+						<span class="hint">
+							{#if located}
+								{$t('domains.places.form.located')}
+							{:else if looked && !hits.length && !finding}
+								{$t('domains.places.form.notFound')}
+							{:else}
+								{$t('domains.places.form.findHelp')}
+							{/if}
+						</span>
+					</div>
+					{#if hits.length}
+						<div class="chips" role="group" aria-label={$t('domains.places.form.matches')}>
+							{#each hits as hit (hit.externalId)}
+								<Chip
+									label={[hit.name, hit.addressLine, hit.locality].filter(Boolean).join(', ')}
+									tone="outline"
+									icon="map-pin"
+									onclick={() => take(hit)}
+								/>
+							{/each}
+						</div>
+					{/if}
+				</div>
+			{/if}
 			<div class="row">
-				<div class="where">
-					<Button
-						label={$t(located ? 'domains.places.form.findAgain' : 'domains.places.form.find')}
-						icon="locate-fixed"
-						disabled={finding || !form.name.trim()}
-						onclick={find}
+				<span class="label" id="{uid}-category">{$t('domains.places.form.category')}</span>
+				<span class="anchor" bind:this={categoryAnchor}>
+					<Chip
+						label={form.category ? $t(categoryKey(form.category)) : $t('domains.places.form.noCategory')}
+						tone="outline"
+						icon="chevron-down"
+						aria-haspopup="menu"
+						aria-expanded={categoryOpen}
+						onclick={() => (categoryOpen = !categoryOpen)}
 					/>
-					<span class="hint">
-						{#if located}
-							{$t('domains.places.form.located')}
-						{:else if looked && !hits.length && !finding}
-							{$t('domains.places.form.notFound')}
-						{:else}
-							{$t('domains.places.form.findHelp')}
-						{/if}
-					</span>
-				</div>
-				{#if hits.length}
-					<div class="chips" role="group" aria-label={$t('domains.places.form.matches')}>
-						{#each hits as hit (hit.externalId)}
-							<Chip
-								label={[hit.name, hit.addressLine, hit.locality].filter(Boolean).join(', ')}
-								tone="outline"
-								icon="map-pin"
-								onclick={() => take(hit)}
-							/>
-						{/each}
-					</div>
-				{/if}
-			</div>
-		{/if}
-		<div class="row">
-			<span class="label" id="{uid}-category">{$t('domains.places.form.category')}</span>
-			<span class="anchor" bind:this={categoryAnchor}>
-				<Chip
-					label={form.category ? $t(categoryKey(form.category)) : $t('domains.places.form.noCategory')}
-					tone="outline"
-					icon="chevron-down"
-					aria-haspopup="menu"
-					aria-expanded={categoryOpen}
-					onclick={() => (categoryOpen = !categoryOpen)}
+				</span>
+				<Menu
+					bind:open={categoryOpen}
+					anchor={categoryAnchor}
+					align="start"
+					label={$t('domains.places.form.category')}
+					items={categoryItems}
+					onselect={(item) => (form.category = form.category === item.id ? '' : (item.id ?? ''))}
 				/>
-			</span>
-			<Menu
-				bind:open={categoryOpen}
-				anchor={categoryAnchor}
-				align="start"
-				label={$t('domains.places.form.category')}
-				items={categoryItems}
-				onselect={(item) => (form.category = form.category === item.id ? '' : (item.id ?? ''))}
+			</div>
+			<AddressForm
+				bind:value={form.address}
+				country={shape.country}
+				countries={shape.countries}
+				countryLabel={$t('address.country')}
+				rows={shape.rows}
+				onblurfield={(key) => (left = [...left, key])}
 			/>
-		</div>
-		<div class="pair">
-			<Field label={$t('domains.places.form.address')} bind:value={form.addressLine} />
 			<Field label={$t('domains.places.form.locality')} bind:value={form.locality} />
-		</div>
-		<div class="pair">
-			<Field label={$t('domains.places.form.website')} bind:value={form.url} type="url" placeholder="https://" />
-			<Field label={$t('domains.places.form.phone')} bind:value={form.phone} type="tel" />
-		</div>
-		<div class="row">
-			<span class="label" id="{uid}-price">{$t('domains.places.form.price')}</span>
-			<Segmented items={priceItems} bind:selected={form.price} label={$t('domains.places.form.price')} />
-		</div>
-		<Toggle
-			label={$t('domains.places.form.alcoholFree')}
-			description={$t('domains.places.form.alcoholFreeHelp')}
-			bind:checked={form.alcoholFree}
-		/>
-		<Field
-			label={$t('domains.places.form.notes')}
-			placeholder={$t('domains.places.form.notesPlaceholder')}
-			multiline
-			rows={3}
-			bind:value={form.notes}
-		/>
-
-		<fieldset class="vibes">
-			<legend class="legend">{$t('domains.places.form.vibes')}</legend>
-			{#each FACETS as facet (facet)}
-				<div class="facet" role="group" aria-labelledby="{uid}-{facet}">
-					<span class="label" id="{uid}-{facet}">{$t(facetKey(facet))}</span>
-					<div class="chips">
-						{#each facets[facet] as vibe (vibe.id)}
-							<Chip
-								label={vibe.label ?? vibeName(vibe.id)}
-								selectable
-								selected={form.vibes.includes(vibe.id)}
-								onselect={() => toggle(vibe.id)}
-							/>
-						{/each}
-					</div>
-				</div>
-			{/each}
-			<div class="custom">
-				<Field
-					label={$t('domains.places.form.customVibe')}
-					placeholder={$t('domains.places.form.customVibePlaceholder')}
-					bind:value={custom}
-					onkeydown={(event) => {
-						if (event.key !== 'Enter') return
-						event.preventDefault()
-						addVibe()
-					}}
-				/>
-				<Segmented
-					items={FACETS.map((facet) => $t(facetKey(facet)))}
-					bind:selected={customFacet}
-					label={$t('domains.places.form.customFacet')}
-				/>
-				<Button label={$t('domains.places.form.addVibe')} icon="plus" disabled={!custom.trim()} onclick={addVibe} />
+			<div class="pair">
+				<Field label={$t('domains.places.form.website')} bind:value={form.url} type="url" placeholder="https://" />
+				<Field label={$t('domains.places.form.phone')} bind:value={form.phone} type="tel" />
 			</div>
-		</fieldset>
-	</form>
+			<div class="row">
+				<span class="label" id="{uid}-price">{$t('domains.places.form.price')}</span>
+				<Segmented items={priceItems} bind:selected={form.price} label={$t('domains.places.form.price')} />
+			</div>
+			<Toggle
+				label={$t('domains.places.form.alcoholFree')}
+				description={$t('domains.places.form.alcoholFreeHelp')}
+				bind:checked={form.alcoholFree}
+			/>
+			<Field
+				label={$t('domains.places.form.notes')}
+				placeholder={$t('domains.places.form.notesPlaceholder')}
+				multiline
+				rows={3}
+				bind:value={form.notes}
+			/>
+
+			<fieldset class="vibes">
+				<legend class="legend">{$t('domains.places.form.vibes')}</legend>
+				{#each FACETS as facet (facet)}
+					<div class="facet" role="group" aria-labelledby="{uid}-{facet}">
+						<span class="label" id="{uid}-{facet}">{$t(facetKey(facet))}</span>
+						<div class="chips">
+							{#each facets[facet] as vibe (vibe.id)}
+								<Chip
+									label={vibe.label ?? vibeName(vibe.id)}
+									selectable
+									selected={form.vibes.includes(vibe.id)}
+									onselect={() => toggle(vibe.id)}
+								/>
+							{/each}
+						</div>
+					</div>
+				{/each}
+				<div class="custom">
+					<Field
+						label={$t('domains.places.form.customVibe')}
+						placeholder={$t('domains.places.form.customVibePlaceholder')}
+						bind:value={custom}
+						onkeydown={(event) => {
+							if (event.key !== 'Enter') return
+							event.preventDefault()
+							addVibe()
+						}}
+					/>
+					<Segmented
+						items={FACETS.map((facet) => $t(facetKey(facet)))}
+						bind:selected={customFacet}
+						label={$t('domains.places.form.customFacet')}
+					/>
+					<Button label={$t('domains.places.form.addVibe')} icon="plus" disabled={!custom.trim()} onclick={addVibe} />
+				</div>
+			</fieldset>
+		</form>
+	</PictureDrop>
 	{#snippet footer()}
 		<Button label={$t('common.cancel')} variant="quiet" onclick={() => (open = false)} />
 		<Button
@@ -384,7 +431,7 @@
 			variant="primary"
 			type="submit"
 			form="{uid}-form"
-			disabled={!form.name.trim()}
+			disabled={!form.name.trim() || Object.keys(problems).length > 0}
 		/>
 	{/snippet}
 </Sheet>
@@ -400,26 +447,6 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-4);
-	}
-	.picture-row {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
-	}
-	.picture {
-		flex: none;
-		box-sizing: border-box;
-		width: calc(var(--space-8) * 2);
-		height: calc(var(--space-8) * 2);
-		border: 1px solid var(--ed-card-border);
-		border-radius: var(--ed-radius-control);
-		object-fit: cover;
-		background: var(--surface-2);
-	}
-	.picture-glyph {
-		display: inline-grid;
-		place-items: center;
-		color: var(--text-secondary);
 	}
 	.row {
 		display: flex;

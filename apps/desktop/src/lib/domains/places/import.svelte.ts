@@ -16,6 +16,7 @@ import {
 	type SavedPlace,
 	type SourceFailure,
 } from '@eden/shared/domains/places'
+import { addressFromHit } from '@eden/shared/address'
 import type { GeocodeHit, LngLat } from '@eden/shared/geo'
 import type { DirectPreview } from '$lib/shell/gardener/runtime.svelte'
 
@@ -242,7 +243,7 @@ export class PlacesImport {
 			point: hit?.point ?? row.point,
 			vibes: [...row.vibes],
 			...(row.note ? { notes: row.note } : {}),
-			...(hit?.addressLine ? { addressLine: hit.addressLine } : {}),
+			...(hit && addressFromHit(hit) ? { address: addressFromHit(hit) } : {}),
 			...(hit?.locality ? { locality: hit.locality } : {}),
 			providerIds: hit ? { osm: hit.externalId } : {},
 			savedFrom: { via: 'import', at },

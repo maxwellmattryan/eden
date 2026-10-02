@@ -3,6 +3,7 @@
 // the owner's units (D-60): the home's area, never its coordinates.
 import { queryEvents, queryTasks } from '@eden/shared/data'
 import { addDays, dateIn, instantAt, timeIn } from '@eden/shared/dates'
+import { home } from '@eden/shared/home'
 import { settings } from '@eden/shared/settings'
 import {
 	goldenHourOf,
@@ -24,8 +25,8 @@ const MOMENTS: readonly MoonMoment[] = ['new', 'first-quarter', 'full', 'last-qu
 const RAIN_LIKELY = 40
 
 function place(): string {
-	const area = settings.home.area
-	return area ? [area.city, area.region, area.country].filter(Boolean).join(', ') : settings.home.label
+	const { area, label } = home.current
+	return area ? [area.city, area.region, area.country].filter(Boolean).join(', ') : label
 }
 
 function degrees(celsius: number): { value: number; unit: string } {

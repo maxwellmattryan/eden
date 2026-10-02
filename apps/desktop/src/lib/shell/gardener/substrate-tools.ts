@@ -112,7 +112,7 @@ const noFact = (id: string | undefined) =>
 const derived = (fact: Fact) =>
 	failed(
 		fact.type === 'home-area'
-			? 'The home area is worked out from the home the owner chose, so it is not changed here: they change their home in Sky. Nothing was changed.'
+			? 'The home area is worked out from the home the owner chose, so it is not changed here: they change their home in Settings, in Sky or from the home pin in Meadow. Nothing was changed.'
 			: `${fact.type} is worked out by Eden and follows what it is worked out from, so it is not changed here. Nothing was changed.`
 	)
 

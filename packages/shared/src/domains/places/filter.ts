@@ -2,6 +2,7 @@
 // any one of the vibes that are on; across facets it needs one from each facet that has any on. The practical
 // filters each narrow further. "Open now" keeps only what is known to be open: a place whose hours did not parse is
 // left out while it is on, since the page cannot say it is open.
+import { formatAddress } from '../../address/index.js'
 import { haversineKm, type LngLat } from '../../geo/index.js'
 import { isOpenAt } from './hours.js'
 import { FACETS, type Collection, type CustomVibe, type PlaceFilter, type SavedPlace } from './types.js'
@@ -92,7 +93,7 @@ export function matches(place: SavedPlace, filter: PlaceFilter, context: FilterC
 				place.name,
 				place.notes,
 				place.locality,
-				place.addressLine,
+				formatAddress(place.address),
 				place.category,
 				...place.vibes.map((vibe) => context.vibeLabel?.(vibe) ?? vibe),
 			]

@@ -52,7 +52,7 @@ Fact types owned by Phase 2 and Phase 3 domains (`gym-preference`, `training-lim
 - The owning domain writes its types through its own editors.
 - **The owner may assert any registered fact type** from "What Eden knows about me", even when the owning domain is not installed. A `medical-dietary-restriction` can be entered in Phase 1 although Wellspring arrives later; Hearth reads it immediately.
 - A domain may derive its facts from its own rows: Meadow writes `favorite-vibe` as `domain-derived`, worked out from the saved places and the visits each time a place is saved or a visit is logged, with the weight as its confidence, and never touches a row of the type the owner asserted (`domains/places.md`, Facts).
-- The substrate writes `system-derived` facts (`home-area` from the `home` Place; from the home the owner chose in Sky until the Place picker exists, D-72).
+- The substrate writes `system-derived` facts (`home-area` from the `home` Place's address, D-141).
 - Integrations write with provenance `integration` and a source, only for types their grant names.
 - **AI-inferred facts pass a confirm gate.** The Gardener proposes; nothing is stored until the owner accepts, at which point provenance stays `ai-inferred` with confidence. A proposal may name the fact it takes the place of and the last day it holds; accepting then removes the old row and stores the new one under one undo (D-127).
 - **The Gardener forgets a fact only on the owner's confirm**, each time, with an undo, and never a fact the substrate derives (D-127).

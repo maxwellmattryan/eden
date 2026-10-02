@@ -9,6 +9,7 @@
 		distanceLabel,
 		formatSpans,
 		mapsLink,
+		placeAddress,
 		meadow,
 		openNow,
 		priceLabel,
@@ -37,6 +38,7 @@
 	const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
 	const now = $derived(new Date(meadow.now))
 	const km = $derived(place ? meadow.distanceTo(place) : undefined)
+	const where = $derived(place ? placeAddress(place, lang) : '')
 	const isOpen = $derived(place?.hours?.spec ? openNow(place, now, timeZone) : undefined)
 	const visits = $derived(place ? meadow.visitsOf(place.id) : [])
 
@@ -84,6 +86,7 @@
 					icon="heart"
 					label={$t(place.favourite ? 'domains.places.detail.unfavourite' : 'domains.places.detail.favourite')}
 					pressed={place.favourite}
+					pressedFill
 					onclick={favourite}
 				/>
 			{/if}
@@ -105,8 +108,8 @@
 					.filter(Boolean)
 					.join(' · ')}
 			</p>
-			{#if place.addressLine || place.locality}
-				<p class="meta">{[place.addressLine, place.locality].filter(Boolean).join(', ')}</p>
+			{#if where}
+				<p class="meta">{where}</p>
 			{/if}
 			{#if place.hours}
 				<div class="hours">

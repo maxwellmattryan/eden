@@ -1,24 +1,28 @@
-// Where Meadow measures from (D-131). Home is still a setting (D-38): this is the one function that reads it, so
-// when home becomes a Place row its point is read here and nowhere else (`engineering/meadow.md`, Handoffs). The
-// point is the rounded one, the same that leaves the device (D-60): the map opens on it and distances are from it.
+// Where Meadow measures from (D-131). Home is the `home` Place (D-38, D-141), held by the home store; this is
+// the one function in Meadow that reads it. `point` is the rounded one, the same that leaves the device (D-60): the
+// map opens on it and searches look near it. `exact` is where the home is, for what never leaves: its pin and the
+// distances from it (D-142).
 import { roundedPoint, type LngLat } from '../../geo/index.js'
-import { settings } from '../../settings/index.js'
+import { home } from '../../home/store.svelte.js'
 import type { SearchArea } from './types.js'
 
 export interface HomeReading {
 	label: string
 	point: LngLat
+	exact: LngLat
 	city?: string
 	region?: string
 	country?: string
 }
 
-/** Home as Meadow may use it: its label, its rounded point, and the area it is in when the geocoder named one. */
+/** Home as Meadow may use it: its label, its point exact and rounded, and the area its address names. */
 export function readHome(): HomeReading {
-	const { label, latitude, longitude, area } = settings.home
+	const { label, latitude, longitude, area } = home.current
+	const exact = { lng: longitude, lat: latitude }
 	return {
 		label,
-		point: roundedPoint({ lng: longitude, lat: latitude }),
+		point: roundedPoint(exact),
+		exact,
 		...(area?.city ? { city: area.city } : {}),
 		...(area?.region ? { region: area.region } : {}),
 		...(area?.country ? { country: area.country } : {}),

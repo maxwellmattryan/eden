@@ -45,6 +45,8 @@ describe('photonHit', () => {
 					city: 'Austin',
 					state: 'Texas',
 					country: 'United States',
+					postcode: '78702',
+					countrycode: 'us',
 				})
 			)
 		).toEqual({
@@ -57,7 +59,22 @@ describe('photonHit', () => {
 			locality: 'Austin',
 			region: 'Texas',
 			country: 'United States',
+			street: 'East Martin Luther King Jr Boulevard',
+			houseNumber: '1814',
+			city: 'Austin',
+			postalCode: '78702',
+			countryCode: 'US',
 		})
+	})
+
+	it('names a street or a house by its address line, only when an address was asked for', () => {
+		const house = {
+			geometry: { coordinates: [-97.73, 30.31] as [number, number] },
+			properties: { osm_type: 'N', osm_id: 7, housenumber: '4301', street: 'Duval Street', city: 'Austin' },
+		}
+		expect(photonHit(house)).toBeUndefined()
+		expect(photonHit(house, true)).toMatchObject({ name: '4301 Duval Street', externalId: 'N7', city: 'Austin' })
+		expect(photonHit({ geometry: house.geometry, properties: { city: 'Austin' } }, true)).toBeUndefined()
 	})
 
 	it('answers nothing for what has no name or no point', () => {

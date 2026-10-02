@@ -4,7 +4,7 @@ status: draft
 summary: Conditions and forecasts for home and saved places, severe-weather alerts, sunrise, sunset and moon computed on-device, the default Garden widget, and the weather and ephemeris layers Almanac draws. Id `weather`, Phase 1.
 read-this-if: You are working on weather, forecasts, alerts, sun and moon, or anything that plans around them.
 depends-on: [substrate/registry, substrate/primitives, substrate/signals-notifications, substrate/shell, substrate/ai]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## 1. Purpose
@@ -27,7 +27,7 @@ Sky knows what the sky is doing where the owner is and where they are going, and
 
 | entity | key fields | tier | links out |
 |---|---|---|---|
-| `forecast` | place, timezone, current reading, hourly and daily series (a day is observed or forecast), provider, attribution, fetched at; provider-neutral (D-56); a mirror keyed by source + place, never synced or exported (D-85) | T0 | place, once home is a Place |
+| `forecast` | place, timezone, current reading, hourly and daily series (a day is observed or forecast), provider, attribution, fetched at; provider-neutral (D-56); a mirror keyed by source + place, never synced or exported (D-85) | T0 | none: keyed by the home's rounded point (D-142) |
 | `air-quality` | place, source, index (US and European), pollutants, fetched at; a mirror (D-59) | T0 | place |
 | `allergens` | place, source, pollen by kind, mold, fetched at; a mirror (D-59) | T0 | place |
 | `alert` | place, source, severity, headline, window, dismissed on this device; a mirror keyed by source + the alert's id | T0 | place |
@@ -55,7 +55,7 @@ Never-do list: never sends coordinates finer than city level (D-60) to a model o
 
 ## 6. Surfaces
 
-**Desktop views (Phase 1)**: the Sky view with now, hours, the week, details, air quality, allergens, sun and moon, active alerts behind a button in the header that shows only while one is active (a popover lists them, and each can be dismissed for as long as it is issued, which also takes its card out of the inbox), the sources' attribution, the header's motif (D-62: the wind now as a flow field, north up, with a small compass at its foot whose needle points the way the wind blows and whose tooltip says it is one reading for the place, not a map), the sun on its wave in the now block, and a location switcher over home and saved venues, with "Change home", a search by name, until Places exist (D-38).
+**Desktop views (Phase 1)**: the Sky view with now, hours, the week, details, air quality, allergens, sun and moon, active alerts behind a button in the header that shows only while one is active (a popover lists them, and each can be dismissed for as long as it is issued, which also takes its card out of the inbox), the sources' attribution, the header's motif (D-62: the wind now as a flow field, north up, with a small compass at its foot whose needle points the way the wind blows and whose tooltip says it is one reading for the place, not a map), the sun on its wave in the now block, and a location switcher over home and saved venues, with "Change home", which opens the change-home sheet (D-143).
 
 **Mobile (Phase 2)**: the same view as a tab candidate; Sky is pinned by default.
 
@@ -88,7 +88,6 @@ Intents: none.
 | Open-Meteo | 1 | none needed | rounded coordinates | hourly and daily forecast, the past days of the week |
 | Open-Meteo Air Quality | 1 | none needed | rounded coordinates | air quality index and pollutants; pollen where covered (Europe) |
 | NWS alerts | 1 | none needed | rounded coordinates | active alerts (US) |
-| Open-Meteo Geocoding | 1 | none needed | the place name the owner types, the language | places by name, to change home |
 | device location, precise | 3 | per device | | coordinates for a travelling forecast |
 | Apple WeatherKit (macOS, iOS) | 1 | the app's entitlement (D-57) | rounded coordinates | forecast |
 | AccuWeather | later | key | rounded coordinates | pollen and mold |

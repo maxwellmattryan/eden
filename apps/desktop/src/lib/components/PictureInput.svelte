@@ -1,13 +1,13 @@
 <script lang="ts">
-	// The picture of an item or a recipe, with the buttons that change it: the picture, or a glyph on a tile of the
+	// The picture of an item, a recipe or a place, with the buttons that change it: the picture, or a glyph on a tile of the
 	// same size; one button whose menu offers a file or a link; and Remove, last. A link is typed into a small panel
 	// that hangs from the button, fetched as soon as it is pasted, and the panel stays open until a picture came of it,
 	// so a wrong address can be corrected. The
 	// form says what a file or a link becomes; nothing is written here. A dropped or pasted picture comes in through
 	// PictureDrop, around the form.
 	import { Field, FileButton, Icon, IconButton, Popover, type IconName } from '@eden/ui-kit'
+	import { PICTURE_ACCEPT } from '@eden/shared/api'
 	import { t } from '@eden/shared/i18n'
-	import { PICTURE_ACCEPT } from '../staging.svelte'
 
 	type Props = {
 		/** The picture as it stands, as a URL the page may load. */
@@ -71,17 +71,17 @@
 			sources={[
 				{
 					id: 'link',
-					label: $t('domains.kitchen.picture.fromLink'),
+					label: $t('common.picture.fromLink'),
 					icon: 'link',
 					onselect: () => (linkOpen = true),
 				},
 			]}
 		/>
 	</span>
-	<Popover bind:open={linkOpen} {anchor} align="start" label={$t('domains.kitchen.picture.link')}>
+	<Popover bind:open={linkOpen} {anchor} align="start" label={$t('common.picture.link')}>
 		<div class="link">
 			<Field
-				label={$t('domains.kitchen.picture.link')}
+				label={$t('common.picture.link')}
 				helper={linkHelp}
 				placeholder="https://"
 				type="url"
@@ -99,7 +99,7 @@
 					<IconButton
 						icon="arrow-right"
 						size="sm"
-						label={$t('domains.kitchen.picture.fetch')}
+						label={$t('common.picture.fetch')}
 						tooltip
 						disabled={fetching || !link.trim()}
 						onclick={() => void fetchLink()}

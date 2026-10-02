@@ -11,6 +11,8 @@ export interface GeocodeQuery {
 	within?: Bounds
 	lang?: string
 	limit?: number
+	/** The text is an address, so a street or a house, which has no name of its own, is an answer too. */
+	address?: boolean
 }
 
 /** One answer: a named thing at a point, with what its source says of it. */
@@ -27,6 +29,12 @@ export interface GeocodeHit {
 	locality?: string
 	region?: string
 	country?: string
+	/** The parts of the address apart, where the source gives them; the country as its ISO code. */
+	street?: string
+	houseNumber?: string
+	city?: string
+	postalCode?: string
+	countryCode?: string
 }
 
 export interface Geocoder {

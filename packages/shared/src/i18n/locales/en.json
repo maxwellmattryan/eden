@@ -8,7 +8,74 @@
 		"close": "Close",
 		"save": "Save",
 		"cancel": "Cancel",
-		"done": "Done"
+		"done": "Done",
+		"picture": {
+			"fromLink": "From a link",
+			"link": "Picture from a link",
+			"fetch": "Fetch the picture"
+		}
+	},
+	"address": {
+		"country": "Country or region",
+		"line1": "Street address",
+		"line2": "Apartment, suite or unit",
+		"jp": {
+			"line1": "Town and block",
+			"line2": "Building and room"
+		},
+		"city": {
+			"city": "City",
+			"town": "Town or city",
+			"suburb": "Suburb",
+			"municipality": "City, ward or town"
+		},
+		"region": {
+			"state": "State",
+			"province": "Province",
+			"prefecture": "Prefecture",
+			"county": "County",
+			"region": "State or region"
+		},
+		"postal": {
+			"zip": "ZIP code",
+			"postcode": "Postcode",
+			"postalCode": "Postal code",
+			"eircode": "Eircode"
+		},
+		"error": {
+			"required": "Needed to save.",
+			"postal": "Written like {example}."
+		},
+		"group": {
+			"suggested": "Suggested",
+			"all": "All countries and regions"
+		},
+		"chooseRegion": "Choose"
+	},
+	"home": {
+		"title": "Change home",
+		"titleFirst": "Set your home",
+		"name": "Name",
+		"defaultName": "Home",
+		"find": "Find on the map",
+		"findAgain": "Find again",
+		"findHelp": "Sends the street, town and postal code to {source}, never the house number.",
+		"notFound": "Nothing found for that address. Check the town, or click the map to place your home.",
+		"matches": "What was found",
+		"map": "Where home is",
+		"mapHelp": "Click the map to put the pin exactly on your home. The exact point stays on this device.",
+		"mapEmpty": "Find the address, or click the map, to place your home.",
+		"mapFailed": "The map could not start. Find still places your home.",
+		"toast": {
+			"changed": "Home changed",
+			"failed": "Home could not be saved."
+		},
+		"card": {
+			"change": "Change home",
+			"set": "Set your home",
+			"sample": "A sample home. Set yours, and distances and the forecast follow it.",
+			"noAddress": "No address yet."
+		}
 	},
 	"shell": {
 		"garden": "Garden",
@@ -187,11 +254,6 @@
 				"lowStock": {
 					"line": "{count, plural, =1 {{first} is running low} =2 {{first} and {second} are running low} other {{first} and {more} more are running low}}"
 				}
-			},
-			"picture": {
-				"fromLink": "From a link",
-				"link": "Picture from a link",
-				"fetch": "Fetch the picture"
 			},
 			"categories": {
 				"produce": "Produce",
@@ -822,16 +884,7 @@
 			},
 			"scale": "{name} {value}, {category}",
 			"place": {
-				"change": "Change home…",
-				"title": "Change home",
-				"find": "Find a place",
-				"placeholder": "A city or a town",
-				"helper": "Only the name you type is sent, to Open-Meteo.",
-				"results": "Places",
-				"result": "{name} · {region}",
-				"none": "No place by that name.",
-				"failed": "Couldn't reach {source}.",
-				"searching": "Searching…"
+				"change": "Change home…"
 			},
 			"motif": {
 				"wind": "Wind from {from} at {speed} {unit}. North is up.",
@@ -1045,6 +1098,8 @@
 				"choosePicture": "Choose a picture",
 				"removePicture": "Remove the picture",
 				"pictureFailed": "That picture could not be read.",
+				"pictureLinkHelp": "A picture's own address, or the page it is on.",
+				"pictureLinkFailed": "No picture could be fetched from that link.",
 				"find": "Find on the map",
 				"findAgain": "Find again",
 				"findHelp": "Looks the name up near your search area. Only the name is sent.",
@@ -1400,6 +1455,9 @@
 		"general": {
 			"language": "Language",
 			"languageHelp": "Changes take effect at once.",
+			"home": "Home",
+			"homeHelp": "Where Sky forecasts for and Meadow measures from.",
+			"homeUnset": "Not set yet",
 			"english": "English",
 			"japanese": "日本語",
 			"measurement": "Units",

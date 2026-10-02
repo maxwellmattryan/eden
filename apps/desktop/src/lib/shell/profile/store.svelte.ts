@@ -36,7 +36,7 @@ export interface FactGroup {
 
 /** The owners in the order the page lists them: Eden first, then the domains; any other owner follows by name. */
 const OWNER_ORDER: readonly string[] = ['substrate', 'kitchen', 'toolbench', 'health']
-const HOME_SOURCE = 'setting:home'
+const HOME_SOURCE = 'place:home'
 
 const ownerRank = (owner: string) => {
 	const index = OWNER_ORDER.indexOf(owner)
@@ -244,8 +244,8 @@ export class ProfileStore {
 	}
 
 	/**
-	 * Derives `home-area` from the home the owner chose (D-38, D-72): one `system-derived` row, renewed when the
-	 * home moves. A home that was never chosen has no area, and derives nothing.
+	 * Derives `home-area` from the home Place's address (D-38, D-141): one `system-derived` row, renewed when the
+	 * home moves. A home with no city has no area, and derives nothing.
 	 */
 	async syncHomeArea(home: HomePlace): Promise<void> {
 		const area = home.area

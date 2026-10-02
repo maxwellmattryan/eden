@@ -10,6 +10,7 @@
 		distanceLabel,
 		formatSpans,
 		mapsLink,
+		placeAddress,
 		meadow,
 		openNow,
 		priceLabel,
@@ -44,6 +45,7 @@
 	const visits = $derived(meadow.visitsOf(place.id))
 	const held = $derived(meadow.collectionsOf(place.id))
 	const km = $derived(meadow.distanceTo(place))
+	const where = $derived(placeAddress(place, lang))
 	const facts = $derived(
 		[
 			categoryName(place.category),
@@ -126,6 +128,7 @@
 				size="sm"
 				label={$t(place.favourite ? 'domains.places.detail.unfavourite' : 'domains.places.detail.favourite')}
 				pressed={place.favourite}
+				pressedFill
 				tooltip
 				onclick={favourite}
 			/>
@@ -134,8 +137,8 @@
 			{/if}
 		</div>
 		{#if facts.length}<p class="meta">{facts.join(' · ')}</p>{/if}
-		{#if place.addressLine || place.locality}
-			<p class="meta">{[place.addressLine, place.locality].filter(Boolean).join(', ')}</p>
+		{#if where}
+			<p class="meta">{where}</p>
 		{/if}
 		{#if !place.point}
 			<p class="source">{$t('domains.places.detail.noPoint')}</p>

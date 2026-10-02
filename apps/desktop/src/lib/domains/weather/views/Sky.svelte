@@ -5,7 +5,7 @@
 	// home. The header's glyph is live, behind the header the motif draws the wind (D-62), and in the now block the
 	// sun stands on its wave where the minute puts it. Every time is the place's, on the owner's clock. The page is the same whatever
 	// the provider (D-56): the attribution follows it, and a note says so when the chosen one could not answer. Home
-	// is changed from the location menu: a search by name, and the place chosen becomes home.
+	// is changed from the location menu, which opens the shell's change-home sheet (D-143).
 	// Offline, an InlineError names the last good forecast and the status bar carries the banner; the numbers stay,
 	// since a mirror is still worth reading.
 	import {
@@ -16,7 +16,6 @@
 		Chip,
 		Compass,
 		EmptyState,
-		Field,
 		Icon,
 		IconButton,
 		InlineError,
@@ -26,7 +25,6 @@
 		Notice,
 		PageHeader,
 		Popover,
-		Sheet,
 		Sketch,
 		SkyGlyph,
 		Stat,
@@ -43,28 +41,25 @@
 	import { cubicOut } from 'svelte/easing'
 	import { openExternal } from '@eden/shared/api'
 	import { updatedLine } from '$lib/domains/weather/updated'
-	import { profile } from '$lib/shell/profile/store.svelte'
+	import { homeUi } from '$lib/shell/home/home-ui.svelte'
+	import { home } from '@eden/shared/home'
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { dayOfMonth, formatHour, hourOfDay, formatMoment, formatTime, formatWeekdayOf } from '@eden/shared/dates'
 	import {
-		MIN_QUERY,
 		airCategory,
 		compass,
 		conditionLabel,
 		distance,
-		homeFrom,
 		pressure,
 		providerFor,
 		rainfall,
-		searchPlaces,
 		speed,
 		uvCategory,
 		weather,
 		type AirCategory,
 		type AllergenLevel,
 		type Measure,
-		type PlaceResult,
 		type UvCategory,
 		type WeatherAlert,
 	} from '@eden/shared/weather'
@@ -75,8 +70,10 @@
 	/** Sky's times are the place's, on the owner's clock (D-58). */
 	const format = $derived({ lang, clock: settings.clock, timeZone: weather.timeZone })
 
+	/** Where the forecast is for, in a word: the home's town, or its name while its address names none. */
+	const homeName = $derived(home.current.area?.city ?? home.current.label)
 	const places = $derived<MenuItem[]>([
-		{ id: 'home', label: $t('domains.weather.home', { values: { label: settings.home.label } }), icon: 'house' },
+		{ id: 'home', label: $t('domains.weather.home', { values: { label: homeName } }), icon: 'house' },
 		{ id: 'change', label: $t('domains.weather.place.change'), icon: 'search' },
 	])
 	let anchor = $state<HTMLElement>()
@@ -84,53 +81,8 @@
 	let alertsAnchor = $state<HTMLElement>()
 	let alertsOpen = $state(false)
 
-	// Changing home: the search runs a moment after the typing stops, and only the latest answer is kept.
-	const SEARCH_DELAY_MS = 300
-	let finding = $state(false)
-	let query = $state('')
-	let results = $state<PlaceResult[]>([])
-	let search = $state<'idle' | 'searching' | 'done' | 'failed'>('idle')
-	let timer: ReturnType<typeof setTimeout> | undefined
-	let asked = 0
-
-	function onquery() {
-		clearTimeout(timer)
-		const text = query.trim()
-		const request = ++asked
-		if (text.length < MIN_QUERY) {
-			results = []
-			search = 'idle'
-			return
-		}
-		search = 'searching'
-		timer = setTimeout(async () => {
-			try {
-				const found = await searchPlaces(text, lang)
-				if (request !== asked) return
-				results = found
-				search = 'done'
-			} catch {
-				if (request !== asked) return
-				results = []
-				search = 'failed'
-			}
-		}, SEARCH_DELAY_MS)
-	}
-
 	function onlocation(item: MenuItem) {
-		if (item.id !== 'change') return
-		query = ''
-		results = []
-		search = 'idle'
-		finding = true
-	}
-
-	function choose(place: PlaceResult) {
-		finding = false
-		settings.setHome(homeFrom(place))
-		// The substrate derives `home-area` from the home the owner chose (D-38); the profile is the shell's.
-		void profile.syncHomeArea(settings.home)
-		void weather.load()
+		if (item.id === 'change') homeUi.show()
 	}
 
 	/** Each category's step on the six-step scale: the dot's colour beside the word. */
@@ -200,7 +152,7 @@
 			speed: value,
 			unit: $t(`domains.weather.units.${unit}`),
 			from: $t(`domains.weather.compass.${compass(now.windDirection)}`),
-			place: settings.home.label,
+			place: homeName,
 		}
 		return {
 			bearing: (now.windDirection + 180) % 360,
@@ -902,47 +854,6 @@
 	</div>
 </div>
 
-<Sheet bind:open={finding} size="sm" label={$t('domains.weather.place.title')}>
-	{#snippet header()}
-		<h2 class="sheet-title">{$t('domains.weather.place.title')}</h2>
-	{/snippet}
-	<div class="finder">
-		<Field
-			label={$t('domains.weather.place.find')}
-			bind:value={query}
-			icon="search"
-			placeholder={$t('domains.weather.place.placeholder')}
-			helper={$t('domains.weather.place.helper')}
-			oninput={onquery}
-		/>
-		<div aria-live="polite">
-			{#if search === 'searching'}
-				<p class="quiet">{$t('domains.weather.place.searching')}</p>
-			{:else if search === 'failed'}
-				<p class="quiet">{$t('domains.weather.place.failed', { values: { source: 'Open-Meteo' } })}</p>
-			{:else if search === 'done' && !results.length}
-				<p class="quiet">{$t('domains.weather.place.none')}</p>
-			{/if}
-		</div>
-		{#if results.length}
-			<ul class="places" aria-label={$t('domains.weather.place.results')}>
-				{#each results as place (place.id)}
-					<li>
-						<Button
-							variant="quiet"
-							icon="map-pin"
-							label={place.region
-								? $t('domains.weather.place.result', { values: { name: place.name, region: place.region } })
-								: place.name}
-							onclick={() => choose(place)}
-						/>
-					</li>
-				{/each}
-			</ul>
-		{/if}
-	</div>
-</Sheet>
-
 <style>
 	/* The page fills its region, so the sources keep to its foot with the room above them, not beneath: the page
 	   reaches down through the region's own bottom padding, leaving a breath above the status bar */
@@ -1264,25 +1175,6 @@
 	}
 	.source :global(.source-icon) {
 		flex: none;
-	}
-	.sheet-title {
-		margin: 0;
-		font: var(--ed-t-title-lg);
-		color: var(--text-primary);
-	}
-	.finder {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-4);
-	}
-	.places {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		gap: var(--space-1);
-		margin: 0;
-		padding: 0;
-		list-style: none;
 	}
 	/* The pollutants two abreast: a name and its figure, twice a row */
 	.fields.pollutants {

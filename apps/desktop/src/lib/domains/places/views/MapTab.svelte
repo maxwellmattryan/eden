@@ -44,6 +44,7 @@
 	import { categoryNamer, vibeNamer } from '../words'
 	import FilterPanel from './FilterPanel.svelte'
 	import FindMore from './FindMore.svelte'
+	import HomeCard from './HomeCard.svelte'
 	import PlaceDetail from './PlaceDetail.svelte'
 	import SuggestionDetail from './SuggestionDetail.svelte'
 
@@ -68,8 +69,10 @@
 	/** What the Gardener found and the owner has not saved: green pins, and a list of their own. */
 	const found = $derived(meadow.suggestions)
 	const suggestion = $derived(place ? undefined : found.find((entry) => entry.id === picked))
-	/** Something is picked: a saved place or a found one. */
-	const open = $derived(place !== undefined || suggestion !== undefined)
+	/** The home's own pin is picked: its card says where home is and opens the sheet that changes it (D-143). */
+	const homeOpen = $derived(picked === 'home' && meadow.area.kind === 'home')
+	/** Something is picked: a saved place, a found one or the home. */
+	const open = $derived(place !== undefined || suggestion !== undefined || homeOpen)
 	const lang = $derived($locale ?? 'en')
 
 	/** A saved place the owner is moving by a click on the map. */
@@ -104,7 +107,7 @@
 	const allPins = $derived<Pin[]>([
 		{
 			id: 'home',
-			point: meadow.origin,
+			point: meadow.originPin,
 			kind: 'home',
 			label: meadow.area.kind === 'home' ? home.label : meadow.area.label,
 		},
@@ -202,6 +205,16 @@
 		})
 	})
 
+	// effect: imperative DOM (the map goes to the home when the home moves, so its pin is not left out of sight)
+	let stood = meadow.originPin
+	$effect(() => {
+		const at = meadow.originPin
+		const live = surface
+		if (!live || (at.lng === stood.lng && at.lat === stood.lat)) return
+		stood = at
+		untrack(() => live.setView({ center: at }))
+	})
+
 	/** A place a tile, a tool or another tab asked for is picked once the store holds it. */
 	$effect(() => {
 		const id = meadow.reveal
@@ -215,8 +228,14 @@
 	let back = $state<HTMLElement>()
 
 	function pick(id: string | undefined) {
-		if (id === 'home' || id === undefined) {
+		// the pin of a searched area is only a mark; the home's own opens its card
+		if (id === undefined || (id === 'home' && meadow.area.kind !== 'home')) {
 			picked = undefined
+			return
+		}
+		if (id === 'home') {
+			picked = id
+			void showPushed(() => back)
 			return
 		}
 		const group = pins.find((pin) => pin.id === id && pin.kind === 'group')
@@ -348,6 +367,8 @@
 		/>
 	{:else if suggestion}
 		<SuggestionDetail {suggestion} {closable} onclose={() => pick(undefined)} onsaved={(id) => (picked = id)} />
+	{:else if homeOpen}
+		<HomeCard {closable} onclose={() => pick(undefined)} />
 	{/if}
 {/snippet}
 
@@ -397,7 +418,11 @@
 			{/if}
 		</div>
 		{#if open && overlay}
-			<aside class="over" aria-label={place?.name ?? suggestion?.candidate.name} bind:clientWidth={detailWidth}>
+			<aside
+				class="over"
+				aria-label={place?.name ?? suggestion?.candidate.name ?? home.label}
+				bind:clientWidth={detailWidth}
+			>
 				{@render detail(true)}
 			</aside>
 		{/if}

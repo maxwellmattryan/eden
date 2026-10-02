@@ -28,6 +28,10 @@ export type { ToastAction, ToastItem, ToastOptions } from './toast/toast.svelte.
 
 // Primitives
 export { default as Field } from './components/Field/Field.svelte'
+export { default as Select } from './components/Select/Select.svelte'
+export type { SelectGroup, SelectOption } from './components/Select/Select.svelte'
+export { default as AddressForm } from './components/AddressForm/AddressForm.svelte'
+export type { AddressFieldSpec, AddressFormKey, AddressFormValue } from './components/AddressForm/AddressForm.svelte'
 export { default as Segmented } from './components/Segmented/Segmented.svelte'
 export type { SegmentedItem } from './components/Segmented/Segmented.svelte'
 export { default as Toggle } from './components/Toggle/Toggle.svelte'

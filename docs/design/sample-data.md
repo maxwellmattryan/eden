@@ -9,7 +9,7 @@ updated: 2026-10-01
 
 ## The owner
 
-Rowan Hale, they/them, a developer in Austin, Texas. Home is a `home` Place in Hyde Park, Austin; `home-area` derives to Austin, Texas, US. Preferred name "Rowan". Locale `en`, second locale `ja` for screenshots of the Japanese UI. The week shown everywhere is Monday 2026-09-28 to Sunday 2026-10-04; "today" is Wednesday 2026-09-30, 07:40.
+Rowan Hale, they/them, a developer in Austin, Texas. Home is a `home` Place in Hyde Park, Austin, at 4301 Duval St, Austin, TX 78751 (`homeAddress`; `homeAddressJa` is a Shibuya address for the Japanese form); `home-area` derives to Austin, Texas, US. The address form's fields for four countries are `addressForms` (US, JP, DE, and BR for the plain layout), over the countries in `addressCountries`. Preferred name "Rowan". Locale `en`, second locale `ja` for screenshots of the Japanese UI. The week shown everywhere is Monday 2026-09-28 to Sunday 2026-10-04; "today" is Wednesday 2026-09-30, 07:40.
 
 ## Facts
 

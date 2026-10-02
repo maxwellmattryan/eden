@@ -3,6 +3,21 @@
 // anything and nothing is stored: the caller keeps the image as an Attachment and the square on its row. Hearth's
 // recipes and Meadow's places share it.
 
+/** The pictures an owner may choose: what the webview decodes, HEIC included. */
+export const PICTURE_ACCEPT = [
+	'image/jpeg',
+	'image/png',
+	'image/webp',
+	'image/heic',
+	'image/heif',
+	'.jpg',
+	'.jpeg',
+	'.png',
+	'.webp',
+	'.heic',
+	'.heif',
+]
+
 /** A row's picture is small: it is shown at a row's height and kept in its row. */
 const THUMB_EDGE = 192
 

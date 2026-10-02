@@ -30,7 +30,7 @@ export function seedData(): MeadowData {
 				...(place.alcoholFree !== undefined ? { alcoholFree: place.alcoholFree } : {}),
 				favourite: place.favourite,
 				...(place.notes ? { notes: place.notes } : {}),
-				addressLine: place.address,
+				address: { country: 'US', line1: place.address, city: 'Austin', region: 'TX' },
 				locality: place.locality,
 				providerIds: {},
 				...(text ? { hours: { source: 'sample', asOf, text, spec: parseOpeningHours(text) } } : {}),

@@ -1,6 +1,7 @@
 // Meadow's shapes (product/domains/places.md; D-133). A saved place is two rows of the owner's: a `venue` Place and
 // the `place-profile` linked `about` it. What is found and not saved is a mirror of this device. The payloads here
 // are what the rows hold; the store joins a Place and its profile into a `SavedPlace` for the page.
+import type { Address } from '../../address/index.js'
 import type { LngLat } from '../../geo/index.js'
 import type { WeekHours } from './hours.js'
 
@@ -50,8 +51,11 @@ export interface PlaceProfilePayload {
 	alcoholFree?: boolean
 	favourite: boolean
 	notes?: string
-	/** A public address line; the Place's own `address` is T2 and only ever typed by hand. */
+	/** The public address, in its parts (D-138); the Place's own `address` is T2 and only ever typed by hand. */
+	address?: Address
+	/** The address as one line, from before it had parts: read as the first line, never written. */
 	addressLine?: string
+	/** The part of town, as Meadow's lists name it. */
 	locality?: string
 	/** The place's ids at its sources: `{ osm: 'N123' }`. */
 	providerIds: Record<string, string>
@@ -179,7 +183,7 @@ export interface SavedPlace {
 	alcoholFree?: boolean
 	favourite: boolean
 	notes?: string
-	addressLine?: string
+	address?: Address
 	locality?: string
 	providerIds: Record<string, string>
 	hours?: PlaceHours
@@ -242,7 +246,7 @@ export interface PlaceDraft {
 	alcoholFree?: boolean
 	favourite?: boolean
 	notes?: string
-	addressLine?: string
+	address?: Address
 	locality?: string
 	providerIds?: Record<string, string>
 	hours?: PlaceHours

@@ -26,6 +26,8 @@
 		"./domains/toolbench": "./src/domains/toolbench/index.ts",
 		"./domains/places": "./src/domains/places/index.ts",
 		"./geo": "./src/geo/index.ts",
+		"./address": "./src/address/index.ts",
+		"./home": "./src/home/index.ts",
 		"./dates": "./src/dates/index.ts",
 		"./recurrence": "./src/recurrence/index.ts",
 		"./tasks": "./src/tasks/index.ts",

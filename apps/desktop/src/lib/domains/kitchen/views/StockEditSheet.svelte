@@ -12,8 +12,8 @@
 	import { undoToast } from '$lib/shell/undo'
 	import { linkedPicture, squarePicture } from '../staging.svelte'
 	import { categoryGlyph } from '../words'
-	import PictureDrop from './PictureDrop.svelte'
-	import PictureInput from './PictureInput.svelte'
+	import PictureDrop from '$lib/components/PictureDrop.svelte'
+	import PictureInput from '$lib/components/PictureInput.svelte'
 	import { LOCATIONS, kitchen, type StockItem, type StockLocation, type StockPatch } from '../store.svelte'
 
 	type Props = {

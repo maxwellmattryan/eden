@@ -1,6 +1,7 @@
 // Between Meadow's shapes and its rows (D-133). A saved place is a `venue` Place and a `place-profile` linked `about`
 // it: `joinPlaces` reads the two back as one `SavedPlace`, and the functions below answer the writes that store one,
 // change one and take one away, so the store and the sample data make the same rows.
+import { cleanAddress, readAddress, type Address } from '../../address/index.js'
 import { toUri, type BatchOp, type Entity, type PlaceInput, type PlacePatch, type PlaceRow } from '../../data/index.js'
 import {
 	MEADOW,
@@ -25,6 +26,7 @@ export const profileUri = (id: string) => toUri(MEADOW.profile, id)
 /** A profile as it is stored: what is not set is left out, so a row holds no empty strings. */
 export function profilePayload(place: SavedPlace | (PlaceDraft & { id: string })): PlaceProfilePayload {
 	const saved = place as Partial<SavedPlace> & PlaceDraft
+	const address = cleanAddress(place.address)
 	return {
 		placeId: place.id,
 		vibes: [...place.vibes],
@@ -32,7 +34,7 @@ export function profilePayload(place: SavedPlace | (PlaceDraft & { id: string })
 		...(place.alcoholFree !== undefined ? { alcoholFree: place.alcoholFree } : {}),
 		favourite: place.favourite === true,
 		...(place.notes?.trim() ? { notes: place.notes.trim() } : {}),
-		...(place.addressLine?.trim() ? { addressLine: place.addressLine.trim() } : {}),
+		...(address ? { address } : {}),
 		...(place.locality?.trim() ? { locality: place.locality.trim() } : {}),
 		providerIds: { ...(place.providerIds ?? {}) },
 		...(place.hours ? { hours: place.hours } : {}),
@@ -72,6 +74,7 @@ export function placePatch(place: SavedPlace): PlacePatch {
 
 /** A draft as the saved place it becomes, with the ids its two rows will have. */
 export function draftPlace(id: string, profileId: string, draft: PlaceDraft): SavedPlace {
+	const address = cleanAddress(draft.address)
 	return {
 		id,
 		profileId,
@@ -85,7 +88,7 @@ export function draftPlace(id: string, profileId: string, draft: PlaceDraft): Sa
 		...(draft.alcoholFree !== undefined ? { alcoholFree: draft.alcoholFree } : {}),
 		favourite: draft.favourite === true,
 		...(draft.notes?.trim() ? { notes: draft.notes.trim() } : {}),
-		...(draft.addressLine?.trim() ? { addressLine: draft.addressLine.trim() } : {}),
+		...(address ? { address } : {}),
 		...(draft.locality?.trim() ? { locality: draft.locality.trim() } : {}),
 		providerIds: { ...(draft.providerIds ?? {}) },
 		...(draft.hours ? { hours: draft.hours } : {}),
@@ -117,6 +120,9 @@ export function placeUris(place: Pick<SavedPlace, 'id' | 'profileId'>): string[]
 export function toSavedPlace(place: PlaceRow, profile?: Entity<PlaceProfilePayload>): SavedPlace {
 	const payload = profile?.payload
 	const has = place.lat !== null && place.lng !== null
+	// a profile from before addresses had parts holds one line, read as the first (D-138)
+	const address: Address | undefined =
+		readAddress(payload?.address) ?? (payload?.addressLine ? { line1: payload.addressLine } : undefined)
 	return {
 		id: place.id,
 		...(profile ? { profileId: profile.id } : {}),
@@ -130,7 +136,7 @@ export function toSavedPlace(place: PlaceRow, profile?: Entity<PlaceProfilePaylo
 		...(payload?.alcoholFree !== undefined ? { alcoholFree: payload.alcoholFree } : {}),
 		favourite: payload?.favourite === true,
 		...(payload?.notes ? { notes: payload.notes } : {}),
-		...(payload?.addressLine ? { addressLine: payload.addressLine } : {}),
+		...(address ? { address } : {}),
 		...(payload?.locality ? { locality: payload.locality } : {}),
 		providerIds: { ...(payload?.providerIds ?? {}) },
 		...(payload?.hours ? { hours: payload.hours } : {}),

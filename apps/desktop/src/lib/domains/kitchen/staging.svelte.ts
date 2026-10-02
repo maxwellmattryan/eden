@@ -18,6 +18,7 @@ import {
 	cropDataUrl,
 	fetchImage,
 	fetchPage,
+	linkedSizedPicture,
 	logError,
 	sizedPicture,
 	webErrorCode,
@@ -28,7 +29,6 @@ import {
 	guessedIcons,
 	htmlToText,
 	iconAddresses,
-	pageImage,
 	storeDetails,
 	type StoreDetails,
 	pictureAddress,
@@ -255,21 +255,6 @@ export async function storeLogo(url: string): Promise<string | undefined> {
 	return (await storeSite(url)).image
 }
 
-/** The pictures an owner may choose for an item or a store: what the webview decodes, HEIC included. */
-export const PICTURE_ACCEPT = [
-	'image/jpeg',
-	'image/png',
-	'image/webp',
-	'image/heic',
-	'image/heif',
-	'.jpg',
-	'.jpeg',
-	'.png',
-	'.webp',
-	'.heic',
-	'.heif',
-]
-
 /** A picture the owner chose for an item: the middle square of their photo, small. HEIC is taken like any other. */
 export async function squarePicture(photo: Blob): Promise<string | undefined> {
 	let bitmap: ImageBitmap | undefined
@@ -296,24 +281,7 @@ export const recipePicture = (photo: Blob): Promise<RecipePicture | undefined> =
  */
 export async function linkedRecipePicture(link: string): Promise<RecipePicture | undefined> {
 	const address = pictureAddress(link)
-	if (!address) return undefined
-	const fetched = async (url: string) => recipePicture(new Blob([(await fetchImage(url)) as Uint8Array<ArrayBuffer>]))
-	try {
-		return await fetched(address)
-	} catch (error) {
-		if (webErrorCode(error) !== 'web:not-image') {
-			void logError('web', 'A picture could not be fetched', webErrorCode(error)).catch(() => null)
-			return undefined
-		}
-	}
-	try {
-		const page = await fetchPage(address)
-		const named = pageImage(page.html, page.url)
-		return named ? await fetched(named) : undefined
-	} catch (error) {
-		void logError('web', "A page's picture could not be fetched", webErrorCode(error)).catch(() => null)
-		return undefined
-	}
+	return address ? linkedSizedPicture(address) : undefined
 }
 
 const asText = (text: string) => new Blob([text.slice(0, TEXT_MAX_BYTES)], { type: 'text/plain' })

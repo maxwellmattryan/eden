@@ -24,6 +24,8 @@ interface PhotonFeature {
 		city?: string
 		state?: string
 		country?: string
+		postcode?: string
+		countrycode?: string
 	}
 }
 
@@ -43,15 +45,19 @@ export function photonUrl(query: GeocodeQuery): string {
 	return `${PHOTON_URL}?${params.toString()}`
 }
 
-/** One answer as a hit; nothing for an answer with no name or no point. */
-export function photonHit(feature: PhotonFeature): GeocodeHit | undefined {
+/**
+ * One answer as a hit; nothing for an answer with no name or no point. A street or a house has no name, so when
+ * an address is what was asked for (`address`) it is named by its address line instead.
+ */
+export function photonHit(feature: PhotonFeature, address = false): GeocodeHit | undefined {
 	const properties = feature.properties ?? {}
 	const [lng, lat] = feature.geometry?.coordinates ?? []
-	if (!properties.name || typeof lng !== 'number' || typeof lat !== 'number') return undefined
-	const point: LngLat = { lng, lat }
 	const line = [properties.housenumber, properties.street].filter(Boolean).join(' ')
+	const name = properties.name || (address ? line : '')
+	if (!name || typeof lng !== 'number' || typeof lat !== 'number') return undefined
+	const point: LngLat = { lng, lat }
 	return {
-		name: properties.name,
+		name,
 		point,
 		source: 'osm',
 		// the object's type and number, as OpenStreetMap writes them together: N123, W456, R789
@@ -65,6 +71,11 @@ export function photonHit(feature: PhotonFeature): GeocodeHit | undefined {
 				: {}),
 		...(properties.state ? { region: properties.state } : {}),
 		...(properties.country ? { country: properties.country } : {}),
+		...(properties.street ? { street: properties.street } : {}),
+		...(properties.housenumber ? { houseNumber: properties.housenumber } : {}),
+		...(properties.city ? { city: properties.city } : {}),
+		...(properties.postcode ? { postalCode: properties.postcode } : {}),
+		...(properties.countrycode ? { countryCode: properties.countrycode.toUpperCase() } : {}),
 	}
 }
 
@@ -80,7 +91,7 @@ export function createPhoton(get: Get = getJson): Geocoder {
 			if (!query.text.trim()) return []
 			const answer = await get<{ features?: PhotonFeature[] }>('Photon', 'photon', photonUrl(query))
 			return (answer.features ?? [])
-				.flatMap((feature) => photonHit(feature) ?? [])
+				.flatMap((feature) => photonHit(feature, query.address) ?? [])
 				.filter((hit) => !query.within || withinBounds(hit.point, query.within))
 		},
 	}

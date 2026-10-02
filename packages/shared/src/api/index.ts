@@ -16,7 +16,8 @@ export {
 	pageTitle,
 	type BusinessDetails,
 } from './html.js'
-export { cropDataUrl, sizedPicture, type SizedPicture } from './picture.js'
+export { cropDataUrl, PICTURE_ACCEPT, sizedPicture, type SizedPicture } from './picture.js'
+export { linkedSizedPicture } from './linked-picture.js'
 export {
 	clearDiagnosticEntries,
 	getDiagnosticEntries,

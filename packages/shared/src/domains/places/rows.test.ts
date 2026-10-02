@@ -9,6 +9,7 @@ import {
 	profilePayload,
 	saveOps,
 	sortVisits,
+	toSavedPlace,
 } from './rows.js'
 import type { MeadowData, PlaceProfilePayload } from './types.js'
 
@@ -44,7 +45,7 @@ describe('a saved place and its two rows', () => {
 		vibes: ['cozy', 'outdoors'],
 		price: 2 as const,
 		notes: '  Good porch. ',
-		addressLine: '121 Pickle Rd',
+		address: { country: 'US', line1: ' 121 Pickle Rd ', city: 'Austin', region: 'Texas', postalCode: '78704' },
 		providerIds: { osm: 'W929874401' },
 		url: 'https://example.com',
 	}
@@ -86,7 +87,7 @@ describe('a saved place and its two rows', () => {
 						price: 2,
 						favourite: false,
 						notes: 'Good porch.',
-						addressLine: '121 Pickle Rd',
+						address: { country: 'US', line1: '121 Pickle Rd', city: 'Austin', region: 'TX', postalCode: '78704' },
 						providerIds: { osm: 'W929874401' },
 					},
 				},
@@ -110,7 +111,24 @@ describe('a saved place and its two rows', () => {
 			url: null,
 		})
 		expect(placePatch(place)).not.toHaveProperty('address')
-		expect(profilePayload(place)).not.toHaveProperty('address')
+		// the public address is the profile's, in its parts (D-138); the old one-line key is never written
+		expect(profilePayload(place).address).toEqual({
+			country: 'US',
+			line1: '121 Pickle Rd',
+			city: 'Austin',
+			region: 'TX',
+			postalCode: '78704',
+		})
+		expect(profilePayload(place)).not.toHaveProperty('addressLine')
+	})
+
+	it('reads a profile from before addresses had parts: its line is the first line', () => {
+		const old = toSavedPlace(
+			row({ id: 'P1', name: 'Cosmic Coffee' }),
+			profile('F1', { placeId: 'P1', vibes: [], favourite: false, addressLine: '121 Pickle Rd', providerIds: {} })
+		)
+		expect(old.address).toEqual({ line1: '121 Pickle Rd' })
+		expect(profilePayload(old)).toMatchObject({ address: { line1: '121 Pickle Rd' } })
 	})
 
 	it('reads back as one, by name; a venue with no profile is a plain place', () => {

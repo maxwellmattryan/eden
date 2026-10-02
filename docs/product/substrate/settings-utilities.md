@@ -4,7 +4,7 @@ status: draft
 summary: The settings modal and its tabs, appearance, language, the updater, diagnostics and crash handling, data actions, keyboard shortcuts, the Domains tab, and what each reuses from Crate.
 read-this-if: You are designing a settings screen or a utility every app needs.
 depends-on: [shell, data, ai, grants]
-updated: 2026-09-30
+updated: 2026-10-01
 ---
 
 ## Settings modal
@@ -13,7 +13,7 @@ Desktop: a modal with a left tab rail, deep-linkable to a tab, following Crate's
 
 | tab | contents | phase |
 |---|---|---|
-| General | language, measurement system, week start and clock (D-58), date formats, timezone, work hours (D-27), run setup again | 1 |
+| General | language, the home (a row that opens the change-home sheet, D-143), measurement system, week start and clock (D-58), date formats, timezone, work hours (D-27), run setup again | 1 |
 | Appearance | theme light, dark or system; accent; font; zoom; reduced motion; sidebar density and subtitles | 1 |
 | Domains | enable, disable, reorder, hide; an experimental section for candidates and plugins (OQ-13) | 1 |
 | Gardener | providers and keys on this device; each provider's models and its map from grade to model (D-74), edited over the seed (`effectiveProvider`, `validateProvider` in `@eden/shared/gardener`); the conversation's default grade; per-domain and per-tool overrides, each naming a model; choosing a model dearer than the seeded one for its grade says by how much (`priceRatio`) and asks first; budgets and the pricing table, the audit log, Council defaults | 1 (Council 2) |

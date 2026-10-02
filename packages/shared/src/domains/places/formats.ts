@@ -1,6 +1,7 @@
 // Meadow's data in formats made for reading, for its bundle (product/substrate/data.md, "Export"): the places as CSV
 // and as Markdown with their notes and visits, the collections as Markdown. The headings are part of the format and
 // are not translated. A distance and a price as the page writes them are here too.
+import { formatAddress, countryName, regionName, type Address } from '../../address/index.js'
 import type { BundleExtra } from '../../data/bundle.js'
 import { inline, toCsv, toMarkdown } from '../../data/text.js'
 import type { MeadowData, PriceLevel } from './types.js'
@@ -16,15 +17,37 @@ export function distanceLabel(km: number | undefined, unit: 'km' | 'mi' = 'km'):
 	return `${value < 10 ? value.toFixed(1) : Math.round(value)} ${unit}`
 }
 
-/** A link that opens a place in a maps app: by its coordinates where it has them, by its name otherwise. */
+/**
+ * Where a saved place is, in a line: its address as its country writes one, and the part of town when the address
+ * does not already say it.
+ */
+export function placeAddress(place: { address?: Address; locality?: string }, locale = 'en'): string {
+	const line = formatAddress(place.address, { locale })
+	const part = place.locality && !line.toLowerCase().includes(place.locality.toLowerCase()) ? place.locality : ''
+	return [line, part].filter(Boolean).join(' · ')
+}
+
+/**
+ * A link that opens a place in a maps app: by its coordinates where it has them, by its name otherwise. A saved
+ * place gives its address in parts, a found one the line its source wrote.
+ */
 export function mapsLink(
-	place: { name: string; point?: { lng: number; lat: number }; addressLine?: string; locality?: string },
+	place: {
+		name: string
+		point?: { lng: number; lat: number }
+		address?: Address
+		addressLine?: string
+		locality?: string
+	},
 	app: 'apple' | 'google' | 'osm' = 'apple'
 ): string {
-	const query = [place.name, place.addressLine, place.locality].filter(Boolean).join(', ')
+	const line = place.address ? formatAddress(place.address) : place.addressLine
+	const query = [place.name, line, line?.includes(place.locality ?? '\n') ? undefined : place.locality]
+		.filter(Boolean)
+		.join(', ')
 	const at = place.point ? `${place.point.lat.toFixed(5)},${place.point.lng.toFixed(5)}` : undefined
 	if (app === 'google') {
-		return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(at && !place.addressLine ? at : query)}`
+		return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(at && !line ? at : query)}`
 	}
 	if (app === 'osm') {
 		return at
@@ -42,6 +65,10 @@ export function meadowExtras(data: MeadowData, vibeName: (id: string) => string 
 			'category',
 			'address',
 			'locality',
+			'city',
+			'region',
+			'postal code',
+			'country',
 			'latitude',
 			'longitude',
 			'price',
@@ -54,8 +81,12 @@ export function meadowExtras(data: MeadowData, vibeName: (id: string) => string 
 		data.places.map((place) => [
 			place.name,
 			place.category ?? '',
-			place.addressLine ?? '',
+			formatAddress(place.address),
 			place.locality ?? '',
+			place.address?.city ?? '',
+			regionName(place.address?.country, place.address?.region),
+			place.address?.postalCode ?? '',
+			place.address?.country ? countryName(place.address.country) : '',
 			place.point?.lat ?? '',
 			place.point?.lng ?? '',
 			priceLabel(place.price),
@@ -72,9 +103,7 @@ export function meadowExtras(data: MeadowData, vibeName: (id: string) => string 
 			heading: place.name,
 			lines: [
 				place.category ? `- Category: ${inline(place.category)}` : undefined,
-				place.addressLine || place.locality
-					? `- Address: ${inline([place.addressLine, place.locality].filter(Boolean).join(', '))}`
-					: undefined,
+				placeAddress(place) ? `- Address: ${inline(placeAddress(place))}` : undefined,
 				place.price ? `- Price: ${priceLabel(place.price)}` : undefined,
 				place.vibes.length ? `- Vibes: ${inline(place.vibes.map(vibeName).join(', '))}` : undefined,
 				place.favourite ? '- Favourite' : undefined,

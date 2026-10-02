@@ -58,7 +58,7 @@ D-128 to D-136 record the decisions and `product/domains/places.md` what Meadow 
 
 A discovery or listings source has `available(query)`, which answers who would run it and the estimate or why it cannot be asked, and `discover(query)` or `fetch(query)`, which answers a `SourceFailure` when nothing came. The query carries the area in words (`areaWords`: a city and its region), never a `SearchArea` or a coordinate. Another source, a keyed one included, is a file, an entry in a registry, its hosts in the CSP and its destination in the ledger; no view and no store changes.
 
-**Home** is read by one function, `readHome()` in `home.ts`: the label, the rounded point and the area from `settings.home`. `areaPoint` and `areaWords` go through it. `SearchArea` is `home` or `named` (a label, a point, and a city and region when the geocoder gave them).
+**Home** is read by one function, `readHome()` in `home.ts`, from the home store (`@eden/shared/home`, D-141): the label, the rounded point (`point`: where the map opens and what a search looks near), the exact one (`exact`: the home pin and distances, `meadow.originPin`, D-142) and the area its address names. The home pin opens `HomeCard`, whose button opens the shell's change-home sheet (D-143); the map goes to the home when it moves. `areaPoint` and `areaWords` go through it. `SearchArea` is `home` or `named` (a label, a point, and a city and region when the geocoder gave them).
 
 ## Discovery
 
@@ -151,6 +151,7 @@ The store and the views have no unit tests. In the browser build the scripted tr
 - Web search through the crate's adapter with a live key: that the request is accepted, that the light model the development clamp uses takes it, what a search costs against the estimate.
 - Photon and Overpass from the webview under the CSP.
 - The page and picture fetch for a place (`web:unavailable` in the browser build), and the picture kept as a `place-photo`.
+- A place's picture from a link (D-144): `linkedSizedPicture` throws `web:unavailable` in the browser build, so only the menu, the panel and its failure toast were seen. A picture dropped on the form or pasted into it was not driven either.
 - The weekly run on a real Sunday, and `add-to-calendar` from a live conversation.
 - The phone's views on a simulator or a device: they were driven in the browser build at 1421 only. On 2026-10-01 `tauri ios dev` for the simulator stopped in the crate's build script, where `swift-rs` could not compile Sky's `EdenWeatherKit` package against the simulator SDK, before any of Meadow's code ran.
 - The installed app.
@@ -158,7 +159,8 @@ The store and the views have no unit tests. In the browser build the scripted tr
 ## Handoffs
 
 - **Google's place card (OQ-24).** A `DetailSource` on the `card` slot, registered in `DETAIL_SOURCES`, with `secret` naming its key and a destination in the ledger; `rating` is open the same way. The slot's data is `unknown` today and nothing draws it: the detail views need a place for the card. Google's map would be a `MapSource` beside `maplibre.ts`, and its places a `DiscoverySource`.
-- **The home Place (D-38).** `readHome()` in `home.ts` is the only reader of home in Meadow. When home is a Place row it reads that row's point, and the `home` pin becomes that row. Sky's part is in `engineering/data-layer.md`, "Sky's mirrors".
+- **Changing home on the phone (OQ-25, #19).** The change-home sheet is the desktop shell's (`apps/desktop/src/lib/shell/home/`): the phone's home pin is a mark (`pick('home')` returns early in the mobile `Meadow.svelte`) and no geocoder is bound there. The phone needs the sheet in its own shell, `photon` given at `bind`, and the kit's `AddressForm`, which already lays out one column on a phone.
+- **A found place's address.** A `PlaceCandidate` keeps the line its source wrote (`addressLine`), and saving one keeps it as the first line of the address (`#draftOf` in `store.svelte.ts`). The geocoder's hit for the candidate has the parts (`addressFromHit`); `receive` could keep them on the candidate so a saved suggestion starts with a whole address.
 - **Precise location.** Not built on either app: "near me" is distance from home or from a named area. It needs `tauri-plugin-geolocation` under the `mobile` cargo feature, the iOS and Android permission strings, the `location-precise` device capability in the manifest with its grant, and `SearchArea` gaining a `device` kind that `areaPoint` and `areaWords` answer. D-131 holds: the device's point moves the map only under the grant, and what leaves is still rounded. Desktop needs its own way to a location.
 - **Bundled glyphs and offline tiles.** If glyphs from the tile host fail under the CSP, bundle a few ranges of an OFL font and point `GLYPHS` at the app's origin. No tile is cached: offline, the pins stand on plain ground. A cache, or self-hosted tiles, is another `MapSource` or a layer in this one.
 - **The estimate.** `SEARCH_RESULT_TOKENS` and the notes allowance are round figures until the first live searches (`engineering/gardener.md`, "Budgets and estimates").

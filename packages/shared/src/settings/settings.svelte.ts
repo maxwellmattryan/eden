@@ -16,7 +16,6 @@ import {
 import { GRADES } from '../gardener/types.js'
 import { setLanguage as setI18nLanguage } from '../i18n/index.js'
 import {
-	DEFAULT_HOME,
 	clockFormats,
 	fontSettings,
 	languages,
@@ -27,8 +26,6 @@ import {
 	weekStarts,
 	type ClockFormat,
 	type FontSetting,
-	type HomeArea,
-	type HomePlace,
 	type Language,
 	type MapsApp,
 	type MeasurementSystem,
@@ -91,42 +88,9 @@ function oneOf<T extends string>(value: string | null, allowed: readonly T[], fa
 	return value !== null && (allowed as readonly string[]).includes(value) ? (value as T) : fallback
 }
 
-function isArea(value: unknown): value is HomeArea {
-	const area = value as HomeArea | null
-	return (
-		typeof area === 'object' &&
-		area !== null &&
-		typeof area.city === 'string' &&
-		typeof area.region === 'string' &&
-		typeof area.country === 'string'
-	)
-}
-
-function isHome(value: unknown): value is HomePlace {
-	const place = value as HomePlace | null
-	return (
-		typeof place === 'object' &&
-		place !== null &&
-		typeof place.label === 'string' &&
-		Number.isFinite(place.latitude) &&
-		Number.isFinite(place.longitude)
-	)
-}
-
-/** The home as it is kept: an area that is not one is dropped, the place itself stands. */
-function asHome(place: HomePlace): HomePlace {
-	const { label, latitude, longitude, area } = place
-	return isArea(area) ? { label, latitude, longitude, area } : { label, latitude, longitude }
-}
-
-function readHome(): HomePlace {
-	try {
-		const parsed: unknown = JSON.parse(read(storage.home) ?? 'null')
-		return isHome(parsed) ? asHome(parsed) : DEFAULT_HOME
-	} catch {
-		return DEFAULT_HOME
-	}
-}
+/** The home as a setting, from before it was a Place row (D-141): read once by the home store, then removed. */
+export const readLegacyHome = (): string | null => read(storage.home)
+export const clearLegacyHome = (): void => write(storage.home, null)
 
 export class Settings {
 	theme = $state<ThemeSetting>('system')
@@ -153,8 +117,6 @@ export class Settings {
 	placesWeekly = $state(true)
 	/** The detail sources the owner turned off, by id (D-128): each is on until it is here. */
 	placesDetailsOff = $state<string[]>([])
-	/** The home place Sky forecasts for, until Places exist (D-38). */
-	home = $state<HomePlace>(DEFAULT_HOME)
 	/** The grade the Gardener's conversation runs at until the owner switches it on the chip (D-74). */
 	gardenerGrade = $state<ModelGrade>('standard')
 	/** The Gardener's dock, in px, as the owner last dragged it; null until they do, and the dock takes its default. */
@@ -194,7 +156,6 @@ export class Settings {
 		this.gardenerPanelWidth = positiveInt(read(storage.gardenerPanelWidth))
 		this.sidebarWidth = positiveInt(read(storage.sidebarWidth))
 		this.sidebarCollapsed = read(storage.sidebarCollapsed) === 'on'
-		this.home = readHome()
 		this.resolvedTheme = this.resolveTheme(this.theme)
 		this.apply()
 		if (typeof window !== 'undefined' && window.matchMedia && !this.#media) {
@@ -349,11 +310,6 @@ export class Settings {
 	setSidebarCollapsed(collapsed: boolean) {
 		this.sidebarCollapsed = collapsed
 		write(storage.sidebarCollapsed, collapsed ? 'on' : null)
-	}
-
-	setHome(home: HomePlace) {
-		this.home = isHome(home) ? asHome(home) : DEFAULT_HOME
-		write(storage.home, JSON.stringify(this.home))
 	}
 
 	/** The choices as they are stored, by name: what an export bundle carries. A choice left at its default is absent. */

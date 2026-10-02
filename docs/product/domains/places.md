@@ -26,7 +26,7 @@ Meadow is the open space beyond the garden: where to go, what is happening, and 
 
 | entity | key fields | tier | links out |
 |---|---|---|---|
-| `place-profile` | what Meadow keeps about a saved `venue` Place: vibes, price, alcohol-free, favourite, notes, a public address line, provider ids, hours and rating with their source, its picture, where it was saved from | T1 | Place (`about`) |
+| `place-profile` | what Meadow keeps about a saved `venue` Place: vibes, price, alcohol-free, favourite, notes, its public address in parts (D-138) and its part of town, provider ids, hours and rating with their source, its picture, where it was saved from | T1 | Place (`about`) |
 | `vibe` | a custom vibe: label and facet. The bundled vibes are code, not rows | T0 | |
 | `collection` | name, places, note | T1 | Places |
 | `visit` | place, day, note, rating | T1 | Place (`at`) |
@@ -60,7 +60,7 @@ Read: `home-area` (substrate, T1), `dietary-preference` (Hearth, T1; includes al
 | `import-places` | `vibe`, `favorite-vibe` | write-draft; tags a pasted list of names with vibes, no search | none | `standard` |
 | `add-to-calendar` | `listing` | write, through the substrate `createEvent` (D-136) | confirm sheet | plain |
 
-How a search runs, what it costs and what it may not do is D-132; the page and picture of a place are D-135; the weekly listings search nobody pressed is D-134.
+How a search runs, what it costs and what it may not do is D-132; the page and picture of a place are D-135, and the picture the owner chooses for one, from a file or a link, is D-144; the weekly listings search nobody pressed is D-134.
 
 What a model receives: the filter, `home-area` or the area the owner typed, the names of saved places and the dietary facts under their grants. Never coordinates. A candidate gets a pin only if the geocoder finds it inside the search area; one it cannot find is listed as "could not be placed". Nothing is saved unasked.
 
@@ -68,7 +68,7 @@ Never-do list: never sends coordinates finer than city level to a model or provi
 
 ## 6. Surfaces
 
-**Desktop views**: Map (a large map, the filter panel, a results list, the place detail; saved pins and suggestion pins; "Find more" through the Gardener; bulk import by paste), Listings (this weekend, interested and going), Collections (a place is dragged into one, D-106), Visits. The page's shape is D-129. The filter panel holds the four facets of vibes, category, price, distance, collection, alcohol-free, open now, favourites and one line of free text; filtering saved places is local, with no key and no network. Forms are sheets (D-95): the place's form and the visit's.
+**Desktop views**: Map (a large map, the filter panel, a results list, the place detail; saved pins and suggestion pins; "Find more" through the Gardener; bulk import by paste), Listings (this weekend, interested and going), Collections (a place is dragged into one, D-106), Visits. The page's shape is D-129. The filter panel holds the four facets of vibes, category, price, distance, collection, alcohol-free, open now, favourites and one line of free text; filtering saved places is local, with no key and no network. Forms are sheets (D-95): the place's form, with the address form of D-137, and the visit's. The home pin opens a card with the home's address and "Change home" (D-143).
 
 **Import**: a pasted list of names (a note's bullets, numbers or checkboxes) is parsed on the device, each name geocoded, optionally tagged with vibes by the Gardener, reviewed row by row and saved as one change. A name the geocoder cannot find is placed by a click on the map. It works with no key.
 

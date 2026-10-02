@@ -24,7 +24,7 @@ updated: 2026-10-01
 | id | owner | tier | phase | value | notes |
 |---|---|---|---|---|---|
 | `preferred-name` | substrate | T1 | 1 | string | what greetings and the Gardener call you |
-| `home-area` | substrate | T1 | 1 | city, region, country | derived from the `home` Place (D-38); provenance `system-derived` |
+| `home-area` | substrate | T1 | 1 | city, region, country | derived from the `home` Place's address (D-38, D-141); provenance `system-derived` |
 
 ### Entity types
 
@@ -32,7 +32,7 @@ updated: 2026-10-01
 |---|---|---|---|---|
 | `task` | substrate | T1 | 1 | |
 | `event` | substrate | by kind | 1 | mirrored Events inherit their CalendarSource tier |
-| `place` | substrate | by kind | 1 | `address` field is T2 |
+| `place` | substrate | by kind | 1 | `address` field is T2; it holds the address's parts (D-138) |
 | `attachment` | substrate | by kind | 1 | T3 kinds live in the Vault |
 | `calendar-source` | substrate | T1 | 1 | local in Phase 1; Almanac adds external kinds |
 

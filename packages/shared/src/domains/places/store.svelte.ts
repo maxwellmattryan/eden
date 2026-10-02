@@ -39,7 +39,7 @@ import {
 } from './discovery.js'
 import { favouriteChanges, favouriteVibes } from './favorites.js'
 import { asFilter, distanceKm, filterPlaces, type FilterContext } from './filter.js'
-import { areaPoint, areaWords, asArea } from './home.js'
+import { areaPoint, areaWords, asArea, readHome } from './home.js'
 import { listingKey, listingWindow, type ListingsQuery, type ListingsSource } from './listings.js'
 import { outingInput, outingOf, outingStatus, toOuting, type OutingMark } from './outings.js'
 import {
@@ -194,8 +194,13 @@ export class MeadowStore {
 		(error) => void logError('data', 'A Meadow write failed', String(error)).catch(() => null)
 	)
 
-	/** Where distances are measured from and the map opens: home, or the area the owner searched. */
+	/** Where the map opens and searches look near: home, rounded, or the area the owner searched. */
 	readonly origin = $derived<LngLat>(areaPoint(this.area))
+	/**
+	 * Where the origin's pin stands and distances are measured from: the home itself, exactly, or the searched area.
+	 * It is used on the device only; what is sent is `origin`, the rounded point (D-60, D-142).
+	 */
+	readonly originPin = $derived<LngLat>(this.area.kind === 'home' ? readHome().exact : areaPoint(this.area))
 	readonly favourites = $derived(this.places.filter((place) => place.favourite))
 	/** The found places the page shows: not dismissed, and not saved since. */
 	readonly suggestions = $derived(
@@ -314,7 +319,7 @@ export class MeadowStore {
 		return id ? this.places.find((place) => place.providerIds[source] === id) : undefined
 	}
 	distanceTo(place: { point?: LngLat }): number | undefined {
-		return distanceKm(place, this.origin)
+		return distanceKm(place, this.originPin)
 	}
 
 	/** What the filter is held against. */
@@ -520,7 +525,8 @@ export class MeadowStore {
 			vibes: [...candidate.vibes],
 			...(candidate.price ? { price: candidate.price } : {}),
 			...(candidate.alcoholFree !== undefined ? { alcoholFree: candidate.alcoholFree } : {}),
-			...(candidate.addressLine ? { addressLine: candidate.addressLine } : {}),
+			// a source writes an address as one line; it is kept as the first until the owner gives it its parts
+			...(candidate.addressLine ? { address: { line1: candidate.addressLine } } : {}),
 			...(candidate.locality ? { locality: candidate.locality } : {}),
 			providerIds: { ...candidate.providerIds },
 			...(read

@@ -1511,3 +1511,127 @@ export const meadowMap = {
 		{ id: 'lake', text: 'Lady Bird Lake', at: [-97.724, 30.2465] },
 	] as { id: string; text: string; at: [number, number] }[],
 }
+
+/** The countries an address form offers: the suggested ones first, then every one (a few stand in for all here). */
+export const addressCountries = [
+	{
+		label: 'Suggested',
+		options: [
+			{ value: 'US', label: 'United States' },
+			{ value: 'JP', label: 'Japan' },
+			{ value: 'DE', label: 'Germany' },
+		],
+	},
+	{
+		label: 'All countries and regions',
+		options: [
+			{ value: 'BR', label: 'Brazil' },
+			{ value: 'DE', label: 'Germany' },
+			{ value: 'JP', label: 'Japan' },
+			{ value: 'US', label: 'United States' },
+		],
+	},
+]
+
+type AddressSampleField = {
+	key: 'line1' | 'line2' | 'city' | 'region' | 'postalCode'
+	label: string
+	required?: boolean
+	error?: string
+	placeholder?: string
+	autocomplete?: string
+	inputmode?: 'numeric' | 'text'
+	options?: { value: string; label: string }[]
+}
+
+/** The address form as four countries ask it, and the owner's home (Hyde Park, Austin) written in the first. */
+export const addressForms: Record<'US' | 'JP' | 'DE' | 'BR', { countryLabel: string; rows: AddressSampleField[][] }> = {
+	US: {
+		countryLabel: 'Country or region',
+		rows: [
+			[{ key: 'line1', label: 'Street address', autocomplete: 'address-line1' }],
+			[{ key: 'line2', label: 'Apartment, suite or unit', autocomplete: 'address-line2' }],
+			[{ key: 'city', label: 'City', required: true, autocomplete: 'address-level2' }],
+			[
+				{
+					key: 'region',
+					label: 'State',
+					placeholder: 'Choose',
+					autocomplete: 'address-level1',
+					options: [
+						{ value: 'CA', label: 'California' },
+						{ value: 'NY', label: 'New York' },
+						{ value: 'TX', label: 'Texas' },
+					],
+				},
+				{ key: 'postalCode', label: 'ZIP code', placeholder: '78751', autocomplete: 'postal-code' },
+			],
+		],
+	},
+	JP: {
+		countryLabel: '国または地域',
+		rows: [
+			[
+				{ key: 'postalCode', label: '郵便番号', placeholder: '150-0001', autocomplete: 'postal-code' },
+				{
+					key: 'region',
+					label: '都道府県',
+					placeholder: '選択',
+					autocomplete: 'address-level1',
+					options: [
+						{ value: '13', label: '東京都' },
+						{ value: '26', label: '京都府' },
+						{ value: '27', label: '大阪府' },
+					],
+				},
+			],
+			[{ key: 'city', label: '市区町村', required: true, autocomplete: 'address-level2' }],
+			[{ key: 'line1', label: '町名・番地', autocomplete: 'address-line1' }],
+			[{ key: 'line2', label: '建物名・部屋番号', autocomplete: 'address-line2' }],
+		],
+	},
+	DE: {
+		countryLabel: 'Country or region',
+		rows: [
+			[{ key: 'line1', label: 'Street address', autocomplete: 'address-line1' }],
+			[{ key: 'line2', label: 'Apartment, suite or unit', autocomplete: 'address-line2' }],
+			[
+				{
+					key: 'postalCode',
+					label: 'Postal code',
+					placeholder: '10115',
+					inputmode: 'numeric',
+					autocomplete: 'postal-code',
+				},
+				{ key: 'city', label: 'City', required: true, autocomplete: 'address-level2' },
+			],
+		],
+	},
+	BR: {
+		countryLabel: 'Country or region',
+		rows: [
+			[{ key: 'line1', label: 'Street address', autocomplete: 'address-line1' }],
+			[{ key: 'line2', label: 'Apartment, suite or unit', autocomplete: 'address-line2' }],
+			[
+				{ key: 'postalCode', label: 'Postal code', autocomplete: 'postal-code' },
+				{ key: 'city', label: 'City', required: true, autocomplete: 'address-level2' },
+			],
+			[{ key: 'region', label: 'State or region', autocomplete: 'address-level1' }],
+		],
+	},
+}
+
+export const homeAddress = {
+	country: 'US',
+	line1: '4301 Duval St',
+	city: 'Austin',
+	region: 'TX',
+	postalCode: '78751',
+}
+export const homeAddressJa = {
+	country: 'JP',
+	postalCode: '150-0001',
+	region: '13',
+	city: '渋谷区',
+	line1: '神宮前1-2-3',
+}

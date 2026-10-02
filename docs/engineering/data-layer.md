@@ -1,7 +1,7 @@
 ---
 title: Data layer
 status: draft
-summary: The workspace database and everything over it: the SQLCipher file and its key on each platform, the schema and its conventions, the append-only migrations, stamps and ids, the registry, the grant store, the egress ledger, the profile, the tables of the scheduler and of signals, the IPC boundary command by command, the frontend module and its browser fallback, how a store sits on rows, the Today store on the task rows, the export bundle, the import, and how it is tested.
+summary: The workspace database and everything over it: the SQLCipher file and its key on each platform, the schema and its conventions, the append-only migrations, stamps and ids, the registry, the grant store, the egress ledger, the profile, the home Place and addresses, the tables of the scheduler and of signals, the IPC boundary command by command, the frontend module and its browser fallback, how a store sits on rows, the Today store on the task rows, the export bundle, the import, and how it is tested.
 read-this-if: You are reading or writing the owner's data from Rust or from an app, adding a table, a migration, a command, an entity type or a fact type, moving a store onto rows, or touching export, import or the database key.
 depends-on: [product/substrate/data, product/substrate/primitives, product/substrate/registry, engineering/app-scaffold]
 updated: 2026-10-01
@@ -159,7 +159,31 @@ A new destination is four edits: the CSP's `connect-src` in `src-tauri/tauri.con
 | history | an edit that changes the value, the note or the window keeps what the fact held, under the edit's stamp, thirty days; `Workspace::open` sweeps the rest |
 | delete and restore | the tombstone, and its lifting: what an undo calls |
 
-`home-area` derives from the home the owner chose in Sky: `HomePlace.area` (city, region, country from the geocoder) becomes the one `system-derived` row, renewed when the home moves, through the shell's profile store. It moves onto the home Place when the Place picker exists; Meadow then reads home from that row through its one reader (`readHome`; `engineering/meadow.md`, Handoffs). A Gardener proposal is shell state (`FactProposal`), never a row: the page shows it as a `ProposalCard`, and only an accept writes the fact, as `ai-inferred` with its confidence.
+`home-area` derives from the home Place (D-141): the city, region and country of its address (`areaOf` in `@eden/shared/home`) become the one `system-derived` row, source `place:home`, renewed when the home moves, through the shell's profile store, which the home store's `changed` hook calls. A Gardener proposal is shell state (`FactProposal`), never a row: the page shows it as a `ProposalCard`, and only an accept writes the fact, as `ai-inferred` with its confidence.
+
+## The home
+
+Home is the one Place of kind `home` (D-38, D-141), and `@eden/shared/home` is the only code that reads or writes it.
+
+- **`rows.ts`** (pure, tested): `Home` (a `HomePlace` with an `id` and an `address`), `homeFromRow`, `homeInput`, `homePatch`, `areaOf`, `forecastPlace`, `legacyHome` and `resolveHome`. The row's `address` column holds the address's parts as JSON (`encodeAddress`, D-138).
+- **`store.svelte.ts`**: `home.current` (the sample home, with no `id`, until a row exists), `load()` once, `reload()` after an import, `set(draft)` answering an `undo`, and `bind({ changed })`. The desktop's layout binds `changed` to renew `home-area` and, when the home was set or put back, to load Sky again. `weather.#read()` awaits `home.load()`.
+- **The old setting.** `resolveHome` gives a home kept under `eden:home` its row and removes the key, whenever there is no row and the key is present. A replace import of an old bundle writes the key back (`settings.restore`), so `SyncTab` reloads the home first and it is brought over again. `settings` keeps the key only to read and clear it (`readLegacyHome`, `clearLegacyHome`).
+
+Handoffs:
+
+- Two devices that each brought their own setting over hold two `home` rows with different ids; on import the later one stays (`bundle.rs`, `of_two_homes_the_later_one_stays`). Sync, when it comes, inherits that rule.
+- Onboarding's Home step (`product/substrate/onboarding.md`, step 5) writes through `home.set`, with the kit's `AddressForm` as the change-home sheet uses it.
+
+## Addresses
+
+`@eden/shared/address` (D-137, D-138) is pure and tested: `Address`, the format table (`formats.ts`, `regions.ts`), `formatAddress`, `validateAddress`, `cleanAddress`, `readAddress` and `encodeAddress`, `addressFromHit`, `geocodeText` (the address as a geocoder is asked for it, D-140) and `addressForm`, which resolves a country's fields for the kit's `AddressForm` (D-139). Every country is in `COUNTRY_CODES`, named by `Intl.DisplayNames`.
+
+Handoffs:
+
+- **More countries.** A country joins by gaining an entry in `ADDRESS_FORMATS`; the rest use `GENERIC_FORMAT`. Generating the table from Google's libaddressinput data is the way to all of them, and brings label variants to translate.
+- **A dependent locality** (a district or neighbourhood as its own postal part, as Korea and China write) is not a part of `Address`. Japan's fits in the first line.
+- **Postal lookup.** A Japanese postal code names its prefecture and city; nothing fills them from it.
+- **A page's address.** `businessDetails` in `api/html.ts` answers one line (`postalLine`), which `readAddress` takes apart only for the home's country. Reading the `PostalAddress` node's own parts, its `addressCountry` among them, would keep every page's address whole.
 
 ## The IPC boundary
 
@@ -263,7 +287,7 @@ SQLite is where the owner's data is; a store is what a page sees of it, in memor
 | | `alert`, a mirror | the alert, the place it was answered for, and `dismissed` |
 | Today (the shell) | `task`, a primitive | its fields as columns; `recurrence`, `target` and `progress` as JSON the frontend shapes (D-75, below) |
 
-A storage tip is a line on its item or its recipe by decision (D-87), not a row waiting for its issue. Left as they are, for the issues that own them: brainstorm sessions and parts lists as rows of their own, the shop day as an Event, a project's next steps as Tasks, and the home place, which is still a setting.
+A storage tip is a line on its item or its recipe by decision (D-87), not a row waiting for its issue. Left as they are, for the issues that own them: brainstorm sessions and parts lists as rows of their own, the shop day as an Event, a project's next steps as Tasks, and nothing of the home, which is its Place row now (D-141).
 
 Hearth's rules are pure modules beside its shapes, in `packages/shared/src/domains/kitchen/`, each with its Vitest file beside it:
 
@@ -296,7 +320,7 @@ Sky's store (`packages/shared/src/weather/store.svelte.ts`, shared by both apps)
 | `air-quality`, `allergens` | the slot's source | the place key |
 | `alert` | `nws` | the alert's id |
 
-- **The place key** is the home's coordinates rounded to two decimals (`placeKey`), the same that leave the device (D-60).
+- **The place key** is the home's coordinates rounded to two decimals (`placeKey`), the same that leave the device (D-60), and stays so now that home is a Place (D-142). What Sky keeps of the home beside a forecast is its name, point and area (`forecastPlace`), never its address.
 - **A write is one batch** (`skyOps`): a `putMirror` for each row held, then a `dropMirror` for every row of Sky's types that is no longer wanted. So the rows are what the store holds, for one place and one provider at a time, and an alert that is no longer issued leaves no tombstone. The store keeps the rows the last read or write left, and its writes run one after another.
 - **A slot nothing covers** has no source, so no row; when it was asked for rides on the forecast's row (`asked`), so it is not asked again before its cache age.
 - **A dismissal** is `dismissed` on the alert's row, written alone when the owner dismisses and carried by every write after it while the alert is issued.
@@ -305,7 +329,6 @@ Sky's store (`packages/shared/src/weather/store.svelte.ts`, shared by both apps)
 
 Handoffs:
 
-- For the home Place (the issue that makes home a Place row, D-38): the place key becomes the Place's id, each of Sky's rows takes an `at` link to it, and `placeKey` is the one function to change. Rows keyed by coordinates are then dropped by the first write, which drops what it does not want. Meadow's part is one function too: `readHome()` in `packages/shared/src/domains/places/home.ts` reads the Place's point, and the map's home pin becomes that row (`engineering/meadow.md`, Handoffs).
 - For the first primitive mirrors (calendar events, Phase 2): `putMirror`, `dropMirror` and the seven-day sweep write and remove `entities` only. A mirrored Event needs the same pair over `events`, and its own retention, since a calendar's past is not stale after a week.
 
 ### Tasks
