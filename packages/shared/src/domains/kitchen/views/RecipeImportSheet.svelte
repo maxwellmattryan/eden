@@ -4,10 +4,10 @@
 	// consent (D-86). A link's page is fetched by the app (D-88), and a page that describes its own recipe is read with
 	// no model asked. What comes back opens in the Recipes view as a draft to check: nothing is stored here.
 	import { Button, Dropzone, Field, FileButton, FileChip, InlineError, Sheet, Spinner } from '@eden/ui-kit'
-	import { t } from '@eden/shared/i18n'
-	import { recipeImport } from '@eden/shared/domains/kitchen'
-	import { CAPTURE_ACCEPT, sourceDetail } from '@eden/shared/domains/kitchen'
-	import { failureOf, readerOf, refusalOf } from '@eden/shared/domains/kitchen'
+	import { t } from '../../../i18n/index.js'
+	import { recipeImport } from '../recipe-draft.svelte.js'
+	import { CAPTURE_ACCEPT, sourceDetail } from '../staging.svelte.js'
+	import { failureOf, readerOf, refusalOf } from '../words.js'
 
 	type Props = {
 		/** A draft was made: the page shows it. */
@@ -70,6 +70,7 @@
 					icon="camera"
 					accept={CAPTURE_ACCEPT}
 					multiple
+					camera
 					tooltip
 					disabled={reading}
 					onfiles={(files) => void recipeImport.staging.add(files)}

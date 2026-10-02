@@ -7,14 +7,16 @@
 	// picture chosen for it as one change with one undo, and a grocer's product link also fills the name, the brand
 	// and the size left empty (D-91, D-104).
 	import { Button, Chip, Field, Menu, Segmented, Sheet, toast, type MenuItem } from '@eden/ui-kit'
-	import { CATEGORIES, categoriesFor, productLink } from '@eden/shared/domains/kitchen'
-	import { t } from '@eden/shared/i18n'
-	import { undoToast } from '@eden/shared/shell'
-	import { linkedPicture, squarePicture } from '@eden/shared/domains/kitchen'
-	import { categoryGlyph } from '@eden/shared/domains/kitchen'
-	import PictureDrop from '@eden/shared/components/PictureDrop.svelte'
-	import PictureInput from '@eden/shared/components/PictureInput.svelte'
-	import { LOCATIONS, kitchen, type StockItem, type StockLocation, type StockPatch } from '@eden/shared/domains/kitchen'
+	import { CATEGORIES, categoriesFor } from '../types.js'
+	import { productLink } from '../product-link.js'
+	import { t } from '../../../i18n/index.js'
+	import { undoToast } from '../../../shell/index.js'
+	import { linkedPicture, squarePicture } from '../staging.svelte.js'
+	import { categoryGlyph } from '../words.js'
+	import PictureDrop from '../../../components/PictureDrop.svelte'
+	import PictureInput from '../../../components/PictureInput.svelte'
+	import { LOCATIONS, type StockItem, type StockLocation } from '../types.js'
+	import { kitchen, type StockPatch } from '../store.svelte.js'
 
 	type Props = {
 		/** An item was added from the blank form; the page shows it. */

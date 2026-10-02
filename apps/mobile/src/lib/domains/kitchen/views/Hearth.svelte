@@ -1,11 +1,9 @@
 <script lang="ts">
-	// Hearth's page (product/domains/kitchen.md, "Surfaces"): the header with the domain's tabs and the tab's filters
-	// beneath it, then the tab's view: Stock, Recipes, Grocery. The tab lives in the URL so a widget can open one
-	// directly. Capture a haul is Stock's primary action (D-13) and opens the capture sheet at once (D-86); Take stock
-	// opens the same sheet on photos of the shelves as they stand (D-89).
-	import { goto } from '$app/navigation'
-	import { resolve } from '$app/paths'
-	import { page } from '$app/state'
+	// Hearth's page on the phone (product/domains/kitchen.md, "Surfaces" and "Mobile"): the header with the domain's
+	// tabs and the tab's filters beneath it, then the tab's view: the phone's own Stock and Grocery, and the shared
+	// Recipes. The tab lives in the URL, as on the desktop, so a tile or the Gardener's draft can open one; with none
+	// the page opens on Grocery, the phone's primary surface (D-TBD(phone-hearth)). Capture a haul and Take stock open
+	// the capture sheet (D-13, D-86, D-89), which the phone's shell mounts over any page; the floating + reaches it too.
 	import {
 		Chip,
 		InlineError,
@@ -21,15 +19,17 @@
 		type PageHeaderAction,
 		type SegmentedItem,
 	} from '@eden/ui-kit'
-	import { t } from '@eden/shared/i18n'
-	import { capture } from '@eden/shared/domains/kitchen'
-	import { KITCHEN_TABS, type KitchenTab } from '../manifest'
-	import { recipeDrafts, recipeImport } from '@eden/shared/domains/kitchen'
-	import { kitchen, type StockSort } from '@eden/shared/domains/kitchen'
-	import Grocery from './Grocery.svelte'
+	import { capture, kitchen, recipeDrafts, recipeImport, type StockSort } from '@eden/shared/domains/kitchen'
 	import RecipeImportSheet from '@eden/shared/domains/kitchen/views/RecipeImportSheet.svelte'
 	import Recipes from '@eden/shared/domains/kitchen/views/Recipes.svelte'
+	import { t } from '@eden/shared/i18n'
+	import { declarationOf, type TabId } from '@eden/shared/manifest'
+	import { navigation } from '@eden/shared/navigation'
+	import Grocery from './Grocery.svelte'
 	import Stock from './Stock.svelte'
+
+	type KitchenTab = TabId<'kitchen'>
+	const KITCHEN_TABS: readonly KitchenTab[] = declarationOf('kitchen').tabs.map((entry) => entry.id)
 
 	/** The Stock view, whose Add to stock sheet the header's Add opens (D-109). */
 	let stock = $state<Stock>()
@@ -37,15 +37,15 @@
 	let grocery = $state<Grocery>()
 
 	const tab = $derived.by<KitchenTab>(() => {
-		const requested = page.params.tab ?? ''
-		return (KITCHEN_TABS as readonly string[]).includes(requested) ? (requested as KitchenTab) : 'stock'
+		const requested = navigation.tab ?? ''
+		return (KITCHEN_TABS as readonly string[]).includes(requested) ? (requested as KitchenTab) : 'grocery'
 	})
 	const TAB_ICONS: Record<KitchenTab, IconName> = { stock: 'refrigerator', recipes: 'book-open', grocery: 'list' }
 	const tabItems = $derived<SegmentedItem[]>(
 		KITCHEN_TABS.map((id) => ({ label: $t(`domains.kitchen.tabs.${id}`), icon: TAB_ICONS[id] }))
 	)
 	function selectTab(index: number) {
-		void goto(resolve('/kitchen/[[tab]]', { tab: KITCHEN_TABS[index] }), { replaceState: true, noScroll: true })
+		void navigation.open({ place: 'kitchen', tab: KITCHEN_TABS[index] }, { replace: true, noScroll: true })
 	}
 
 	// The header's motif (D-123): what is in stock and how much of it is expiring, the same on every tab.

@@ -7,26 +7,24 @@
 	// a form and is stored only when it is saved there, with its picture (D-93). Everything the pane says of the stock
 	// is worked out here, locally; a recipe that names something the owner avoids says so (D-25).
 	import { BackButton, Button, Chip, Dropzone, EmptyState, toast, type ListRowData, type MenuItem } from '@eden/ui-kit'
-	import {
-		browseRecipes,
-		cookPlan,
-		cookTonight,
-		formatIngredient,
-		ingredientStatus,
-		isSafe,
-		missingEstimate,
-		normaliseName,
-		scaledIngredients,
-		type CookLine,
-	} from '@eden/shared/domains/kitchen'
-	import { t } from '@eden/shared/i18n'
-	import { undoToast } from '@eden/shared/shell'
-	import { showPushed } from '@eden/shared/shell'
-	import { recipeBrowse } from '@eden/shared/domains/kitchen'
-	import { recipeDrafts, recipeImport } from '@eden/shared/domains/kitchen'
-	import { forbidden } from '@eden/shared/domains/kitchen'
-	import { CAPTURE_ACCEPT, type RecipePicture } from '@eden/shared/domains/kitchen'
-	import { kitchen, type Recipe, type RecipeDraft } from '@eden/shared/domains/kitchen'
+	import { browseRecipes } from '../browse.js'
+	import { cookPlan, cookTonight, ingredientStatus, type CookLine } from '../cook.js'
+	import { formatIngredient } from '../parse.js'
+	import { isSafe } from '../safety.js'
+	import { missingEstimate } from '../prices.js'
+	import { normaliseName } from '../match.js'
+	import { scaledIngredients } from '../scale.js'
+	import { t } from '../../../i18n/index.js'
+	import { holdBack } from '../../../navigation/index.js'
+	import { undoToast } from '../../../shell/index.js'
+	import { showPushed } from '../../../shell/index.js'
+	import { recipeBrowse } from '../recipe-browse.svelte.js'
+	import { recipeDrafts, recipeImport } from '../recipe-draft.svelte.js'
+	import { forbidden } from '../safety.svelte.js'
+	import { CAPTURE_ACCEPT, type RecipePicture } from '../staging.svelte.js'
+	import { kitchen } from '../store.svelte.js'
+	import { type Recipe } from '../types.js'
+	import { type RecipeDraft } from '../recipe-import.js'
 	import RecipeBrowser from './RecipeBrowser.svelte'
 	import RecipeForm from './RecipeForm.svelte'
 	import RecipePage from './RecipePage.svelte'
@@ -81,6 +79,10 @@
 		recipeBrowse.selected = undefined
 		mode = 'view'
 	}
+	// The phone's back press first leaves the form or the cook's questions, then the recipe (desktop never asks).
+	$effect(() =>
+		picked && !recipeDrafts.current ? holdBack(() => (mode === 'view' ? close() : (mode = 'view'), true)) : undefined
+	)
 	/**
 	 * The picture chosen while a saved recipe is edited: one the owner chose, `null` for taken away, nothing for left
 	 * as it is. It is kept with the recipe only when the form is saved, so Cancel leaves the picture alone.

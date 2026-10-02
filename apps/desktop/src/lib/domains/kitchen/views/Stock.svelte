@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Hearth's Stock view (Domains/Hearth/Stock): one List per location under its own heading, sorted as the header's
 	// chip says, with quantities in mono, `estimated` where capture guessed, a warning where stock is low and a tip button
-	// where an item has one worth knowing (D-87); and the selected item in a detail pane. Edit opens the item's form in
+	// where an item has one worth knowing (D-87); and the selected item in a detail pane (the shared StockDetail). Edit opens the item's form in
 	// a sheet over the page (D-95, StockEditSheet), and the page's Add opens the same sheet blank (D-109). Selection is the List's own
 	// mode (D-41), and what it selects is moved, listed or deleted as one write with one undo. Files dropped or pasted
 	// on the page start a capture with them (D-86). Every item has a picture (D-90): the one cut from its photo or
@@ -13,10 +13,8 @@
 	// out; one that ran out, dropped on a location, opens its form there with the quantity to type (D-111). Every
 	// location shows for the length of a drag, even one that holds nothing.
 	import {
-		Badge,
 		BackButton,
 		Button,
-		Chip,
 		DropTarget,
 		Dropzone,
 		EmptyState,
@@ -24,22 +22,20 @@
 		IconButton,
 		List,
 		Menu,
-		type IconName,
 		type ListRowData,
 		type MenuItem,
 	} from '@eden/ui-kit'
-	import { CATEGORIES } from '@eden/shared/domains/kitchen'
-	import { locale, t } from '@eden/shared/i18n'
-	import { settings } from '@eden/shared/settings'
+	import { t } from '@eden/shared/i18n'
 	import { quintOut } from 'svelte/easing'
 	import type { TransitionConfig } from 'svelte/transition'
 	import { undoToast } from '@eden/shared/shell'
-	import { formatDay, formatDayTime } from '@eden/shared/dates'
+	import { formatDay } from '@eden/shared/dates'
 	import { showPushed } from '@eden/shared/shell'
 	import { capture } from '@eden/shared/domains/kitchen'
 	import { CAPTURE_ACCEPT } from '@eden/shared/domains/kitchen'
-	import { categoryGlyph } from '@eden/shared/domains/kitchen'
-	import StockEditSheet from './StockEditSheet.svelte'
+	import { LOCATION_ICONS, categoryGlyph, groceryLineOf, stockMoveItems } from '@eden/shared/domains/kitchen'
+	import StockDetail from '@eden/shared/domains/kitchen/views/StockDetail.svelte'
+	import StockEditSheet from '@eden/shared/domains/kitchen/views/StockEditSheet.svelte'
 	import { LOCATIONS, kitchen, type StockItem, type StockLocation, type StockSort } from '@eden/shared/domains/kitchen'
 
 	type Props = {
@@ -55,27 +51,9 @@
 	let { expiring = false, lowStock = false, sort = 'expiry', ontakestock }: Props = $props()
 
 	const uid = $props.id()
-	const lang = $derived($locale ?? 'en')
-	const format = $derived({ lang, clock: settings.clock })
 	const locationLabel = (location: StockLocation) => $t(`domains.kitchen.stock.locations.${location}`)
 	const quantity = (item: StockItem) => (item.unit ? `${item.qty} ${item.unit}` : item.qty)
-	/** A category as the page names it: one of the ids, or the words a row from before they were ids holds. */
-	const categoryLabel = (category: string) =>
-		(CATEGORIES as readonly string[]).includes(category) ? $t(`domains.kitchen.categories.${category}`) : category
-
-	const LOCATION_ICONS: Record<StockLocation, IconName> = {
-		fridge: 'refrigerator',
-		freezer: 'snowflake',
-		pantry: 'package',
-		counter: 'carrot',
-		household: 'house',
-	}
-	const moveItems = (current?: StockLocation): MenuItem[] =>
-		LOCATIONS.filter((location) => location !== current).map((location) => ({
-			id: `move:${location}`,
-			label: locationLabel(location),
-			icon: LOCATION_ICONS[location],
-		}))
+	const moveItems = (current?: StockLocation): MenuItem[] => stockMoveItems($t, current)
 	/** The one "Move to" row: the places it can go are its submenu. */
 	const moveMenu = (current: StockLocation): MenuItem => ({
 		id: 'move',
@@ -94,12 +72,6 @@
 	]
 	/** The package's size beside what is held, apart from it by its id: "2" of "16 oz". */
 	const sizeChip = (item: StockItem) => (item.size ? [{ id: 'size', label: item.size, mono: true }] : [])
-	/** What a grocery line takes of a stock item: its name, and the brand and the size to buy again (D-104). */
-	const groceryRow = (item: StockItem) => ({
-		name: item.name,
-		...(item.brand ? { brand: item.brand } : {}),
-		...(item.size ? { size: item.size } : {}),
-	})
 	const toRow = (item: StockItem): ListRowData => ({
 		id: item.id,
 		primary: item.name,
@@ -188,7 +160,7 @@
 
 	function addToGrocery(item: StockItem) {
 		return kitchen.addToGrocery(
-			groceryRow(item),
+			groceryLineOf(item),
 			kitchen.out(item) ? 'ran-out' : kitchen.low(item) ? 'low-stock' : 'manual'
 		)
 	}
@@ -263,7 +235,7 @@
 	function groceryMany(ids: string[], from: StockLocation) {
 		const items = kitchen.stock.filter((item) => ids.includes(item.id))
 		const { undo } = kitchen.addGroceryItems(
-			items.map(groceryRow),
+			items.map(groceryLineOf),
 			items.every((item) => kitchen.low(item)) ? 'low-stock' : 'manual'
 		)
 		undoToast($t('domains.kitchen.stock.toast.addedManyToGrocery', { values: { count: items.length } }), undo)
@@ -280,10 +252,6 @@
 		selecting[from] = false
 	}
 
-	// The detail pane's Move opens the same choices as the row's menu, anchored to its button.
-	let moveAnchor = $state<HTMLElement>()
-	let moveOpen = $state(false)
-
 	/** Files pasted anywhere on the page start a capture with them; pasted text is left to the field it lands in. */
 	function onpaste(event: ClipboardEvent) {
 		const files = [...(event.clipboardData?.files ?? [])]
@@ -294,15 +262,6 @@
 </script>
 
 <svelte:window {onpaste} />
-
-{#snippet picture(item: StockItem)}
-	{@const image = kitchen.photoOf(item)}
-	{#if image}
-		<img class="picture" src={image} alt="" />
-	{:else}
-		<span class="picture picture-glyph" aria-hidden="true"><Icon name={categoryGlyph(item.category)} /></span>
-	{/if}
-{/snippet}
 
 <Dropzone accept={[...CAPTURE_ACCEPT]} disabled={capture.open} ondrop={(accepted) => capture.start(accepted)}>
 	{#if kitchen.stock.length === 0}
@@ -409,106 +368,7 @@
 				{#if detail}
 					<div class="reveal" transition:reveal>
 						<div class="back" bind:this={back}><BackButton onback={() => (selected = undefined)} /></div>
-						<aside class="detail" aria-labelledby="{uid}-detail">
-							<div class="detail-head">
-								{@render picture(detail)}
-								<h2 class="detail-title" id="{uid}-detail">{detail.name}</h2>
-								{#if detail.tip}
-									<IconButton
-										icon="info"
-										size="xs"
-										label={$t('domains.kitchen.stock.detail.tipFor', { values: { name: detail.name } })}
-										tooltip={detail.tip}
-									/>
-								{/if}
-							</div>
-							<dl class="fields">
-								{#if detail.brand}
-									<dt>{$t('domains.kitchen.stock.detail.brand')}</dt>
-									<dd>{detail.brand}</dd>
-								{/if}
-								{#if detail.size}
-									<dt>{$t('domains.kitchen.stock.detail.size')}</dt>
-									<dd class="mono">{detail.size}</dd>
-								{/if}
-								<dt>{$t('domains.kitchen.stock.detail.quantity')}</dt>
-								<dd class="mono">
-									{#if kitchen.out(detail)}
-										<Badge kind="origin" label={$t('domains.kitchen.stock.badge.ranOut')} />
-									{:else}
-										{quantity(detail)}
-									{/if}
-									{#if kitchen.low(detail)}<Badge
-											kind="warning"
-											label={$t('domains.kitchen.stock.badge.lowStock')}
-										/>{/if}
-								</dd>
-								<dt>{$t('domains.kitchen.stock.detail.location')}</dt>
-								<dd><Chip label={locationLabel(detail.location)} /></dd>
-								{#if detail.expiry}
-									<dt>{$t('domains.kitchen.stock.detail.expires')}</dt>
-									<dd class="mono">
-										{formatDay(detail.expiry)}
-										{#if detail.estimated}<Badge kind="estimated" />{/if}
-										{#if kitchen.soon(detail)}<Badge
-												kind="warning"
-												label={$t('domains.kitchen.stock.badge.thisWeek')}
-											/>{/if}
-									</dd>
-								{/if}
-								{#if detail.category}
-									<dt>{$t('domains.kitchen.stock.detail.category')}</dt>
-									<dd>{categoryLabel(detail.category)}</dd>
-								{/if}
-								<dt>{$t('domains.kitchen.stock.detail.source')}</dt>
-								<dd>
-									<Badge kind="origin" label={$t(`domains.kitchen.stock.source.${detail.source}`)} />
-									<span class="mono">{formatDayTime(detail.sourcedAt, format)}</span>
-								</dd>
-								{#if detail.threshold !== undefined}
-									<dt>{$t('domains.kitchen.stock.detail.threshold')}</dt>
-									<dd class="mono">{detail.threshold}</dd>
-								{/if}
-							</dl>
-							<div class="detail-actions">
-								<Button label={$t('domains.kitchen.stock.actions.edit')} icon="pencil" onclick={() => edit(detail)} />
-								<Button
-									label={$t('domains.kitchen.stock.actions.addToGrocery')}
-									icon="plus"
-									onclick={() => act('grocery', detail.id)}
-								/>
-								{#if !kitchen.out(detail)}
-									<span class="anchor" bind:this={moveAnchor}>
-										<Button
-											label={$t('domains.kitchen.stock.actions.move')}
-											icon="arrow-right"
-											aria-haspopup="menu"
-											aria-expanded={moveOpen}
-											onclick={() => (moveOpen = !moveOpen)}
-										/>
-									</span>
-									<Menu
-										bind:open={moveOpen}
-										anchor={moveAnchor}
-										align="start"
-										label={$t('domains.kitchen.stock.actions.move')}
-										items={moveItems(detail.location)}
-										onselect={(item) => act(item.id ?? '', detail.id)}
-									/>
-									<Button
-										label={$t('domains.kitchen.stock.actions.ranOut')}
-										icon="circle-dashed"
-										onclick={() => act('ranOut', detail.id)}
-									/>
-								{/if}
-								<Button
-									label={$t('domains.kitchen.stock.actions.delete')}
-									variant="danger"
-									icon="trash"
-									onclick={() => act('delete', detail.id)}
-								/>
-							</div>
-						</aside>
+						<StockDetail item={detail} onact={(action) => act(action, detail.id)} />
 					</div>
 				{/if}
 				<DropTarget accepts={[DRAG_GROUP]} ondrop={(ids) => ids.forEach((id) => drop(id, 'out'))}>
@@ -646,86 +506,11 @@
 		letter-spacing: var(--ed-t-display-md-tracking);
 		font-variation-settings: var(--ed-t-display-md-opsz);
 	}
-	.anchor {
-		display: inline-flex;
-	}
 	.voice {
 		margin: 0;
 		font: var(--ed-t-voice);
 		letter-spacing: var(--ed-t-voice-tracking);
 		font-variation-settings: var(--ed-t-voice-opsz);
 		color: var(--text-secondary);
-	}
-
-	/* The detail pane: the item's name with its tip beside it, its fields as a definition list, the actions */
-	.detail {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-4);
-		box-sizing: border-box;
-		padding: var(--space-4);
-		border: 1px solid var(--ed-card-border);
-		border-radius: var(--ed-radius-card);
-		background: var(--surface-1);
-		box-shadow: var(--shadow-card);
-	}
-	.detail-head {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
-	}
-	/* the item's picture, or its category's glyph on a tile of the same size */
-	.picture {
-		flex: none;
-		box-sizing: border-box;
-		width: calc(var(--space-8) * 2);
-		height: calc(var(--space-8) * 2);
-		border: 1px solid var(--ed-card-border);
-		border-radius: var(--ed-radius-control);
-		object-fit: cover;
-		background: var(--surface-2);
-	}
-	.picture-glyph {
-		display: inline-grid;
-		place-items: center;
-		color: var(--text-secondary);
-	}
-	.detail-title {
-		margin: 0;
-		font: var(--ed-t-display-sm);
-		letter-spacing: var(--ed-t-display-sm-tracking);
-		font-variation-settings: var(--ed-t-display-sm-opsz);
-		text-wrap: balance;
-	}
-	.fields {
-		display: grid;
-		grid-template-columns: auto minmax(0, 1fr);
-		gap: var(--space-2) var(--space-4);
-		align-items: center;
-		margin: 0;
-	}
-	.fields dt {
-		font: var(--ed-t-body-sm);
-		letter-spacing: var(--ed-t-body-sm-tracking);
-		color: var(--text-secondary);
-	}
-	.fields dd {
-		display: flex;
-		align-items: center;
-		flex-wrap: wrap;
-		gap: var(--space-2);
-		margin: 0;
-		font: var(--ed-t-body);
-		letter-spacing: var(--ed-t-body-tracking);
-	}
-	.mono {
-		font: var(--ed-t-data);
-		letter-spacing: var(--ed-t-data-tracking);
-		font-variant-numeric: tabular-nums;
-	}
-	.detail-actions {
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-2);
 	}
 </style>

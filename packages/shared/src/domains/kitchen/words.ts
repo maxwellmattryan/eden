@@ -1,9 +1,12 @@
-// The words Hearth's sheets share: who would read what the owner staged and what it costs, why a read did not
-// answer, and why a file was not taken. Each takes the translator, so the caller's `$t` keeps them reactive.
-import type { IconName } from '@eden/ui-kit'
+// The words Hearth's views share: who would read what the owner staged and what it costs, why a read did not
+// answer, why a file was not taken, and the glyphs and menus both apps' Stock draw. Each takes the translator, so
+// the caller's `$t` keeps them reactive.
+import type { IconName, MenuItem } from '@eden/ui-kit'
 import { formatCost } from '../../gardener/index.js'
 import type { DirectPreview } from '../../shell/gardener/types.js'
 import { modelLabel } from './staging.svelte.js'
+import type { GroceryRow } from './store.svelte.js'
+import { LOCATIONS, type StockItem, type StockLocation } from './types.js'
 
 /** The glyph that stands for an item with no picture of its own, by its category (D-90). */
 const CATEGORY_GLYPHS: Record<string, IconName> = {
@@ -26,7 +29,31 @@ const CATEGORY_GLYPHS: Record<string, IconName> = {
 
 export const categoryGlyph = (category: string | undefined): IconName => CATEGORY_GLYPHS[category ?? ''] ?? 'package'
 
+/** Each location's glyph, on its heading and in Move to. */
+export const LOCATION_ICONS: Record<StockLocation, IconName> = {
+	fridge: 'refrigerator',
+	freezer: 'snowflake',
+	pantry: 'package',
+	counter: 'carrot',
+	household: 'house',
+}
+
 type Translate = (key: string, options?: { values?: Record<string, string | number> }) => string
+
+/** The places a stock item can be moved to, as menu items `move:<location>`: every location but the one it is in. */
+export const stockMoveItems = (translate: Translate, current?: StockLocation): MenuItem[] =>
+	LOCATIONS.filter((location) => location !== current).map((location) => ({
+		id: `move:${location}`,
+		label: translate(`domains.kitchen.stock.locations.${location}`),
+		icon: LOCATION_ICONS[location],
+	}))
+
+/** What a grocery line takes of a stock item: its name, and the brand and the size to buy again (D-104). */
+export const groceryLineOf = (item: StockItem): GroceryRow => ({
+	name: item.name,
+	...(item.brand ? { brand: item.brand } : {}),
+	...(item.size ? { size: item.size } : {}),
+})
 
 /** The provider line of a sheet: who reads, on which model, at about what cost; or why nothing can be read. */
 export function readerOf(

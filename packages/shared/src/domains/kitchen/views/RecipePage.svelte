@@ -5,11 +5,14 @@
 	// marked against the stock, so what this page says is in stock is what would be cooked. Ingredients sit beside the
 	// steps and stay in view while the steps scroll.
 	import { Badge, Button, Chip, Icon, IconButton, tooltip } from '@eden/ui-kit'
-	import { openExternal } from '@eden/shared/api'
-	import { MAX_SERVES, scalable, type Estimate, type IngredientStatus } from '@eden/shared/domains/kitchen'
-	import { formatUsd } from '@eden/shared/gardener'
-	import { t } from '@eden/shared/i18n'
-	import { kitchen, type Recipe } from '@eden/shared/domains/kitchen'
+	import { openExternal } from '../../../api/index.js'
+	import { MAX_SERVES, scalable } from '../scale.js'
+	import { type Estimate } from '../prices.js'
+	import { type IngredientStatus } from '../cook.js'
+	import { formatUsd } from '../../../gardener/index.js'
+	import { t } from '../../../i18n/index.js'
+	import { kitchen } from '../store.svelte.js'
+	import { type Recipe } from '../types.js'
 
 	type Props = {
 		recipe: Recipe

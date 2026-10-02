@@ -6,12 +6,12 @@
 	// (D-93) is not one of the fields: the form shows the one it is handed and says what the owner chose (a file, a
 	// link, or a picture dropped or pasted, D-110), and the view keeps it with the recipe when the form is saved.
 	import { Button, Field, Toggle, toast } from '@eden/ui-kit'
-	import { formatIngredient, parseIngredient } from '@eden/shared/domains/kitchen'
-	import { t } from '@eden/shared/i18n'
-	import { linkedRecipePicture, recipePicture, type RecipePicture } from '@eden/shared/domains/kitchen'
-	import PictureDrop from '@eden/shared/components/PictureDrop.svelte'
-	import PictureInput from '@eden/shared/components/PictureInput.svelte'
-	import type { RecipeDraft } from '@eden/shared/domains/kitchen'
+	import { formatIngredient, parseIngredient } from '../parse.js'
+	import { t } from '../../../i18n/index.js'
+	import { linkedRecipePicture, recipePicture, type RecipePicture } from '../staging.svelte.js'
+	import PictureDrop from '../../../components/PictureDrop.svelte'
+	import PictureInput from '../../../components/PictureInput.svelte'
+	import type { RecipeDraft } from '../recipe-import.js'
 
 	type Props = {
 		recipe: RecipeDraft

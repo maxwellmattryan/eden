@@ -14,17 +14,12 @@
 		type ListRowData,
 		type MenuItem,
 	} from '@eden/ui-kit'
-	import {
-		RECIPE_SORTS,
-		filtering,
-		ingredientStatus,
-		recipeTags,
-		type RecipeSort,
-		type TonightPick,
-	} from '@eden/shared/domains/kitchen'
-	import { t } from '@eden/shared/i18n'
-	import { recipeBrowse } from '@eden/shared/domains/kitchen'
-	import { kitchen, type Recipe } from '@eden/shared/domains/kitchen'
+	import { RECIPE_SORTS, filtering, recipeTags, type RecipeSort } from '../browse.js'
+	import { ingredientStatus, type TonightPick } from '../cook.js'
+	import { t } from '../../../i18n/index.js'
+	import { recipeBrowse } from '../recipe-browse.svelte.js'
+	import { kitchen } from '../store.svelte.js'
+	import { type Recipe } from '../types.js'
 
 	type Props = {
 		/** The recipes the search and the filters leave, in the order asked for. */

@@ -5,13 +5,13 @@
 	// photos of the shelves through the same sheet (D-89). The kit's sheet is the picture; the state, the read and the
 	// commit are `capture`'s.
 	import { CaptureSheet, type CaptureFile, type CaptureRow } from '@eden/ui-kit'
-	import { CATEGORIES } from '@eden/shared/domains/kitchen'
-	import { MAX_FILES } from '@eden/shared/gardener'
-	import { t } from '@eden/shared/i18n'
-	import { capture } from '@eden/shared/domains/kitchen'
-	import { kitchen } from '@eden/shared/domains/kitchen'
-	import { CAPTURE_ACCEPT, sourceDetail, type CaptureRefusal } from '@eden/shared/domains/kitchen'
-	import { failureOf, readerOf, refusalOf } from '@eden/shared/domains/kitchen'
+	import { CATEGORIES } from '../types.js'
+	import { MAX_FILES } from '../../../gardener/index.js'
+	import { t } from '../../../i18n/index.js'
+	import { capture } from '../capture.svelte.js'
+	import { kitchen } from '../store.svelte.js'
+	import { CAPTURE_ACCEPT, sourceDetail, type CaptureRefusal } from '../staging.svelte.js'
+	import { failureOf, readerOf, refusalOf } from '../words.js'
 
 	const reader = $derived(readerOf($t, capture.preview))
 	const files = $derived<CaptureFile[]>(

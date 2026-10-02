@@ -1,5 +1,6 @@
 // Hearth's shapes and their rows, shared so the pure parts are tested here (`*.test.ts`) and both apps read one
-// definition. The store is here too (mobile parity, F3); the views and the widgets stay in each app.
+// definition. The store is here too (mobile parity, F3); the views both apps mount are under `views/` and the
+// widgets under `widgets/`, reached by deep path. Stock, Grocery and the page around them are each app's own.
 export * from './browse.js'
 export * from './capture.js'
 export * from './cook.js'
@@ -47,7 +48,15 @@ export {
 } from './store.svelte.js'
 export { forbidden } from './safety.svelte.js'
 export { fetchStoreSite } from './store-site.js'
-export { categoryGlyph, failureOf, readerOf, refusalOf } from './words.js'
+export {
+	LOCATION_ICONS,
+	categoryGlyph,
+	failureOf,
+	groceryLineOf,
+	readerOf,
+	refusalOf,
+	stockMoveItems,
+} from './words.js'
 export { recipeBrowse } from './recipe-browse.svelte.js'
 export { capture } from './capture.svelte.js'
 export { recipeDrafts, recipeImport } from './recipe-draft.svelte.js'

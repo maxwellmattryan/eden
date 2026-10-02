@@ -1,7 +1,7 @@
-// Hearth's surface on the phone (product/domains/kitchen.md, "Mobile"): the page and its tabs, and the bodies of
-// its Garden tiles, which are the ones the desktop mounts. What Hearth declares is in
-// `@eden/shared/domains/kitchen/manifest.json`; what it does (its store, its tools, its drafts) is its `logic.ts`
-// there, which `defineDomain` joins to this. Its capture sheet is bound when the phone's Hearth is built (#19).
+// Hearth's surface on the phone (product/domains/kitchen.md, "Mobile"): the page and its tabs, the bodies of its
+// Garden tiles, which are the ones the desktop mounts, and the capture sheet the shell shows over any page. What
+// Hearth declares is in `@eden/shared/domains/kitchen/manifest.json`; what it does (its store, its tools, its
+// drafts) is its `logic.ts` there, which `defineDomain` joins to this.
 import { goto } from '$app/navigation'
 import { resolve } from '$app/paths'
 import { defineDomain } from '@eden/shared/domains'
@@ -9,6 +9,7 @@ import { kitchen } from '@eden/shared/domains/kitchen'
 import CookTonight from '@eden/shared/domains/kitchen/widgets/CookTonight.svelte'
 import ExpiringSoon from '@eden/shared/domains/kitchen/widgets/ExpiringSoon.svelte'
 import GroceryQuickAdd from '@eden/shared/domains/kitchen/widgets/GroceryQuickAdd.svelte'
+import HaulCapture from '@eden/shared/domains/kitchen/views/HaulCapture.svelte'
 
 export const kitchenManifest = defineDomain('kitchen', {
 	routes: {
@@ -36,4 +37,5 @@ export const kitchenManifest = defineDomain('kitchen', {
 			},
 		},
 	},
+	overlay: HaulCapture,
 })
