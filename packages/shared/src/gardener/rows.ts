@@ -33,21 +33,28 @@ function trimmed(value: unknown): unknown {
 	return value
 }
 
+/** A field with nothing to send: empty, or a picture held inline (a place's thumbnail), which is bytes and no words. */
+const unsent = (value: unknown) =>
+	value === null || value === undefined || (typeof value === 'string' && value.startsWith('data:'))
+
 /**
- * The row as it is sent: without the store's fields and the empty ones, an entity's payload fields raised beside
- * its id where none shares a name with the row's own, instants to the minute, every string scrubbed.
+ * The row as it is sent: without the store's fields, the empty ones and the inline pictures, an entity's payload
+ * fields raised beside its id where none shares a name with the row's own, instants to the minute, every string
+ * scrubbed.
  */
 export function sentRow(row: WrittenRow): Record<string, unknown> {
 	const kept: Record<string, unknown> = {}
 	for (const [key, value] of Object.entries(row)) {
-		if (!OMITTED.includes(key) && value !== null && value !== undefined) kept[key] = value
+		if (!OMITTED.includes(key) && !unsent(value)) kept[key] = value
 	}
 	const { payload } = kept
 	if (isObject(payload) && !Object.keys(payload).some((key) => key !== 'payload' && key in kept)) {
 		delete kept.payload
 		for (const [key, value] of Object.entries(payload)) {
-			if (value !== null && value !== undefined) kept[key] = value
+			if (!unsent(value)) kept[key] = value
 		}
+	} else if (isObject(payload)) {
+		kept.payload = Object.fromEntries(Object.entries(payload).filter(([, value]) => !unsent(value)))
 	}
 	return scrubValue(trimmed(kept)) as Record<string, unknown>
 }

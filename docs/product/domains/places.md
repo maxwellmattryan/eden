@@ -4,7 +4,7 @@ status: draft
 summary: Places and listings near you on a map, filtered by vibe, with favourites, collections, visits, and a one-tap path from "let's go" to a calendar event. Id `places`, Phase 3.
 read-this-if: You are working on the map, place discovery, vibes, favourites, listings or outings.
 depends-on: [substrate/registry, substrate/primitives, substrate/integrations, substrate/grants, substrate/shell, substrate/ai]
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 ## 1. Purpose
@@ -59,12 +59,13 @@ Read: `home-area` (substrate, T1), `dietary-preference` (Hearth, T1; includes al
 | `suggest-listings` | `listing`, `favorite-vibe`, `home-area`, `local-event`, `outing` | read; searches the web (D-132) | none | `standard`, needs `search` |
 | `import-places` | `vibe`, `favorite-vibe` | write-draft; tags a pasted list of names with vibes, no search | none | `standard` |
 | `add-to-calendar` | `listing` | write, through the substrate `createEvent` (D-136) | confirm sheet | plain |
+| `update-places` | `place-profile`, `venue`, `vibe`, `collection` | write; a batch that edits, files in collections and deletes saved places (D-154) | confirm sheet, one undo; a delete always asks | plain |
 
-How a search runs, what it costs and what it may not do is D-132; the page and picture of a place are D-135, and the picture the owner chooses for one, from a file or a link, is D-144; the weekly listings search nobody pressed is D-134.
+How a search runs, what it costs and what it may not do is D-132; the page and picture of a place are D-135, and the picture the owner chooses for one, from a file or a link, is D-144; the weekly listings search nobody pressed is D-134; looking for the picture of one place that has none is D-153.
 
 What a model receives: the filter, `home-area` or the area the owner typed, the names of saved places and the dietary facts under their grants. Never coordinates. A candidate gets a pin only if the geocoder finds it inside the search area; one it cannot find is listed as "could not be placed". Nothing is saved unasked.
 
-Never-do list: never sends coordinates finer than city level to a model or provider without a precise-location grant; keeps no location history; never books, reserves or publishes reviews; never fetches an address a model composed.
+Never-do list: never sends coordinates finer than city level to a model or provider without a precise-location grant; keeps no location history; never books, reserves or publishes reviews; never fetches an address a model composed that the owner has not confirmed on a card (D-154).
 
 ## 6. Surfaces
 

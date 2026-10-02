@@ -556,6 +556,8 @@
 	   a popover, which would close when the map is dragged */
 	.over {
 		position: absolute;
+		/* above every pin: pins carry z-index 1, and none may show through the detail */
+		z-index: 2;
 		top: var(--space-3);
 		right: var(--space-3);
 		width: min(calc(var(--sheet-sm) * 0.95), calc(100% - 2 * var(--space-3)));

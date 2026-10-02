@@ -100,6 +100,12 @@
 			"access": "write",
 			"confirm": true,
 			"reads": ["listing"]
+		},
+		{
+			"id": "update-places",
+			"access": "write",
+			"confirm": true,
+			"reads": ["place-profile", "venue", "vibe", "collection"]
 		}
 	],
 	"signals": ["listing.matched", "visit.logged"],

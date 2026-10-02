@@ -2033,6 +2033,20 @@ export const DECLARATIONS = {
 				"grade": null,
 				"needs": [],
 				"minContext": null
+			},
+			{
+				"id": "update-places",
+				"access": "write",
+				"confirm": true,
+				"reads": [
+					"place-profile",
+					"venue",
+					"vibe",
+					"collection"
+				],
+				"grade": null,
+				"needs": [],
+				"minContext": null
 			}
 		],
 		"signals": [

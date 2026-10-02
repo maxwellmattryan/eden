@@ -3,12 +3,13 @@
 	// where they were read and a note to check, its vibes, the owner's notes and visits, and the actions on it. It is
 	// for reading and for acting; the forms are sheets (D-95). The map page lays it over the map's edge when it is
 	// wide and shows it as a pushed view when it is narrow, so it knows nothing of where it stands.
-	import { Button, Chip, IconButton, Menu, Rating, type MenuItem } from '@eden/ui-kit'
+	import { Button, Chip, IconButton, Menu, Rating, toast, type MenuItem } from '@eden/ui-kit'
 	import { openExternal } from '@eden/shared/api'
 	import { formatAgo, formatDateOf } from '@eden/shared/dates'
 	import {
 		distanceLabel,
 		formatSpans,
+		lacksPicture,
 		mapsLink,
 		placeAddress,
 		meadow,
@@ -106,15 +107,37 @@
 		)
 	}
 
+	// A place with no picture offers to look for one (D-153): its page is read as opening it reads it, asked for even
+	// where it was asked lately, and what came of it is said in a toast.
+	let finding = $state<string>()
+	async function findPicture() {
+		const { id, name } = place
+		finding = id
+		const outcome = await meadow.findPicture(id, lang).catch(() => 'failed' as const)
+		if (finding === id) finding = undefined
+		if (outcome !== 'had') toast({ message: $t(`domains.places.picture.${outcome}`, { values: { name } }) })
+	}
+
 	let moreAnchor = $state<HTMLElement>()
 	let moreOpen = $state(false)
 	const moreItems = $derived<MenuItem[]>([
 		...(place.url ? [{ id: 'website', label: $t('domains.places.detail.website'), icon: 'globe' as const }] : []),
+		...(lacksPicture(place)
+			? [
+					{
+						id: 'picture',
+						label: $t(finding === place.id ? 'domains.places.picture.finding' : 'domains.places.picture.find'),
+						icon: 'image-plus' as const,
+						disabled: finding === place.id,
+					},
+				]
+			: []),
 		{ id: 'place', label: $t('domains.places.detail.placeOnMap'), icon: 'locate-fixed' },
 		{ id: 'delete', label: $t('domains.places.detail.delete'), icon: 'trash', destructive: true },
 	])
 	function more(id: string | undefined) {
 		if (id === 'website' && place.url) void openExternal(place.url)
+		else if (id === 'picture') void findPicture()
 		else if (id === 'place') onplace?.(place)
 		else if (id === 'delete') remove()
 	}

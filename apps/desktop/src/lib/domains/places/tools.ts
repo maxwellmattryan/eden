@@ -11,6 +11,8 @@ import {
 	DISCOVERY_LIMIT,
 	DISCOVERY_SEARCHES,
 	inputFromFilter,
+	isCategory,
+	knownVibes,
 	listingsReadingPrompt,
 	listingsResearchPrompt,
 	listingsSchema,
@@ -29,9 +31,14 @@ import {
 	type DiscoverySource,
 	type ListingsQuery,
 	type ListingsSource,
+	type PlacePatch,
+	type PriceLevel,
 	type SourceFailure,
+	type Undo,
 	type WeeklyOutcome,
 } from '@eden/shared/domains/places'
+import { normalLink } from '@eden/shared/gardener'
+import { entries, given, ids, preview, together, unknown, withFields, type Fields } from '../../shell/gardener/batch.js'
 import {
 	int,
 	parseJson,
@@ -251,6 +258,163 @@ placesTools['add-to-calendar'] = {
 		return {
 			output: { added: listing.title, when: listing.startAt, status: 'confirmed' },
 			touched: [`eden://event/${outing.id}`],
+		}
+	},
+}
+
+const say = (key: 'change' | 'remove', what: string) =>
+	get(t)(`domains.places.gardener.preview.${key}`, { values: { what } })
+
+/** The ids a row names under a key, each once. */
+const listed = (row: Fields, key: string): string[] => [...new Set(ids(row, key))]
+
+/** The names of the collections a card's row names, or nothing when one of them is not there. */
+const collectionNames = (value: unknown): string | undefined => {
+	const names = (Array.isArray(value) ? value : []).map(
+		(id) => meadow.collections.find((entry) => entry.id === id)?.name
+	)
+	return names.length && names.every(Boolean) ? names.join(' + ') : undefined
+}
+
+/**
+ * Asks after a place's picture once the owner has confirmed a website for it (D-154), in the background. The undo it
+ * answers takes the picture back, whether it has arrived or is still on its way.
+ */
+function fetchPlacePicture(id: string): Undo {
+	let stopped = false
+	let photoId: string | undefined
+	const take = () => {
+		if (photoId && meadow.placeById(id)?.photoId === photoId) meadow.setPhoto(id, undefined)
+	}
+	void meadow
+		.findPicture(id, get(locale) ?? 'en')
+		.then((outcome) => {
+			if (outcome !== 'found') return
+			photoId = meadow.placeById(id)?.photoId
+			if (stopped) take()
+		})
+		.catch(() => null)
+	return () => {
+		stopped = true
+		take()
+	}
+}
+
+const nothingChanged = (error: string) => ({ output: { error: `${error} Nothing was changed.` } })
+
+// The batch write (D-154), on the pattern of Hearth's (D-108): every id and every field is checked before anything
+// is written, and the whole call is one confirm and one undo.
+placesTools['update-places'] = {
+	preview: preview('update-places', (input) => [
+		...entries(input, 'update').map((row) => {
+			const named = withFields(meadow.placeById(String(row.id ?? ''))?.name, row, ['id'], {
+				addTo: collectionNames,
+				removeFrom: collectionNames,
+			})
+			return named && say('change', named)
+		}),
+		...ids(input, 'remove').map((id) => {
+			const place = meadow.placeById(id)
+			return place && say('remove', place.name)
+		}),
+	]),
+	// a call that deletes asks every time
+	asks: (input) => ids(input, 'remove').length > 0,
+	run: async (input, ctx) => {
+		await meadow.load()
+		const update = entries(input, 'update')
+		const remove = [...new Set(ids(input, 'remove'))]
+		if (!update.length && !remove.length) return { output: { error: 'Nothing to change: pass `update` or `remove`.' } }
+		const missing = [...update.map((row) => String(row.id ?? '')), ...remove].filter((id) => !meadow.placeById(id))
+		if (missing.length) return unknown('place', 'venue', missing)
+		const lost = update
+			.flatMap((row) => [...listed(row, 'addTo'), ...listed(row, 'removeFrom')])
+			.filter((id) => !meadow.collections.some((entry) => entry.id === id))
+		if (lost.length) return unknown('collection', 'collection', [...new Set(lost)])
+
+		// every field is read before anything is written
+		const changes: { id: string; patch: PlacePatch }[] = []
+		for (const row of update) {
+			const id = row.id as string
+			const patch: PlacePatch = {}
+			const name = given(row, 'name')
+			if (name) patch.name = name.slice(0, 200)
+			if ('category' in row) {
+				if (!isCategory(row.category)) return nothingChanged(`${JSON.stringify(row.category)} is not a kind of place.`)
+				patch.category = row.category
+			}
+			if ('vibes' in row) {
+				const asked = Array.isArray(row.vibes) ? [...new Set(row.vibes)] : undefined
+				const vibes = knownVibes(asked, meadow.vibes)
+				if (!asked || vibes.length !== asked.length)
+					return nothingChanged(
+						`${JSON.stringify((asked ?? [row.vibes]).filter((vibe) => !vibes.includes(vibe as string)))} are not vibes: pass ids the tool lists, or the \`id\` of a row under \`vibe\`.`
+					)
+				patch.vibes = vibes
+			}
+			if ('price' in row) {
+				const price = row.price
+				if (typeof price !== 'number' || !Number.isInteger(price) || price < 0 || price > 4)
+					return nothingChanged(`${JSON.stringify(price)} is not a price: pass 1 to 4, or 0 to clear it.`)
+				patch.price = price ? (price as PriceLevel) : undefined
+			}
+			if (typeof row.alcoholFree === 'boolean') patch.alcoholFree = row.alcoholFree || undefined
+			if (typeof row.favourite === 'boolean') patch.favourite = row.favourite
+			const notes = given(row, 'notes')
+			if (notes !== undefined) patch.notes = notes.slice(0, 2000) || undefined
+			const phone = given(row, 'phone')
+			if (phone !== undefined) patch.phone = phone.slice(0, 40) || undefined
+			const url = given(row, 'url')
+			if (url) {
+				const site = normalLink(url)
+				if (!site)
+					return nothingChanged(`${JSON.stringify(url)} is not a website: pass an address starting with https://.`)
+				patch.url = site
+			} else if (url === '') patch.url = undefined
+			if (Object.keys(patch).length) changes.push({ id, patch })
+		}
+
+		const before = new Map(update.map((row) => [row.id as string, meadow.placeById(row.id as string)?.url]))
+		const undos: Undo[] = []
+		const touched = new Set<string>()
+		if (changes.length) {
+			undos.push(meadow.changePlaces(changes).undo)
+			for (const { id, patch } of changes) {
+				touched.add(id)
+				// the website the owner confirmed on the card is read on the device, for a place with no picture
+				const place = meadow.placeById(id)
+				if (patch.url && patch.url !== before.get(id) && place && !place.photoId && !place.thumb)
+					undos.push(fetchPlacePicture(id))
+			}
+		}
+		for (const row of update) {
+			const id = row.id as string
+			for (const collection of listed(row, 'addTo')) {
+				const { added, undo } = meadow.addToCollection(collection, [id])
+				if (!added) continue
+				undos.push(undo)
+				touched.add(id)
+			}
+			for (const collection of listed(row, 'removeFrom')) {
+				if (!meadow.collections.find((entry) => entry.id === collection)?.placeIds.includes(id)) continue
+				undos.push(meadow.removeFromCollection(collection, id).undo)
+				touched.add(id)
+			}
+		}
+		const updated = [...touched].map((id) => ({ id, name: meadow.placeById(id)?.name ?? '' }))
+		const removed = remove.map((id) => {
+			const { place, undo } = meadow.removePlace(id)
+			undos.push(undo)
+			return { id, name: place?.name ?? '' }
+		})
+		if (undos.length)
+			ctx.undo(
+				get(t)('domains.places.gardener.toast.places', { values: { count: updated.length + removed.length } }),
+				together(undos)
+			)
+		return {
+			output: { updated, removed },
+			touched: [...updated, ...removed].map((place) => `eden://place/${place.id}`),
 		}
 	},
 }

@@ -31,10 +31,10 @@ import {
 const index = toolIndex(declarations)
 
 describe('the tool index', () => {
-	it('validates, and holds the thirty-six tools', () => {
+	it('validates, and holds the thirty-seven tools', () => {
 		expect(validateTools(index)).toEqual([])
-		expect(index).toHaveLength(36)
-		expect(Object.keys(SCHEMAS)).toHaveLength(36)
+		expect(index).toHaveLength(37)
+		expect(Object.keys(SCHEMAS)).toHaveLength(37)
 	})
 
 	it('declares Meadow’s searching tools as needing a model that searches, and its writes as strict (D-132)', () => {
@@ -51,6 +51,10 @@ describe('the tool index', () => {
 		expect(outing.declaration).toMatchObject({ access: 'write', confirm: true, grade: null })
 		expect(isStrict(bulk) && isStrict(outing)).toBe(true)
 		expect(optionalCount(bulk.schema) + optionalCount(outing.schema)).toBe(0)
+		// the batch write is confirmed on its card and read loosely, as Hearth's are
+		const batch = parseWireName('places_update-places', index)!
+		expect(batch.declaration).toMatchObject({ access: 'write', confirm: true, grade: null })
+		expect(isStrict(batch)).toBe(false)
 		// eleven strict tools of the twenty the API takes
 		expect(index.filter(isStrict)).toHaveLength(11)
 	})

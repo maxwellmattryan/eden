@@ -135,6 +135,20 @@ describe('rows as a model reads them (D-151)', () => {
 	})
 })
 
+describe('a picture held inline', () => {
+	it('is never sent: a place keeps its picture’s id and loses the thumbnail', () => {
+		expect(
+			sentRow(
+				of({
+					id: 'p1',
+					type: 'place-profile',
+					payload: { placeId: 'v1', photoId: 'a1', thumb: 'data:image/jpeg;base64,AAAA' },
+				})
+			)
+		).toEqual({ id: 'p1', type: 'place-profile', placeId: 'v1', photoId: 'a1' })
+	})
+})
+
 describe('the agenda as text', () => {
 	it('writes a heading a day and each list as rows, and leaves out what is empty', () => {
 		const agenda: Agenda = {

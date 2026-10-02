@@ -27,7 +27,15 @@ import { assertFact, deleteFact, queryFacts, updateFact } from '../../profile/cl
 import { emit } from '../../signals/runtime.js'
 import type { SizedPicture } from '../../api/picture.js'
 import { asCategory, categoryFromOsm } from './categories.js'
-import { fetchDetail, searchHours, type DetailAnswer, type HoursDetail, type PlaceRef } from './details/index.js'
+import {
+	fetchDetail,
+	lacksPicture,
+	searchHours,
+	type DetailAnswer,
+	type HoursDetail,
+	type PictureOutcome,
+	type PlaceRef,
+} from './details/index.js'
 import {
 	candidateKey,
 	discoveryBrief,
@@ -86,6 +94,11 @@ import {
 } from './types.js'
 
 export type Undo = () => void
+
+/** The fields of a saved place a batch may change; one given as `undefined` is cleared. */
+export type PlacePatch = Partial<
+	Pick<SavedPlace, 'name' | 'category' | 'vibes' | 'price' | 'alcoholFree' | 'favourite' | 'notes' | 'url' | 'phone'>
+>
 
 /** One change: what the page sees of it and the way back, and the write that stores each. */
 interface Change {
@@ -782,6 +795,14 @@ export class MeadowStore {
 	 * that could not be read never holds up the rest.
 	 */
 	async openDetails(target: SavedPlace | Suggestion, lang: string): Promise<void> {
+		await this.#readDetails(target, lang)
+	}
+
+	async #readDetails(
+		target: SavedPlace | Suggestion,
+		lang: string,
+		options: { forcePhoto?: boolean } = {}
+	): Promise<PictureOutcome> {
 		const saved = 'candidate' in target ? undefined : target
 		const suggestion = 'candidate' in target ? target : undefined
 		const ref: PlaceRef = saved
@@ -806,9 +827,9 @@ export class MeadowStore {
 			const age = Date.now() - Date.parse(known.fetchedAt)
 			return age > (known.status === 'ok' ? DETAIL_FRESH_MS : DETAIL_RETRY_MS)
 		}
-		const ask = async <S extends DetailSlot>(slot: S) => {
+		const ask = async <S extends DetailSlot>(slot: S, force = false) => {
 			const key = `${ref.key}:${slot}`
-			if (this.#asking.has(key) || !due(slot)) return undefined
+			if (this.#asking.has(key) || (!force && !due(slot))) return undefined
 			this.#asking.add(key)
 			try {
 				const answer = await fetchDetail(slot, ref, { lang, off })
@@ -850,18 +871,22 @@ export class MeadowStore {
 			!ref.url && hours?.answer.status === 'ok' && hours.answer.data?.website
 				? { ...ref, url: hours.answer.data.website }
 				: ref
-		const wantsPicture = saved ? !saved.photoId && !saved.thumb : !this.#pictures.has(ref.key)
-		if (!wantsPicture || !withPage.url) return
+		const wantsPicture = saved ? lacksPicture(saved) : !this.#pictures.has(ref.key)
+		if (!wantsPicture) return 'had'
+		if (!withPage.url) return 'noWebsite'
 		Object.assign(ref, withPage)
-		const photo = await ask('photo')
-		if (photo?.answer.status !== 'ok' || !photo.answer.data) return
+		const photo = await ask('photo', options.forcePhoto)
+		if (photo?.answer.status !== 'ok' || !photo.answer.data) return 'failed'
 		if (saved) {
 			// kept as the place's picture, as a recipe's page picture is (D-93); the owner may change it or take it away
-			if (this.placeById(saved.id) && !this.placeById(saved.id)?.photoId)
-				this.setPhoto(saved.id, photo.answer.data.picture)
+			const now = this.placeById(saved.id)
+			if (!now) return 'failed'
+			if (now.photoId) return 'had'
+			this.setPhoto(saved.id, photo.answer.data.picture)
 		} else {
 			this.#pictures.set(ref.key, photo.answer.data.picture)
 		}
+		return 'found'
 	}
 
 	/** A change to a saved place that is the app's own doing: no feed line and no undo, since the owner did nothing. */
@@ -945,6 +970,58 @@ export class MeadowStore {
 		const undo = this.#commit(this.#replaced(was, after), 'garden.feed.placeChanged', { name: after.name })
 		this.#afterSave()
 		return { place: after, undo }
+	}
+
+	/**
+	 * Changes several places as one write with one undo: what the Gardener's `update-places` commits (D-154). A patch
+	 * holds only the fields that change, and one it holds as `undefined` is cleared; the rest of the place stands.
+	 */
+	changePlaces(changes: { id: string; patch: PlacePatch }[]): { places: SavedPlace[]; undo: Undo } {
+		// one entry a place: a later patch for the same place is laid over the earlier
+		const patches: Record<string, PlacePatch> = {}
+		for (const { id, patch } of changes) patches[id] = { ...patches[id], ...patch }
+		const made = Object.entries(patches).flatMap(([id, patch]) => {
+			const before = this.placeById(id)
+			if (!before) return []
+			const was = $state.snapshot(before) as SavedPlace
+			const after = Object.fromEntries(
+				Object.entries({ ...was, profileId: was.profileId ?? newId(), ...patch }).filter(
+					([, value]) => value !== undefined
+				)
+			) as unknown as SavedPlace
+			return [{ after, step: this.#replaced(was, after) }]
+		})
+		if (!made.length) return { places: [], undo: () => {} }
+		const steps = made.map((entry) => entry.step)
+		const back = [...steps].reverse()
+		const one = made.length === 1
+		const undo = this.#commit(
+			{
+				apply: () => steps.forEach((step) => step.apply()),
+				revert: () => back.forEach((step) => step.revert()),
+				write: async () => {
+					for (const step of steps) await step.write()
+				},
+				unwrite: async () => {
+					for (const step of back) await step.unwrite()
+				},
+			},
+			one ? 'garden.feed.placeChanged' : 'garden.feed.placesChanged',
+			one ? { name: made[0]!.after.name } : { count: made.length }
+		)
+		this.#afterSave()
+		return { places: made.map((entry) => entry.after), undo }
+	}
+
+	/**
+	 * Asks after the picture of one saved place that has none, as opening it would, whether or not it was asked
+	 * lately (D-153): what the owner asks for on the place, and what follows a website they have just confirmed for
+	 * it (D-154).
+	 */
+	async findPicture(id: string, lang: string): Promise<PictureOutcome> {
+		const place = this.placeById(id)
+		if (!place) return 'failed'
+		return this.#readDetails($state.snapshot(place) as SavedPlace, lang, { forcePhoto: true })
 	}
 
 	/** One place written over another of the same id: the Place's fields and the profile, as one batch each way. */

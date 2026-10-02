@@ -688,6 +688,46 @@ export const SCHEMAS: Readonly<Record<string, { description: string; schema: Jso
 			'Puts a listing in the owner’s calendar as an outing they are going to, after the owner confirms on the card; they can undo it. It takes a listing Meadow already holds: pass the `id` of a row under `listing`, from `read-rows`, or of an entry `places_suggest-listings` returned. Returns the outing’s title and time, or an error when no listing has that id. It makes no other kind of event.',
 		schema: object({ listingId: text('The `id` of the listing.') }, ['listingId']),
 	},
+	'places.update-places': {
+		description:
+			'Changes or deletes the places the owner has saved in Meadow, after the owner confirms on the card; they can undo it. One call takes every change. For a place you know, fill in `url` with its own website so the owner does not have to: once they confirm, the app reads that site on the device for the place’s picture. Leave `url` out when you are not sure of it; a wrong address puts the wrong picture on the place. Never guess a phone number. You cannot set a place’s address or move it on the map, and you cannot add a place: several names go to `places_import-places`, and one the owner adds on the Meadow page. Deleting a place deletes its picture and its visits with it. Returns the id and name of each place changed and removed, or an error that says nothing was changed.',
+		schema: object({
+			update: {
+				type: 'array',
+				description: 'The places to change, one entry each, with only the fields that change.',
+				items: object(
+					{
+						id: text('The `id` of the place’s row under `venue`, from `read-rows`.'),
+						name: text('Its new name.'),
+						category: { type: 'string', enum: PLACE_CATEGORIES, description: 'The kind of place.' },
+						vibes: {
+							type: 'array',
+							items: text(),
+							description: `Every vibe the place should have, replacing the ones it has: ids from ${PLACE_VIBES.join(', ')}, or the \`id\` of a row under \`vibe\`. An empty list clears them.`,
+						},
+						price: integer('How dear it is, 1 to 4; 0 clears it.'),
+						alcoholFree: { type: 'boolean', description: 'Whether it is somewhere to go without drinking.' },
+						favourite: { type: 'boolean', description: 'Whether it is one of the owner’s favourites.' },
+						notes: text('What the owner wants to remember about it. An empty string clears it.'),
+						url: text('The place’s own website, starting with https://. An empty string clears it.'),
+						phone: text('Its phone number, only when the owner gave it. An empty string clears it.'),
+						addTo: {
+							type: 'array',
+							items: text(),
+							description: 'The `id` of each collection to put the place in, from rows under `collection`.',
+						},
+						removeFrom: {
+							type: 'array',
+							items: text(),
+							description: 'The `id` of each collection to take the place out of.',
+						},
+					},
+					['id']
+				),
+			},
+			remove: { type: 'array', items: text(), description: 'The `id` of each place to delete.' },
+		}),
+	},
 	'toolbench.find-similar': {
 		description:
 			'Finds the owner’s ideas, projects and notes that share words with a piece of text. It compares words and not meaning, so pass the distinctive keywords and not a sentence. Returns `matches`, the closest first, each with its `type`, `id`, `title` and a `score` from 0 to 1; an empty list means nothing shares a word. No model request is made. Use it to see what the owner already has before brainstorming or capturing an idea.',
@@ -838,6 +878,7 @@ export const LOOSE: ReadonlySet<string> = new Set([
 	'kitchen.edit-stores',
 	'kitchen.save-recipe',
 	'kitchen.change-recipe',
+	'places.update-places',
 ])
 
 /** Whether a tool's input is held to its schema by the API: the ones that write or draft, where a stray field or a

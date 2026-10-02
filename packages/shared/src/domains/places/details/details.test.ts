@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { lacksPicture } from './backfill.js'
 import { createOsmHours, hoursFromTags, overpassQuery } from './osm-hours.js'
 import { fetchDetail, searchHours, sourcesFor } from './registry.js'
 import type { DetailSource, PlaceRef } from './types.js'
@@ -122,5 +123,13 @@ describe('a slot', () => {
 		expect(
 			(await searchHours.fetch({ key: 'x', name: 'x', hoursText: 'Mo-Su 09:00-17:00' }, { lang: 'en' }))?.spec
 		).toBeDefined()
+	})
+})
+
+describe('finding a missing picture', () => {
+	it('asks about a place with neither a picture nor a thumbnail', () => {
+		expect(lacksPicture({})).toBe(true)
+		expect(lacksPicture({ thumb: 'data:image/jpeg;base64,AA' })).toBe(false)
+		expect(lacksPicture({ photoId: 'a1' })).toBe(false)
 	})
 })

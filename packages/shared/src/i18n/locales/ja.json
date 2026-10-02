@@ -200,6 +200,7 @@
 			"placeSaved": "{name}を野原に保存",
 			"placesImported": "{count}件の場所を取り込み",
 			"placeChanged": "{name}を変更",
+			"placesChanged": "{count}件の場所を変更",
 			"placeRemoved": "{name}を削除",
 			"placeFavourited": "{name}をお気に入りに",
 			"placeUnfavourited": "{name}をお気に入りから外した",
@@ -1227,6 +1228,22 @@
 				"list": "庭師が見つけた場所",
 				"from": "ウェブ検索で見つかりました。出典:",
 				"notSaved": "まだ保存されていません。7日後にこの端末から消えます。"
+			},
+			"gardener": {
+				"preview": {
+					"change": "変更: {what}",
+					"remove": "削除: {what}"
+				},
+				"toast": {
+					"places": "場所を{count}件変更しました。"
+				}
+			},
+			"picture": {
+				"find": "写真を探す",
+				"finding": "写真を探しています",
+				"found": "{name}の写真が見つかりました。",
+				"noWebsite": "{name}には写真を読み取るウェブサイトがありません。",
+				"failed": "{name}のウェブサイトから写真を読み取れませんでした。"
 			},
 			"import": {
 				"title": "リストを取り込む",

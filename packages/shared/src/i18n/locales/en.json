@@ -200,6 +200,7 @@
 			"placeSaved": "{name} saved to Meadow",
 			"placesImported": "{count, plural, one {# place} other {# places}} imported",
 			"placeChanged": "{name} changed",
+			"placesChanged": "{count, plural, one {# place} other {# places}} changed",
 			"placeRemoved": "{name} deleted",
 			"placeFavourited": "{name} marked a favourite",
 			"placeUnfavourited": "{name} no longer a favourite",
@@ -1227,6 +1228,22 @@
 				"list": "Found by the Gardener",
 				"from": "Found by a web search, from",
 				"notSaved": "Not saved yet; it goes from this device in seven days."
+			},
+			"gardener": {
+				"preview": {
+					"change": "Change: {what}",
+					"remove": "Delete: {what}"
+				},
+				"toast": {
+					"places": "{count, plural, one {# place} other {# places}} changed."
+				}
+			},
+			"picture": {
+				"find": "Find a picture",
+				"finding": "Looking for a picture",
+				"found": "Picture found for {name}.",
+				"noWebsite": "{name} has no website to read a picture from.",
+				"failed": "No picture could be read from {name}’s website."
 			},
 			"import": {
 				"title": "Import a list",
