@@ -40,8 +40,21 @@ describe('the home and its row', () => {
 		const home = homeFromRow(rowOf(input))!
 		expect(home).toMatchObject({ id: 'p1', label: 'Home', latitude: 30.3074, longitude: -97.7262 })
 		expect(home.address).toEqual(duval.address)
-		expect(home.area).toEqual({ city: 'Austin', region: 'Texas', country: 'United States' })
+		expect(home.area).toEqual({
+			street: 'Duval St',
+			city: 'Austin',
+			region: 'Texas',
+			postalCode: '78751',
+			country: 'United States',
+		})
 		expect(draftOf(home)).toEqual(duval)
+	})
+
+	it('reads the street without its house number or a unit, wherever the unit was written (D-152)', () => {
+		const address = { ...duval.address, line1: '4301 Duval St Apt 12', line2: 'Unit 7' }
+		const area = homeFromRow(rowOf(homeInput({ ...duval, address })))!.area
+		expect(area?.street).toBe('Duval St')
+		expect(JSON.stringify(area)).not.toMatch(/4301|12|Unit 7/)
 	})
 
 	it('has no area without a city, clears an address that was removed, and is nothing without a point', () => {

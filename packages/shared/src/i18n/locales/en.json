@@ -1321,8 +1321,10 @@
 			"favorite-vibe": "Favourite vibe"
 		},
 		"fields": {
+			"street": "Street",
 			"city": "City",
 			"region": "Region",
+			"postalCode": "Postal code",
 			"country": "Country",
 			"substance": "Substance",
 			"kind": "Kind",

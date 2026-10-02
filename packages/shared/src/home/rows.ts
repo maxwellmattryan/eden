@@ -1,5 +1,6 @@
 // Between the home and its row (D-141): home is the one Place of kind `home` (D-38). Its `address` column holds
-// the address's parts (D-138), and the area a model may be told of (city, region, country) is read from them.
+// the address's parts (D-138), and the area a model may be told of (the street without its number, the city, the
+// region, the postal code and the country, D-152) is read from them.
 import {
 	cleanAddress,
 	countryCode,
@@ -7,6 +8,7 @@ import {
 	encodeAddress,
 	readAddress,
 	regionName,
+	streetOf,
 	type Address,
 } from '../address/index.js'
 import type { PlaceInput, PlacePatch, PlaceRow } from '../data/types.js'
@@ -16,7 +18,7 @@ import type { HomeArea, HomePlace } from '../types/index.js'
 /** The home: where it is, what it is called, and its address when the owner gave one. No `id` until it has a row. */
 export interface Home extends HomePlace {
 	id?: string
-	/** T2: kept on the device, never sent to a model. */
+	/** T2: kept on the device, never sent to a model whole; `area` is the part a model is told (D-152). */
 	address?: Address
 }
 
@@ -28,12 +30,19 @@ export interface HomeDraft {
 	address?: Address
 }
 
-/** The area an address is in, in words: nothing without a city. */
+/**
+ * The area an address is in, in words: nothing without a city. The street comes without its house number or a
+ * unit, and the second line is never read (D-152).
+ */
 export function areaOf(address: Address | undefined): HomeArea | undefined {
 	if (!address?.city) return undefined
+	const street = streetOf(address)
+	const postalCode = address.postalCode?.trim()
 	return {
+		...(street ? { street } : {}),
 		city: address.city,
 		region: regionName(address.country, address.region),
+		...(postalCode ? { postalCode } : {}),
 		country: address.country ? countryName(address.country) : '',
 	}
 }
@@ -74,10 +83,15 @@ export const homePatch = (draft: HomeDraft): PlacePatch => ({
 	address: encodeAddress(draft.address) || null,
 })
 
-/** What Sky keeps of the home beside a forecast: its name, its point and its area, never its address. */
+/** What Sky keeps of the home beside a forecast: its name, its point and its area at city level, never its address. */
 export function forecastPlace(home: Home): HomePlace {
 	const { label, latitude, longitude, area } = home
-	return { label, latitude, longitude, ...(area ? { area: { ...area } } : {}) }
+	return {
+		label,
+		latitude,
+		longitude,
+		...(area ? { area: { city: area.city, region: area.region, country: area.country } } : {}),
+	}
 }
 
 /**

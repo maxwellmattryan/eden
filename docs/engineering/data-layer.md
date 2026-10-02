@@ -4,7 +4,7 @@ status: draft
 summary: The workspace database and everything over it: the SQLCipher file and its key on each platform, the schema and its conventions, the append-only migrations, stamps and ids, the registry, the grant store, the egress ledger, the profile, the home Place and addresses, the tables of the scheduler and of signals, the IPC boundary command by command, the frontend module and its browser fallback, how a store sits on rows, the Today store on the task rows, the export bundle, the import, and how it is tested.
 read-this-if: You are reading or writing the owner's data from Rust or from an app, adding a table, a migration, a command, an entity type or a fact type, moving a store onto rows, or touching export, import or the database key.
 depends-on: [product/substrate/data, product/substrate/primitives, product/substrate/registry, engineering/app-scaffold]
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 ## Where it stands
@@ -159,7 +159,7 @@ A new destination is four edits: the CSP's `connect-src` in `src-tauri/tauri.con
 | history | an edit that changes the value, the note or the window keeps what the fact held, under the edit's stamp, thirty days; `Workspace::open` sweeps the rest |
 | delete and restore | the tombstone, and its lifting: what an undo calls |
 
-`home-area` derives from the home Place (D-141): the city, region and country of its address (`areaOf` in `@eden/shared/home`) become the one `system-derived` row, source `place:home`, renewed when the home moves, through the shell's profile store, which the home store's `changed` hook calls. A Gardener proposal is shell state (`FactProposal`), never a row: the page shows it as a `ProposalCard`, and only an accept writes the fact, as `ai-inferred` with its confidence.
+`home-area` derives from the home Place (D-141, D-152): the street of its address without the house number or a unit (`streetOf` in `@eden/shared/address`), its city, region, postal code and country (`areaOf` in `@eden/shared/home`) become the one `system-derived` row, source `place:home`, renewed when the home moves, through the shell's profile store, which the home store's `changed` hook calls. A Gardener proposal is shell state (`FactProposal`), never a row: the page shows it as a `ProposalCard`, and only an accept writes the fact, as `ai-inferred` with its confidence.
 
 ## The home
 

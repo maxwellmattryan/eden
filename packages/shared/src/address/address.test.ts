@@ -14,6 +14,7 @@ import {
 	encodeAddress,
 	formatAddress,
 	geocodeText,
+	streetOf,
 	readAddress,
 	regionCode,
 	validateAddress,
@@ -135,6 +136,16 @@ describe('geocodeText', () => {
 		expect(geocodeText(shibuya)).toBe('神宮前, 渋谷区, Tokyo 150-0001, Japan')
 		expect(geocodeText({ country: 'US', line1: '4301', city: 'Austin' })).toBe('Austin, United States')
 		expect(geocodeText({ country: 'US', city: 'Austin', region: 'TX' })).toBe('Austin, TX, United States')
+	})
+
+	it('drops a unit typed at the end of the first line, and leaves a street named like one', () => {
+		expect(streetOf({ country: 'US', line1: '4301 Duval St Apt 12' })).toBe('Duval St')
+		expect(streetOf({ country: 'US', line1: '4301 Duval St, #12' })).toBe('Duval St')
+		expect(streetOf({ country: 'US', line1: '4301 Duval St, Suite B' })).toBe('Duval St')
+		expect(streetOf({ country: 'US', line1: '12 Floor St' })).toBe('Floor St')
+		expect(streetOf({ country: 'DE', line1: 'Hauptstraße 12a' })).toBe('Hauptstraße')
+		expect(streetOf(shibuya)).toBe('神宮前')
+		expect(streetOf({ country: 'US', line1: '4301' })).toBe('')
 	})
 })
 

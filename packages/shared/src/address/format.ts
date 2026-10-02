@@ -53,9 +53,16 @@ export function formatAddress(address: Address | undefined, options: FormatOptio
 	return lines.join(templateFor(address, options.locale ?? 'en').joiner ?? ', ')
 }
 
-/** A first line without its house number: the street alone, from whichever end the country writes the number at. */
-function streetOnly(address: Address): string {
-	const line = (address.line1 ?? '').normalize('NFKC').trim()
+/** A unit written at the end of a first line (`Apt 12`, `Suite 300`, `#4B`): a designator and its number or letter. */
+const UNIT_TAIL =
+	/[\s,]+(?:(?:apt|apartment|unit|suite|ste|fl|floor|bldg|building|rm|room)\.?\s*#?\s*|#\s*)(?:\d[\w-]*|[a-z])$/i
+
+/**
+ * A first line without its house number or a unit typed after it: the street alone, from whichever end the country
+ * writes the number at. The second line is never read.
+ */
+export function streetOf(address: Address): string {
+	const line = (address.line1 ?? '').normalize('NFKC').trim().replace(UNIT_TAIL, '')
 	const street = formatFor(address.country).houseNumberFirst
 		? line.replace(/^\d[\w\-/]*(\s+|$)/, '')
 		: line.replace(/[\s,]*\d[\w\-/]*$/, '')
@@ -69,7 +76,7 @@ function streetOnly(address: Address): string {
  */
 export function geocodeText(address: Address): string {
 	const { country, city, region, postalCode } = address
-	const street = streetOnly(address)
+	const street = streetOf(address)
 	return formatAddress(
 		{ country, city, region, postalCode, ...(street ? { line1: street } : {}) },
 		{ locale: 'en', country: true }

@@ -4,7 +4,7 @@ status: draft
 summary: The sensitivity tiers T0–T3 and what each allows for storage, sync, AI and export; what never leaves the device; what third parties receive; the owner's controls; a one-screen threat model.
 read-this-if: Anything you are designing touches personal data, an external service, or the Gardener.
 depends-on: [decisions]
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 ## Principles (Phase 1)
@@ -42,7 +42,7 @@ Tiers attach to resources in `substrate/registry.md`:
 - Anything T3, including that Vault items exist. The AI subsystem has no vault reader, the manifest validator rejects a tool naming a vault resource, and the redaction step drops T3 fields as a third line of defense.
 - Any resource outside a tool's declared reads.
 - T2 resources without a standing or per-request grant.
-- Raw location beyond `home-area`.
+- Raw location beyond `home-area`: the house number, the unit and the exact point never, though the fact names the street and the postal code (D-152).
 - Content from mirrors is marked untrusted in the context pack, and tools with `act-external` always confirm, so a Google event title cannot instruct the Gardener into an action (D-8).
 
 ## Third parties and what each receives

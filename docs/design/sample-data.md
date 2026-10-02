@@ -4,12 +4,12 @@ status: draft
 summary: One consistent fictional dataset for every mockup: an owner, facts, stock by location, a captured haul, recipes, a grocery list, ideas and projects, a calendar week with layers, a weather week, workouts and a weight series, places and listings, daily lines, notifications, feed and audit entries.
 read-this-if: You are drawing a mockup or seeding an empty state with sample data.
 depends-on: [product/domains/README]
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 ## The owner
 
-Rowan Hale, they/them, a developer in Austin, Texas. Home is a `home` Place in Hyde Park, Austin, at 4301 Duval St, Austin, TX 78751 (`homeAddress`; `homeAddressJa` is a Shibuya address for the Japanese form); `home-area` derives to Austin, Texas, US. The address form's fields for four countries are `addressForms` (US, JP, DE, and BR for the plain layout), over the countries in `addressCountries`. Preferred name "Rowan". Locale `en`, second locale `ja` for screenshots of the Japanese UI. The week shown everywhere is Monday 2026-09-28 to Sunday 2026-10-04; "today" is Wednesday 2026-09-30, 07:40.
+Rowan Hale, they/them, a developer in Austin, Texas. Home is a `home` Place in Hyde Park, Austin, at 4301 Duval St, Austin, TX 78751 (`homeAddress`; `homeAddressJa` is a Shibuya address for the Japanese form); `home-area` derives to Duval St, Austin, Texas, 78751, United States (D-152). The address form's fields for four countries are `addressForms` (US, JP, DE, and BR for the plain layout), over the countries in `addressCountries`. Preferred name "Rowan". Locale `en`, second locale `ja` for screenshots of the Japanese UI. The week shown everywhere is Monday 2026-09-28 to Sunday 2026-10-04; "today" is Wednesday 2026-09-30, 07:40.
 
 ## Facts
 

@@ -11,7 +11,7 @@ export {
 	type CountryOption,
 } from './countries.js'
 export { ADDRESS_FORMATS, CURATED_COUNTRIES, GENERIC_FORMAT, formatFor, regionCode, regionName } from './formats.js'
-export { addressLines, formatAddress, geocodeText, type FormatOptions } from './format.js'
+export { addressLines, formatAddress, geocodeText, streetOf, type FormatOptions } from './format.js'
 export {
 	addressKeys,
 	cleanAddress,

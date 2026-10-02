@@ -1321,8 +1321,10 @@
 			"favorite-vibe": "好きな雰囲気"
 		},
 		"fields": {
+			"street": "通り",
 			"city": "市",
 			"region": "地域",
+			"postalCode": "郵便番号",
 			"country": "国",
 			"substance": "物質",
 			"kind": "種類",

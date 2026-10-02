@@ -20,6 +20,10 @@ describe('the value shapes', () => {
 			['preferred-name', 'Rowan'],
 			['home-area', { city: 'Austin', region: 'Texas', country: 'United States' }],
 			['home-area', { city: 'Singapore' }],
+			[
+				'home-area',
+				{ street: 'Duval St', city: 'Austin', region: 'Texas', postalCode: '78751', country: 'United States' },
+			],
 			['allergy', { kind: 'food', substance: 'tree nuts', severity: 'severe' }],
 			['dietary-preference', 'low-sodium'],
 			['dietary-preference', 'no nightshades'],
@@ -71,6 +75,13 @@ describe('the value shapes', () => {
 		expect(formatValue('home-area', { city: 'Austin', region: 'Texas', country: 'United States' }, label)).toBe(
 			'Austin, Texas, United States'
 		)
+		expect(
+			formatValue(
+				'home-area',
+				{ street: 'Duval St', city: 'Austin', region: 'Texas', postalCode: '78751', country: 'United States' },
+				label
+			)
+		).toBe('Duval St, Austin, Texas, 78751, United States')
 		expect(formatValue('home-area', { city: 'Singapore', region: '', country: 'Singapore' }, label)).toBe(
 			'Singapore, Singapore'
 		)

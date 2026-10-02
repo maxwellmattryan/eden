@@ -93,10 +93,10 @@
 	/** The types the morning's Hearth request read (design/sample-data.md, "Audit and grants"). */
 	const READ = new Set<string>(canSee.map((entry) => entry.id))
 
-	/** Home is a Place; its area is derived, never typed (D-38). */
+	/** Home is a Place; its area is derived, never typed (D-38), and its street has no house number (D-152). */
 	const home = {
 		type: 'home-area',
-		value: { city: 'Austin', region: 'Texas', country: 'United States' },
+		value: { street: 'Duval St', city: 'Austin', region: 'Texas', postalCode: '78751', country: 'United States' },
 		provenance: 'system-derived',
 	}
 	type Row = Omit<SampleFact, 'provenance'> & { provenance: string }
@@ -115,7 +115,9 @@
 		const value = record(fact.value)
 		if (fact.type === 'allergy') return [value.substance, value.kind, value.severity].join(' · ')
 		if (fact.type === 'skill') return [value.name, value.level].join(' · ')
-		if (fact.type === 'home-area') return [value.city, value.region, value.country].join(', ')
+		if (fact.type === 'home-area') {
+			return [value.street, value.city, value.region, value.postalCode, value.country].filter(Boolean).join(', ')
+		}
 		if (fact.type === 'cuisine-preference') return String(value.name)
 		if (fact.type === 'dietary-preference') return String(fact.value).replace('-', ' ')
 		return String(fact.value)

@@ -60,8 +60,11 @@ export const FACT_SHAPES: Record<LiveFactId, FactShape> = {
 			kind: 'object',
 			join: ', ',
 			fields: [
+				// the street alone: never the house number or a unit (D-152)
+				{ key: 'street', shape: string(120) },
 				{ key: 'city', shape: string(120), required: true },
 				{ key: 'region', shape: string(120) },
+				{ key: 'postalCode', shape: string(20) },
 				{ key: 'country', shape: string(120) },
 			],
 		},

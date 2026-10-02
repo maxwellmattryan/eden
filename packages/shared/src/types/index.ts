@@ -44,14 +44,17 @@ export interface HomePlace {
 	label: string
 	latitude: number
 	longitude: number
-	/** The city, region and country the place is in, read from the home's address: what `home-area` is derived
-	 * from (D-38). Absent for a home with no city. */
+	/** Where the place is, read from the home's address: what `home-area` is derived from (D-38, D-152). Absent for
+	 * a home with no city. */
 	area?: HomeArea
 }
 
 export interface HomeArea {
+	/** The street alone, without the house number or a unit (D-152); the fact carries it, Sky and Meadow do not. */
+	street?: string
 	city: string
 	region: string
+	postalCode?: string
 	country: string
 }
 /** Rowan's Hyde Park, Austin (design/sample-data.md): the sample home, shown until the owner chooses theirs. */
