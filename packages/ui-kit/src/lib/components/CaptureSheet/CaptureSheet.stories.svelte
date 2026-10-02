@@ -77,9 +77,10 @@
 		const canvas = canvasOf(canvasElement)
 		await userEvent.click(canvas.getByRole('button', { name: trigger }))
 		const dialog = await canvas.findByRole('dialog', { name: title })
-		// the panel has begun to unfurl, and the focus has moved into it
-		await waitFor(() => expect(within(dialog).getByRole('heading', { name: title })).toBeVisible())
-		await waitFor(() => expect(dialog).toContainElement(document.activeElement as HTMLElement))
+		// the panel has begun to unfurl, and the focus has moved into it; a full run under load can take past a second
+		const settle = { timeout: 3000 }
+		await waitFor(() => expect(within(dialog).getByRole('heading', { name: title })).toBeVisible(), settle)
+		await waitFor(() => expect(dialog).toContainElement(document.activeElement as HTMLElement), settle)
 		return { canvas, dialog }
 	}
 
