@@ -1,5 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { LAST_PLACE_KEY, isKnownPlace, lastPlace, rememberPlace, rememberScroll, scrollOf, tabOf } from './index.js'
+import {
+	LAST_PLACE_KEY,
+	bindNavigation,
+	isKnownPlace,
+	lastPlace,
+	navigation,
+	rememberPlace,
+	rememberScroll,
+	scrollOf,
+	tabOf,
+	type PlaceId,
+} from './index.js'
 
 const KNOWN = ['/garden', '/today', '/kitchen', '/weather']
 
@@ -54,5 +65,59 @@ describe('tabOf', () => {
 		expect(tabOf({ id: null })).toBe('garden')
 		expect(tabOf(null)).toBe('garden')
 		expect(tabOf(undefined)).toBe('garden')
+	})
+})
+
+describe('the navigation seam', () => {
+	const paths: Partial<Record<PlaceId, string>> = { garden: '/garden', gardener: '/gardener', kitchen: '/kitchen' }
+	const at = (address: string, tab?: string, id: string | null = null) => ({
+		url: new URL(address, 'http://localhost'),
+		params: { tab },
+		route: { id },
+	})
+
+	it('answers quietly while no app is bound', async () => {
+		expect(navigation.href({ place: 'kitchen', tab: 'recipes' })).toBeUndefined()
+		await expect(navigation.open({ place: 'garden' })).resolves.toBeUndefined()
+		expect(navigation.tab).toBeUndefined()
+		expect([...navigation.search]).toEqual([])
+		expect(navigation.place).toBe('garden')
+	})
+
+	it('resolves through the app, appends the search and reads the page', async () => {
+		const goto = vi.fn(async () => {})
+		let page = at('/gardener/audit?tool=add-items&range=7d', 'audit', '/gardener/[[tab]]')
+		const unbind = bindNavigation({
+			resolve: ({ place, tab }) => {
+				const path = paths[place]
+				return path === undefined ? undefined : tab ? `${path}/${tab}` : path
+			},
+			goto,
+			page: () => page,
+		})
+
+		expect(navigation.href({ place: 'kitchen', tab: 'recipes' })).toBe('/kitchen/recipes')
+		expect(navigation.href({ place: 'gardener', tab: 'audit', search: 'tool=add-items' })).toBe(
+			'/gardener/audit?tool=add-items'
+		)
+		expect(navigation.href({ place: 'gardener', search: '?range=7d' })).toBe('/gardener?range=7d')
+		expect(navigation.href({ place: 'gardener', search: '' })).toBe('/gardener')
+		expect(navigation.href({ place: 'more' })).toBeUndefined()
+
+		await navigation.open({ place: 'gardener', tab: 'audit', search: 'range=7d' }, { noScroll: true, keepFocus: true })
+		expect(goto).toHaveBeenLastCalledWith('/gardener/audit?range=7d', { noScroll: true, keepFocus: true })
+		await navigation.open({ place: 'more' })
+		expect(goto).toHaveBeenCalledTimes(1)
+
+		expect(navigation.tab).toBe('audit')
+		expect(navigation.search.get('tool')).toBe('add-items')
+		expect(navigation.place).toBe('gardener')
+		page = at('/kitchen', undefined, '/kitchen/[[tab]]')
+		expect(navigation.tab).toBeUndefined()
+		expect(navigation.place).toBe('kitchen')
+
+		unbind()
+		expect(navigation.href({ place: 'garden' })).toBeUndefined()
+		expect(navigation.place).toBe('garden')
 	})
 })

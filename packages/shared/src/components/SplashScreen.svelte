@@ -6,7 +6,7 @@
 	import { cubicOut } from 'svelte/easing'
 	import { fade } from 'svelte/transition'
 	import { AppMark } from '@eden/ui-kit'
-	import { SPLASH_CLASS, SPLASH_FADE_MS, SPLASH_ID } from '@eden/shared/splash'
+	import { SPLASH_CLASS, SPLASH_FADE_MS, SPLASH_ID } from '../splash/index.js'
 
 	type Props = {
 		show: boolean

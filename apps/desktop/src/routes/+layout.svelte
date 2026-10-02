@@ -4,6 +4,7 @@
 	// (toast, settings, crash) on top. It mounts the shared pieces
 	// once: settings, i18n, the global error handler, the hourly update check, signals and the scheduler. The splash
 	// covers it until they are ready, then fades out as the shell fades in.
+	import '$lib/navigation'
 	import '../app.css'
 	import { onMount, tick } from 'svelte'
 	import { afterNavigate, beforeNavigate, goto } from '$app/navigation'
@@ -27,8 +28,8 @@
 	import { initializeI18n, locale, t, uiKitStrings } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { dismissSplash, splashVisible } from '@eden/shared/stores'
-	import CrashScreen from '$lib/components/CrashScreen.svelte'
-	import SplashScreen from '$lib/components/SplashScreen.svelte'
+	import CrashScreen from '@eden/shared/components/CrashScreen.svelte'
+	import SplashScreen from '@eden/shared/components/SplashScreen.svelte'
 	import { shell, shortcutPositions, sidebarGroups, type SidebarItem } from '@eden/shared/manifest'
 	import { rememberPlace, rememberScroll, scrollOf, tabOf } from '@eden/shared/navigation'
 	import { coordinator } from '@eden/shared/refresh'
@@ -40,7 +41,8 @@
 	import { FORECAST_RESOURCE, weather } from '@eden/shared/weather'
 	import { formatTime, formatWeekday, relativeDay } from '@eden/shared/dates'
 	import { detectOs, formatShortcut } from '@eden/shared/shortcuts'
-	import { useGlobalErrorHandler } from '$lib/hooks/useGlobalErrorHandler'
+	import { useGlobalErrorHandler } from '@eden/shared/errors/global-handler'
+	import { markSvelteKitReady } from '../hooks.client'
 	import SettingsSheet from '$lib/settings/SettingsSheet.svelte'
 	import ChangeHomeSheet from '$lib/shell/home/ChangeHomeSheet.svelte'
 	import { homeUi } from '$lib/shell/home/home-ui.svelte'
@@ -329,7 +331,7 @@
 	}
 
 	onMount(() => {
-		const cleanupErrors = useGlobalErrorHandler()
+		const cleanupErrors = useGlobalErrorHandler(markSvelteKitReady)
 		let timer: ReturnType<typeof setInterval> | undefined
 		;(async () => {
 			settings.load()

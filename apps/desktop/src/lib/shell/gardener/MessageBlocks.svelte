@@ -32,7 +32,7 @@
 	} from '@eden/shared/gardener'
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
-	import { copyText } from '$lib/clipboard'
+	import { copyText } from '@eden/shared/api'
 	import { formatValue, type FactProposal } from '@eden/shared/profile'
 	import { proposalDetail } from '../profile/rows'
 	import { profile } from '../profile/store.svelte'

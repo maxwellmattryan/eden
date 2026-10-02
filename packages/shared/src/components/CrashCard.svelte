@@ -7,9 +7,9 @@
 	// close it; the only ways out are the two buttons. Focus lands on the card itself, never on a button: nothing looks
 	// pressed or ringed until Tab is pressed.
 	import { Button } from '@eden/ui-kit'
-	import { t } from '@eden/shared/i18n'
-	import { crashStore } from '@eden/shared/stores'
-	import type { CrashInfo } from '@eden/shared/types'
+	import { t } from '../i18n/index.js'
+	import { crashStore } from '../stores/index.js'
+	import type { CrashInfo } from '../types/index.js'
 
 	let { error }: { error: CrashInfo | null } = $props()
 

@@ -13,7 +13,7 @@
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { describeRecurrence, taskFromDraft, type DraftTask } from '@eden/shared/tasks'
-	import { copyText } from '$lib/clipboard'
+	import { copyText } from '@eden/shared/api'
 	import { manifestFor } from '$lib/domains'
 	import { formatDayWord, formatRepeat, formatWallTime, type Words } from '../today/chips'
 	import { tasks } from '../today/store.svelte'

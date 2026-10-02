@@ -4,6 +4,7 @@
 	// settings sheet, crash). It mounts the shared
 	// pieces once: settings, i18n, the global error handler, signals and the scheduler. No updater: mobile updates
 	// through the stores. The splash covers it until they are ready, then fades out as the shell fades in.
+	import '$lib/navigation'
 	import '../app.css'
 	import { onMount, tick } from 'svelte'
 	import { afterNavigate, beforeNavigate, goto } from '$app/navigation'
@@ -21,10 +22,11 @@
 	import { startSignals } from '@eden/shared/signals'
 	import { FORECAST_RESOURCE, weather } from '@eden/shared/weather'
 	import { dismissSplash, splashVisible } from '@eden/shared/stores'
-	import CrashScreen from '$lib/components/CrashScreen.svelte'
+	import CrashScreen from '@eden/shared/components/CrashScreen.svelte'
 	import { declarations, manifestFor, manifests } from '$lib/domains'
-	import SplashScreen from '$lib/components/SplashScreen.svelte'
-	import { useGlobalErrorHandler } from '$lib/hooks/useGlobalErrorHandler'
+	import SplashScreen from '@eden/shared/components/SplashScreen.svelte'
+	import { useGlobalErrorHandler } from '@eden/shared/errors/global-handler'
+	import { markSvelteKitReady } from '../hooks.client'
 	import SettingsSheet from '$lib/settings/SettingsSheet.svelte'
 
 	let { children } = $props()
@@ -77,7 +79,7 @@
 	})
 
 	onMount(() => {
-		const cleanupErrors = useGlobalErrorHandler()
+		const cleanupErrors = useGlobalErrorHandler(markSvelteKitReady)
 		settings.load()
 		void home.load()
 		void initializeI18n(settings.language)
