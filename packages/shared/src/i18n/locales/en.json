@@ -1807,6 +1807,10 @@
 			"title": "No forecast yet",
 			"text": "Set your home place and the sky fills in."
 		},
+		"gardener": {
+			"title": "The Gardener's page is on its way",
+			"text": "Usage, conversations, the audit log and the tools arrive here."
+		},
 		"more": {
 			"title": "More",
 			"text": "Toolbench, Meadow, the Gardener and settings."

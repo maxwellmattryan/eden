@@ -20,7 +20,7 @@
 
 	function open(id: string) {
 		if (id === 'settings') return settingsUi.show()
-		manifestFor(id)?.routes?.open()
+		manifestFor(id)?.routes.open()
 	}
 </script>
 

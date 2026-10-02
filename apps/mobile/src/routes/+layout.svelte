@@ -12,13 +12,17 @@
 	import { page } from '$app/state'
 	import { env } from '$env/dynamic/public'
 	import { BottomTabBar, ToastHost, UiKitProvider, domainGlyph, type BottomTab, type GlyphId } from '@eden/ui-kit'
-	import { fileDropGuard } from '@eden/shared/api'
+	import { fileDropGuard, logError } from '@eden/shared/api'
 	import { home } from '@eden/shared/home'
 	import { initializeI18n, locale, t, uiKitStrings } from '@eden/shared/i18n'
 	import { shell, tabBar } from '@eden/shared/manifest'
 	import { rememberPlace, rememberScroll, scrollOf, tabOf } from '@eden/shared/navigation'
 	import { coordinator } from '@eden/shared/refresh'
 	import { settings } from '@eden/shared/settings'
+	import { grants } from '@eden/shared/shell'
+	import { gardenerSetup, gardenerUi, missingHandlers } from '@eden/shared/shell/gardener'
+	import { inbox } from '@eden/shared/shell/inbox'
+	import { profile } from '@eden/shared/shell/profile'
 	import { startSignals } from '@eden/shared/signals'
 	import { FORECAST_RESOURCE, weather } from '@eden/shared/weather'
 	import { dismissSplash, splashVisible } from '@eden/shared/stores'
@@ -40,7 +44,7 @@
 		today: () => void goto(resolve('/today')),
 		[shell.tabs.more.id]: () => void goto(resolve('/more')),
 	}
-	const openOf = (id: string) => manifestFor(id)?.routes?.open ?? places[id]
+	const openOf = (id: string) => manifestFor(id)?.routes.open ?? places[id]
 
 	const tabs = $derived<BottomTab[]>([
 		...bar.tabs
@@ -81,10 +85,29 @@
 	onMount(() => {
 		const cleanupErrors = useGlobalErrorHandler(markSvelteKitReady)
 		settings.load()
+		// what follows the home (D-141): the area a model may know, and the forecast when it has moved
+		home.bind({
+			changed: (place, moved) => {
+				void profile.syncHomeArea(place)
+				if (moved) void weather.load()
+			},
+		})
 		void home.load()
+		// the Gardener comes back on the domain it was left on, while that domain is still one of the app's
+		if (gardenerUi.domain && !manifestFor(gardenerUi.domain)) gardenerUi.domain = undefined
 		void initializeI18n(settings.language)
 			.catch(() => null)
-			.then(dismissSplash)
+			.then(() => {
+				void dismissSplash()
+				void grants.load()
+				void gardenerSetup.load()
+				// every declared tool has a handler, or the log says which does not (engineering/gardener.md, "Tools")
+				const unhandled = missingHandlers()
+				if (unhandled.length)
+					void logError('gardener', 'Declared tools without a handler', unhandled.join(', ')).catch(() => null)
+			})
+		// The inbox hears what is delivered before signals start, so a card made by the first take is not missed.
+		void inbox.load()
 		// Signals and the scheduler (substrate/signals-notifications.md): the domains bind what they hear, their
 		// schedules are declared, and what came due while Eden was closed or in the background is taken.
 		const stopSignals = startSignals({
@@ -138,6 +161,17 @@
 		padding: calc(var(--ed-safe-top) + var(--ed-gutter)) calc(var(--ed-safe-right) + var(--ed-gutter))
 			calc(var(--ed-tab-bar) + var(--ed-safe-bottom) + var(--ed-gutter)) calc(var(--ed-safe-left) + var(--ed-gutter));
 		background: var(--surface-0);
+		/* A page adapts to this column, never to the window: every shared view asks `@container page` how much room
+		   it has (D-112). A size container may hold what is fixed inside it, so the tab bar and anything else pinned
+		   to the viewport stay siblings of this element, never children */
+		container: page / inline-size;
+	}
+	/* narrow page */
+	@container page (max-width: 48rem) {
+		/* every page insets itself by the gutter, which tightens here once for all of them */
+		.content > :global(*) {
+			--ed-gutter: var(--space-4);
+		}
 	}
 	:global(.tabs) {
 		position: fixed;

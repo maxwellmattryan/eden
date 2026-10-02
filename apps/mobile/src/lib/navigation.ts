@@ -1,7 +1,6 @@
 // The phone's half of the navigation seam (`@eden/shared/navigation`): shared views and stores name a place, and
 // this resolves it over the phone's route tree. A module with a side effect, imported first by the root layout, so
-// the seam is bound before any child's script runs. A place the phone has no route for yet is left undefined, and
-// the seam does nothing for it.
+// the seam is bound before any child's script runs. Every place has a route on the phone.
 import { goto } from '$app/navigation'
 import { resolve } from '$app/paths'
 import { page } from '$app/state'
@@ -10,12 +9,12 @@ import { bindNavigation, type PlaceId } from '@eden/shared/navigation'
 const paths: Record<PlaceId, ((tab?: string) => string) | undefined> = {
 	garden: () => resolve('/garden'),
 	today: () => resolve('/today'),
-	profile: undefined,
-	gardener: undefined,
-	kitchen: () => resolve('/kitchen'),
-	toolbench: undefined,
+	profile: () => resolve('/garden/profile'),
+	gardener: (tab) => resolve('/gardener/[[tab]]', tab ? { tab } : {}),
+	kitchen: (tab) => resolve('/kitchen/[[tab]]', tab ? { tab } : {}),
+	toolbench: (tab) => resolve('/toolbench/[[tab]]', tab ? { tab } : {}),
 	weather: () => resolve('/weather'),
-	places: () => resolve('/places'),
+	places: (tab) => resolve('/places/[[tab]]', tab ? { tab } : {}),
 	more: () => resolve('/more'),
 }
 

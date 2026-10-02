@@ -25,14 +25,20 @@
 	} from '@eden/shared/domains/places'
 	import type { LngLat } from '@eden/shared/geo'
 	import { locale, t } from '@eden/shared/i18n'
+	import { navigation } from '@eden/shared/navigation'
 	import { settings } from '@eden/shared/settings'
 	import { createSurface, source } from '../map'
 	import { categoryNamer, vibeNamer } from '@eden/shared/domains/places'
 	import FilterSheet from './FilterSheet.svelte'
 	import PlaceSheet from './PlaceSheet.svelte'
 
+	// The tab lives in the URL, as the desktop's does, so a widget or the Gardener can open one directly; an address
+	// that names none of the phone's tabs shows the map.
 	const TABS = ['map', 'nearby', 'listings'] as const
-	let tab = $state(0)
+	const tab = $derived(Math.max(0, (TABS as readonly string[]).indexOf(navigation.tab ?? '')))
+	function selectTab(index: number) {
+		void navigation.open({ place: 'places', tab: TABS[index] }, { replace: true, noScroll: true })
+	}
 	const lang = $derived($locale ?? 'en')
 	const format = $derived({ lang, clock: settings.clock })
 	const vibeName = $derived(vibeNamer($t, meadow.vibes))
@@ -153,8 +159,9 @@
 	{#snippet filters()}
 		<Segmented
 			items={TABS.map((id) => $t(`domains.places.mobile.${id}`))}
-			bind:selected={tab}
+			selected={tab}
 			label={$t('domains.places.tabsLabel')}
+			onchange={selectTab}
 		/>
 		{#if TABS[tab] !== 'listings'}
 			<Chip
