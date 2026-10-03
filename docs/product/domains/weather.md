@@ -4,7 +4,7 @@ status: draft
 summary: Conditions and forecasts for home and saved places, severe-weather alerts, sunrise, sunset and moon computed on-device, the default Garden widget, and the weather and ephemeris layers Almanac draws. Id `weather`, Phase 1.
 read-this-if: You are working on weather, forecasts, alerts, sun and moon, or anything that plans around them.
 depends-on: [substrate/registry, substrate/primitives, substrate/signals-notifications, substrate/shell, substrate/ai]
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 ## 1. Purpose
@@ -57,7 +57,7 @@ Never-do list: never sends coordinates finer than city level (D-60) to a model o
 
 **Desktop views (Phase 1)**: the Sky view with now, hours, the week, details, air quality, allergens, sun and moon, active alerts behind a button in the header that shows only while one is active (a popover lists them, and each can be dismissed for as long as it is issued, which also takes its card out of the inbox), the sources' attribution, the header's motif (D-62: the wind now as a flow field, north up, with a small compass at its foot whose needle points the way the wind blows and whose tooltip says it is one reading for the place, not a map), the sun on its wave in the now block, and a location switcher over home and saved venues, with "Change home", which opens the change-home sheet (D-143).
 
-**Mobile (Phase 2)**: the same view as a tab candidate; Sky is pinned by default.
+**Mobile (built)**: the same view, mounted from `@eden/shared` in its narrow layout with the phone's own rules (D-172); Sky is pinned by default (D-160), and Change home opens the change-home sheet as on desktop (D-162). Never run on a device: WeatherKit on iOS (the simulator build stops in the crate's build script before Eden runs, `engineering/meadow.md`, "Never run"), Open-Meteo on Android under the mobile CSP, and the forecast's refresh as the phone suspends and resumes Eden.
 
 **Garden widgets**: `weather-now` (S, M; default on), `week-outlook` (M), `sun-and-moon` (S), `good-day-for` (S).
 

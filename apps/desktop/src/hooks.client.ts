@@ -114,7 +114,7 @@ async function showFallbackCrashScreen(error: EarlyError): Promise<void> {
 	try {
 		// Loaded here, never at the top: an error in the kit or the card must not take this handler down with it.
 		const [{ default: CrashCard }, { initializeI18n }] = await Promise.all([
-			import('$lib/components/CrashCard.svelte'),
+			import('@eden/shared/components/CrashCard.svelte'),
 			import('@eden/shared/i18n'),
 		])
 		await initializeI18n(savedLanguage() as Parameters<typeof initializeI18n>[0])

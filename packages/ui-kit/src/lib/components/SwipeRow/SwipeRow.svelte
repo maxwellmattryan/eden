@@ -23,7 +23,9 @@
 	// swipe: a focused one rises above the content at its edge. A drag past the action's width (or 40 % of the row)
 	// fires the action on release; anything shorter settles back over the panel duration. Under reduced motion the
 	// content never travels: a 600 ms hold shows both actions over the row's ends, and a tap elsewhere or Escape hides
-	// them. On desktop the children render unchanged. The gesture lives in `swipe.ts`, on the content itself.
+	// them. On desktop the children render unchanged. The gesture lives in `swipe.ts`, on the content itself. A row
+	// that has another way to its actions (a list row, whose held press opens its menu) turns the hold off (`hold`)
+	// and, where it is one tab stop among many, takes the buttons out of the tab order (`tabbable`).
 	import type { Snippet } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
 	import Icon from '../../icons/Icon.svelte'
@@ -36,10 +38,14 @@
 		leading?: SwipeLeading
 		/** Revealed by a drag to the left: delete. */
 		trailing?: SwipeTrailing
+		/** Under reduced motion a 600 ms hold shows both actions. Off for a row whose held press does something else. */
+		hold?: boolean
+		/** The action buttons are tab stops. Off inside a grid that is one tab stop, where the row's menu holds them. */
+		tabbable?: boolean
 		/** The row. */
 		children: Snippet
 	}
-	let { leading, trailing, children, class: className = '', ...rest }: Props = $props()
+	let { leading, trailing, hold = true, tabbable = true, children, class: className = '', ...rest }: Props = $props()
 
 	// The root, for the platform: the wrapper behaves only on mobile.
 	let root = $state<HTMLDivElement>()
@@ -73,6 +79,7 @@
 			<button
 				class="ed-swipe-action ed-swipe-leading ed-swipe-{leading.tone ?? 'accent'}"
 				type="button"
+				tabindex={tabbable ? undefined : -1}
 				onclick={() => fire(leading)}
 			>
 				{#if leading.icon}<Icon name={leading.icon} size="md" />{/if}
@@ -88,6 +95,7 @@
 				width: actionWidth,
 				rowWidth: () => root?.offsetWidth ?? 0,
 				still,
+				hold,
 				onMove: (dx) => {
 					dragging = true
 					offset = dx
@@ -107,6 +115,7 @@
 			<button
 				class="ed-swipe-action ed-swipe-trailing ed-swipe-{trailing.tone ?? 'danger'}"
 				type="button"
+				tabindex={tabbable ? undefined : -1}
 				onclick={() => fire(trailing)}
 			>
 				{#if trailing.icon}<Icon name={trailing.icon} size="md" />{/if}

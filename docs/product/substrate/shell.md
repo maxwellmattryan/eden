@@ -11,7 +11,7 @@ updated: 2026-10-02
 
 **Desktop**: a left sidebar whose edge drags wider and narrower and collapses it to a rail of glyphs (D-119); the main content area with a subtle back affordance at its top left; an optional right panel for the Gardener, which also has a page of its own (D-113); a bottom status bar. Modals (settings, confirm sheets, Capture verification) overlay the whole window.
 
-**Mobile**: a bottom tab bar (Garden, Today, two pinned domains, More); sheets for the Gardener, settings and Quick Log; a floating **+** button; no sidebar.
+**Mobile** (D-158): a top bar on every page with the back arrow where there is a way back, the Gardener and the bell; a bottom tab bar (Garden, Today, two pinned domains, More); sheets for the Gardener's chat, the inbox, settings (a drawer, D-159) and Quick Log; a floating **+** button over the tab bar's corner; no sidebar and no status bar.
 
 ## Sidebar (Phase 1)
 
@@ -19,7 +19,7 @@ The app mark and wordmark at the head, then three groups under rules: Today; Gar
 
 ## The Garden (Phase 1)
 
-The dashboard (OQ-1). A four-column widget grid with tiles of size S (1×1), M (2×1) and L (2×2), an edit mode to add, remove, drag and resize, and a catalog built from manifests. A widget declares in the manifest the registry ids it reads and computes locally; a widget that needs the Gardener calls one of its domain's tools, so nothing runs a model just because the Garden opened. A quick-navigation row of domain tiles sits above the grid, and the activity feed occupies a column on wide screens.
+The dashboard (OQ-1). A four-column widget grid with tiles of size S (1×1), M (2×1) and L (2×2), an edit mode to add, remove, drag and resize, and a catalog built from manifests. A widget declares in the manifest the registry ids it reads and computes locally; a widget that needs the Gardener calls one of its domain's tools, so nothing runs a model just because the Garden opened. A quick-navigation row of domain tiles sits above the grid, and the activity feed occupies a column on wide screens. Edit mode is D-155's, and the layout is the device's, never synced (D-156); on the phone the grid is two columns, the feed sits under the tiles and a tile moves through its menu only (D-165).
 
 Default layout, eleven tiles: weather-now (Sky), today (Tasks), expiring-soon and cook-tonight (Hearth), resurfaced-idea and active-projects (Toolbench), sun-and-moon (Sky), the daily line (neutral until Sanctuary), quick-log, and nearby-favorites and upcoming-listings (Meadow, built ahead of its phase, D-130); the activity feed sits beside the grid. Widgets render their empty state until data exists.
 
@@ -39,19 +39,23 @@ The grade switch is the kit's `StatusBarGardener` with `grades` and `onchangegra
 
 ## Quick Log surfaces (D-12)
 
-The **+** button and floating button open the Quick Log sheet listing the enabled domains' quick actions. ⌘K's **log** verb parses a one-liner. The Today view shows a Quick Log strip. The Garden has a quick-log widget with a sparkline for numeric logs (weight). Every quick log is a `write` with undo and an activity-feed entry, never a confirm sheet. Built on desktop (D-145): the **+**, the sheet under ⌘⇧L and Today's strip. Not built: the palette's **log** (issue 23, handed off in `engineering/domain-module.md`), the phone's floating button and sheet (issue 19, handed off in `domains/kitchen.md`), and a numeric log, so the Garden's widget keeps its prompt until Vigor logs a weight (issue 6, `domains/fitness.md`).
+The **+** button and floating button open the Quick Log sheet listing the enabled domains' quick actions. ⌘K's **log** verb parses a one-liner. The Today view shows a Quick Log strip. The Garden has a quick-log widget with a sparkline for numeric logs (weight). Every quick log is a `write` with undo and an activity-feed entry, never a confirm sheet. Built on desktop (D-145): the **+**, the sheet under ⌘⇧L and Today's strip. Built on the phone (D-158): the floating **+**, which opens the same sheet with Capture as its launch tab, and Today's strip. Not built: the palette's **log** (issue 23, handed off in `engineering/domain-module.md`) and a numeric log, so the Garden's widget keeps its prompt until Vigor logs a weight (issue 6, `domains/fitness.md`).
 
 ## Capture entry points (D-13)
 
-Capture opens from a domain's primary action (Hearth's "capture a haul"), from files dropped or pasted on that domain's page (D-86), from the Quick Log sheet, from the share sheet on mobile (Phase 2), and from ⌘K **run**. The verification sheet is specified in `design/ux-patterns.md`.
+Capture opens from a domain's primary action (Hearth's "capture a haul"), from files dropped or pasted on that domain's page (D-86), from the Quick Log sheet, from the share sheet on mobile (Phase 2), and from ⌘K **run**. On the phone, where nothing is dropped and a page takes no paste, the sheet's file button offers the camera and the library (D-170) and its collect step has a field for pasted text (D-171); the share sheet is not built. The verification sheet is specified in `design/ux-patterns.md`.
 
 ## Notification center
 
-The bell opens the inbox described in `substrate/signals-notifications.md`. Cards group by domain and day and carry inline actions.
+The bell opens the inbox described in `substrate/signals-notifications.md`: a popover on desktop, a sheet on the phone (D-158). Cards group by domain and day and carry inline actions.
 
 ## Mobile (Phase 2)
 
-Tabs: Garden, Today, and two domains the owner pins (Hearth and Sky by default), with the rest under More. Phase 2 surfaces: grocery list, stock by location, capture a haul, Today, Gardener chat, weather, the inbox and settings. Everything else opens as a read-only view until its domain gains a mobile surface.
+Tabs: Garden, Today, and two domains the owner pins (Hearth and Sky by default), with the rest under More. The pair is chosen per device in Settings → Domains (D-160). Phase 2 surfaces: grocery list, stock by location, capture a haul, Today, Gardener chat, weather, the inbox and settings. Everything else opens as a read-only view until its domain gains a mobile surface.
+
+Built (D-157 to D-176): every surface desktop has is on the phone. The frame is D-158's: the top bar, More (the domains that are not pinned, the Gardener's page, the profile and Settings), the floating **+**, Android's back, haptics. The Garden (D-165), Today (D-166), the Gardener's chat and page (D-163, D-164), the inbox, Settings (D-159), the profile, Hearth (D-174 to D-176), Sky (D-172), Toolbench's Ideas and Meadow (D-173) are built; the phone keeps its own Garden, Today, Hearth, Stock, Grocery and Meadow pages and mounts the shared views for the rest. Rows swipe for their commonest action (D-167; `design/ux-patterns.md`, "Mobile adaptations").
+
+Handoff: the undo toast stands over the floating **+** while it shows, so its Undo stays pressable; the **+** is back when the toast goes. Revisit if use finds the wait gets in the way.
 
 ## Keyboard model (Phase 1 defaults, customisable in Phase 2)
 

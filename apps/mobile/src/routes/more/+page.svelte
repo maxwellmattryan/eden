@@ -1,85 +1,61 @@
 <script lang="ts">
-	// More: what the tab bar has no room for (product/substrate/shell.md, Mobile), composed from the manifests: the
-	// domains that are not pinned, then the Gardener and Settings. Toolbench has no mobile surface yet, the Gardener
-	// arrives with its substrate; Settings opens the Appearance sheet.
-	import { EmptyState, Icon, PageHeader, domainGlyph, type GlyphId } from '@eden/ui-kit'
+	// More: what the tab bar has no room for (product/substrate/shell.md, "Mobile"; D-158), composed
+	// from the manifests: the domains that are not pinned, then the Gardener's page, the profile, and Settings, which
+	// opens the drawer. A row is a place unless the shell declares it an action (`place` in shell.json).
+	import { List, PageHeader, domainGlyph, type GlyphId, type ListRowData } from '@eden/ui-kit'
 	import { t } from '@eden/shared/i18n'
-	import { shell, tabBar } from '@eden/shared/manifest'
-	import { declarations, manifestFor } from '$lib/domains'
-	import { settingsUi } from '$lib/settings/settings-ui.svelte'
+	import { navigation, type PlaceId } from '@eden/shared/navigation'
+	import { settingsUi } from '@eden/shared/shell/settings'
+	import { manifestFor, phoneTabBar } from '$lib/domains'
 
-	const rows = $derived(
-		tabBar(declarations, shell).more.map((item) => ({
+	const uid = $props.id()
+	const nameId = `${uid}-name`
+
+	// what the tab bar has no room for on this device, after the owner's pinned pair
+	const more = $derived(phoneTabBar().more)
+	/** Where the Gardener's entry ends: the profile sits between its page and Settings. */
+	const actionsFrom = $derived(more.findIndex((item) => !item.place))
+
+	const rows = $derived.by<ListRowData[]>(() => {
+		const entries = more.map((item) => ({
 			id: item.id,
-			name: $t(item.name),
-			subtitle: $t(item.subtitle),
+			primary: $t(item.name),
+			secondary: $t(item.subtitle),
 			// the registry builder checked each id against the kit's glyphs
-			icon: domainGlyph(item.id as GlyphId),
+			icon: manifestFor(item.id)?.glyph ?? domainGlyph(item.id as GlyphId),
 		}))
-	)
+		const profile: ListRowData = {
+			id: 'profile',
+			primary: $t('shell.profile'),
+			secondary: $t('shell.profileSubtitle'),
+			icon: 'id-card',
+		}
+		const at = actionsFrom < 0 ? entries.length : actionsFrom
+		return [...entries.slice(0, at), profile, ...entries.slice(at)]
+	})
 
-	function open(id: string) {
-		if (id === 'settings') return settingsUi.show()
-		manifestFor(id)?.routes?.open()
+	function open(row: ListRowData) {
+		const item = more.find((entry) => entry.id === row.id)
+		// Settings is the one action behind More: the drawer, not a page
+		if (item && !item.place) {
+			if (item.id === 'settings') settingsUi.show()
+			return
+		}
+		const manifest = manifestFor(row.id)
+		if (manifest) manifest.routes.open()
+		else void navigation.open({ place: row.id as PlaceId })
 	}
 </script>
 
 <PageHeader name={$t('shell.more')} icon="menu" />
-<ul class="more">
-	{#each rows as row (row.id)}
-		<li>
-			<button type="button" class="more-row" onclick={() => open(row.id)}>
-				<Icon name={row.icon} size="md" />
-				<span class="more-text">
-					<span class="more-name">{row.name}</span>
-					<span class="more-subtitle">{row.subtitle}</span>
-				</span>
-				<Icon name="chevron-right" size="sm" />
-			</button>
-		</li>
-	{/each}
-</ul>
-<EmptyState title={$t('empty.more.title')} text={$t('empty.more.text')} motif={false} />
+<div class="more">
+	<!-- the grid is named by the page's name; a hidden element still names what points at it -->
+	<span id={nameId} hidden>{$t('shell.more')}</span>
+	<List headless labelledby={nameId} {rows} onopen={open} />
+</div>
 
 <style>
 	.more {
-		display: grid;
-		gap: 2px;
-		margin: 0 0 var(--space-4);
-		padding: 0;
-		list-style: none;
-	}
-	.more-row {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		width: 100%;
-		min-height: var(--ed-row);
-		border: 0;
-		border-radius: var(--ed-radius-control);
-		background: transparent;
-		padding: 8px 12px;
-		text-align: left;
-		color: var(--text-primary);
-		cursor: pointer;
-	}
-	.more-row:active {
-		background: color-mix(in srgb, var(--text-primary) 8%, transparent);
-	}
-	.more-row:focus-visible {
-		outline: 2px solid transparent;
-		box-shadow: var(--focus-ring);
-	}
-	.more-text {
-		display: grid;
-		flex: 1;
-		min-width: 0;
-	}
-	.more-name {
-		font: var(--ed-t-body-lg);
-	}
-	.more-subtitle {
-		font: var(--ed-t-caption);
-		color: var(--text-secondary);
+		padding: 0 var(--ed-gutter);
 	}
 </style>

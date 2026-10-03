@@ -77,9 +77,10 @@
 		const canvas = canvasOf(canvasElement)
 		await userEvent.click(canvas.getByRole('button', { name: trigger }))
 		const dialog = await canvas.findByRole('dialog', { name: title })
-		// the panel has begun to unfurl, and the focus has moved into it
-		await waitFor(() => expect(within(dialog).getByRole('heading', { name: title })).toBeVisible())
-		await waitFor(() => expect(dialog).toContainElement(document.activeElement as HTMLElement))
+		// the panel has begun to unfurl, and the focus has moved into it; a full run under load can take past a second
+		const settle = { timeout: 3000 }
+		await waitFor(() => expect(within(dialog).getByRole('heading', { name: title })).toBeVisible(), settle)
+		await waitFor(() => expect(dialog).toContainElement(document.activeElement as HTMLElement), settle)
 		return { canvas, dialog }
 	}
 
@@ -578,6 +579,51 @@
 		const { canvas } = await opened(canvasElement, s.collectTitle)
 		await expect(canvas.getByText(s.inviteHintTouch)).toBeVisible()
 		await expect(canvas.getByRole('button', { name: s.read })).toBeEnabled()
+	}}
+/>
+
+<!-- The phone has no page to paste onto and nothing to drop: a haul's collect step carries a field for the text, and
+     Add hands it to the same callback a paste feeds. The sheet opens without the keyboard, and the file button
+     offers the camera -->
+<Story
+	name="Mobile paste"
+	parameters={{ platforms: ['mobile'] }}
+	{template}
+	play={async ({ canvasElement, args }) => {
+		if (!hasCanvas(canvasElement)) return
+		const { canvas, dialog } = await opened(canvasElement, s.collectTitle)
+		const field = canvas.getByRole('textbox', { name: s.pasteLabel })
+		await expect(field).not.toHaveFocus()
+		const add = canvas.getByRole('button', { name: strings.add })
+		await expect(add).toBeDisabled()
+		await userEvent.type(field, 'limes x6{Enter}oat milk')
+		await userEvent.click(add)
+		await expect(args.onpastetext).toHaveBeenLastCalledWith('limes x6\noat milk')
+		await expect(field).toHaveValue('')
+		await expect(await within(dialog).findByText('Pasted text')).toBeVisible()
+		await expect(canvas.getByRole('button', { name: s.read })).toBeEnabled()
+		// a paste into the field is the field's own: it is not taken as a source until Add
+		const calls = (args.onpastetext as ReturnType<typeof fn>).mock.calls.length
+		field.focus()
+		paste({ text: 'eggs 12' })
+		await expect(args.onpastetext).toHaveBeenCalledTimes(calls)
+		// the file button's menu leads with the camera on the phone
+		await userEvent.click(canvas.getByRole('button', { name: s.chooseFiles }))
+		await waitFor(() => expect(canvas.getByText(strings.file.takePhoto)).toBeVisible())
+		await expect(canvas.getByText(strings.file.fromLibrary)).toBeVisible()
+	}}
+/>
+
+<!-- The wide layout keeps paste-anywhere and shows no field; taking stock reads photos only and shows none either -->
+<Story
+	name="No paste field"
+	args={{ kind: 'stock' }}
+	parameters={{ platforms: ['mobile'] }}
+	{template}
+	play={async ({ canvasElement }) => {
+		if (!hasCanvas(canvasElement)) return
+		const { canvas } = await opened(canvasElement, s.stock.collectTitle)
+		await expect(canvas.queryByRole('textbox', { name: s.pasteLabel })).toBeNull()
 	}}
 />
 

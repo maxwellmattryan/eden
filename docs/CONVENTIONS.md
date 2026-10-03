@@ -4,12 +4,12 @@ status: draft
 summary: How these docs are written and maintained: the required header, the status vocabulary, the rules every change follows, and the Crate patterns to reuse.
 read-this-if: You are editing any doc in this repo.
 depends-on: []
-updated: 2026-09-29
+updated: 2026-10-02
 ---
 
 ## What this repo is right now
 
-Product and design documents plus the first package of application code, `packages/ui-kit` (D-43). Engineering docs for the rest come after product and design are stable, and the app scaffolds follow, ported from Crate at `~/dev/bbx/repos/crate`.
+Product, design and engineering documents, and the code they describe: the UI kit `packages/ui-kit` (D-43), the shared package `packages/shared`, the two apps `apps/desktop` and `apps/mobile`, ported from Crate at `~/dev/bbx/repos/crate`, and the crate `src-tauri` (`engineering/app-scaffold.md`). Logic and the views both apps mount live in `@eden/shared`, and imports inside it are relative, as inside the kit (D-157).
 
 ## Read `docs/INDEX.md` first
 
@@ -59,6 +59,8 @@ The front matter is the summary; the first H2 starts the content. `depends-on` l
 - Commits are authored solely by the repo owner. No co-author trailers, no generated-with footers.
 
 ## Crate references (patterns to reuse)
+
+The paths are Crate's, not Eden's; where Eden keeps its port is `engineering/app-scaffold.md`.
 
 | pattern | path in Crate |
 |---|---|

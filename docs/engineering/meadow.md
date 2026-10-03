@@ -1,7 +1,7 @@
 ---
 title: Meadow as code
 status: draft
-summary: Meadow (places, listings and the map) as code: the map seam and its generated style, the sources that reach outside (discovery, listings, details, the geocoder), the two requests of a search, the details slots, import by paste, listings, outings and the weekly search, what goes into the egress ledger, the phone's read surfaces, how it is tested, what was never run, and the handoffs.
+summary: Meadow (places, listings and the map) as code: the map seam and its generated style, the sources that reach outside (discovery, listings, details, the geocoder), the two requests of a search, the details slots, import by paste, listings, outings and the weekly search, what goes into the egress ledger, the phone's page, how it is tested, what was never run, and the handoffs.
 read-this-if: You are touching the map, a map or detail source, the geocoder, discovery, import, listings or outings, Meadow's store or its views on either app, or adding a keyed provider for places.
 depends-on: [product/domains/places, engineering/domain-module, engineering/data-layer, engineering/gardener, engineering/signals]
 updated: 2026-10-02
@@ -11,7 +11,7 @@ updated: 2026-10-02
 
 | built | not yet |
 |---|---|
-| the map behind a seam, MapLibre over OpenFreeMap in a style made from the tokens; saved places with facets, filters, favourites, visits and collections; discovery through the Gardener's web search, with suggestions as mirrors; details in slots (hours from OpenStreetMap, the place's page and the search; the page's picture); import by paste; listings, outings and the weekly search; the two Garden tiles; the settings; the phone's map, nearby list and listings as read surfaces, with favourite and log a visit | a keyed source of any kind (Google's place card, map or places; OQ-24); the device's location on either app; discovery, import and the listings search on the phone (#19); the palette entry running (#23); an offline tile cache and bundled label glyphs; outing reminders (#28); anything in "Never run" |
+| the map behind a seam, MapLibre over OpenFreeMap in a style made from the tokens; saved places with facets, filters, favourites, visits and collections; discovery through the Gardener's web search, with suggestions as mirrors; details in slots (hours from OpenStreetMap, the place's page and the search; the page's picture); import by paste; listings, outings and the weekly search; the two Garden tiles; the settings; the phone's page with every write desktop has, discovery, import and the weekly search included (D-173) | a keyed source of any kind (Google's place card, map or places; OQ-24); the device's location on either app; the palette entry running (#23); an offline tile cache and bundled label glyphs; outing reminders (#28); anything in "Never run" |
 
 D-128 to D-136 record the decisions and `product/domains/places.md` what Meadow is; this page is how it works. Meadow's id, route and module are `places`; its store is `meadow`, since `places` already names the primitive's rows and the shell's destinations.
 
@@ -20,15 +20,17 @@ D-128 to D-136 record the decisions and `product/domains/places.md` what Meadow 
 | piece | where | holds |
 |---|---|---|
 | shapes and rules | `packages/shared/src/domains/places/` | `types`, `rows`, `vibes`, `categories`, `filter`, `hours`, `view`, `favorites`, `formats`, `home`, `discovery`, `import`, `listings`, `outings`, `signals`: plain modules, each with its test |
-| store | `…/places/store.svelte.ts` | `meadow`, shared by both apps as Sky's is |
+| store and logic | `…/places/store.svelte.ts`, `logic.ts` | `meadow`, shared by both apps as Sky's is, and bound once in `logic.ts` |
+| tools, import, seed, words | `…/places/tools.ts`, `import.svelte.ts`, `seed.ts`, `words.ts` | the Gardener's handlers and the sources that find, the import's rows, the sample data, the vibes' names |
+| shared views | `…/places/views/`, `widgets/` | what both apps mount: `PlaceDetail`, `SuggestionDetail`, `HomeCard`, `PlaceEditSheet`, `VisitSheet`, `ImportSheet`, `FindMore`, `Fold`, `Listings`, `Collections`, `Visits`, and the two tiles |
 | map seam | `…/places/map/` | `types`, `registry`, `style`, `palette`, `maplibre` |
 | detail sources | `…/places/details/` | `types`, `registry`, `osm-hours`, `website` |
 | geo | `packages/shared/src/geo/` | `LngLat`, `Bounds`, `rounded`, `roundedPoint`, `haversineKm`, `boundsAround`, `throttle`, the `Geocoder` seam and Photon. Substrate level, so Sky and Meadow both import it |
-| desktop | `apps/desktop/src/lib/domains/places/` | `manifest.ts`, `tools.ts`, `map.ts`, `import.svelte.ts`, `seed.ts`, `views/`, `widgets/` |
-| mobile | `apps/mobile/src/lib/domains/places/` | `manifest.ts`, `map.ts`, `views/{Meadow,FilterSheet,PlaceSheet}.svelte` |
+| desktop | `apps/desktop/src/lib/domains/places/` | `manifest.ts`, `map.ts`, `views/{Meadow,MapTab,FilterPanel}.svelte` |
+| mobile | `apps/mobile/src/lib/domains/places/` | `manifest.ts`, `map.ts`, `views/{Meadow,PlaceSheet,FilterSheet}.svelte` |
 | kit | `packages/ui-kit` | `MapPin`, `PinLayer`, `Rating`, the `meadowSeeds` sketch; the mocks under `src/stories/domains/places/` |
 
-**The store is shared, so the shell is injected.** `meadow.bind({ record, discovery, listings, geocoder })` is called once in the desktop's `manifest.ts`: `record` writes a line in the Garden's feed and answers how to take it back, and the three sources are the ones below. Every write changes the store at once, is queued (`WriteQueue`) and answers its undo; the view shows the toast. A source that was not given is not there: the phone calls no `bind`, so it has no feed line, no geocoder and nothing that finds.
+**The store is shared, so the shell is injected.** `meadow.bind({ record, discovery, listings, geocoder })` is called once, in `logic.ts`, for both apps: `record` writes a line in the Garden's feed and answers how to take it back, and the three sources are the ones below. Every write changes the store at once, is queued (`WriteQueue`) and answers its undo; the view shows the toast. A source that was not given is not there.
 
 **Rows** are D-133's. A saved place is read as one `SavedPlace` from its `venue` Place and its `place-profile` (`joinPlaces`); a `venue` with no profile has no `profileId` and shows as a plain pin. The filter (`eden:places:filter`) and the search area (`eden:places:area`) are per device in localStorage, not rows. `favorite-vibe` is written `domain-derived` behind each save and each visit (`favorites.ts`, `#syncFavourites`), and never touches a fact of the type the owner asserted.
 
@@ -42,7 +44,7 @@ D-128 to D-136 record the decisions and `product/domains/places.md` what Meadow 
 - **The palette** (`palette.ts`) is thirteen colours mixed from ten tokens (`PALETTE_TOKENS`). `readMapPalette(el)` resolves each token where the element stands by painting one pixel on an `OffscreenCanvas`, since a token may be a `color-mix()`; `mapPalette` is the pure part. The desktop's Map tab reads it again on a theme or accent change and calls `setPalette`, which sets the whole style anew.
 - **Pins** are the kit's `MapPin` in a `PinLayer`, placed by `surface.project` and a `revision` the view bumps on `move`. A saved place's pin carries its category's glyph (`categoryGlyph`); one with no category keeps the plain pin. `drawnPins` (`view.ts`) leaves out what is off the ground shown and, above sixty pins on screen, draws saved places that share a 48 px cell as one `group` pin; home, a suggestion and the picked pin always stand alone.
 - **No map.** When the surface rejects, or the device is offline, the pins stand on plain ground by `flatProjection` over `flatFit` of their points, and the credit line says so. Saved places are still found.
-- **The page** (`views/MapTab.svelte`) follows D-129 and D-112: the detail is an `<aside>` over the map's far edge while the page is wide and the map at least 640 px, with `setPadding` keeping the picked pin clear of it, and a pushed view otherwise. Storybook never mounts a map: the mocks draw `StaticGround.svelte`.
+- **The page** on desktop (`views/MapTab.svelte`) follows D-129 and D-112: the detail is an `<aside>` over the map's far edge while the page is wide and the map at least 640 px, with `setPadding` keeping the picked pin clear of it, and a pushed view otherwise. Storybook never mounts a map: the mocks draw `StaticGround.svelte`.
 
 **CSP** (`src-tauri/tauri.conf.json`, D-131): `connect-src` names `https://tiles.openfreemap.org`, `https://photon.komoot.io` and `https://overpass-api.de`; `worker-src 'self'` is for the map's worker; `img-src` has `blob:`.
 
@@ -51,7 +53,7 @@ D-128 to D-136 record the decisions and `product/domains/places.md` what Meadow 
 | seam | where | first source | given to the store by |
 |---|---|---|---|
 | `MapSource` | `map/registry.ts` | OpenFreeMap through MapLibre | each app's `map.ts` |
-| `DiscoverySource` | `discovery.ts` | `gardenerDiscovery` (`apps/desktop/…/places/tools.ts`) | `bind` |
+| `DiscoverySource` | `discovery.ts` | `gardenerDiscovery` (`…/places/tools.ts`) | `bind` |
 | `ListingsSource` | `listings.ts` | `gardenerListings` (the same file) | `bind` |
 | `DetailSource` | `details/types.ts` | `DETAIL_SOURCES` | the registry itself |
 | `Geocoder` | `geo/types.ts` | `photon` | `bind` |
@@ -89,15 +91,15 @@ Opening a place calls `meadow.openDetails` (D-135). A slot is tried source by so
 - `hours.ts` parses the common subset of OpenStreetMap's `opening_hours`. A string outside it is shown as written, and "open now" is answered only for hours that parsed.
 - Settings → Integrations turns each source that makes a request on or off (`settings.placesDetailsOff`).
 - **Finding a picture** (D-153). `openDetails` and `meadow.findPicture(id, lang)` share one reader, `#readDetails`, which answers a `PictureOutcome` (`found`, `had`, `noWebsite`, `failed`; `details/backfill.ts`). `findPicture` passes `forcePhoto`, so the photo slot is asked whether or not it is due; hours keep their rule. It is the Find a picture item in the place's menu (`views/PlaceDetail.svelte`), there while `lacksPicture(place)`, and its outcome is a toast. Nothing runs over every place: the owner asked for one place at a time, to keep the requests few.
-- **The Gardener's `update-places`** (D-154; `apps/desktop/…/places/tools.ts`). A loose batch tool on the pattern of Hearth's (`engineering/gardener.md`, "Tools"): `preview` names each place, `asks` is true for a call that deletes, and `run` checks every id, collection, kind, vibe, price and website (`normalLink`) before `meadow.changePlaces` writes the edits as one change with one feed line. Collections and deletes go through the store's own methods, and the undos are joined. A website that was set on a place with no picture is followed by `fetchPlacePicture`, which calls `meadow.findPicture` in the background and whose undo takes the picture back.
+- **The Gardener's `update-places`** (D-154; `…/places/tools.ts`). A loose batch tool on the pattern of Hearth's (`engineering/gardener.md`, "Tools"): `preview` names each place, `asks` is true for a call that deletes, and `run` checks every id, collection, kind, vibe, price and website (`normalLink`) before `meadow.changePlaces` writes the edits as one change with one feed line. Collections and deletes go through the store's own methods, and the undos are joined. A website that was set on a place with no picture is followed by `fetchPlacePicture`, which calls `meadow.findPicture` in the background and whose undo takes the picture back.
 
 ## Import
 
 `parseNameList` (`import.ts`) reads a pasted list with no model and no network: bullets, numbers and checkboxes are dropped, what follows a dash or a colon is the name's note, a heading and a blank line are passed over, a name written twice is read once, two hundred names at most.
 
-`PlacesImport` (`apps/desktop/…/places/import.svelte.ts`, on the model of Hearth's capture) holds the rows. Each name is looked up through `meadow.geocode`, one a second, and its row settles as it comes: `saved` (a place of that name or that OpenStreetMap id is already kept), `matched`, `ambiguous` (several hits further than about fifty metres apart; the owner says which) or `not-found`, which the owner places by a click on the map (the Map tab reads the point under the click with `surface.unproject`, or `flatInverse` when there is no map). "Tag vibes with the Gardener" is one optional `import-places` request with no search (`tagPrompt`, `tagSchema`, three vibes a row at most), its vibes marked suggested. Save all is `meadow.addPlaces`, one batch with one undo.
+`PlacesImport` (`…/places/import.svelte.ts`, on the model of Hearth's capture) holds the rows. Each name is looked up through `meadow.geocode`, one a second, and its row settles as it comes: `saved` (a place of that name or that OpenStreetMap id is already kept), `matched`, `ambiguous` (several hits further than about fifty metres apart; the owner says which) or `not-found`, which the owner places by a click on the map (the Map tab reads the point under the click with `surface.unproject`, or `flatInverse` when there is no map; on the phone a tap on the ground while the map's pill waits). "Tag vibes with the Gardener" is one optional `import-places` request with no search (`tagPrompt`, `tagSchema`, three vibes a row at most), its vibes marked suggested. Save all is `meadow.addPlaces`, one batch with one undo.
 
-`ImportSheet` is the domain's `overlay`, so `import-places` called in a conversation opens it on whatever page is showing with the names and their suggested vibes; nothing is saved until the owner saves there.
+`ImportSheet` is the domain's `overlay` in both apps, so `import-places` called in a conversation opens it on whatever page is showing with the names and their suggested vibes; nothing is saved until the owner saves there.
 
 ## Listings and outings
 
@@ -105,7 +107,7 @@ A `listing` is a mirror found by `suggest-listings`, the same two requests with 
 
 `markListing` makes an `outing` Event: interested is `tentative`, going `confirmed`, no mark deletes it. The Event carries the listing's `source` and `externalId`, which is how a second mark finds the first, and a snapshot (`outings.ts`). `add-to-calendar` is `markListing(id, 'going')` behind the tool's confirm (D-136).
 
-**The weekly run** (D-134; `signals.ts`). The manifest's one schedule, `places.weekly`, is `daily` at 09:00. `weeklyMorning` runs the search when `weeklyDue`: once for each Sunday, on that Sunday or on the Monday after. What it has done is kept per device (`eden:places:weekly`, the Sunday it last ran for). `weeklyListings` (`tools.ts`) is the search the desktop binds:
+**The weekly run** (D-134; `signals.ts`). The manifest's one schedule, `places.weekly`, is `daily` at 09:00. `weeklyMorning` runs the search when `weeklyDue`: once for each Sunday, on that Sunday or on the Monday after. What it has done is kept per device (`eden:places:weekly`, the Sunday it last ran for), so the search runs on each device, under the same switch and the same cap (D-173). `weeklyListings` (`tools.ts`) is the search `logic.ts` binds:
 
 | it answers | when | the week |
 |---|---|---|
@@ -114,6 +116,8 @@ A `listing` is a mirror found by `suggest-listings`, the same two requests with 
 | `nothing`, `found` | the search ran | settled; `found` emits `listing.matched` keyed by the Sunday, with the count and the first title |
 
 `settings.placesWeekly` turns it off, and Settings disables that toggle while discovery is off.
+
+Handoff: listings are mirrors, which are per device and never synced (D-32), so what one device's search found never shows on the other; with the search on both, each device finds its own week and spends its own requests. An outing marked from a listing is an Event and will travel with sync. When sync arrives, decide whether one device searches for both or each keeps its own.
 
 ## Egress
 
@@ -129,9 +133,11 @@ A `listing` is a mirror found by `suggest-listings`, the same two requests with 
 
 ## The phone
 
-`apps/mobile/src/lib/domains/places/views/Meadow.svelte` is one page at `/places` with a `Segmented` of three surfaces: the map, Nearby (the filtered places as a list with each one's distance) and Listings (what the desktop found, read from the mirrors, each opening its page). The map stays mounted while another surface shows, so it is made once. `FilterSheet` holds the filter and `PlaceSheet` a saved place: what it is, its hours and vibes, and the two writes the phone makes, favourite and a visit with a rating and a note, each with an undo toast.
+`apps/mobile/src/lib/domains/places/views/Meadow.svelte` is the phone's own page at `/places/[[tab]]` (D-173): desktop's four tabs in a text `Segmented`, the tab in the address. The Map tab is the map, `52dvh` tall, with the saved places under it by distance (each row with the four actions of desktop's side column, through a held press), then what the Gardener found and `FindMore`. The map stays mounted while another tab shows, so it is made once. Listings, Collections and Visits are the shared views. What is picked (a saved place, a suggestion, the home) opens in `PlaceSheet`, a sheet from the foot whose body is the shared `PlaceDetail`, `SuggestionDetail` or `HomeCard`, drawn flat; the forms it opens (`PlaceEditSheet`, `VisitSheet`) are sheets of their own over it, and the home's button opens the shell's change-home sheet (D-162). `FilterSheet` holds the same filter as desktop's panel, every choice on the sheet. Placing a place by hand is a tap on the ground while a pill at the map's top waits; Android's back cancels it (`holdBack`) and the floating + stands down meanwhile. There is no header motif (D-123) and no pushed view.
 
-The store is the shared one with no `bind`, so the phone has no discovery, no import, no listings search and no geocoder, and its pages offer none; they come with the Gardener's runtime (#19; `engineering/gardener.md`, Handoffs). Where the library cannot start the pins stand on plain ground and Nearby still says how far each place is. The views are the phone's own, so they do not wait on the mobile `page` container (`engineering/app-scaffold.md`).
+The store, its sources and the weekly search are the ones desktop has, bound in `logic.ts`. Where the library cannot start, the pins stand on plain ground and the list still says how far each place is.
+
+Handoff: the kit's phone canvas of `Domains/Meadow/Map` still draws a pushed detail and the filters inline; it should draw the picked sheet and `FilterSheet` as the app does. Visual baselines are the owner's to regenerate.
 
 ## Testing
 
@@ -156,13 +162,12 @@ The store and the views have no unit tests. In the browser build the scripted tr
 - A place's picture from a link (D-144): `linkedSizedPicture` throws `web:unavailable` in the browser build, so only the menu, the panel and its failure toast were seen. A picture dropped on the form or pasted into it was not driven either.
 - The weekly run on a real Sunday, and `add-to-calendar` from a live conversation.
 - Find a picture (D-153) against a real page: in the browser build a place with a website ends `failed` and one without ends `noWebsite`, and neither was driven: the browser build's one saved place has a picture, so only the item's absence there was seen. `update-places` (D-154) from a live conversation: its handler was run by hand in the browser build, and the picture that follows a confirmed website was not fetched.
-- The phone's views on a simulator or a device: they were driven in the browser build at 1421 only. On 2026-10-01 `tauri ios dev` for the simulator stopped in the crate's build script, where `swift-rs` could not compile Sky's `EdenWeatherKit` package against the simulator SDK, before any of Meadow's code ran.
+- The phone's views on a simulator or a device: they were driven in the browser build at 1421 only. On 2026-10-01 `tauri ios dev` for the simulator stopped in the crate's build script, where `swift-rs` could not compile Sky's `EdenWeatherKit` package against the simulator SDK, before any of Meadow's code ran. Only a device proves: MapLibre's worker and a tap on the ground in the iOS and Android webviews; Photon, Overpass and the page fetches under the mobile CSP; the camera and the library from the place form's `FileButton` (D-170); Android's back press closing the picked sheet and cancelling a placing; the weekly listings search waking on a phone, which suspends Eden soon after it leaves the screen.
 - The installed app.
 
 ## Handoffs
 
 - **Google's place card (OQ-24).** A `DetailSource` on the `card` slot, registered in `DETAIL_SOURCES`, with `secret` naming its key and a destination in the ledger; `rating` is open the same way. The slot's data is `unknown` today and nothing draws it: the detail views need a place for the card. Google's map would be a `MapSource` beside `maplibre.ts`, and its places a `DiscoverySource`.
-- **Changing home on the phone (OQ-25, #19).** The change-home sheet is the desktop shell's (`apps/desktop/src/lib/shell/home/`): the phone's home pin is a mark (`pick('home')` returns early in the mobile `Meadow.svelte`) and no geocoder is bound there. The phone needs the sheet in its own shell, `photon` given at `bind`, and the kit's `AddressForm`, which already lays out one column on a phone.
 - **A found place's address.** A `PlaceCandidate` keeps the line its source wrote (`addressLine`), and saving one keeps it as the first line of the address (`#draftOf` in `store.svelte.ts`). The geocoder's hit for the candidate has the parts (`addressFromHit`); `receive` could keep them on the candidate so a saved suggestion starts with a whole address.
 - **Precise location.** Not built on either app: "near me" is distance from home or from a named area. It needs `tauri-plugin-geolocation` under the `mobile` cargo feature, the iOS and Android permission strings, the `location-precise` device capability in the manifest with its grant, and `SearchArea` gaining a `device` kind that `areaPoint` and `areaWords` answer. D-131 holds: the device's point moves the map only under the grant, and what leaves is still rounded. Desktop needs its own way to a location.
 - **Bundled glyphs and offline tiles.** If glyphs from the tile host fail under the CSP, bundle a few ranges of an OFL font and point `GLYPHS` at the app's origin. No tile is cached: offline, the pins stand on plain ground. A cache, or self-hosted tiles, is another `MapSource` or a layer in this one.
@@ -171,3 +176,5 @@ The store and the views have no unit tests. In the browser build the scripted tr
 - **Adding a place from a conversation.** `update-places` adds none, since a place needs the geocoder: `import-places` opens the sheet for several, and a prefilled Add sheet for one is not built.
 - **Pictures from Google (OQ-24).** A `DetailSource` on the `photo` slot ahead of `website-photo`; `findPicture` would use it unchanged. Google's terms on keeping a photo make it a mirror that is fetched again, not a `place-photo`.
 - **Import geocoding.** Photon's hit rate on venue names is unmeasured; a second geocoder is another `Geocoder` given at `bind`.
+- **Meadow's header motif on the phone** (D-123). The phone's `PageHeader` has no room for it beside the tabs, so it is left out; one could ride in the header once the phone's header gains a place for it.
+- **Swipe on the phone's rows.** The saved list under the map and the Visits rows have a held-press menu and no swipe (D-167); add a leading and trailing action if use asks for one.

@@ -12,7 +12,7 @@
 	import type { HTMLAttributes } from 'svelte/elements'
 	import { useStrings } from '../../i18n/context.js'
 	import { measure } from '../../internal/measure.js'
-	import { pointerAt } from '../../internal/pointer.js'
+	import { chartRead, type ChartPlace } from '../../internal/chart-read.js'
 	import ChartTip from '../ChartTip/ChartTip.svelte'
 	import { sunArc, sunAt } from './sun.js'
 
@@ -70,18 +70,16 @@
 	const reads = $derived(hover && !!format)
 	let at = $state<number>()
 	const reading = $derived(geo && at !== undefined ? sunAt(sunrise, sunset, latitude, geo, at) : undefined)
-	function point(event: PointerEvent & { currentTarget: EventTarget & HTMLElement }) {
-		at = pointerAt(event).x
+	// A finger pins the readout, scrubs it and leaves it until a tap elsewhere (`chartRead`, D-168).
+	function point(place: ChartPlace | undefined) {
+		at = place?.x
 	}
 </script>
 
 <div
 	class={['ed-sun', className]}
 	style:height="{height}px"
-	onpointermove={reads ? point : undefined}
-	onpointerdown={reads ? point : undefined}
-	onpointerleave={reads ? () => (at = undefined) : undefined}
-	onpointercancel={reads ? () => (at = undefined) : undefined}
+	{@attach chartRead(() => ({ on: reads, onread: point }))}
 	{@attach measure((rect) => (width = Math.round(rect.width)))}
 	{...rest}
 >

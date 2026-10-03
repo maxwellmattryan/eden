@@ -12,6 +12,8 @@ export interface SwipeOptions {
 	rowWidth: () => number
 	/** True when movement is off (reduced motion): the content never travels; a hold reveals instead. */
 	still: () => boolean
+	/** Whether a hold reveals the actions when movement is off. On unless set false. */
+	hold?: boolean
 	/** The content's offset while the pointer is down, already clamped. */
 	onMove(dx: number): void
 	/** The drag ended, committed or not: settle back to 0. */
@@ -71,7 +73,7 @@ export function swipe(get: () => SwipeOptions): Attachment<HTMLElement> {
 			dragged = false
 			width = options.width()
 			threshold = Math.min(width, options.rowWidth() * 0.4)
-			if (options.still()) {
+			if (options.hold !== false && options.still()) {
 				hold = setTimeout(() => {
 					hold = undefined
 					reset()

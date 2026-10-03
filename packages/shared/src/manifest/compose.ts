@@ -117,7 +117,8 @@ export function tabBar(
 	const actions = shell.sidebar.pinned.map((entry): SidebarItem => ({
 		...entry,
 		kind: 'shell',
-		place: false,
+		// a pinned entry says whether it is a place (the Gardener's page, D-113) or an action (Settings)
+		place: entry.place,
 		key: entry.key,
 	}))
 	const places = shell.tabs.places.flatMap((id) => own.filter((item) => item.id === id))

@@ -188,6 +188,8 @@ export interface UiStrings {
 		inviteHintTouch: string
 		/** The file button's name. */
 		chooseFiles: string
+		/** The label of the field for pasted text in the collect step, on the phone, where nothing is pasted onto a page. */
+		pasteLabel: string
 		/** The accessible name of the sources: the staged files, and their thumbnails beside the rows. */
 		sources: string
 		/** The cost as the provider line says it: "about 0.8 ¢". */
@@ -357,6 +359,9 @@ export interface UiStrings {
 		failed: string
 		/** The first row of a file button's menu of sources: the platform's picker. */
 		fromFile: string
+		/** With the camera offered (the phone): the menu's first row, which opens the camera, and the picker's row after it. */
+		takePhoto: string
+		fromLibrary: string
 	}
 }
 
@@ -509,6 +514,7 @@ export const defaultStrings: UiStrings = {
 		inviteHint: 'Drop them here, choose files, or paste a list.',
 		inviteHintTouch: 'Choose files, or paste a list.',
 		chooseFiles: 'Choose files',
+		pasteLabel: 'Or paste a list, a receipt or an order',
 		sources: 'Sources',
 		estimate: (cost) => `up to ${cost}`,
 		readBy: (line) => `Read by ${line}`,
@@ -635,6 +641,8 @@ export const defaultStrings: UiStrings = {
 		missing: 'No longer on this device',
 		failed: 'Could not be added',
 		fromFile: 'From a file',
+		takePhoto: 'Take a photo',
+		fromLibrary: 'From the library or files',
 	},
 }
 

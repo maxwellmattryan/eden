@@ -5,6 +5,7 @@
 	import type { BadgeKind } from '../Badge/Badge.svelte'
 	import type { ChipTone } from '../Chip/Chip.svelte'
 	import type { MenuItem } from '../Menu/Menu.svelte'
+	import type { SwipeLeading, SwipeTrailing } from '../SwipeRow/SwipeRow.svelte'
 
 	/** A detail chip: a quantity in mono, a location, a tag. */
 	export interface ListRowChip {
@@ -55,11 +56,32 @@
 		actions?: MenuItem[]
 	}
 
+	/** The ids of the menu items that stand for a row's swipe actions. */
+	const SWIPE_LEADING = 'ed-swipe-leading'
+	const SWIPE_TRAILING = 'ed-swipe-trailing'
+	const isSwipeItem = (item: MenuItem) => item.id === SWIPE_LEADING || item.id === SWIPE_TRAILING
+	/**
+	 * A row's swipe actions as menu items, the leading one first and the trailing one destructive: what the menu of a
+	 * row with no `actions` of its own holds, so nothing depends on a swipe (D-167).
+	 */
+	export function swipeItems(leading?: SwipeLeading, trailing?: SwipeTrailing): MenuItem[] {
+		return [
+			...(leading ? [{ id: SWIPE_LEADING, label: leading.label, icon: leading.icon }] : []),
+			...(trailing ? [{ id: SWIPE_TRAILING, label: trailing.label, icon: trailing.icon, destructive: true }] : []),
+		]
+	}
+
 	/** The controls a click on the row must not toggle, and the overlays a right-click inside must leave alone. */
 	const CONTROLS = 'button, a, input, [role="menu"], dialog'
 	const OVERLAYS = '[role="menu"], dialog'
-	const inside = (target: EventTarget | null, selector: string) =>
-		target instanceof Element && !!target.closest(selector)
+	/**
+	 * Whether the event began in one of the row's own controls or overlays: a match between the target and the row,
+	 * never the row's own ancestors, so a list inside a sheet (a `<dialog>`) still picks and opens.
+	 */
+	function inside(target: EventTarget | null, selector: string, row: Element | undefined): boolean {
+		const hit = target instanceof Element ? target.closest(selector) : null
+		return !!hit && !!row && hit !== row && row.contains(hit)
+	}
 
 	/**
 	 * The mark's slide along the inline axis: its width and the row's gap before the next item open together over the
@@ -127,7 +149,12 @@
 	// the mode is the list's to answer (`onextend`). Inside List the row is a grid row with one gridcell and the list manages its tab stop, and
 	// it leaves with a collapse (`collapse` above); on its own it is a list item and its own tab stop. A press on a
 	// button in the row (the hint, the ⋯) never toggles or opens the row. With a `dragGroup` a desktop pointer can pick
-	// the row up and drop it on a DropTarget that accepts the group; the row dims while it is held.
+	// the row up and drop it on a DropTarget that accepts the group; the row dims while it is held. With a
+	// `swipeLeading` or a `swipeTrailing` the row is drawn through SwipeRow (D-167): on the phone a
+	// horizontal drag reveals and fires them, and on desktop nothing moves. Either way a row with no `actions` of its
+	// own takes them as its menu, the leading one first and the trailing one last and destructive, so a held press, a
+	// right-click and Shift+F10 reach them without a swipe, under reduced motion too; on the phone that menu has no ⋯
+	// button, on desktop it has. A row with its own `actions` keeps its menu as written.
 	import { tick } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
 	import type { AnchorLike } from '../../internal/anchor.js'
@@ -137,7 +164,9 @@
 	import Chip from '../Chip/Chip.svelte'
 	import IconButton from '../IconButton/IconButton.svelte'
 	import Menu from '../Menu/Menu.svelte'
+	import SwipeRow from '../SwipeRow/SwipeRow.svelte'
 	import Thumbnail from '../Thumbnail/Thumbnail.svelte'
+	import { platformOf } from '../../internal/platform.js'
 	import { rowDragSource } from '../../internal/row-drag.js'
 	import { longPress } from './long-press.js'
 
@@ -167,6 +196,10 @@
 			onselect?: (selected: boolean) => void
 			/** Set by List: the row's leave from the list has begun, before it goes inert; the list moves its focus on. */
 			onleave?: (row: HTMLElement) => void
+			/** Revealed by a drag to the right on the phone: done or check. Off while `selecting`. */
+			swipeLeading?: SwipeLeading
+			/** Revealed by a drag to the left on the phone: delete. Off while `selecting`. */
+			swipeTrailing?: SwipeTrailing
 			/** Makes the row one a pointer can drag to a `DropTarget` that accepts this group; desktop only. */
 			dragGroup?: string
 			/** The row was picked up (`true`) or let go, dropped or not (`false`). */
@@ -199,6 +232,8 @@
 		onaction,
 		onselect,
 		onleave,
+		swipeLeading,
+		swipeTrailing,
 		dragGroup,
 		ondragstate,
 		class: className = '',
@@ -210,6 +245,13 @@
 	const hasDetail = $derived(!!secondary || chips.length > 0 || badges.length > 0)
 
 	let root = $state<HTMLDivElement>()
+	const mobile = $derived(root ? platformOf(root) === 'mobile' : false)
+	/** The row is drawn through SwipeRow; it stays so while selecting, with no actions, so the mark can slide in. */
+	const swipes = $derived(!!(swipeLeading || swipeTrailing))
+	/** The row's menu: its own actions, or with none of its own the swipe actions. */
+	const menu = $derived(actions.length ? actions : swipeItems(swipeLeading, swipeTrailing))
+	/** The ⋯ button: not on the phone for a menu that only repeats the swipes, which a held press opens. */
+	const showMore = $derived(menu.length > 0 && !(mobile && menu.every(isSwipeItem)))
 	let more = $state<HTMLElement>()
 	let menuOpen = $state(false)
 	let menuAnchor = $state<AnchorLike | null>(null)
@@ -219,7 +261,7 @@
 	let returnToRow = false
 
 	function openMenu(anchor: AnchorLike, align: 'start' | 'end', fromRow: boolean) {
-		if (!actions.length) return
+		if (!menu.length) return
 		// the ⋯ button pressed again while its menu is open closes it
 		if (menuOpen && menuAnchor === anchor) {
 			menuOpen = false
@@ -243,11 +285,13 @@
 	 */
 	async function pick(item: MenuItem) {
 		await tick()
-		onaction?.(item)
+		if (item.id === SWIPE_LEADING) swipeLeading?.onaction()
+		else if (item.id === SWIPE_TRAILING) swipeTrailing?.onaction()
+		else onaction?.(item)
 	}
 
 	function onclick(e: MouseEvent) {
-		if (inside(e.target, CONTROLS)) return
+		if (inside(e.target, CONTROLS, root)) return
 		if (onextend && (e.shiftKey || e.metaKey || e.ctrlKey)) onextend(e.shiftKey ? 'range' : 'toggle')
 		else if (selecting) toggle()
 		// the second click of a double-click picks nothing again: the first one did
@@ -255,15 +299,15 @@
 	}
 	/** A Shift click extends the selection: it must not select the text between the two rows. */
 	function onmousedown(e: MouseEvent) {
-		if (onextend && e.shiftKey && !inside(e.target, CONTROLS)) e.preventDefault()
+		if (onextend && e.shiftKey && !inside(e.target, CONTROLS, root)) e.preventDefault()
 	}
 	function ondblclick(e: MouseEvent) {
 		// with no `onpick` the two clicks have opened the row already
-		if (selecting || !onpick || inside(e.target, CONTROLS)) return
+		if (selecting || !onpick || inside(e.target, CONTROLS, root)) return
 		onopen?.()
 	}
 	function oncontextmenu(e: MouseEvent) {
-		if (!actions.length || inside(e.target, OVERLAYS)) return
+		if (!menu.length || inside(e.target, OVERLAYS, root)) return
 		e.preventDefault()
 		openAt(e.clientX, e.clientY)
 	}
@@ -279,7 +323,7 @@
 			e.preventDefault()
 			oncheck?.(!done)
 		} else if ((e.shiftKey && e.key === 'F10') || e.key === 'ContextMenu') {
-			if (!actions.length) return
+			if (!menu.length) return
 			e.preventDefault()
 			const anchor = more?.querySelector('button') ?? root
 			if (anchor) openMenu(anchor, 'end', true)
@@ -342,22 +386,41 @@
 		{/if}
 	</span>
 	{#if meta}<span class="ed-row-meta" class:ed-row-meta-warn={metaWarn}>{meta}</span>{/if}
-	{#if actions.length}
-		<span class="ed-row-more" bind:this={more}>
-			<IconButton
-				icon="ellipsis"
-				label={name}
-				size="sm"
-				active={menuOpen}
-				aria-haspopup="menu"
-				aria-expanded={menuOpen}
-				tabindex={inGrid ? -1 : undefined}
-				onclick={(e) => openMenu(e.currentTarget, 'end', false)}
-			/>
-		</span>
-		<Menu bind:open={menuOpen} anchor={menuAnchor} align={menuAlign} label={name} items={actions} onselect={pick} />
+	{#if menu.length}
+		{#if showMore}
+			<span class="ed-row-more" bind:this={more}>
+				<IconButton
+					icon="ellipsis"
+					label={name}
+					size="sm"
+					active={menuOpen}
+					aria-haspopup="menu"
+					aria-expanded={menuOpen}
+					tabindex={inGrid ? -1 : undefined}
+					onclick={(e) => openMenu(e.currentTarget, 'end', false)}
+				/>
+			</span>
+		{/if}
+		<Menu bind:open={menuOpen} anchor={menuAnchor} align={menuAlign} label={name} items={menu} onselect={pick} />
 	{/if}
 	{#if selecting && selected && !inGrid}<span class="ed-sr-only">{s.selectedRow}</span>{/if}
+{/snippet}
+
+<!-- A row that swipes is drawn through SwipeRow, inside its cell: the buttons behind it are the cell's, never the row's -->
+{#snippet cell()}
+	{#if swipes}
+		<SwipeRow
+			class="ed-row-swipe"
+			leading={selecting ? undefined : swipeLeading}
+			trailing={selecting ? undefined : swipeTrailing}
+			hold={false}
+			tabbable={!inGrid}
+		>
+			<div class="ed-row-inner">{@render content()}</div>
+		</SwipeRow>
+	{:else}
+		{@render content()}
+	{/if}
 {/snippet}
 
 <!-- The row itself is the focus target: a grid row under List's roving tabindex, or a list item on its own. -->
@@ -374,8 +437,9 @@
 			'ed-row-current': current && !selecting,
 			'ed-row-pickable': !!(onpick ?? onopen),
 			// a row that does something answers the pointer; one that only shows its data stays still
-			'ed-row-live': !!(onpick ?? onopen) || selecting || checkable || actions.length > 0 || !!dragGroup,
+			'ed-row-live': !!(onpick ?? onopen) || selecting || checkable || menu.length > 0 || !!dragGroup,
 			'ed-row-compact': compact,
+			'ed-row-swipes': swipes,
 		},
 		className,
 	]}
@@ -398,15 +462,16 @@
 	{...rest}
 >
 	{#if inGrid}
-		<div class="ed-row-cell" role="gridcell">{@render content()}</div>
+		<div class="ed-row-cell" role="gridcell">{@render cell()}</div>
 	{:else}
-		{@render content()}
+		{@render cell()}
 	{/if}
 </div>
 
 <style>
 	.ed-row,
-	.ed-row-cell {
+	.ed-row-cell,
+	.ed-row-inner {
 		display: flex;
 		align-items: center;
 		gap: var(--space-3);
@@ -434,6 +499,31 @@
 		padding-top: 0;
 		padding-bottom: 0;
 	}
+	/* A row that swipes: the swipe row fills it edge to edge, so the actions sit at the row's ends, and the padding
+	   moves onto the content that travels. The row takes a ground of its own, which the travelling content inherits
+	   through the cell, so it hides the actions behind it and still shows the row's state. */
+	.ed-row-swipes {
+		padding: 0;
+		background: var(--ed-row-ground, var(--surface-1));
+	}
+	.ed-row-swipes > .ed-row-cell {
+		background: inherit;
+	}
+	.ed-row-swipes :global(.ed-row-swipe) {
+		flex: 1;
+		min-width: 0;
+		background: inherit;
+	}
+	.ed-row-inner {
+		box-sizing: border-box;
+		/* the row's height less its divider */
+		min-height: calc(var(--ed-row) - 1px);
+		padding: var(--space-1) var(--space-2) var(--space-1) var(--space-3);
+	}
+	.ed-row-compact .ed-row-inner {
+		padding-top: 0;
+		padding-bottom: 0;
+	}
 	.ed-row-live:hover {
 		background: var(--surface-2);
 	}
@@ -456,6 +546,19 @@
 		outline: 2px solid transparent;
 		box-shadow: inset 0 0 0 var(--focus-ring-width) var(--brand-primary);
 		z-index: 1;
+	}
+
+	/* the swipe row's content covers the row's own ground, so the ring is drawn over it instead */
+	.ed-row-swipes:focus-visible {
+		box-shadow: none;
+	}
+	.ed-row-swipes:focus-visible::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		z-index: 3;
+		box-shadow: inset 0 0 0 var(--focus-ring-width) var(--brand-primary);
+		pointer-events: none;
 	}
 
 	/* The selection mark: a hollow circle that fills with the accent; the check fades and settles in */

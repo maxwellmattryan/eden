@@ -85,7 +85,7 @@
 			docs: {
 				description: {
 					component:
-						'The dashboard (product/substrate/shell.md), mocked from kit components under D-54. A quick-navigation row of domain tiles, the Phase 1 default grid read from `gardenLayout` in the sample data (weather-now, today, expiring-soon, cook-tonight, resurfaced-idea, active-projects, sun-and-moon, the neutral daily line, the weight quick log, Meadow’s favourites nearby and this weekend’s listings), and the activity feed in a column of its own on desktop. Rendered inside the AppFrame: the Sidebar with subtitles on, the status bar at the foot, and on the phone the bottom tabs. Widgets show a one-line prompt until data exists; offline, the Sky widgets say when their forecast is from.',
+						'The dashboard (product/substrate/shell.md), mocked from kit components under D-54. A quick-navigation row of domain tiles, the Phase 1 default grid read from `gardenLayout` in the sample data (weather-now, today, expiring-soon, cook-tonight, resurfaced-idea, active-projects, sun-and-moon, the neutral daily line, the weight quick log, Meadow’s favourites nearby and this weekend’s listings), and the activity feed, in a column of its own on desktop and under the tiles on the phone. Rendered inside the AppFrame: the Sidebar with subtitles on, the status bar at the foot, and on the phone the bottom tabs. Widgets show a one-line prompt until data exists; offline, the Sky widgets say when their forecast is from.',
 				},
 			},
 		},
@@ -115,11 +115,11 @@
 		const desktop = canvas.queryByRole('contentinfo', { name: strings.statusBar.label })
 		if (desktop) {
 			await expect(canvas.getByRole('navigation', { name: strings.sidebar.label })).toBeVisible()
-			await expect(canvas.getByRole('complementary', { name: gardenCopy.activity })).toBeVisible()
 		} else {
 			await expect(canvas.getByRole('navigation', { name: strings.tabBar.label })).toBeVisible()
-			await expect(canvas.queryByRole('complementary')).toBeNull()
 		}
+		// the feed is beside the grid on desktop and under it on the phone
+		await expect(canvas.getByRole('complementary', { name: gardenCopy.activity })).toBeVisible()
 	}}
 />
 

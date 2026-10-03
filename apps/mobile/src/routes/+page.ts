@@ -10,7 +10,8 @@ export function load() {
 		resolve('/garden'),
 		resolve('/today'),
 		resolve('/more'),
-		...manifests.flatMap((manifest) => (manifest.routes ? [manifest.routes.href] : [])),
+		resolve('/gardener/[[tab]]', {}),
+		...manifests.map((manifest) => manifest.routes.href),
 	]
 	redirect(307, lastPlace(known) ?? resolve('/garden'))
 }

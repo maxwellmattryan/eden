@@ -22,13 +22,13 @@
 		type SegmentedItem,
 	} from '@eden/ui-kit'
 	import { t } from '@eden/shared/i18n'
-	import { capture } from '../capture.svelte'
+	import { capture } from '@eden/shared/domains/kitchen'
 	import { KITCHEN_TABS, type KitchenTab } from '../manifest'
-	import { recipeDrafts, recipeImport } from '../recipe-draft.svelte'
-	import { kitchen, type StockSort } from '../store.svelte'
+	import { recipeDrafts, recipeImport } from '@eden/shared/domains/kitchen'
+	import { kitchen, type StockSort } from '@eden/shared/domains/kitchen'
 	import Grocery from './Grocery.svelte'
-	import RecipeImportSheet from './RecipeImportSheet.svelte'
-	import Recipes from './Recipes.svelte'
+	import RecipeImportSheet from '@eden/shared/domains/kitchen/views/RecipeImportSheet.svelte'
+	import Recipes from '@eden/shared/domains/kitchen/views/Recipes.svelte'
 	import Stock from './Stock.svelte'
 
 	/** The Stock view, whose Add to stock sheet the header's Add opens (D-109). */

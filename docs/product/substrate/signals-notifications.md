@@ -1,10 +1,10 @@
 ---
 title: Signals and notifications
 status: draft
-summary: The signal model, the scheduler, rules that turn signals into notifications or tasks, channels, digests and quiet hours, the notification center, the activity feed, and the toast policy. Built so far (D-73): the scheduler, signals, rules from the manifests, the inbox as a plain list and OS notifications on desktop.
+summary: The signal model, the scheduler, rules that turn signals into notifications or tasks, channels, digests and quiet hours, the notification center, the activity feed, and the toast policy. Built so far (D-73): the scheduler, signals, rules from the manifests, the inbox as a plain list and OS notifications on desktop and the phone (D-158).
 read-this-if: You are designing anything that tells the owner something happened, or anything that runs on a schedule.
 depends-on: [primitives, grants]
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 ## Signal model (Phase 1)
@@ -37,7 +37,7 @@ Built (D-73): a rule is a notification kind with the signal that triggers it, a 
 |---|---|---|
 | in-app inbox | 1 | everything |
 | toast | 1 | errors and undo only |
-| OS local notification | 1 (desktop built; the phone in Phase 2) | reminders, shop-day, severe weather; content hidden on the lock screen for T2 signals. Off until the owner turns it on for the device, which the first card that would have been one offers (`substrate/grants.md`) |
+| OS local notification | 1 (built on desktop and the phone, shown while Eden is running; the phone asks the system's permission when the owner turns them on, D-158) | reminders, shop-day, severe weather; content hidden on the lock screen for T2 signals. Off until the owner turns it on for the device, which the first card that would have been one offers (`substrate/grants.md`) |
 | push through a relay | 3 | mobile when the app is closed (OQ-3) |
 | email, SMS | 3 | opt-in per rule (OQ-3) |
 
@@ -47,7 +47,7 @@ A morning digest at a chosen time collects agenda, tasks due, expiring stock, we
 
 ## Notification center (Phase 1)
 
-Built so far: the inbox as a plain list behind the bell, with the unread count, read state on closing, and one action that opens the card's domain. Grouping, snooze, clearing and the other inline actions are not built.
+Built so far: the inbox as a plain list behind the bell, on desktop in the status bar and on the phone as a sheet from the top bar (D-158), with the unread count, read state on closing, and one action that opens the card's domain. Grouping, snooze, clearing and the other inline actions are not built.
 
 The inbox opens from the status bar bell. Cards group by domain and day, carry read state, snooze, and inline actions (open, done, add to grocery). The bell shows an unread count. Clearing the inbox never deletes the underlying signals from the activity feed.
 

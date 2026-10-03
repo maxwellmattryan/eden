@@ -4,12 +4,12 @@ status: draft
 summary: The settings modal and its tabs, appearance, language, the updater, diagnostics and crash handling, data actions, keyboard shortcuts, the Domains tab, and what each reuses from Crate.
 read-this-if: You are designing a settings screen or a utility every app needs.
 depends-on: [shell, data, ai, grants]
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 ## Settings modal
 
-Desktop: a modal with a left tab rail, deep-linkable to a tab, following Crate's SettingsModal. Mobile: a drawer with grouped rows and two-level navigation, following Crate's SettingsDrawer.
+Desktop: a modal with a left tab rail, deep-linkable to a tab, following Crate's SettingsModal. Mobile: a drawer with grouped rows and two-level navigation, following Crate's SettingsDrawer; built as D-159 describes, over the same tab bodies desktop mounts (`packages/shared/src/shell/settings/tabs/`), opened from More. On the phone, Appearance has no density and no sidebar subtitles, About has no update check, and the Domains tab is the picker of the two pinned tabs, kept per device and never in a bundle (D-160); enabling, disabling and reordering come with the rest of that tab on both apps.
 
 | tab | contents | phase |
 |---|---|---|
@@ -43,7 +43,9 @@ Three layers as in Crate: a pre-load error hook, a global error handler that log
 
 ## Data actions
 
-Export, import, backup, restore, purge and wipe are entry points into `substrate/data.md`. Each destructive action names what it will delete, offers an export first, and asks for the workspace name to wipe.
+Export, import, backup, restore, purge and wipe are entry points into `substrate/data.md`. Each destructive action names what it will delete, offers an export first, and asks for the workspace name to wipe. On the phone an archive goes out and comes in through Eden's own folder (D-161; `engineering/data-layer.md`, "Settings → Sync and data").
+
+Handoff: an export on the iPhone is kept in Eden's `exports/` folder, which the Files app does not show; making the app's documents visible there (`UIFileSharingEnabled`, `LSSupportsOpeningDocumentsInPlace`) would let the owner reach an export the save dialog did not copy (D-161).
 
 ## Keyboard shortcuts (Phase 2)
 

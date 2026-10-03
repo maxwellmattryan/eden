@@ -28,7 +28,6 @@
 		type MenuItem,
 	} from '$lib/index.js'
 	import AppFrame from '../_frame/AppFrame.svelte'
-	import SwipeList from '../_frame/SwipeList.svelte'
 	import {
 		grocery,
 		hearthMotif,
@@ -67,7 +66,6 @@
 		oncomplete?: (store?: string) => void
 		oncheck?: (row: ListRowData) => void
 		ondelete?: (row: ListRowData) => void
-		onopen?: (row: ListRowData) => void
 		onaction?: (item: MenuItem, row: ListRowData) => void
 		/** Save in the item's form, with the item's id. */
 		onsave?: (id: string) => void
@@ -95,7 +93,6 @@
 		oncomplete,
 		oncheck,
 		ondelete,
-		onopen,
 		onaction,
 		onsave,
 		ongostore,
@@ -383,17 +380,21 @@
 							{#if block.rows.length && block.checked === block.rows.length}
 								<p class="voice">Everything is checked. Complete the list once you are home.</p>
 							{/if}
-							{#if block.rows.length && platform === 'desktop'}
-								<List rows={block.rows} onpick={oncheck} oncheck={(row) => oncheck?.(row)} onaction={act} />
-							{:else if block.rows.length}
-								<div class="card">
-									<SwipeList
-										rows={block.rows}
-										leading={(row) => ({ label: 'Check off', icon: 'check', onaction: () => oncheck?.(row) })}
-										trailing={(row) => ({ label: 'Delete', icon: 'trash', onaction: () => ondelete?.(row) })}
-										{onopen}
-									/>
-								</div>
+							{#if block.rows.length}
+								<!-- one list for both platforms: a tap checks, the ⋯ menu holds every action, and on the phone the
+								     rows swipe as well (a row with its own menu keeps it, so desktop shows nothing new) -->
+								<List
+									rows={block.rows}
+									onpick={oncheck}
+									oncheck={(row) => oncheck?.(row)}
+									onaction={act}
+									leading={(row) => ({
+										label: row.done ? 'Uncheck' : 'Check off',
+										icon: 'check',
+										onaction: () => oncheck?.(row),
+									})}
+									trailing={(row) => ({ label: 'Delete', icon: 'trash', onaction: () => ondelete?.(row) })}
+								/>
 							{:else if total > 0}
 								<EmptyState
 									inline
@@ -645,17 +646,6 @@
 		font-variation-settings: var(--ed-t-voice-opsz);
 		color: var(--text-secondary);
 	}
-	/* Mobile: the rows on the List's chrome, each a swipe row */
-	.card {
-		display: flex;
-		flex-direction: column;
-		box-sizing: border-box;
-		border: 1px solid var(--ed-card-border);
-		border-radius: var(--ed-radius-card);
-		background: var(--surface-1);
-		overflow: hidden;
-	}
-
 	.none {
 		padding: var(--space-3);
 	}
