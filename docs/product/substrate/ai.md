@@ -23,7 +23,8 @@ The provider registry holds each provider's models, each with its flags (`tools`
 
 ## Surfaces
 
-- **Global panel**: a right-side panel on desktop, a sheet on mobile, opened from the Gardener chip or ⌘K "ask". It has every enabled domain's tools.
+- **Global panel**: a right-side panel on desktop, a sheet on mobile, opened from the Gardener chip or ⌘K "ask". It has every enabled domain's tools. On the phone the sheet is full height, over the same conversation and log as desktop's panel, and opens from the top bar (D-163).
+- **The Gardener's page**: usage, conversations, the audit log and the tools (D-113), reached from the sidebar on desktop and from More on the phone, where it is desktop's page in its narrow layout (D-164).
 - **Domain chat**: the same panel opened from inside a domain. It has the same tools in the same order (D-150), and the domain's own facts go up front with the message (D-148).
 - **Inline ask**: select text or an entity and ask about it; the entity's URI becomes a declared read for that request.
 - **Proposal cards**: when a tool wants to store a fact or create an entity with `write-draft`, the draft appears as a card with accept and dismiss (`substrate/profile.md`).

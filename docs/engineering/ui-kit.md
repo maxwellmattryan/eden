@@ -109,7 +109,7 @@ Newsreader (upright and italic), Inter and Geist Mono ship from `src/lib/fonts`,
 | rule | why | enforced by |
 |---|---|---|
 | `<script lang="ts">`, `type Props` with a JSDoc line per prop, `class: className`, `...rest` typed from `svelte/elements` when the root is a native element; a callback prop that shares a DOM handler's name (`onselect`, `onchange`, `onclose`, `oncancel`) is `Omit`ted from the element type first | attachments and `aria-*` pass through; consumers get types, and a callback's signature is not intersected with the DOM event's | svelte-check, the apps' svelte-check, review |
-| imports inside `src/lib` are relative, never `$lib/…` | the apps compile the kit from source through the workspace symlink, where `$lib` is the app's own alias (`engineering/app-scaffold.md`) | the apps' `yarn check` and `yarn build` |
+| imports inside `src/lib` are relative, never `$lib/…` | the apps compile the kit from source through the workspace symlink, where `$lib` is the app's own alias (`engineering/app-scaffold.md`). `@eden/shared` follows the same rule for the same reason, with a `.js` suffix on each import (D-157) | the apps' `yarn check` and `yarn build`; for shared, ESLint's block over `packages/shared/src` |
 | callback props and snippets; `$bindable` only where `ui-kit-components.md` says so | one data-flow convention | review |
 | keyed `{#each}`; list props carry an `id` | stable identity, no duplicate-key crashes | ESLint `svelte/require-each-key` |
 | `$derived` for derived state; `$effect` only to drive an imperative DOM API, tagged `// effect: imperative DOM` | no state syncing in effects | review |

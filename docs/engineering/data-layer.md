@@ -304,7 +304,7 @@ Hearth's rules are pure modules beside its shapes, in `packages/shared/src/domai
 | `scale.ts` | `scaledIngredients` (a recipe's lines for the servings asked for, D-107), `scalable`, `MAX_SERVES`; nothing it answers is stored |
 | `browse.ts` | `browseRecipes` (the recipes a search and the filters leave, in the order asked for), `searchTerms`, `recipeTags`, `RecipeFilters`, `RECIPE_SORTS` |
 
-A haul is committed as one write (`kitchen.commitHaul` in `apps/desktop/src/lib/domains/kitchen/store.svelte.ts`, D-86): a batch that creates the new items, updates the merged ones and links the stock to any files already stored with a conversation, then `attachBytes` for each photo as a `haul-photo` linked `from` the stock rows. One undo takes back the rows, the merges and the photos. A photo that cannot be stored is logged and does not fail the haul. Taking stock (D-89) is the same write with `mode` `stock`: a matched item's quantity is set, not added to.
+A haul is committed as one write (`kitchen.commitHaul` in `packages/shared/src/domains/kitchen/store.svelte.ts`, D-86): a batch that creates the new items, updates the merged ones and links the stock to any files already stored with a conversation, then `attachBytes` for each photo as a `haul-photo` linked `from` the stock rows. One undo takes back the rows, the merges and the photos. A photo that cannot be stored is logged and does not fail the haul. Taking stock (D-89) is the same write with `mode` `stock`: a matched item's quantity is set, not added to.
 
 An item's picture (D-90) is an Attachment of kind `item-photo`, linked `from` its item, whose row's `thumbnail` is the small image shown; the item's payload names it in `photo`. The store reads them all once (`queryAttachments({ kinds: ['item-photo'] })`) into a map by id. A haul's commit writes each row's picture after the rows; `setStockPhoto` gives an item the owner's own or takes it away, deleting the one it had; deleting an item, alone, in a selection or by cooking it to nothing, deletes its picture in the same write, and the undo restores both. A picture can also come from a link (D-91): `productLink` reads a grocer's product address into a name, a size and the address of its picture with nothing fetched, the crate's `fetch_image` brings the picture's bytes under the checks of `fetch_page`, and `fitPicture` fits it whole on the small square.
 
@@ -333,14 +333,14 @@ Handoffs:
 
 ### Tasks
 
-The Today store (`apps/desktop/src/lib/shell/today/store.svelte.ts`) is a store on the task rows, the shell's, so a domain may import it. It holds every live task, whatever its kind and day, and no `Date`: the clock is a number that moves by the minute while a page watches, and `@eden/shared/tasks` works the Today view out of the tasks, the instant, the owner's zone and the week start. `Query` has no `done` filter and a routine's `due` is `null`, so the store loads all live tasks in one `queryTasks()`; that is acceptable at Phase 1 volumes, and a `done` filter is the first thing to add when it is not.
+The Today store (`packages/shared/src/shell/today/store.svelte.ts`, which both apps' Today pages read) is a store on the task rows, the shell's, so a domain may import it. It holds every live task, whatever its kind and day, and no `Date`: the clock is a number that moves by the minute while a page watches, and `@eden/shared/tasks` works the Today view out of the tasks, the instant, the owner's zone and the week start. `Query` has no `done` filter and a routine's `due` is `null`, so the store loads all live tasks in one `queryTasks()`; that is acceptable at Phase 1 volumes, and a `done` filter is the first thing to add when it is not.
 
 - **The shapes** (D-75) are `@eden/shared/tasks`' `types.ts`: `Recurrence` (`@eden/shared/recurrence`), `HabitTarget` and `TaskProgress`, read from the JSON fields by `toTask`, malformed as `null`. The crate checks that the JSON is valid and nothing more, as for a fact's value (D-72).
 - **Each owner action** is one patch of the row: `completion`, `skip`, `reopened` and `tallied` in `rules.ts` answer the fields a change sets, and `inverseOf` the same fields as they stand, which is what the undo writes back. A snooze patches `due` alone.
 - **The signals** follow the write: `task.created` after a create, `task.completed` after a completion and after a tally that meets the target, through `emitTaskCreated` and `emitTaskCompleted`; a failed write emits nothing and a failed emit fails nothing. The seed is one `applyBatch` and emits nothing.
 - **Reload.** After an import the store is read again with the domains' (below), and any code that writes a task outside the store asks it to reload (`product/substrate/tasks.md`, "How domains use tasks").
 
-Left for the issues that own them: the Garden's `today` tile binds to `view.counts` and `view.top` (`shellTiles` in `apps/desktop/src/lib/shell/garden/tiles.ts` stays unbound until the Garden issue), and the Garden's "Add sample data" seeds tasks through `shell/today/seed.ts` with it; the mobile app lifts the store from `apps/desktop/src/lib/shell/today/` into `@eden/shared` when it builds its Today from the story's phone canvas, so the two apps never keep two stores; the timezone setting hands the store its `zone`.
+Left for the issues that own them: the Garden's `today` tile binds to `view.counts` and `view.top` (`shellTiles` in `packages/shared/src/shell/garden/tiles.ts` stays unbound until the Garden issue), and the Garden's "Add sample data" seeds tasks through `shell/today/seed.ts` with it; the timezone setting hands the store its `zone`.
 
 ### The one-time import
 
@@ -359,7 +359,7 @@ A zip archive a person can open (`substrate/bundle.rs`; `product/substrate/data.
 | `attachments/<id>` | the files of the live attachments |
 | `grants.json` | full scope only: `{ "grants": [...] }` by id with their stamps, revocations included; never a capability or a session grant. The manifest counts the live ones under `grant` |
 | `facts.jsonl` | full scope only: one fact a line by id, tombstones included as their id, type, provenance and stamps with nothing of what they held. The manifest counts the live ones under `fact`. The history never leaves |
-| `settings.json` | full scope only: the settings, which live in the frontend and are passed in |
+| `settings.json` | full scope only: the settings, which live in the frontend and are passed in; the device's own (the Garden's layout, D-156; the pinned tabs, D-160) stay out, as `deviceStorage` in `packages/shared/src/settings/keys.ts` |
 | `friendly/` | per domain: the same data as CSV and Markdown, written by the frontend, which owns the shapes |
 
 - **Scope** is `{ kind: 'full' }` or `{ kind: 'domain', domain }`: the entity types and the kinds the registry says the domain owns.
@@ -394,7 +394,11 @@ Settings are applied only by a replace from a full bundle; a merge leaves the on
 
 ## Settings → Sync and data
 
-`apps/desktop/src/lib/settings/tabs/SyncTab.svelte`: export everything, export one domain (the domains that declare `extras` in their manifest), and import. An archive is inspected before the owner chooses merge or replace; a replace asks through `ConfirmSheet` and names its backup afterwards. After an import every domain's store is read again (`reload` in the manifest), and the shell's grant, profile and Today stores with them. Outside the app the tab says that export and import work in the installed app.
+`packages/shared/src/shell/settings/tabs/SyncTab.svelte`, the same tab in both apps: export everything, export one domain (the domains that declare `extras` in their manifest), and import. An archive is inspected before the owner chooses merge or replace; a replace asks through `ConfirmSheet` and names its backup afterwards. After an import every domain's store is read again (`reload` in the domain's logic), and the shell's grant, profile and Today stores with them. Outside the app the tab says that export and import work in the installed app.
+
+Where an archive goes and where one comes from is the app's, through the port `ArchiveFiles` (`shell/settings/archive-files.ts`) that each app passes the tab from its own `src/lib/settings/archive-files.ts`. Desktop's asks the system's save and open dialogs for a path the crate writes or reads. The phone's goes through Eden's own folder (D-161): an export is written to `<data dir>/exports/` and the system's save dialog copies it, the page saying where the file was kept when the dialog fails; an import is copied from the file input into `<data dir>/imports/` and read there, and removed once imported or replaced by another choice. The device's pinned tabs are never in `settings.json` (`deviceStorage`, D-160).
+
+Handoff: the phone's export and import have never been exercised. The browser build has no crate and shows the tab's notice, so the save dialog, the copy out of `exports/` and the staging into `imports/` wait on a device, iOS and Android both.
 
 ## Testing
 
