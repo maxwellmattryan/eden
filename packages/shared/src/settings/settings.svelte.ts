@@ -6,7 +6,6 @@ import {
 	accents,
 	brandLevels,
 	densities,
-	storageKeys,
 	themes,
 	type Accent,
 	type BrandLevel,
@@ -36,36 +35,8 @@ import {
 	type WeatherProvider,
 	type WeekStart,
 } from '../types/index.js'
+import { deviceStorage, storage } from './keys.js'
 import { measurementFrom } from './migrate.js'
-
-/** Every key the settings persist: the kit's five plus the app's own. */
-export const storage = {
-	...storageKeys,
-	language: 'eden:language',
-	subtitles: 'eden:subtitles',
-	measurement: 'eden:measurement',
-	weekStart: 'eden:week-start',
-	clock: 'eden:clock',
-	weatherProvider: 'eden:weather-provider',
-	mapsApp: 'eden:maps-app',
-	placesDiscovery: 'eden:places-discovery',
-	placesWeekly: 'eden:places-weekly',
-	placesDetailsOff: 'eden:places-details-off',
-	home: 'eden:home',
-	gardenerGrade: 'eden:gardener-grade',
-	gardenerPanelWidth: 'eden:gardener-panel-width',
-	sidebarWidth: 'eden:sidebar-width',
-	sidebarCollapsed: 'eden:sidebar-collapsed',
-	gardenLayout: 'eden:garden-layout',
-} as const
-
-/**
- * What this device keeps for itself (D-160): read and written like the rest, and never part of
- * `snapshot()` or `restore()`, so no bundle carries it and no import changes it.
- */
-export const deviceStorage = {
-	pinnedTabs: 'eden:pinned-tabs',
-} as const
 
 function read(key: string): string | null {
 	try {
@@ -174,7 +145,7 @@ export class Settings {
 		this.gardenerPanelWidth = positiveInt(read(storage.gardenerPanelWidth))
 		this.sidebarWidth = positiveInt(read(storage.sidebarWidth))
 		this.sidebarCollapsed = read(storage.sidebarCollapsed) === 'on'
-		this.gardenLayout = parseLayout(read(storage.gardenLayout))
+		this.gardenLayout = parseLayout(read(deviceStorage.gardenLayout))
 		this.pinnedTabs = parsePinned(read(deviceStorage.pinnedTabs))
 		this.resolvedTheme = this.resolveTheme(this.theme)
 		this.apply()
@@ -335,7 +306,7 @@ export class Settings {
 	/** Keeps the Garden's layout, or with nothing goes back to the default. */
 	setGardenLayout(layout: StoredLayout | undefined) {
 		this.gardenLayout = layout
-		write(storage.gardenLayout, layout ? JSON.stringify(layout) : null)
+		write(deviceStorage.gardenLayout, layout ? JSON.stringify(layout) : null)
 	}
 
 	/** Keeps the tab bar's pinned pair on this device, or with nothing goes back to the declared pair. */
