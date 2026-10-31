@@ -32,7 +32,7 @@
 		const at = startAtOf(form.date, timeIn(Date.now(), undefined))
 		const { undo } = fitness.logMetric(chosen, stored, { at })
 		const name = $t(`domains.fitness.body.kinds.${chosen}`)
-		undoToast($t('garden.feed.metricLogged', { values: { kind: name, value: `${value} ${unit}` } }), undo)
+		undoToast($t('garden.feed.metricLogged', { values: { kind: name } }), undo)
 		open = false
 	}
 </script>

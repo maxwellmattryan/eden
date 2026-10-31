@@ -62,7 +62,6 @@ import {
 	type WorkoutLog,
 	type WorkoutTemplate,
 } from './types.js'
-import { toDisplay, unitOf } from './units.js'
 
 export type Undo = () => void
 
@@ -254,8 +253,6 @@ export class FitnessStore {
 		}
 		const before = this.metrics
 		const tr = get(t)
-		const unit = unitOf(kind, settings.measurement)
-		const shown = `${toDisplay(kind, value, settings.measurement).toFixed(1)}`
 		const undo = this.#commit(
 			{
 				apply: () => (this.metrics = [metric, ...this.metrics].sort((a, b) => b.at.localeCompare(a.at))),
@@ -267,13 +264,9 @@ export class FitnessStore {
 				},
 				unwrite: () => deleteRows([toUri(FITNESS.metric, metric.id)]),
 			},
+			// T2: the feed is stored outside the workspace, so it names the kind and never the value
 			kind === 'weight' ? 'garden.feed.weightLogged' : 'garden.feed.metricLogged',
-			kind === 'weight'
-				? { value: shown, unit }
-				: {
-						kind: tr(`domains.fitness.body.kinds.${kind}`),
-						value: kind === 'body-fat' ? `${shown} %` : `${shown} ${unit}`,
-					}
+			kind === 'weight' ? undefined : { kind: tr(`domains.fitness.body.kinds.${kind}`) }
 		)
 		return { metric, undo }
 	}
@@ -282,7 +275,6 @@ export class FitnessStore {
 	setGoal(target: number, by: string): Undo {
 		const before = this.goal
 		const goal: TrainingGoal = { id: before?.id ?? newId(), kind: 'weight', target, by }
-		const unit = unitOf('weight', settings.measurement)
 		return this.#commit(
 			{
 				apply: () => (this.goal = goal),
@@ -293,8 +285,9 @@ export class FitnessStore {
 						: createEntity({ id: goal.id, type: FITNESS.goal, payload: payload(goal) }),
 				unwrite: () => (before ? updateEntity(before.id, payload(before)) : deleteRows([toUri(FITNESS.goal, goal.id)])),
 			},
+			// T2: the target weight stays out of the feed, which is stored outside the workspace
 			'garden.feed.goalSet',
-			{ target: toDisplay('weight', target, settings.measurement).toFixed(1), unit, date: by }
+			{ date: by }
 		)
 	}
 

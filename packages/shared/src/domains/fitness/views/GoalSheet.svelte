@@ -24,7 +24,7 @@
 		if (!canSave) return
 		const kg = fromDisplay('weight', target, settings.measurement)
 		const undo = fitness.setGoal(kg, form.by)
-		undoToast($t('garden.feed.goalSet', { values: { target: target.toFixed(1), unit, date: form.by } }), undo)
+		undoToast($t('garden.feed.goalSet', { values: { date: form.by } }), undo)
 		open = false
 	}
 </script>
