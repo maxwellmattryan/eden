@@ -171,6 +171,9 @@ pub fn run() {
             commands::gardener::delete_secret,
             commands::gardener::gardener_send,
             commands::gardener::gardener_cancel,
+            commands::gardener::gardener_tool_answer,
+            commands::gardener::gardener_claude_status,
+            commands::gardener::gardener_forget_session,
             commands::gardener::record_audit,
             commands::gardener::query_audit,
             commands::gardener::audit_usage,
@@ -218,6 +221,16 @@ pub fn run() {
             // The updater installs the same one if it gets there first, so a second install is nothing.
             let _ = rustls::crypto::ring::default_provider().install_default();
             app.manage(gardener::Inflight::default());
+            // The desktop Gardener's tools reach Claude Code through a loopback MCP server (D-179). Without it a
+            // conversation still runs, with no Eden tools.
+            #[cfg(feature = "desktop")]
+            match gardener::mcp::McpBridge::start() {
+                Ok(bridge) => {
+                    log::info!("Gardener MCP bridge on 127.0.0.1:{}", bridge.port());
+                    app.manage(bridge);
+                }
+                Err(e) => log::error!("The Gardener's MCP bridge did not start: {e}"),
+            }
             app.manage(DiagnosticsService::new(app_data_dir));
             // The scheduler's tick: it reads the workspace, so it starts once that is managed.
             services::scheduler::start(app.handle().clone());

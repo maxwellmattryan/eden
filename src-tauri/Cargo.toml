@@ -74,8 +74,9 @@ reqwest = { version = "0.13", default-features = false, features = ["json", "str
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 futures-util = "0.3"
 # The page fetch (commands/web.rs) resolves a host itself and holds each hop to a deadline. Already in the tree with
-# these features through reqwest; direct so the crate can name it.
-tokio = { version = "1", features = ["net", "time"] }
+# these features through reqwest; direct so the crate can name it. The desktop Gardener (D-178, D-179) adds the
+# Claude Code process (`process`, `io-util`) and the MCP bridge's waiting calls (`sync`); all already in the tree.
+tokio = { version = "1", features = ["net", "time", "process", "io-util", "sync"] }
 
 [dev-dependencies]
 # Real zones for the scheduler's tests: a daily time the clocks skip, and one they repeat.

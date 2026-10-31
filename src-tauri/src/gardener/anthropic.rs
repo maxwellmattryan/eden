@@ -492,6 +492,9 @@ mod tests {
             tools: Vec::new(),
             output_format: None,
             effort: None,
+            provider: None,
+            session: None,
+            claude_path: None,
         }
     }
 
