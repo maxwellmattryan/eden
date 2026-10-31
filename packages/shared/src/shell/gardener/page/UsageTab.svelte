@@ -207,7 +207,8 @@
 	{:else if !ready}
 		<Skeleton rows={4} icon={false} />
 	{:else if !days.length}
-		{@render usageWindows()}
+		<!-- before the first request the empty state speaks alone; windows read since then still show -->
+		{#if windows.length}{@render usageWindows()}{/if}
 		<EmptyState title={$t('gardenerPage.usage.empty.title')} text={$t('gardenerPage.usage.empty.text')} />
 	{:else}
 		{#if gardenerSetup.clamped}
