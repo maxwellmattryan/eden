@@ -67,7 +67,7 @@
 	"peerDependencies": {
 		"@eden/ui-kit": "0.1.0",
 		"@tauri-apps/plugin-process": "2.4.0",
-		"@tauri-apps/plugin-updater": "2.13.0",
+		"@tauri-apps/plugin-updater": "2.14.1",
 		"svelte": "^5.0.0"
 	},
 	"peerDependenciesMeta": {
@@ -80,7 +80,7 @@
 	},
 	"devDependencies": {
 		"@tauri-apps/plugin-process": "2.4.0",
-		"@tauri-apps/plugin-updater": "2.13.0",
+		"@tauri-apps/plugin-updater": "2.14.1",
 		"svelte": "5.57.1",
 		"svelte-check": "4.7.6",
 		"typescript": "5.9.3",
