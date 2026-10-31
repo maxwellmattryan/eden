@@ -1,14 +1,12 @@
-// Sky's bindings (product/domains/weather.md): the one view, the bodies of its two built Garden tiles, the glyph that
-// follows the conditions. What Sky declares is in `@eden/shared/domains/weather/manifest.json`; its store is shared.
+// Sky's surface on the desktop (product/domains/weather.md): the one view and the bodies of its two built Garden
+// tiles. What Sky declares is in `@eden/shared/domains/weather/manifest.json`; what it does is its `logic.ts` there,
+// which `defineDomain` joins to this. Its store and its view are shared; the phone mounts the same ones.
 import { goto } from '$app/navigation'
 import { resolve } from '$app/paths'
-import { iconFor } from '@eden/ui-kit'
-import type { Entity } from '@eden/shared/data'
-import { defineDomain } from '../manifest.js'
-import { forecastForPack, SKY, weather, type ForecastPayload } from '@eden/shared/weather'
-import SunAndMoon from './widgets/SunAndMoon.svelte'
-import WeatherNow from './widgets/WeatherNow.svelte'
-import { weatherTools } from './tools.js'
+import { defineDomain } from '@eden/shared/domains'
+import { weather } from '@eden/shared/weather'
+import SunAndMoon from '@eden/shared/domains/weather/widgets/SunAndMoon.svelte'
+import WeatherNow from '@eden/shared/domains/weather/widgets/WeatherNow.svelte'
 
 export const weatherManifest = defineDomain('weather', {
 	routes: { path: '/weather', href: resolve('/weather'), open: () => void goto(resolve('/weather')) },
@@ -16,11 +14,4 @@ export const weatherManifest = defineDomain('weather', {
 		'weather-now': { body: WeatherNow, hasData: () => weather.now !== undefined },
 		'sun-and-moon': { body: SunAndMoon, hasData: () => weather.sun !== undefined },
 	},
-	liveGlyph: () => (weather.now ? iconFor(weather.now.condition, weather.now.night) : undefined),
-	load: () => weather.load(),
-	reload: () => weather.reload(),
-	subscribe: () => weather.bind(),
-	tools: weatherTools,
-	// the tools answer the hours and the details; the pack carries the week at a glance
-	pack: { [SKY.forecast]: (row) => forecastForPack(row as Entity<ForecastPayload>) },
 })

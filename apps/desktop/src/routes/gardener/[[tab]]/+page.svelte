@@ -1,5 +1,6 @@
 <script lang="ts">
-	import Gardener from '$lib/shell/gardener/page/Gardener.svelte'
+	import { page } from '$app/state'
+	import Gardener from '@eden/shared/shell/gardener/page/Gardener.svelte'
 </script>
 
-<Gardener />
+<Gardener tab={page.params.tab} />

@@ -21,7 +21,7 @@ A page whose subject is a map follows the page anatomy above with the map as the
 
 ## Lists, tables, cards
 
-Lists are the default; tables only for numeric data (stock quantities, metrics). A row takes a hover ground only when it does something; one that only shows its data stays still (D-118). A chart reads out the point under the pointer (D-117). Cards for things with an image (places, renders); a list that drives a page beside it keeps rows, each with a small picture (recipes). Row height 40 comfortable, 32 compact. Each row has one primary text, one secondary line, trailing metadata in mono for numbers, and a hover action cluster. Selection is a mode (D-41): rows show no mark outside select mode; "Select" in the list header or a row's menu turns it on, Space toggles a row, and "Done" leaves it. There are no checkboxes. Actions on the selection sit in the list header beside "n selected"; acting on several rows is one write with one undo toast.
+Lists are the default; tables only for numeric data (stock quantities, metrics). A row takes a hover ground only when it does something; one that only shows its data stays still (D-118). A chart reads out the point under the pointer (D-117); on touch a tap pins the readout and a sideways scrub moves it (D-168). Cards for things with an image (places, renders); a list that drives a page beside it keeps rows, each with a small picture (recipes). Row height 40 comfortable, 32 compact. Each row has one primary text, one secondary line, trailing metadata in mono for numbers, and a hover action cluster. Selection is a mode (D-41): rows show no mark outside select mode; "Select" in the list header or a row's menu turns it on, Space toggles a row, and "Done" leaves it. There are no checkboxes. Actions on the selection sit in the list header beside "n selected"; acting on several rows is one write with one undo toast.
 
 ## Forms and quick-add
 
@@ -75,7 +75,7 @@ The panel: a header with the conversation's title and, after it, the list button
 
 ## Notifications
 
-Inbox cards: domain glyph, one line, time, inline actions, swipe to snooze on mobile. Toasts only for errors and undo, bottom center, eight seconds, one at a time.
+Inbox cards: domain glyph, one line, time, inline actions, swipe to snooze on mobile (not built: nothing can snooze a card yet, D-158). Toasts only for errors and undo, bottom center, eight seconds, one at a time, and over an open sheet too, where the toast's action can be pressed (D-169).
 
 ## Widgets
 
@@ -88,6 +88,14 @@ Right-click and long-press menus follow Crate's convention: the same items as th
 ## Mobile adaptations
 
 Bottom tabs (the kit's `BottomTabBar`), sheets for anything modal (`Sheet`), a floating button for Quick Log and Capture, swipe actions on rows (`SwipeRow`; leading: done or check; trailing: delete), safe-area insets respected, and an Android back handler that closes the top-most sheet first.
+
+As built (D-158, D-167):
+
+- **Swipes.** A row's swipes are the kit's `List` with `leading` and `trailing`. The leading swipe is the row's commonest action, which is not always done: Ran out on a stock row, Add to grocery on one that ran out (D-175), Check on a grocery row (D-176), Done, Not done or Log one on Today's (D-166). The trailing swipe deletes, with an undo toast. Both are also in the row's menu, by a held press.
+- **A check is its own undo.** A grocery row checked or unchecked on the phone shows no toast (D-176).
+- **One store at a time.** Grocery's chips stand in one store's list, or all of them, for the session (D-176).
+- **The floating +** stands down while a text field of the page has focus, so the keyboard does not lift it over the field, and while a view has a mode of its own on screen (select mode, placing a place by hand). While an undo toast shows, the toast stands over it.
+- **Pushed views** close on Android's back as sheets do.
 
 ## Keyboard and focus
 

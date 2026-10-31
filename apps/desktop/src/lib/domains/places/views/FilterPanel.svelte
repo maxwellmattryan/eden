@@ -19,8 +19,8 @@
 	} from '@eden/shared/domains/places'
 	import { t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
-	import FilterChip from '$lib/shell/FilterChip.svelte'
-	import { vibeNamer } from '../words'
+	import FilterChip from '@eden/shared/components/FilterChip.svelte'
+	import { vibeNamer } from '@eden/shared/domains/places'
 
 	const uid = $props.id()
 	const filter = $derived(meadow.filter)

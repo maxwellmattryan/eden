@@ -17,12 +17,13 @@ D-68 records the decision; this page is how it works.
 
 ## Two halves
 
-A domain is what it **declares** and what an app **binds** to that.
+A domain is what it **declares**, and what is bound to that in two halves: its **logic**, written once in shared, and its **surface**, which each app binds (D-157).
 
 | half | where | holds |
 |---|---|---|
 | declaration | `packages/shared/src/domains/<id>/manifest.json` | data only: resources, reads, widgets, quick actions, tools, signals, rules, schedules, intents, palette entries, export sections. The same for every app and for the crate |
-| bindings | `apps/<app>/src/lib/domains/<id>/manifest.ts` | what the data cannot hold: the route, each widget's component and `hasData()`, the live glyph, the store's `load`, `seed`, `reload` and `extras`, `subscribe`, which binds what the domain hears, the tool handlers, and the surfaces a draft opens on (`openDraft`, `overlay`) |
+| logic | `packages/shared/src/domains/<id>/logic.ts`, listed in `domains/registry.ts` | what the domain does: the live glyph, the store's `load`, `seed`, `reload` and `extras`, `subscribe`, which binds what the domain hears, the tool handlers, `pack`, `labels`, the quick actions' handlers, launchers and readouts, `commitDraft` and `openDraft`. Only the registry imports a `logic.ts`; shared code reads a domain's logic through `logic` and `logicFor(id)` (`@eden/shared/domains`) |
+| surface | `apps/<app>/src/lib/domains/<id>/manifest.ts` | what each app draws: the route, each widget's component and `hasData()`, and the `overlay` |
 
 The declaration is JSON because two languages read it. A JSON import would widen every id to `string`, so the builder writes the declarations out again as `as const` TypeScript, and the types come from that.
 
@@ -35,7 +36,7 @@ All under `packages/shared/src/`, hand-edited and formatted by Prettier:
 | `domains/<id>/manifest.json` | one built domain |
 | `registry/substrate.json` | the substrate's rows: its facts, the four primitives, its entity types, its kinds |
 | `registry/planned.json` | the rows of the owners that are not built, keyed by owner, so a Phase 1 read of a later resource resolves; a block moves into a manifest when its domain is built |
-| `manifest/shell.json` | what the shell declares for itself: the built domains in order, the sidebar entries that are not domains (D-64), the phone's tab bar, the Garden tiles no domain owns, the Garden's default layout |
+| `manifest/shell.json` | what the shell declares for itself: the built domains in order, the sidebar entries that are not domains (D-64) and the two pinned at its foot, each with `place` (whether it has a page, as the Gardener does, or is an action, as Settings is; More opens a place and runs an action), the phone's tab bar with its declared pinned pair (a device's own choice is a setting, D-160), the Garden tiles no domain owns, the Garden's default layout |
 
 ### Manifest fields
 
@@ -110,11 +111,11 @@ An entity URI resolves to its owner through `ownerOf`, so a link survives a chan
 
 ## Bindings
 
-Each app has `src/lib/domains/manifest.ts` with `defineDomain(id, bindings)`, which joins a declaration to what the app binds. On desktop the widget bindings are typed over the declaration's built widget ids: a widget without a binding does not compile, and neither does a binding for a widget nobody declared. The phone binds a route and a live glyph, and its widgets when its Garden is built.
+`defineDomain(id, surface)` (`packages/shared/src/domains/define.ts`) joins a declaration, the domain's logic from the registry and the surface an app binds. The widget bindings are typed over the declaration's built widget ids: a widget without a binding does not compile, and neither does a binding for a widget nobody declared. The tile bodies are shared (`domains/<id>/widgets/`), so both apps bind the same components. Shared code never calls an app's `manifestFor`: it reads `declarations`, `logicFor` or the navigation seam (`engineering/app-scaffold.md`, "Navigation").
 
 `pack` is what the Gardener is sent of a row, in a context pack or by `read-rows` (D-148), by entity type, for a type whose row is more than a request should pay for (D-85): the shell's pack readers apply it after the query, a type without an entry is sent whole, and `null` leaves a row out. Sky binds one for `forecast`.
 
-`labels` is what a row is called where the Gardener lists what it read (the eye under a reply, the audit log), and where `read-rows` answers a long type by its rows' names, by entity type, for a type whose rows hold no `name`, `title` or `label` of their own: `labelRows` (`apps/desktop/src/lib/shell/gardener/labels.ts`) asks it first and falls back to the row's name, then its id. Hearth binds one for `grocery-list`, which is called by its store, or "Miscellaneous" for the list of what is not filed.
+`labels` is what a row is called where the Gardener lists what it read (the eye under a reply, the audit log), and where `read-rows` answers a long type by its rows' names, by entity type, for a type whose rows hold no `name`, `title` or `label` of their own: `labelRows` (`packages/shared/src/shell/gardener/labels.ts`) asks it first and falls back to the row's name, then its id. Hearth binds one for `grocery-list`, which is called by its store, or "Miscellaneous" for the list of what is not filed.
 
 `subscribe` is where a domain hears its schedules and its signals and registers its mirrors with the refresh coordinator (`engineering/signals.md`). The shell calls it once when it starts, before any store is loaded, so what it binds reads rows and not the domain's store; its answer unbinds.
 
@@ -122,9 +123,9 @@ Each app has `src/lib/domains/manifest.ts` with `defineDomain(id, bindings)`, wh
 
 `commitDraft(card)` is the domain's part of committing a draft its tool left, from the card in the Gardener's panel (a grocery list, a plan's shop list); the substrate's parts, tasks and events, are the shell's. `openDraft(card, settle)` is for a draft the owner checks on a surface of the domain's own instead: it opens the draft there and answers whether it took it, and `settle` is told when the owner keeps or discards it, until which the card stays as it was. Hearth binds it for a `capture` draft, which opens its capture sheet at the rows, and for a `recipe` draft, which opens in its Recipes pane unsaved (D-86).
 
-`overlay` is a component the shell mounts once, over whatever page is open, beside its own sheets. Hearth's capture sheet is one, since a haul is captured from its page, from a drop and from a card in the Gardener's panel. The root layout mounts each enabled domain's overlay and names none of them.
+`overlay` is a component the shell mounts once, over whatever page is open, beside its own sheets. Hearth's capture sheet is one, since a haul is captured from its page, from a drop and from a card in the Gardener's panel or the phone's chat sheet. Each app's root layout mounts each enabled domain's overlay and names none of them.
 
-`src/lib/domains/index.ts` lists the enabled domains in the shell's order and exports their `declarations`. Disabling a domain is leaving it out of that list: its sidebar entry, its tiles, its palette entries, its quick actions, its rules and its schedules go, and its rows stay.
+Each app's `src/lib/domains/index.ts` lists the enabled domains in the shell's order as `manifests`, with `manifestFor` and `widgetFor`, and re-exports their `declarations`; the phone's adds `phoneTabBar()`. Disabling a domain is leaving it out of that list: its sidebar entry, its tiles, its palette entries, its quick actions, its rules and its schedules go, and its rows stay.
 
 ## Composition
 
@@ -135,15 +136,16 @@ Each app has `src/lib/domains/manifest.ts` with `defineDomain(id, bindings)`, wh
 | `sidebarGroups(declarations, shell, preferences?)` | the groups in order (D-64), with the owner's order and hidden list applied | the desktop sidebar |
 | `shortcutPositions(groups)` | the ⌘ position of each place | the desktop sidebar |
 | `tabBar(declarations, shell, pinned?)` | the phone's tabs, and what waits behind More | the mobile tab bar and More |
+| `pinnedPair(chosen, declarations, shell, routable)`, `withPinned(pair, slot, id)` (`manifest/pinned.ts`) | the two domains this device pins, mending a stale or turned-off choice; the pair with one slot chosen, the two swapped when the other slot held it (D-160) | the phone's tab bar, Settings → Domains on the phone |
 | `gardenCatalog(declarations, shell)` | every built tile with its sizes and reads | the Garden's catalog |
 | `defaultLayout(declarations, shell)` | the default tiles in order, each at its first size | the Garden |
 | `paletteIndex(declarations, shell)` | the **go** and **run** entries, and the types each domain lets the palette search | the command palette |
 | `quickActions(declarations)` | the Quick Log's entries | Quick Log |
 | `handlerOf(declarations, intent)` | the domain that handles an intent, or nothing when it is disabled | intent routing |
 
-Quick Log on desktop is `apps/desktop/src/lib/shell/quick-log.ts` (D-145): `quickLogEntries` makes the kit's tabs from the declarations and from the readouts a domain binds (`quickActionReadouts`), `saveQuickLog` runs a field's handler (`quickActionHandlers`) on the domain's loaded store and shows the undo toast, or runs a launch (`quickActionLaunchers`), and `quick-log-ui.svelte.ts` holds the one sheet, which `QuickLogHost.svelte` mounts. The parser of a one-liner is pure, in `@eden/shared/quick-log`.
+Quick Log is the shell's, in `packages/shared/src/shell/quick-log/` (D-145), and both apps mount it, from the desktop's **+** and the phone's floating + (D-158). `quickLogEntries` (`quick-log.ts`) makes the kit's tabs from the declarations and from the readouts a domain binds (`quickActionReadouts`), `saveQuickLog` runs a field's handler (`quickActionHandlers`) on the domain's loaded store and shows the undo toast, or runs a launch (`quickActionLaunchers`), and `ui.svelte.ts` holds the one sheet, which `QuickLogHost.svelte` mounts. The parser of a one-liner is pure, in `@eden/shared/quick-log`.
 
-Handoff, for the palette (#23): the **log** verb is `logLine(line)` in `shell/quick-log.ts`, which parses "log grocery oat milk" against the actions' keywords, labels and, for a domain with one field, its name, and saves; it answers `false` when the line names nothing, which the palette should say. **run** on a `quick-action` target is `runQuickLog('<domain>.<action>')` in `shell/quick-log-ui.svelte.ts`: a launch opens its surface (Hearth's capture), a field opens the sheet on its tab. No manifest declares a `log` entry yet; one that does must name a field, never a launch.
+Handoff, for the palette (#23): the **log** verb is `logLine(line)` in `shell/quick-log/quick-log.ts` (not yet in the barrel), which parses "log grocery oat milk" against the actions' keywords, labels and, for a domain with one field, its name, and saves; it answers `false` when the line names nothing, which the palette should say. **run** on a `quick-action` target is `runQuickLog('<domain>.<action>')` in `shell/quick-log/ui.svelte.ts`: a launch opens its surface (Hearth's capture), a field opens the sheet on its tab. No manifest declares a `log` entry yet; one that does must name a field, never a launch.
 
 Handoff, for the palette (#23): Meadow declares the intent `places.open` and a `go` entry for it (`domains.places.open`), and nothing dispatches either yet. `paletteIndex` already answers the entry; running it is the palette's, through `handlerOf`.
 
@@ -171,28 +173,28 @@ The Gardener's runtime (`engineering/gardener.md`) calls `resolveTool` before ev
 
 | side | path | holds |
 |---|---|---|
-| shared | `packages/shared/src/domains/<id>/` | `manifest.json`, and the modules both apps use: types, row mapping, formats, what the domain does on its schedules (`signals.ts`), and its pure rules, each with its test beside it (Hearth's are listed in `engineering/data-layer.md`, "A store on rows") |
-| desktop | `apps/desktop/src/lib/domains/<id>/` | `manifest.ts` (bindings), `store.svelte.ts`, `seed.ts`, `tools.ts`, `views/`, `widgets/` |
-| mobile | `apps/mobile/src/lib/domains/<id>/` | `manifest.ts` (bindings), and its surfaces as they are built |
+| shared | `packages/shared/src/domains/<id>/` | `manifest.json`, `logic.ts`, `store.svelte.ts`, `seed.ts`, `tools.ts`, `words.ts`, the barrel `index.ts`, types, row mapping, formats, what the domain does on its schedules (`signals.ts`), its pure rules, each with its test beside it (Hearth's are listed in `engineering/data-layer.md`, "A store on rows"), and under `views/` and `widgets/` the components both apps mount |
+| desktop | `apps/desktop/src/lib/domains/<id>/` | `manifest.ts` (the surface), and the views only desktop draws: Hearth's `Hearth`, `Stock` and `Grocery`; Meadow's `Meadow`, `MapTab` and `FilterPanel`, with `map.ts` |
+| mobile | `apps/mobile/src/lib/domains/<id>/` | `manifest.ts` (the surface), and the views only the phone draws: Hearth's `Hearth`, `Stock`, `Grocery` and `stand.svelte.ts`; Meadow's `Meadow`, `PlaceSheet` and `FilterSheet`, with `map.ts` |
 | Rust | `src-tauri/src/domains/<id>/` | models, services and commands, for a domain that needs the crate |
 
-Every folder under a `domains/` is a domain, named by its plain id. What belongs to the shell lives in `src/lib/shell/`: the Garden (`shell/garden/`), the activity feed (`shell/feed.svelte.ts`), the inbox (`shell/inbox.svelte.ts`), the undo toast. Sky's model, providers, row mapping and store predate this layout and stay in `packages/shared/src/weather/`; its manifest is in `domains/weather/`. In the crate, `domains/documents.rs` is the document store and not a domain.
+Every folder under a `domains/` is a domain, named by its plain id; beside them in shared are `define.ts`, `registry.ts` and the barrel. What belongs to the shell lives in `packages/shared/src/shell/`: the Garden's tiles and edits (`shell/garden/`), the activity feed (`shell/feed.svelte.ts`), the inbox (`shell/inbox/`), the undo toast (`shell/undo.ts`), the Gardener, Today, Profile, home, Quick Log and the settings tabs. Each app's `src/lib/shell/` keeps its frame and its own Garden and Today pages. Sky's model, providers, row mapping and store predate this layout and stay in `packages/shared/src/weather/`; its manifest is in `domains/weather/`. In the crate, `domains/documents.rs` is the document store and not a domain.
 
 ## Isolation
 
 A domain never imports another domain's code (`product/substrate/domain-manifest.md`, "Isolation rules"). Two checks hold it:
 
-- **ESLint.** `eslint.config.js` builds one `no-restricted-imports` block per domain id, for its folder in each app and in `@eden/shared`. It refuses a relative import into another domain's folder, `$lib/domains/<other>`, `@eden/shared/domains/<other>`, and `@eden/shared/weather` from any domain but Sky.
+- **ESLint.** `eslint.config.js` builds one `no-restricted-imports` block per domain id, for its folder in each app and in `@eden/shared`, over `.ts` and `.svelte` alike. It refuses a relative import into another domain's folder, `$lib/domains/<other>`, `@eden/shared/domains/<other>`, and `@eden/shared/weather` from any domain but Sky. A second block covers all of `packages/shared/src`: no `$lib`, `$app/*` or `$env/*`, and no `@eden/shared/*` from inside the package.
 - **The crate.** A test in `src-tauri/src/domains/mod.rs` reads every domain's sources and fails on a path into another domain.
 
-A domain may import the shell and the substrate. What two domains would share goes there, or travels as a fact, a primitive, a signal, an intent or a typed link.
+A domain may import the shell and the substrate. What two domains would share goes there, or travels as a fact, a primitive, a signal, an intent or a typed link. A domain file never imports the `shell/gardener` barrel, which exports the runtime and would close a static cycle through the registry: it imports `types.js`, `batch.js`, `files.js` or `attachments.svelte.js` directly and reaches the runtime by a dynamic import.
 
 ## Adding a domain
 
 1. Write `packages/shared/src/domains/<id>/manifest.json`; move the domain's block out of `registry/planned.json`; add the id to `domains` in `manifest/shell.json`.
 2. Add the locale keys the builder asks for, to `en.json` and `ja.json`.
 3. Run `yarn registry`. Fix what it refuses; update `docs/product/substrate/registry.md` when a row changed.
-4. Add `apps/*/src/lib/domains/<id>/manifest.ts` with `defineDomain`, list it in that app's `domains/index.ts`, and add its route.
+4. Write `packages/shared/src/domains/<id>/logic.ts` and list it in `domains/registry.ts`; add `apps/*/src/lib/domains/<id>/manifest.ts` with `defineDomain`, list it in that app's `domains/index.ts`, add its route, and name its place in each app's `src/lib/navigation.ts`.
 5. Add `src-tauri/src/domains/<id>/` when the domain needs the crate, and list it in `domains/mod.rs`.
 
 A domain built ahead of its phase keeps its `phase` (Meadow's is 3); being built is what makes its rows live.

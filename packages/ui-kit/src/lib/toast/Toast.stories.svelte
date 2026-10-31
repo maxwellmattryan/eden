@@ -1,10 +1,11 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
 	import type { ComponentProps } from 'svelte'
-	import { expect, fn, waitFor } from 'storybook/test'
+	import { expect, fn, waitFor, within } from 'storybook/test'
 	import { canvasOf } from '../../storybook/play.js'
 	import { skyToday, weightSeries } from '../../stories/sample-data.js'
 	import Button from '../components/Button/Button.svelte'
+	import Sheet from '../components/Sheet/Sheet.svelte'
 	import Toast from './Toast.svelte'
 	import ToastHost from './ToastHost.svelte'
 	import { ToastStore } from './toast.svelte.js'
@@ -28,6 +29,11 @@
 	})
 
 	const settle = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+</script>
+
+<script lang="ts">
+	/** The "Over a sheet" story's sheet. */
+	let sheetOpen = $state(false)
 </script>
 
 <!-- Every story that shows a live toast mounts its own host on a fresh store, so stories never share one -->
@@ -100,6 +106,66 @@
 	{/snippet}
 </Story>
 
+<!-- A toast raised from inside a modal sheet: the one host moves into the open dialog, so the toast stands over the
+     sheet and its Undo can be pressed (outside the dialog it would be behind the scrim, and inert). It goes back to
+     the page when the sheet closes -->
+<Story
+	name="Over a sheet"
+	args={{ message: removed, action: { label: 'Undo', icon: 'undo-2', onclick: fn() } }}
+	play={async ({ canvasElement, userEvent, args }) => {
+		const canvas = canvasOf(canvasElement)
+		const host = canvasElement.querySelector<HTMLElement>('.ed-toast-host')!
+		const home = host.parentElement
+		const before = (args.action!.onclick as ReturnType<typeof fn>).mock.calls.length
+		await userEvent.click(canvas.getByRole('button', { name: 'Open the log' }))
+		const dialog = await canvas.findByRole('dialog')
+		// the host is inside the open dialog now, where nothing is inert
+		await waitFor(() => expect(dialog.contains(host), 'host in dialog').toBe(true))
+		await userEvent.click(within(dialog).getByRole('button', { name: 'Remove the log' }))
+		const toast = await within(dialog).findByRole('status')
+		await expect(toast).toHaveTextContent(removed)
+		// what is under the Undo button's middle is the button itself: nothing covers it and it is not inert
+		const undo = within(toast).getByRole('button', { name: 'Undo' })
+		await waitFor(() => {
+			const box = undo.getBoundingClientRect()
+			const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)
+			return expect(undo.contains(hit), 'undo is hit').toBe(true)
+		})
+		// Tab from the sheet's last control goes on to the toast
+		within(dialog).getByRole('button', { name: 'Remove the log' }).focus()
+		await userEvent.tab()
+		await expect(undo).toHaveFocus()
+		await userEvent.click(undo)
+		await expect(args.action?.onclick).toHaveBeenCalledTimes(before + 1)
+		await waitFor(() => expect(canvas.queryByRole('status')).toBeNull())
+		// the sheet closes and the host is back where it was mounted
+		within(dialog).getByRole('button', { name: 'Remove the log' }).focus()
+		await userEvent.keyboard('{Escape}')
+		await waitFor(() => expect(home?.contains(host), 'host back home').toBe(true))
+		// with no dialog open a toast shows in the page, as it always did
+		await waitFor(() => expect(canvas.queryByRole('dialog')).toBeNull())
+		await userEvent.click(canvas.getByRole('button', { name: 'Remove the log from the page' }))
+		await expect(await canvas.findByRole('status')).toHaveTextContent(removed)
+		await expect(home?.contains(canvas.getByRole('status')), 'toast in page').toBe(true)
+	}}
+>
+	{#snippet template(args)}
+		{@const store = new ToastStore()}
+		{@const show = () => store.show({ message: args.message, action: args.action })}
+		<div class="demo">
+			<Button label="Open the log" onclick={() => (sheetOpen = true)} />
+			<Button label="Remove the log from the page" variant="quiet" onclick={show} />
+		</div>
+		<Sheet bind:open={sheetOpen} label="The log" size="sm">
+			<p class="note in-sheet">{logged}</p>
+			{#snippet footer()}
+				<Button label="Remove the log" variant="danger" onclick={show} />
+			{/snippet}
+		</Sheet>
+		<ToastHost {store} />
+	{/snippet}
+</Story>
+
 <!-- The clock stops while the pointer or focus is on the toast -->
 <Story
 	name="Paused on hover"
@@ -155,5 +221,8 @@
 		max-width: calc(var(--sheet-md) + var(--space-8));
 		font: var(--ed-t-body-sm);
 		color: var(--text-secondary);
+	}
+	.in-sheet {
+		margin: 0;
 	}
 </style>

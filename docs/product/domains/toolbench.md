@@ -4,7 +4,7 @@ status: draft
 summary: Capture any idea and grow the good ones into projects; keep homelab devices, generative-art sketches and technical notes in one workbench. Id `toolbench`, Phase 1.
 read-this-if: You are working on ideas, projects, the homelab, the studio, or technical notes.
 depends-on: [substrate/registry, substrate/primitives, substrate/tasks, substrate/ai, substrate/shell, substrate/ai]
-updated: 2026-09-30
+updated: 2026-10-02
 ---
 
 ## 1. Purpose
@@ -58,7 +58,7 @@ Never-do list: never sees credentials, keys or tokens (Lab holds hostnames only,
 
 **Desktop views (Phase 1)**: Ideas (inbox with status filter and a detail pane showing the log and brainstorm thread), Projects (list; detail with repo, next steps as tasks, log), Lab (devices with services and routine status), Studio (render gallery; sketch detail with seed and parameters), Notes (search-first).
 
-**Mobile (Phase 2)**: capture an idea, browse ideas, read notes.
+**Mobile (Phase 2)**: capture an idea, browse ideas, read notes. Built: `/toolbench/[[tab]]` behind More (or pinned, D-160), mounting desktop's page from `@eden/shared`. Ideas is the shared view in its narrow layout, the picked idea pushed over the list, and Android's back closes it; an idea is also captured from the floating **+**. Projects, Lab, Studio and Notes show their empty states, as on desktop.
 
 **Garden widgets**: `active-projects` (M), `resurfaced-idea` (S; one idea the owner has not touched in a while), `recent-renders` (M), `lab-status` (S, later).
 
@@ -99,6 +99,14 @@ Stale threshold in days; default idea category; render folder path; whether Lab 
 Non-goals: an IDE, an issue tracker, kanban, dev-environment orchestration (that is Forge), code hosting, running scripts, a general note-taking app.
 
 Open: OQ-9, for whether Rings would live here; OQ-22, for whether `find-similar` gains a graded mode.
+
+## Handoffs
+
+- **The phone (issue 19).** Left for later:
+  - *A phone canvas for `Domains/Toolbench/Ideas`.* The story draws the desktop only; the phone's narrow layout has no mock to check it against.
+  - *The floating + in select mode.* It stays up while Ideas selects (`engineering/ui-kit-components.md`, `List`).
+  - *Swipe on an idea's row* (D-167), if use asks for one; today the row has its menu and a held press.
+  - *The five tabs in Japanese* have not been checked for width on a phone.
 
 ## Registry rows
 

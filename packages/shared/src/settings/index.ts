@@ -1,1 +1,2 @@
-export { Settings, settings, storage } from './settings.svelte.js'
+export { deviceStorage, storage } from './keys.js'
+export { Settings, settings } from './settings.svelte.js'

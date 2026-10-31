@@ -4,7 +4,7 @@ status: draft
 summary: The screen inventory for mockups: a template per screen, the shell screens, the domain screens, mobile variants, and the priority order for Claude Design.
 read-this-if: You are drawing mockups or checking that a screen covers its states.
 depends-on: [ux-patterns, sample-data, product/substrate/shell]
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 ## Screen template
@@ -69,6 +69,10 @@ Each screen below lists: id, platform, purpose, must show, primary actions, stat
 ## Mobile variants (Phase 2)
 
 `garden`, `today`, `hearth-grocery`, `hearth-stock`, `capture-sheet`, `quick-log-sheet`, `gardener-panel` as a sheet, `sky`, `inbox`, `settings-root`. Bottom tabs: Garden, Today, Hearth, Sky, More.
+
+All of them are built in `apps/mobile` (D-157 to D-176), and so are the screens above marked built in `apps/desktop`: the profile, the Gardener's page, Recipes, Toolbench's Ideas and Meadow's four tabs. Where a table above says "built in `apps/desktop`", the phone has it too, in the shape its decision gives. The phone's frame (top bar, More, the floating **+**) is D-158's and is drawn by no story; `domains/_frame/AppFrame.svelte` still draws the phone as the page over a tab bar.
+
+The phone canvases that now lag the app, to be brought up to it (the visual baselines are the owner's): `Domains/Hearth/Stock` and `Grocery` (the Ran out card, the store chips, Complete at a list's foot; `product/domains/kitchen.md`, Handoffs), `Domains/Meadow/Map` (a pushed detail and inline filters where the app has sheets; `engineering/meadow.md`, "The phone"), and `Domains/Toolbench/Ideas`, which has no phone canvas (`product/domains/toolbench.md`, Handoffs).
 
 ## Mockup priority for Claude Design
 

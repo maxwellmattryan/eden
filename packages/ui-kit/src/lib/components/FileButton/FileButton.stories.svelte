@@ -82,6 +82,41 @@
 	}}
 />
 
+<!-- With `camera`: on the phone the press opens a menu that leads with the camera, a second input with `capture`
+     that opens it directly, then the picker; on desktop nothing changes and the press opens the picker -->
+<Story
+	name="Camera"
+	args={{ label: 'Add a photo', icon: 'camera', accept: ['image/*'], camera: true }}
+	play={async ({ canvasElement, args }) => {
+		const scope = canvasElement.querySelector<HTMLElement>('.ed-canvas')
+		if (!scope) return
+		const canvas = canvasOf(canvasElement)
+		const button = canvas.getByRole('button', { name: 'Add a photo' })
+		const inputs = () => [...scope.querySelectorAll<HTMLInputElement>('input[type="file"]')]
+		if (scope.closest('[data-platform]')?.getAttribute('data-platform') !== 'mobile') {
+			await expect(button).not.toHaveAttribute('aria-haspopup')
+			await expect(inputs()).toHaveLength(1)
+			await expect(inputs()[0]).not.toHaveAttribute('capture')
+			return
+		}
+		await expect(button).toHaveAttribute('aria-haspopup', 'menu')
+		await expect(inputs()).toHaveLength(2)
+		await expect(inputs()[0]).not.toHaveAttribute('capture')
+		await expect(inputs()[1]).toHaveAttribute('capture', 'environment')
+		await expect(inputs()[1]).toHaveAttribute('accept', 'image/*')
+		await userEvent.click(button)
+		await waitFor(() => expect(canvas.getByText('Take a photo')).toBeVisible())
+		await expect(canvas.getByText('From the library or files')).toBeVisible()
+		// the photo the camera hands back arrives like any picked file
+		const photo = new File(['1234'], 'image.jpg', { type: 'image/jpeg' })
+		const data = new DataTransfer()
+		data.items.add(photo)
+		inputs()[1]!.files = data.files
+		inputs()[1]!.dispatchEvent(new Event('change', { bubbles: true }))
+		await expect(args.onfiles).toHaveBeenLastCalledWith([photo])
+	}}
+/>
+
 <Story
 	name="Disabled"
 	args={{ disabled: true }}

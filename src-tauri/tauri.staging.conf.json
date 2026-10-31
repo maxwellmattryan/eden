@@ -12,7 +12,7 @@
 		],
 		"windows": {
 			"wix": {
-				"version": "0.1.0.4"
+				"version": "0.1.0.5"
 			}
 		}
 	},
@@ -36,5 +36,5 @@
 			]
 		}
 	},
-	"version": "0.1.0-staging.4"
+	"version": "0.1.0-staging.5"
 }

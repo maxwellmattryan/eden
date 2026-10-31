@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte'
 	import { manifests } from '$lib/domains'
-	import { feed } from '$lib/shell/feed.svelte'
+	import { feed } from '@eden/shared/shell'
 	import Garden from '$lib/shell/garden/Garden.svelte'
 
 	onMount(() => {

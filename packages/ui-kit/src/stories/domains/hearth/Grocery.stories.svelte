@@ -9,7 +9,7 @@
 
 	const strings = defaultStrings
 	const hearth = sidebar.items.find((entry) => entry.id === 'kitchen')!
-	/** The grocery rows in the page: grid rows on desktop, list items in the swipe rows on mobile. The navs' items sit outside main. */
+	/** The grocery rows in the page: grid rows on both platforms, swiping on mobile. The navs' items sit outside main. */
 	const rowsIn = (canvas: ReturnType<typeof canvasOf>) => {
 		const main = within(canvas.getByRole('main'))
 		return main.queryAllByRole('row').length + main.queryAllByRole('listitem').length
@@ -25,7 +25,7 @@
 			docs: {
 				description: {
 					component:
-						'Hearth’s Grocery view (product/domains/kitchen.md), mocked from kit components under D-54. The Stock header with the Grocery tab selected and one action, Add, whose menu offers Add item and Add store (D-102), then one list per store (D-96), all on the page at once: the store’s name in the display face, its shop day when it has one, about what it costs (D-105), Complete, Add (the item’s form with that store picked) and Edit store as quiet icon buttons, and its rows; what names no store yet sits in Miscellaneous. Each row carries an origin badge (manual, recipe, low stock); a checked row is struck through and stays until its list is completed. On desktop the side holds Buy it again and, beneath it, the stores in the owner’s order (D-101): each row says what is left to buy and the store’s shop day or its last trip, a click goes to its list and its menu edits, moves and deletes it; a store’s form (its name, what it sells, where it is, a note, its optional shop day) and an item’s open in a sheet (D-95), the same one to add as to edit. On mobile there is no side: a swipe to the right checks a row off and a swipe to the left deletes it.',
+						'Hearth’s Grocery view (product/domains/kitchen.md), mocked from kit components under D-54. The Stock header with the Grocery tab selected and one action, Add, whose menu offers Add item and Add store (D-102), then one list per store (D-96), all on the page at once: the store’s name in the display face, its shop day when it has one, about what it costs (D-105), Complete, Add (the item’s form with that store picked) and Edit store as quiet icon buttons, and its rows; what names no store yet sits in Miscellaneous. Each row carries an origin badge (manual, recipe, low stock); a checked row is struck through and stays until its list is completed. On desktop the side holds Buy it again and, beneath it, the stores in the owner’s order (D-101): each row says what is left to buy and the store’s shop day or its last trip, a click goes to its list and its menu edits, moves and deletes it; a store’s form (its name, what it sells, where it is, a note, its optional shop day) and an item’s open in a sheet (D-95), the same one to add as to edit. On mobile there is no side, and the same lists’ rows swipe: to the right checks a row off, to the left deletes it; a tap checks, and the ⋯ menu stays.',
 				},
 			},
 		},
@@ -34,7 +34,6 @@
 			oncomplete: fn(),
 			oncheck: fn(),
 			ondelete: fn(),
-			onopen: fn(),
 			onagain: fn(),
 			onaction: fn(),
 			onsave: fn(),

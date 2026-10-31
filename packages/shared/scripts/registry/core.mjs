@@ -604,10 +604,16 @@ export function build(sources) {
 			key: entry?.key ?? null,
 		}
 	})
-	const pinned = list(shellData.sidebar?.pinned).map((entry) => ({
-		...shellEntry(entry, 'the pinned entry'),
-		key: entry?.key ?? null,
-	}))
+	const pinned = list(shellData.sidebar?.pinned).map((entry) => {
+		// a pinned entry says which it is: a place with a page of its own (the Gardener, D-113) or an action (Settings)
+		if (typeof entry?.place !== 'boolean')
+			fail(shellFile, `the pinned entry "${entry?.id}" does not say whether it is a place`)
+		return {
+			...shellEntry(entry, 'the pinned entry'),
+			place: entry?.place === true,
+			key: entry?.key ?? null,
+		}
+	})
 	// The phone's tab bar: the shell's places, the domains pinned until the owner chooses, and More for the rest.
 	const tabs = {
 		places: ids(shellFile, 'tabs.places', shellData.tabs?.places).filter((id) => {

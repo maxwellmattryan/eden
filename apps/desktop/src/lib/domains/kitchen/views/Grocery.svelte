@@ -15,51 +15,33 @@
 	// (D-103), beside its name and in its row: its website's icon, fetched when the website is saved, or one the
 	// owner chose in its form, or the store glyph on a tile.
 	import {
-		AddressForm,
-		Button,
 		Chip,
 		DropTarget,
 		EmptyState,
-		Field,
-		FileButton,
 		IconButton,
 		List,
-		Sheet,
 		Thumbnail,
-		toast,
-		type AddressFormKey,
 		type ListRowData,
 		type MenuItem,
 	} from '@eden/ui-kit'
-	import {
-		addressForm,
-		cleanAddress,
-		defaultCountry,
-		encodeAddress,
-		readAddress,
-		validateAddress,
-		type Address,
-	} from '@eden/shared/address'
-	import { home } from '@eden/shared/home'
-	import { PICTURE_ACCEPT, openExternal } from '@eden/shared/api'
-	import { STORE_SELLS, listEstimate, shopDayMorning } from '@eden/shared/domains/kitchen'
+	import { openExternal } from '@eden/shared/api'
+	import { listEstimate } from '@eden/shared/domains/kitchen'
 	import { formatUsd } from '@eden/shared/gardener'
 	import { locale, t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
-	import { undoToast } from '$lib/shell/undo'
-	import { daysFromToday, daysSince, formatEventTime, todayIso } from '@eden/shared/dates'
-	import { fitPicture, storeLogo } from '../staging.svelte'
-	import { fetchStoreSite } from '../store-site'
-	import { categoryGlyph } from '../words'
+	import { undoToast } from '@eden/shared/shell'
+	import { daysSince, formatEventTime } from '@eden/shared/dates'
+	import { categoryGlyph } from '@eden/shared/domains/kitchen'
 	import {
 		kitchen,
 		type GroceryBlock,
 		type GroceryItem,
 		type GroceryStore,
 		type StockItem,
-		type StoreSells,
 		type Undo,
-	} from '../store.svelte'
+	} from '@eden/shared/domains/kitchen'
+	import GroceryItemSheet from '@eden/shared/domains/kitchen/views/GroceryItemSheet.svelte'
+	import StoreSheet from '@eden/shared/domains/kitchen/views/StoreSheet.svelte'
 
 	const uid = $props.id()
 	const lang = $derived($locale ?? 'en')
@@ -204,71 +186,22 @@
 		if (item) undoToast($t('domains.kitchen.stock.toast.removed', { values: { name: item.name } }), undo)
 	}
 
-	// An item's form, in its sheet (D-95), to add with or to edit; saved as one change. `store` is the store's id,
-	// '' for the unfiled list; none, while adding, is no store picked: the item goes where it was last bought (D-97).
-	type ItemForm = {
-		name: string
-		brand: string
-		size: string
-		price: string
-		qty: string
-		store: string | undefined
-		note: string
-	}
-	const BLANK: ItemForm = { name: '', brand: '', size: '', price: '', qty: '', store: undefined, note: '' }
-	/** The price as typed, as an amount; nothing for what is not one. */
-	const priceOf = (text: string) => {
-		const amount = Number(text.trim().replace(',', '.'))
-		return text.trim() && Number.isFinite(amount) && amount >= 0 ? amount : undefined
-	}
-	/** The form's fields as an item holds them: trimmed, and an empty one cleared. */
-	const fields = () => ({
-		name: form.name.trim(),
-		brand: form.brand.trim() || undefined,
-		size: form.size.trim() || undefined,
-		price: priceOf(form.price),
-		qty: form.qty.trim(),
-		note: form.note.trim() || undefined,
-	})
-	let itemOpen = $state(false)
-	let editing = $state<string>()
-	let form = $state<ItemForm>({ ...BLANK })
-	const edited = $derived(kitchen.grocery.items.find((item) => item.id === editing))
+	// An item's form and a store's, each in its sheet (D-95), the same one to add as to edit.
+	let itemSheet = $state<GroceryItemSheet>()
+	let storeSheet = $state<StoreSheet>()
 	/**
 	 * Opens the item's form blank: the header's Add item and the empty state's action with no store picked, a
 	 * list's own Add with its store picked ('' for the unfiled list).
 	 */
 	export function addItem(store?: string) {
-		form = { ...BLANK, store }
-		editing = undefined
-		itemOpen = true
+		itemSheet?.add(store)
 	}
-	function create() {
-		const target = form.store === undefined ? undefined : form.store || null
-		const { item, store, undo } = kitchen.addToGrocery(fields(), 'manual', target)
-		landed(item.name, store, undo)
-		itemOpen = false
+	const edit = (id: string) => itemSheet?.edit(id)
+	/** Opens the store's form blank: the header's Add store. */
+	export function addStore() {
+		storeSheet?.add()
 	}
-	function edit(id: string) {
-		const item = kitchen.grocery.items.find((entry) => entry.id === id)
-		if (!item) return
-		form = {
-			name: item.name,
-			brand: item.brand ?? '',
-			size: item.size ?? '',
-			price: item.price === undefined ? '' : String(item.price),
-			qty: item.qty,
-			store: kitchen.storeOf(item)?.id ?? '',
-			note: item.note ?? '',
-		}
-		editing = id
-		itemOpen = true
-	}
-	function save(item: GroceryItem) {
-		const { undo } = kitchen.updateGrocery(item.id, { ...fields(), storeId: form.store || null })
-		undoToast($t('domains.kitchen.grocery.toast.edited', { values: { name: form.name.trim() || item.name } }), undo)
-		itemOpen = false
-	}
+	const editStore = (id: string) => storeSheet?.edit(id)
 
 	// The stores, at the side: each row goes to its list.
 	/** A last trip by its day: `today`, `yesterday`, `5 days ago`. */
@@ -339,7 +272,6 @@
 	}
 	function removeStore(id: string) {
 		const { store, undo } = kitchen.removeStore(id)
-		storeOpen = false
 		if (store) undoToast($t('domains.kitchen.grocery.toast.storeRemoved', { values: { store: store.name } }), undo)
 	}
 	function onstore(menuItem: MenuItem, row: ListRowData) {
@@ -348,140 +280,6 @@
 		else if (menuItem.id === 'up') moveStore(row.id, -1)
 		else if (menuItem.id === 'down') moveStore(row.id, 1)
 		else if (menuItem.id === 'delete') removeStore(row.id)
-	}
-
-	// A store's form, in its sheet (D-95): its name, what it sells, where it is (D-101), a note and its shop day,
-	// which is optional (D-98).
-	/** A store's address starts in the home's country, else the language's (D-137). */
-	const homeCountry = () => defaultCountry({ home: home.current.address?.country, locale: $locale ?? 'en' })
-	const startAddress = (given?: Address): Address => ({ ...given, country: given?.country ?? homeCountry() })
-	const blankPlace = () => ({
-		name: '',
-		sells: ['grocery'] as StoreSells[],
-		address: startAddress(),
-		url: '',
-		phone: '',
-		note: '',
-		date: '',
-		time: '',
-	})
-	let storeOpen = $state(false)
-	let storeId = $state<string>()
-	let place = $state(blankPlace())
-	/** Opens the store's form blank: the header's Add store. */
-	export function addStore() {
-		place = blankPlace()
-		left = []
-		storeId = undefined
-		storeOpen = true
-	}
-	const placeFields = () => ({
-		sells: STORE_SELLS.filter((kind) => place.sells.includes(kind)),
-		where: { address: cleanAddress(place.address), url: place.url.trim(), phone: place.phone.trim() },
-		note: place.note.trim(),
-		shopDay: place.date ? `${place.date}T${place.time || '10:00'}:00` : undefined,
-	})
-	// The address as its country asks for one. None of it is required; a postal code that is not shaped as its
-	// country's are is said once the field is left, and holds Save until it is put right.
-	let left = $state<AddressFormKey[]>([])
-	const problems = $derived(validateAddress(place.address))
-	const shape = $derived(
-		addressForm(place.address, {
-			label: (id, values) => $t(`address.${id}`, { values }),
-			locale: $locale ?? 'en',
-			home: home.current.address?.country,
-			errors: Object.fromEntries(Object.entries(problems).filter(([key]) => left.includes(key as AddressFormKey))),
-		})
-	)
-	// A store's own picture, in its form: one the owner picks, fitted whole, the website's fetched again, or none.
-	// Each is its own write with its own undo (D-95).
-	async function choosePicture(store: GroceryStore, files: File[]) {
-		const image = files[0] ? await fitPicture(files[0]) : undefined
-		if (!image) {
-			toast({ message: $t('domains.kitchen.grocery.toast.pictureFailed') })
-			return
-		}
-		const { undo } = kitchen.setStorePhoto(store.id, image)
-		undoToast($t('domains.kitchen.grocery.toast.pictureSet', { values: { store: store.name } }), undo)
-	}
-	let fetching = $state(false)
-	async function fetchPicture(store: GroceryStore) {
-		if (fetching || !place.url.trim()) return
-		fetching = true
-		const image = await storeLogo(place.url)
-		fetching = false
-		if (!image) {
-			toast({ message: $t('domains.kitchen.grocery.toast.pictureNotFound') })
-			return
-		}
-		const { undo } = kitchen.setStorePhoto(store.id, image)
-		undoToast($t('domains.kitchen.grocery.toast.pictureSet', { values: { store: store.name } }), undo)
-	}
-	function removePicture(store: GroceryStore) {
-		const { undo } = kitchen.setStorePhoto(store.id, undefined)
-		undoToast($t('domains.kitchen.grocery.toast.pictureRemoved', { values: { store: store.name } }), undo)
-	}
-	/** Add in the store's form: the store with all its form held, and its shop day, as one undo. */
-	function createStore() {
-		const { sells, where, note, shopDay } = placeFields()
-		const { store, created, undo } = kitchen.addStore(place.name, sells, { note, place: where })
-		storeOpen = false
-		if (!created) {
-			undoToast($t('domains.kitchen.grocery.toast.storeExists', { values: { store: store.name } }), undo)
-			return
-		}
-		const undos = [undo]
-		if (shopDay) undos.push(kitchen.setShopDay(store.id, shopDay))
-		if (where.url) undos.push(fetchStoreSite(store.id, where.url))
-		undoToast($t('domains.kitchen.grocery.toast.storeAdded', { values: { store: store.name } }), () =>
-			undos.reverse().forEach((entry) => entry())
-		)
-	}
-	const shown = $derived(kitchen.storeById(storeId))
-	const shopDayOf = (id: string) => kitchen.grocery.lists.find((list) => list.storeId === id)?.shopDay
-	function editStore(id: string) {
-		const store = kitchen.storeById(id)
-		if (!store) return
-		const shopDay = shopDayOf(id)
-		place = {
-			name: store.name,
-			sells: [...store.sells],
-			// one line from before addresses had parts is read against the home's country
-			address: startAddress(readAddress(store.place?.address, homeCountry())),
-			url: store.place?.url ?? '',
-			phone: store.place?.phone ?? '',
-			note: store.note ?? '',
-			date: shopDay?.slice(0, 10) ?? '',
-			time: shopDay?.slice(11, 16) ?? '',
-		}
-		left = []
-		storeId = id
-		storeOpen = true
-	}
-	function saveStore(store: GroceryStore) {
-		const undos: Undo[] = []
-		const name = place.name.trim() || store.name
-		const { sells, where, note, shopDay } = placeFields()
-		const same =
-			name === store.name &&
-			sells.join() === store.sells.join() &&
-			note === (store.note ?? '') &&
-			encodeAddress(where.address) === encodeAddress(readAddress(store.place?.address)) &&
-			where.url === (store.place?.url ?? '') &&
-			where.phone === (store.place?.phone ?? '')
-		if (!same) undos.push(kitchen.updateStore(store.id, { name, sells, note, place: where }).undo)
-		const moved = shopDay !== shopDayOf(store.id)
-		if (moved) undos.push(kitchen.setShopDay(store.id, shopDay))
-		// a website that is new to a store brings its icon and what its page says of the store (D-103, D-108)
-		if (where.url && where.url !== (store.place?.url ?? '')) undos.push(fetchStoreSite(store.id, where.url))
-		storeOpen = false
-		if (!undos.length) return
-		// a morning already past has no reminder to promise
-		const late = (shopDayMorning(shopDay)?.at ?? Infinity) <= Date.now()
-		const key = !moved ? 'storeSaved' : !shopDay ? 'shopDayCleared' : late ? 'shopDaySetLate' : 'shopDaySet'
-		undoToast($t(`domains.kitchen.grocery.toast.${key}`, { values: { store: name } }), () =>
-			undos.reverse().forEach((undo) => undo())
-		)
 	}
 </script>
 
@@ -612,198 +410,8 @@
 	</div>
 </div>
 
-<Sheet bind:open={itemOpen} size="sm" labelledby="{uid}-item-title">
-	{#snippet header()}
-		<h2 class="title" id="{uid}-item-title">
-			{$t(edited ? 'domains.kitchen.grocery.pane.editing' : 'domains.kitchen.grocery.addItem')}
-		</h2>
-	{/snippet}
-	{#if edited || !editing}
-		<form
-			class="form"
-			id="{uid}-item-form"
-			onsubmit={(event) => {
-				event.preventDefault()
-				if (edited) save(edited)
-				else create()
-			}}
-		>
-			<Field label={$t('domains.kitchen.grocery.pane.name')} bind:value={form.name} />
-			<div class="pair">
-				<Field label={$t('domains.kitchen.grocery.pane.brand')} bind:value={form.brand} />
-				<Field
-					label={$t('domains.kitchen.grocery.pane.size')}
-					placeholder={$t('domains.kitchen.grocery.pane.sizeHint')}
-					bind:value={form.size}
-				/>
-			</div>
-			<div class="pair">
-				<Field label={$t('domains.kitchen.grocery.pane.quantity')} bind:value={form.qty} mono />
-				<Field label={$t('domains.kitchen.grocery.pane.price')} bind:value={form.price} mono inputmode="decimal" />
-			</div>
-			<p class="help">{$t('domains.kitchen.grocery.pane.priceHelp')}</p>
-			<div class="group" role="group" aria-labelledby="{uid}-where">
-				<span class="group-label" id="{uid}-where">{$t('domains.kitchen.grocery.pane.store')}</span>
-				<div class="chips">
-					{#each [...kitchen.grocery.stores.map( (store) => ({ id: store.id, label: store.name }) ), { id: '', label: anyStore }] as entry (entry.id)}
-						<Chip
-							label={entry.label}
-							selectable
-							tone={form.store === entry.id ? 'accent' : 'outline'}
-							bind:selected={() => form.store === entry.id, (on) => (form.store = on || edited ? entry.id : undefined)}
-						/>
-					{/each}
-				</div>
-				{#if !edited}
-					<p class="help">{$t('domains.kitchen.grocery.pane.storeHelp')}</p>
-				{/if}
-			</div>
-			<Field label={$t('domains.kitchen.grocery.pane.note')} bind:value={form.note} />
-		</form>
-	{/if}
-	{#snippet footer()}
-		<Button label={$t('common.cancel')} variant="quiet" onclick={() => (itemOpen = false)} />
-		<Button
-			label={$t(edited ? 'common.save' : 'domains.kitchen.grocery.add')}
-			variant="primary"
-			type="submit"
-			form="{uid}-item-form"
-			disabled={(!edited && !!editing) || !form.name.trim()}
-		/>
-	{/snippet}
-</Sheet>
-
-<Sheet bind:open={storeOpen} size="sm" labelledby="{uid}-store-title">
-	{#snippet header()}
-		<h2 class="title" id="{uid}-store-title">
-			{$t(shown ? 'domains.kitchen.grocery.pane.editingStore' : 'domains.kitchen.grocery.addStore')}
-		</h2>
-	{/snippet}
-	{#if shown || !storeId}
-		<form
-			class="form"
-			id="{uid}-store-form"
-			onsubmit={(event) => {
-				event.preventDefault()
-				if (shown) saveStore(shown)
-				else createStore()
-			}}
-		>
-			{#if shown}
-				<div class="picture-row">
-					<Thumbnail size="md" src={kitchen.storePhotoOf(shown)} icon="store" />
-					<FileButton
-						label={$t('domains.kitchen.grocery.pane.choosePicture')}
-						icon="image-plus"
-						accept={PICTURE_ACCEPT}
-						multiple={false}
-						tooltip
-						onfiles={(files) => void choosePicture(shown, files)}
-					/>
-					{#if place.url.trim()}
-						<IconButton
-							icon="refresh-cw"
-							size="sm"
-							label={$t('domains.kitchen.grocery.pane.fetchPicture')}
-							tooltip
-							disabled={fetching}
-							onclick={() => void fetchPicture(shown)}
-						/>
-					{/if}
-					{#if shown.photo}
-						<IconButton
-							icon="trash"
-							size="sm"
-							label={$t('domains.kitchen.grocery.pane.removePicture')}
-							danger
-							tooltip
-							onclick={() => removePicture(shown)}
-						/>
-					{/if}
-				</div>
-			{/if}
-			<Field label={$t('domains.kitchen.grocery.pane.name')} bind:value={place.name} />
-			<div class="group" role="group" aria-labelledby="{uid}-sells">
-				<span class="group-label" id="{uid}-sells">{$t('domains.kitchen.grocery.pane.sells')}</span>
-				<div class="chips">
-					{#each STORE_SELLS as kind (kind)}
-						<Chip
-							label={$t(`domains.kitchen.grocery.sells.${kind}`)}
-							selectable
-							tone={place.sells.includes(kind) ? 'accent' : 'outline'}
-							bind:selected={
-								() => place.sells.includes(kind),
-								(on) => (place.sells = on ? [...place.sells, kind] : place.sells.filter((entry) => entry !== kind))
-							}
-						/>
-					{/each}
-				</div>
-			</div>
-			<AddressForm
-				bind:value={place.address}
-				country={shape.country}
-				countries={shape.countries}
-				countryLabel={$t('address.country')}
-				rows={shape.rows}
-				onblurfield={(key) => (left = [...left, key])}
-			/>
-			<div class="pair">
-				<Field label={$t('domains.kitchen.grocery.pane.website')} type="url" bind:value={place.url} />
-				<Field label={$t('domains.kitchen.grocery.pane.phone')} type="tel" bind:value={place.phone} />
-			</div>
-			<Field label={$t('domains.kitchen.grocery.pane.storeNote')} multiline bind:value={place.note} />
-			<div class="pair">
-				<Field label={$t('domains.kitchen.grocery.pane.shopDay')} type="date" bind:value={place.date} />
-				<Field
-					label={$t('domains.kitchen.grocery.pane.shopTime')}
-					type="time"
-					bind:value={place.time}
-					disabled={!place.date}
-				/>
-			</div>
-			<div class="chips">
-				<Chip
-					label={$t('domains.kitchen.grocery.pane.today')}
-					tone="outline"
-					onclick={() => (place.date = todayIso())}
-				/>
-				<Chip
-					label={$t('domains.kitchen.grocery.pane.tomorrow')}
-					tone="outline"
-					onclick={() => (place.date = daysFromToday(1))}
-				/>
-				{#if place.date}
-					<Chip
-						label={$t('domains.kitchen.grocery.pane.noShopDay')}
-						tone="outline"
-						onclick={() => {
-							place.date = ''
-							place.time = ''
-						}}
-					/>
-				{/if}
-			</div>
-			<p class="help">{$t('domains.kitchen.grocery.pane.shopDayHelp')}</p>
-		</form>
-	{/if}
-	{#snippet footer()}
-		{#if shown}
-			<Button
-				label={$t('domains.kitchen.grocery.pane.deleteStore')}
-				variant="danger"
-				onclick={() => removeStore(shown.id)}
-			/>
-		{/if}
-		<Button label={$t('common.cancel')} variant="quiet" onclick={() => (storeOpen = false)} />
-		<Button
-			label={$t(shown ? 'common.save' : 'domains.kitchen.grocery.add')}
-			variant="primary"
-			type="submit"
-			form="{uid}-store-form"
-			disabled={(!shown && !!storeId) || !place.name.trim() || Object.keys(problems).length > 0}
-		/>
-	{/snippet}
-</Sheet>
+<GroceryItemSheet bind:this={itemSheet} />
+<StoreSheet bind:this={storeSheet} />
 
 <style>
 	/* The lists on the left and the side on the right */
@@ -832,12 +440,6 @@
 		display: flex;
 		align-items: center;
 		flex-wrap: wrap;
-		gap: var(--space-2);
-	}
-	/* the store's picture with the buttons that change it */
-	.picture-row {
-		display: flex;
-		align-items: center;
 		gap: var(--space-2);
 	}
 	/* A store's name, and Miscellaneous, in the display face */
@@ -899,43 +501,5 @@
 			max-height: none;
 			overflow-y: visible;
 		}
-	}
-	.form {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-3);
-	}
-	.pair {
-		display: grid;
-		grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-		gap: var(--space-3);
-	}
-	.title {
-		margin: 0;
-		font: var(--ed-t-title);
-		letter-spacing: var(--ed-t-title-tracking);
-		font-variation-settings: var(--ed-t-title-opsz);
-	}
-	.group {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		gap: var(--space-1);
-	}
-	.group-label {
-		font: var(--ed-t-label);
-		letter-spacing: var(--ed-t-label-tracking);
-		color: var(--text-secondary);
-	}
-	.chips {
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-2);
-	}
-	.help {
-		margin: 0;
-		font: var(--ed-t-body-sm);
-		letter-spacing: var(--ed-t-body-sm-tracking);
-		color: var(--text-secondary);
 	}
 </style>

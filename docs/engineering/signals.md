@@ -1,17 +1,17 @@
 ---
 title: Signals and the scheduler
 status: draft
-summary: The scheduler, signals, rules and the inbox as code: the alarm in the crate and the take in the webview, the store and its commands, the rules a manifest declares and the frontend evaluates, the runtime both apps start, the refresh coordinator, the desktop inbox with its OS notifications, the first consumers, and how it is tested.
+summary: The scheduler, signals, rules and the inbox as code: the alarm in the crate and the take in the webview, the store and its commands, the rules a manifest declares and the frontend evaluates, the runtime both apps start, the refresh coordinator, the inbox with its OS notifications on desktop and on the phone, the first consumers, and how it is tested.
 read-this-if: You are adding a schedule, a signal, a rule or a mirror that refreshes itself, touching the inbox or an OS notification, or changing when Sky fetches.
 depends-on: [product/substrate/signals-notifications, engineering/data-layer, engineering/domain-module, engineering/app-scaffold]
-updated: 2026-10-01
+updated: 2026-10-02
 ---
 
 ## Where it stands
 
 | built | not yet |
 |---|---|
-| the scheduler with `once`, `daily` and `every`; signals with a key that emits once; rules from the manifests; the inbox rows; the alarm; the runtime in both apps; the refresh coordinator; the desktop bell as a plain list with mark-read; OS notifications on desktop behind the capability grant; Sky's alerts and forecast; Hearth's expiring digest, its weekly low-stock card and its shop-day reminder; Meadow's weekly listings search (D-134); the task signals, emitted by the frontend (D-75) | the substrate's own signals from the changes seam, the two task signals apart; the activity feed on signals; grouping, snooze and clearing in the inbox; rule toggles in Settings; quiet hours and digests; weekly and monthly triggers; the inbox and OS notifications on mobile; background execution on mobile; a measurement of the cadence in a hidden window |
+| the scheduler with `once`, `daily` and `every`; signals with a key that emits once; rules from the manifests; the inbox rows; the alarm; the runtime in both apps; the refresh coordinator; the desktop bell and the phone's inbox sheet as a plain list with mark-read; OS notifications on both behind the capability grant, with the system's permission asked first on the phone (D-158); Sky's alerts and forecast; Hearth's expiring digest, its weekly low-stock card and its shop-day reminder; Meadow's weekly listings search (D-134); the task signals, emitted by the frontend (D-75) | the substrate's own signals from the changes seam, the two task signals apart; the activity feed on signals; grouping, snooze and clearing in the inbox; rule toggles in Settings; quiet hours and digests; weekly and monthly triggers; OS notifications scheduled ahead on the phone; background execution on mobile; a measurement of the cadence in a hidden window |
 
 D-73 records the decisions; this page is how they work.
 
@@ -27,7 +27,7 @@ D-73 records the decisions; this page is how they work.
 | `@eden/shared/scheduler` | `packages/shared/src/scheduler/` | the rules (pure), the client |
 | `@eden/shared/signals` | `packages/shared/src/signals/` | the rules (pure), the bus, the pump, the client, the runtime |
 | `@eden/shared/refresh` | `packages/shared/src/refresh/` | the coordinator |
-| inbox store | `apps/desktop/src/lib/shell/inbox.svelte.ts` | the cards behind the bell, and the OS notification of one |
+| inbox store | `packages/shared/src/shell/inbox/` | the cards behind the bell and the phone's sheet, and the OS notification of one (`store.svelte.ts`); a card in the kit's words (`notices.ts`) |
 
 ## The scheduler
 
@@ -143,18 +143,23 @@ coordinator.watch(id)                                                // a view s
 
 The division of work: the scheduler owns the clock for what must happen unobserved; the coordinator owns freshness for what is on screen, where a late check costs nothing because the window's return checks again. A rule is what gives a resource a reason to stay fresh in the background, and that reason is a schedule. A refresh already under way is joined, not repeated, and a failed one is logged and stops nothing.
 
-## The inbox on desktop
+## The inbox
 
-`InboxStore` reads the cards once and then hears each delivery, so the bell's count moves without asking the store again. The layout writes each card's line from its rule's keys and its signal's payload, which is why the inbox reads in the current locale, and gives it one action, Open, to the rule's domain (`manifestFor(domain).routes.open`, so the shell names no domain). Closing the bell marks what it showed as read (`StatusBar`'s `oninboxclose`).
+`InboxStore` (`@eden/shared/shell/inbox`) reads the cards once and then hears each delivery, so the count moves without asking the store again. `inboxItems` (`notices.ts`) writes each card's line from its rule's keys and its signal's payload, which is why the inbox reads in the current locale, and gives it one action, Open, to the rule's domain through the navigation seam, so the shell names no domain. Both apps draw the same items: desktop behind the status bar's bell, where closing the bell marks what it showed as read (`StatusBar`'s `oninboxclose`); the phone in a sheet the top bar's bell opens (`apps/mobile/src/lib/shell/InboxSheet.svelte`, D-158), where closing the sheet does.
 
 A card on the `os` channel is also shown as an OS notification when it arrives, through `show_notification`:
 
-- It needs the capability grant `os-notifications` for `this-device` (D-70). The desktop systems ask for no permission of their own, so this grant is the gate. The crate checks it again.
-- While it is off, the latest such card offers "Turn on notifications", which records the grant. Notifications start with the next card; nothing is replayed.
+- It needs the capability grant `os-notifications` for `this-device` (D-70). The crate checks it again.
+- While it is off, the latest such card offers "Turn on notifications". That first asks the system (`request_notification_permission`, which prompts on iOS and on Android 13 and later, and answers yes on desktop with no prompt), then records the grant; a refusal is a toast and records nothing. Notifications start with the next card; nothing is replayed.
 - From T2 up the notification names the domain and says "Open Eden to see it", and not what the signal is about.
 - In `yarn dev` on macOS the notification is posted as Terminal's, and nothing reports a failure: Terminal's notifications must be allowed and no Focus on.
+- On the phone a notification is shown only while Eden is running, as on desktop: the take runs in the webview, and nothing is handed to the system ahead of its time (D-158).
 
-The phone has no inbox and sends no OS notification yet. It runs the runtime, so its schedules are taken and its signals are stored.
+Handoffs:
+
+- **Notifications scheduled ahead on the phone.** A phone suspends Eden soon after it leaves the screen, so a shop-day reminder or a severe alert due while it is in the background is shown at the next launch, as a card. Handing the system the notifications whose time is known (the `daily` rules) when the app goes to the background would show them on time.
+- **Swipe to snooze an inbox card** (D-158). Nothing in the crate can snooze a card, so the sheet's cards do not swipe; it comes with the notification center's snooze.
+- **Never run on a device:** the permission prompt on iOS and on Android 13, and a notification shown on either. The browser build has no notification plugin.
 
 ## The first consumers
 
@@ -194,7 +199,7 @@ Here the key alone is not enough, since what must happen once a week is the requ
 
 The tier is T1, the task row's. A batch (the seed) and an import emit nothing; a failed emit is logged and never fails the write; an undo retracts nothing, and a repeat the same day is dropped by the key. No rule answers a task signal yet: a rule names a signal of its own domain's manifest, so the substrate needs rules of its own first (the notification center's, with `task.due`).
 
-The one rule every later issue follows: any code that creates or completes a task for the owner calls `emitTaskCreated` or `emitTaskCompleted` from `@eden/shared/tasks` after its write, and asks the Today store to reload (`tasks.reload()` in `apps/desktop/src/lib/shell/today/store.svelte.ts`). Code that skips this still writes the task, but no signal is emitted and Today does not show it until the next launch. That is: a domain that makes a task (Hearth's "restock rice", a project's next steps); the palette's "create a task" verb, which calls the store's `add` rather than `createTask` directly, and its go-to-Today; and the Gardener's `draft-tasks` and `update-tasks`, which write through the Today store and so through the same emitters (a kept plan is a batch and emits none, D-75), while `agenda` reads `todayView` and its rules rather than keeping a second idea of "due today".
+The one rule every later issue follows: any code that creates or completes a task for the owner calls `emitTaskCreated` or `emitTaskCompleted` from `@eden/shared/tasks` after its write, and asks the Today store to reload (`tasks.reload()` in `packages/shared/src/shell/today/store.svelte.ts`). Code that skips this still writes the task, but no signal is emitted and Today does not show it until the next launch. That is: a domain that makes a task (Hearth's "restock rice", a project's next steps); the palette's "create a task" verb, which calls the store's `add` rather than `createTask` directly, and its go-to-Today; and the Gardener's `draft-tasks` and `update-tasks`, which write through the Today store and so through the same emitters (a kept plan is a batch and emits none, D-75), while `agenda` reads `todayView` and its rules rather than keeping a second idea of "due today".
 
 ## Adding one
 

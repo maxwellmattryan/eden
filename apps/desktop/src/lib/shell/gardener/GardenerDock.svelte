@@ -9,7 +9,7 @@
 	import { t } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import GardenerPanel from './GardenerPanel.svelte'
-	import { gardenerUi } from './panel-ui.svelte'
+	import { gardenerUi } from '@eden/shared/shell/gardener'
 	import ResizeHandle from '../ResizeHandle.svelte'
 
 	type Props = {

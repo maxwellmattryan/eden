@@ -4,11 +4,12 @@
 	// have room (they never touch), a few round figures up the side on hairlines, and the highest and lowest points
 	// marked with their values, since those are what a reader looks for. It fills its container's width and keeps its
 	// height, and it needs no legend, since it draws one series and its axes say what that is. The point nearest the
-	// pointer is read out above itself (`hover`), on a hairline down to its tick. Colour is not the only carrier: the
-	// SVG carries one accessible sentence.
+	// pointer is read out above itself (`hover`), on a hairline down to its tick; a finger pins the readout with a
+	// tap, moves it with a horizontal scrub and leaves it standing until a tap elsewhere (D-168). Colour
+	// is not the only carrier: the SVG carries one accessible sentence.
 	import type { HTMLAttributes } from 'svelte/elements'
 	import { measure } from '../../internal/measure.js'
-	import { pointerAt } from '../../internal/pointer.js'
+	import { chartRead, type ChartPlace } from '../../internal/chart-read.js'
 	import ChartTip from '../ChartTip/ChartTip.svelte'
 	import { nearestIndex } from '../ChartTip/nearest.js'
 	import { trend } from './trend.js'
@@ -74,14 +75,16 @@
 	const marks = $derived(extremes ? [geo.high, geo.low].flatMap((mark) => (mark ? [mark] : [])) : [])
 	const floor = $derived(geo.plot.y + geo.plot.height)
 
-	// the point being read: the one nearest the pointer across the plot
+	// the point being read: the one nearest the pointer across the plot, or the one a finger pinned (`chartRead`)
 	let read = $state<number>()
 	const reading = $derived(read === undefined ? undefined : geo.points[read])
-	function point(event: PointerEvent & { currentTarget: EventTarget & HTMLElement }) {
-		const at = nearestIndex(
-			geo.points.map((one) => one.x),
-			pointerAt(event).x
-		)
+	function point(place: ChartPlace | undefined) {
+		const at = place
+			? nearestIndex(
+					geo.points.map((one) => one.x),
+					place.x
+				)
+			: -1
 		read = at < 0 ? undefined : at
 	}
 </script>
@@ -89,10 +92,7 @@
 <div
 	class={['ed-trend', className]}
 	style:height="{height}px"
-	onpointermove={hover ? point : undefined}
-	onpointerdown={hover ? point : undefined}
-	onpointerleave={hover ? () => (read = undefined) : undefined}
-	onpointercancel={hover ? () => (read = undefined) : undefined}
+	{@attach chartRead(() => ({ on: hover, onread: point }))}
 	{@attach measure((rect) => (width = Math.round(rect.width)))}
 	{...rest}
 >

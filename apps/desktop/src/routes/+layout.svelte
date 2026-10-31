@@ -4,6 +4,7 @@
 	// (toast, settings, crash) on top. It mounts the shared pieces
 	// once: settings, i18n, the global error handler, the hourly update check, signals and the scheduler. The splash
 	// covers it until they are ready, then fades out as the shell fades in.
+	import '$lib/navigation'
 	import '../app.css'
 	import { onMount, tick } from 'svelte'
 	import { afterNavigate, beforeNavigate, goto } from '$app/navigation'
@@ -27,32 +28,34 @@
 	import { initializeI18n, locale, t, uiKitStrings } from '@eden/shared/i18n'
 	import { settings } from '@eden/shared/settings'
 	import { dismissSplash, splashVisible } from '@eden/shared/stores'
-	import CrashScreen from '$lib/components/CrashScreen.svelte'
-	import SplashScreen from '$lib/components/SplashScreen.svelte'
+	import CrashScreen from '@eden/shared/components/CrashScreen.svelte'
+	import SplashScreen from '@eden/shared/components/SplashScreen.svelte'
 	import { shell, shortcutPositions, sidebarGroups, type SidebarItem } from '@eden/shared/manifest'
 	import { rememberPlace, rememberScroll, scrollOf, tabOf } from '@eden/shared/navigation'
 	import { coordinator } from '@eden/shared/refresh'
-	import { messageValues, notificationKeys, startSignals } from '@eden/shared/signals'
+	import { startSignals } from '@eden/shared/signals'
 	import { declarations, manifestFor, manifests } from '$lib/domains'
-	import { grants } from '$lib/shell/grants.svelte'
-	import { inbox } from '$lib/shell/inbox.svelte'
-	import { profile } from '$lib/shell/profile/store.svelte'
+	import { grants } from '@eden/shared/shell'
+	import { inbox, inboxItems } from '@eden/shared/shell/inbox'
+	import { profile } from '@eden/shared/shell/profile'
 	import { FORECAST_RESOURCE, weather } from '@eden/shared/weather'
-	import { formatTime, formatWeekday, relativeDay } from '@eden/shared/dates'
+	import { formatTime } from '@eden/shared/dates'
 	import { detectOs, formatShortcut } from '@eden/shared/shortcuts'
-	import { useGlobalErrorHandler } from '$lib/hooks/useGlobalErrorHandler'
+	import { useGlobalErrorHandler } from '@eden/shared/errors/global-handler'
+	import { markSvelteKitReady } from '../hooks.client'
 	import SettingsSheet from '$lib/settings/SettingsSheet.svelte'
-	import ChangeHomeSheet from '$lib/shell/home/ChangeHomeSheet.svelte'
-	import { homeUi } from '$lib/shell/home/home-ui.svelte'
-	import { settingsUi } from '$lib/settings/settings-ui.svelte'
-	import QuickLogHost from '$lib/shell/QuickLogHost.svelte'
-	import { quickLogEntries, saveQuickLog } from '$lib/shell/quick-log'
-	import { quickLogUi } from '$lib/shell/quick-log-ui.svelte'
+	import ChangeHomeSheet from '@eden/shared/shell/home/ChangeHomeSheet.svelte'
+	import * as map from '$lib/domains/places/map'
+	import { homeUi } from '@eden/shared/shell/home'
+	import { settingsUi } from '@eden/shared/shell/settings'
+	import QuickLogHost from '@eden/shared/shell/quick-log/QuickLogHost.svelte'
+	import { quickLogEntries, saveQuickLog } from '@eden/shared/shell/quick-log'
+	import { quickLogUi } from '@eden/shared/shell/quick-log'
 	import ResizeHandle from '$lib/shell/ResizeHandle.svelte'
 	import GardenerDock from '$lib/shell/gardener/GardenerDock.svelte'
-	import { gardenerUi } from '$lib/shell/gardener/panel-ui.svelte'
-	import { gardenerSetup } from '$lib/shell/gardener/setup.svelte'
-	import { missingHandlers } from '$lib/shell/gardener/handlers'
+	import { gardenerUi } from '@eden/shared/shell/gardener'
+	import { gardenerSetup } from '@eden/shared/shell/gardener'
+	import { missingHandlers } from '@eden/shared/shell/gardener'
 	import { fileDropGuard, isTauri, logError } from '@eden/shared/api'
 	import { formatUsd, GRADES } from '@eden/shared/gardener'
 
@@ -106,7 +109,7 @@
 			shortcut: item.key ? keys(item.key) : undefined,
 			// the Gardener has a page and becomes the current item on it; Settings is an action
 			href: places[item.id],
-			action: !places[item.id],
+			action: !item.place,
 		}))
 	)
 	const current = $derived(tabOf(page.route))
@@ -123,49 +126,16 @@
 			: undefined
 	)
 
-	// The inbox behind the bell (substrate/signals-notifications.md): each card's line is written here from its
-	// rule's locale key and its signal's payload, so it reads in the current locale. A card opens its domain; the
-	// latest card that would have been an OS notification offers to turn those on while they are off.
-	function arrived(at: number): string {
-		const iso = new Date(at).toISOString()
-		const day = relativeDay(iso)
-		if (day === 'today') return formatTime(at, format)
-		return day === 'yesterday' ? $t('shell.inbox.yesterday') : formatWeekday(iso, format.lang)
-	}
+	// The inbox behind the bell (substrate/signals-notifications.md): each card's line is written from its rule's
+	// locale key and its signal's payload, so it reads in the current locale. A card opens its domain; the latest
+	// card that would have been an OS notification offers to turn those on while they are off. The phone's inbox
+	// sheet draws the same items (`inboxItems`).
 	const notices = $derived<InboxItem[]>(
-		inbox.cards.map((card) => {
-			const keys = notificationKeys(card.rule)
-			const manifest = manifestFor(keys.domain)
-			return {
-				id: card.id,
-				icon: manifest?.glyph,
-				line: $t(keys.line, { values: messageValues(card.payload) }),
-				when: arrived(card.at),
-				domain: manifest ? $t(manifest.name) : undefined,
-				unread: !card.read,
-				actions: [
-					...(manifest
-						? [
-								{
-									id: 'open',
-									label: $t('shell.inbox.open'),
-									icon: 'arrow-right' as const,
-									onclick: () => manifest.routes.open(),
-								},
-							]
-						: []),
-					...(inbox.asks === card.id
-						? [
-								{
-									id: 'allow',
-									label: $t('shell.inbox.allow'),
-									icon: 'bell' as const,
-									onclick: () => void inbox.allowNotifications(),
-								},
-							]
-						: []),
-				],
-			}
+		inboxItems(inbox.cards, {
+			tr: $t,
+			format,
+			asks: inbox.asks,
+			allow: () => void inbox.allowNotifications(),
 		})
 	)
 
@@ -329,7 +299,7 @@
 	}
 
 	onMount(() => {
-		const cleanupErrors = useGlobalErrorHandler()
+		const cleanupErrors = useGlobalErrorHandler(markSvelteKitReady)
 		let timer: ReturnType<typeof setInterval> | undefined
 		;(async () => {
 			settings.load()
@@ -429,7 +399,7 @@
 	<SettingsSheet />
 	<QuickLogHost />
 	{#key homeUi.opened}
-		{#if homeUi.opened}<ChangeHomeSheet />{/if}
+		{#if homeUi.opened}<ChangeHomeSheet {map} />{/if}
 	{/key}
 	{#each manifests as manifest (manifest.id)}
 		{#if manifest.overlay}

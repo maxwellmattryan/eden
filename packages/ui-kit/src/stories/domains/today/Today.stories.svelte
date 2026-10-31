@@ -8,7 +8,7 @@
 
 	const today = sidebar.items.find((entry) => entry.id === 'today')!
 	const overdue = todayTasks.find((task) => task.state === 'overdue')!
-	/** The rows in the page: grid rows on desktop, list items in the swipe rows on mobile. The navs' items sit outside main. */
+	/** The rows in the page: grid rows on both platforms, swiping on mobile. The navs' items sit outside main. */
 	const rowsIn = (canvas: ReturnType<typeof canvasOf>) => {
 		const main = within(canvas.getByRole('main'))
 		return main.queryAllByRole('row').length + main.queryAllByRole('listitem').length

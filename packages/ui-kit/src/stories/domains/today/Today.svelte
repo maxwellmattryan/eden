@@ -46,7 +46,6 @@
 		type MenuItem,
 	} from '$lib/index.js'
 	import AppFrame from '../_frame/AppFrame.svelte'
-	import SwipeList from '../_frame/SwipeList.svelte'
 	import { sidebar, todayHabit, todayRoutine, todayTasks } from '../../sample-data.js'
 
 	type Props = {
@@ -208,14 +207,15 @@
 										{onaction}
 									/>
 								{:else}
-									<div class="card" id={section.id === 'overdue' ? `${uid}-overdue-list` : undefined}>
-										<SwipeList
-											rows={section.rows}
-											leading={(row) => ({ label: 'Done', icon: 'check', onaction: () => ondone?.(row) })}
-											trailing={(row) => ({ label: 'Delete', icon: 'trash', onaction: () => ondelete?.(row) })}
-											{onopen}
-										/>
-									</div>
+									<!-- the phone: the same list, its rows swiping; a tap does nothing, the ⋯ menu holds the rest -->
+									<List
+										id={section.id === 'overdue' ? `${uid}-overdue-list` : undefined}
+										labelledby="{uid}-{section.id}"
+										rows={section.rows}
+										leading={(row) => ({ label: 'Done', icon: 'check', onaction: () => ondone?.(row) })}
+										trailing={(row) => ({ label: 'Delete', icon: 'trash', onaction: () => ondelete?.(row) })}
+										{onaction}
+									/>
 								{/if}
 							{/if}
 						</section>
@@ -270,15 +270,5 @@
 		letter-spacing: var(--ed-t-data-sm-tracking);
 		font-variant-numeric: tabular-nums;
 		color: var(--text-secondary);
-	}
-	/* Mobile: the rows on the List's chrome, each a swipe row */
-	.card {
-		display: flex;
-		flex-direction: column;
-		box-sizing: border-box;
-		border: 1px solid var(--ed-card-border);
-		border-radius: var(--ed-radius-card);
-		background: var(--surface-1);
-		overflow: hidden;
 	}
 </style>

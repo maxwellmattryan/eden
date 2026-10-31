@@ -66,7 +66,7 @@ Fact types owned by Phase 2 and Phase 3 domains (`gym-preference`, `training-lim
 
 ## Surfaces (Phase 1)
 
-- **What Eden knows about me** (Garden → profile; mocked as `Domains/Garden/Profile`, built in `apps/desktop`, `shell/profile/`): every fact grouped by domain, with value, provenance, source, dates, and "used by N Gardener requests" linking into the audit log (the count waits on the audit log). Edit, delete, add, set a validity window, renew what expired. T2 rows show a lock glyph; the Vault is not listed here because it holds no facts.
+- **What Eden knows about me** (Garden → profile on desktop, a row in More on the phone; mocked as `Domains/Garden/Profile`, built once in `packages/shared/src/shell/profile/` and mounted by both apps at `/garden/profile`, D-158): every fact grouped by domain, with value, provenance, source, dates, and "used by N Gardener requests" linking into the audit log (the count waits on the audit log). Edit, delete, add, set a validity window, renew what expired. T2 rows show a lock glyph; the Vault is not listed here because it holds no facts.
 - **Why am I seeing this**: any suggestion that used a fact shows the fact by name on hover or long press and links to it.
 - **Gardener proposals**: an inline card "I noticed you avoid cilantro. Save as a dislike?" with accept and dismiss, and a quiet line when it replaces a fact or holds until a day.
 

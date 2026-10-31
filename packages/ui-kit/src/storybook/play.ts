@@ -32,3 +32,29 @@ export function pointAcross(
 		coords: { clientX: rect.left + rect.width * across, clientY: rect.top + rect.height / 2 },
 	})
 }
+
+type TouchStep = {
+	keys?: string
+	pointerName?: string
+	target?: Element
+	coords?: { clientX: number; clientY: number }
+}
+
+/**
+ * A finger on an element: down at a fraction of its width, moved across to each further fraction in turn (a
+ * horizontal scrub), then lifted. With one fraction it is a tap. What a chart's story uses to pin a reading.
+ */
+export function touchAcross(
+	userEvent: { pointer: (input: TouchStep[]) => Promise<void> },
+	el: Element,
+	...across: number[]
+): Promise<void> {
+	const rect = el.getBoundingClientRect()
+	const at = (fraction: number) => ({ clientX: rect.left + rect.width * fraction, clientY: rect.top + rect.height / 2 })
+	const [first = 0.5, ...rest] = across
+	return userEvent.pointer([
+		{ keys: '[TouchA>]', target: el, coords: at(first) },
+		...rest.map((fraction) => ({ pointerName: 'TouchA', target: el, coords: at(fraction) })),
+		{ keys: '[/TouchA]' },
+	])
+}

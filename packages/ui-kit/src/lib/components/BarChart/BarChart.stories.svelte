@@ -1,7 +1,7 @@
 <script module lang="ts">
 	import { defineMeta } from '@storybook/addon-svelte-csf'
 	import { expect } from 'storybook/test'
-	import { canvasOf, hasCanvas, pointAcross } from '../../../storybook/play.js'
+	import { canvasOf, hasCanvas, pointAcross, touchAcross } from '../../../storybook/play.js'
 	import { usageByGrade, usageDays } from '../../../stories/sample-data.js'
 	import BarChart from './BarChart.svelte'
 	import type { BarSeries } from './bars.js'
@@ -81,6 +81,31 @@
 		// and the first day, from the other end
 		await pointAcross(userEvent, plot, 0.02)
 		await expect(plot.querySelector('.ed-chart-tip')).toHaveTextContent(usageDays[0]!)
+	}}
+/>
+
+<!-- A finger: a tap pins the readout on the bar tapped, a horizontal scrub moves it, and it stays once the finger
+     is lifted, until a press anywhere outside the chart. A vertical drag is the page's to scroll (touch-action: pan-y) -->
+<Story
+	name="Pinned by touch"
+	args={{ series: byGrade }}
+	play={async ({ canvasElement, userEvent }) => {
+		if (!hasCanvas(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		await canvas.findByRole('img', { name: sentence })
+		const plot = canvasElement.querySelector<HTMLElement>('.ed-canvas .ed-bars-plot')!
+		await expect(getComputedStyle(plot).touchAction).toBe('pan-y')
+		await touchAcross(userEvent, plot, 0.98)
+		await expect(plot.querySelector('.ed-chart-tip')).toHaveTextContent(usageDays.at(-1)!)
+		await expect(plot.querySelector('.ed-bars-read')).not.toBeNull()
+		// a scrub back to the first day: the reading follows the finger and stays where it was lifted
+		await touchAcross(userEvent, plot, 0.9, 0.5, 0.02)
+		const tip = plot.querySelector('.ed-chart-tip')!
+		await expect(tip).toHaveTextContent(usageDays[0]!)
+		await expect(tip).toHaveTextContent(`Total ${usd(total[0]!.values[0]!)}`)
+		// a tap on the legend, outside the plot, takes it away
+		await userEvent.pointer({ keys: '[TouchA]', target: canvas.getByRole('list') })
+		await expect(plot.querySelector('.ed-chart-tip')).toBeNull()
 	}}
 />
 

@@ -6,7 +6,7 @@
 	// quantities in mono, `estimated` where the capture guessed, a warning where stock is low and the info button
 	// where an item has a tip (D-87). On desktop the selected item opens in a detail pane, and Edit opens its form in a
 	// sheet over the page (D-95), its picture included; a List in select mode (D-41) offers Move, Add to grocery and
-	// Delete on what is selected. On mobile the rows are a SwipeList whose trailing action deletes, and the detail
+	// Delete on what is selected. On mobile the same List's rows swipe (Ran out, Delete), and the detail
 	// would be a pushed view.
 	import {
 		Badge,
@@ -31,7 +31,6 @@
 		type MenuItem,
 	} from '$lib/index.js'
 	import AppFrame from '../_frame/AppFrame.svelte'
-	import SwipeList from '../_frame/SwipeList.svelte'
 	import {
 		haul,
 		haulCategories,
@@ -77,6 +76,8 @@
 		onpicture?: (id: string, files: File[]) => void
 		onremovepicture?: (id: string) => void
 		ondelete?: (row: ListRowData) => void
+		/** The phone's leading swipe: the item ran out. */
+		onranout?: (row: ListRowData) => void
 		onsample?: () => void
 		onnavigate?: (id: string) => void
 	}
@@ -99,6 +100,7 @@
 		onpicture,
 		onremovepicture,
 		ondelete,
+		onranout,
 		onsample,
 		onnavigate,
 	}: Props = $props()
@@ -202,6 +204,8 @@
 		metaWarn: soon(item),
 		actions: actionsFor(item),
 	})
+	/** The phone's row: no menu of its own, so the two swipes are its menu, under a held press. */
+	const toPhoneRow = (item: StockItem): ListRowData => ({ ...toRow(item), actions: undefined })
 
 	/** A row of the Ran out list: where the item was kept and the day it ran out; its menu puts it on the list. */
 	const toOutRow = (item: (typeof ranOutItems)[number]): ListRowData => ({
@@ -419,16 +423,15 @@
 									{/snippet}
 								</List>
 							{:else}
-								<section class="card" aria-labelledby="{uid}-{section.id}">
-									<h2 class="card-title" id="{uid}-{section.id}">
-										{section.label}<span class="card-count">{section.items.length}</span>
-									</h2>
-									<SwipeList
-										rows={section.items.map(toRow)}
-										trailing={(row) => ({ label: 'Delete', icon: 'trash', onaction: () => ondelete?.(row) })}
-										{onopen}
-									/>
-								</section>
+								<!-- the phone: the same list with swiping rows and no ⋯; a tap opens the item, where its other actions are -->
+								<List
+									header={section.label}
+									count={section.items.length}
+									rows={section.items.map(toPhoneRow)}
+									leading={(row) => ({ label: 'Ran out', icon: 'circle-dashed', onaction: () => onranout?.(row) })}
+									trailing={(row) => ({ label: 'Delete', icon: 'trash', onaction: () => ondelete?.(row) })}
+									{onopen}
+								/>
 							{/if}
 						{/each}
 						{#if ranOut && platform === 'desktop'}
@@ -653,37 +656,6 @@
 		letter-spacing: var(--ed-t-voice-tracking);
 		font-variation-settings: var(--ed-t-voice-opsz);
 		color: var(--text-secondary);
-	}
-
-	/* Mobile: a card per location with a heading and swipe rows, on the List's chrome */
-	.card {
-		display: flex;
-		flex-direction: column;
-		box-sizing: border-box;
-		border: 1px solid var(--ed-card-border);
-		border-radius: var(--ed-radius-card);
-		background: var(--surface-1);
-		overflow: hidden;
-	}
-	.card-title {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: var(--space-2);
-		box-sizing: border-box;
-		min-height: var(--ed-control);
-		margin: 0;
-		padding: 0 var(--space-3);
-		border-bottom: 1px solid var(--stroke-subtle);
-		color: var(--text-secondary);
-		font: var(--ed-t-title);
-		letter-spacing: var(--ed-t-title-tracking);
-		font-variation-settings: var(--ed-t-title-opsz);
-	}
-	.card-count {
-		font: var(--ed-t-data-sm);
-		letter-spacing: var(--ed-t-data-sm-tracking);
-		font-variant-numeric: tabular-nums;
 	}
 
 	/* The detail pane: the item's name with its tip beside it, its fields as a definition list, the actions */

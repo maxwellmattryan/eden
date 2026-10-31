@@ -18,3 +18,6 @@ export { meadow, MeadowStore, type MeadowShell, type PlacePatch, type SearchStat
 export * from './types.js'
 export * from './vibes.js'
 export * from './view.js'
+export { seedData } from './seed.js'
+export { categoryNamer, vibeNamer } from './words.js'
+export { type ImportRow, placesImport } from './import.svelte.js'

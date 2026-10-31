@@ -1,41 +1,19 @@
-// Hearth's bindings (product/domains/kitchen.md): the page and its tabs, the bodies of its Garden tiles, its store,
-// what it does on its schedules, its tool handlers, and the surfaces it opens a draft on. What Hearth declares is in
-// `@eden/shared/domains/kitchen/manifest.json`.
-import { getRow, toUri } from '@eden/shared/data'
-import {
-	KITCHEN,
-	bindKitchenSignals,
-	kitchenExtras,
-	storeForPack,
-	type GroceryListPayload,
-} from '@eden/shared/domains/kitchen'
-import { get } from 'svelte/store'
+// Hearth's surface on the desktop (product/domains/kitchen.md): the page and its tabs, the bodies of its Garden
+// tiles and the capture sheet it shows over any page. What Hearth declares is in
+// `@eden/shared/domains/kitchen/manifest.json`; what it does (its store, its tools, its drafts) is its `logic.ts`
+// there, which `defineDomain` joins to this.
 import { goto } from '$app/navigation'
 import { resolve } from '$app/paths'
-import { t } from '@eden/shared/i18n'
+import { defineDomain } from '@eden/shared/domains'
+import { kitchen } from '@eden/shared/domains/kitchen'
 import { declarationOf, type TabId } from '@eden/shared/manifest'
-import { defineDomain } from '../manifest.js'
-import { capture } from './capture.svelte.js'
-import { kitchen } from './store.svelte.js'
-import { kitchenCommitDraft, kitchenOpenDraft, kitchenQuickActions, kitchenTools } from './tools.js'
-import HaulCapture from './views/HaulCapture.svelte'
-import CookTonight from './widgets/CookTonight.svelte'
-import ExpiringSoon from './widgets/ExpiringSoon.svelte'
-import GroceryQuickAdd from './widgets/GroceryQuickAdd.svelte'
+import HaulCapture from '@eden/shared/domains/kitchen/views/HaulCapture.svelte'
+import CookTonight from '@eden/shared/domains/kitchen/widgets/CookTonight.svelte'
+import ExpiringSoon from '@eden/shared/domains/kitchen/widgets/ExpiringSoon.svelte'
+import GroceryQuickAdd from '@eden/shared/domains/kitchen/widgets/GroceryQuickAdd.svelte'
 
 export type KitchenTab = TabId<'kitchen'>
 export const KITCHEN_TABS: readonly KitchenTab[] = declarationOf('kitchen').tabs.map((tab) => tab.id)
-
-const openRecipes = () => void goto(resolve('/kitchen/[[tab]]', { tab: 'recipes' }))
-
-/** A list is called by its store, and the one of what is not filed by the page's name for it (D-96). */
-async function listLabel(row: { payload: object }): Promise<string | undefined> {
-	const { storeId } = row.payload as GroceryListPayload
-	if (!storeId) return get(t)('domains.kitchen.gardener.preview.unfiled')
-	const store = await getRow(toUri(KITCHEN.store, storeId)).catch(() => null)
-	const name = store && 'payload' in store ? (store.payload as { name?: unknown }).name : undefined
-	return typeof name === 'string' && name.trim() ? name : undefined
-}
 
 export const kitchenManifest = defineDomain('kitchen', {
 	routes: {
@@ -49,7 +27,10 @@ export const kitchenManifest = defineDomain('kitchen', {
 		'cook-tonight': {
 			body: CookTonight,
 			hasData: () => kitchen.recipes.length > 0,
-			action: { label: 'garden.actions.cookTonight', open: openRecipes },
+			action: {
+				label: 'garden.actions.cookTonight',
+				open: () => void goto(resolve('/kitchen/[[tab]]', { tab: 'recipes' })),
+			},
 		},
 		'grocery-quick-add': {
 			body: GroceryQuickAdd,
@@ -60,21 +41,5 @@ export const kitchenManifest = defineDomain('kitchen', {
 			},
 		},
 	},
-	load: () => kitchen.load(),
-	reload: () => kitchen.reload(),
-	extras: async () => {
-		await kitchen.load()
-		return kitchenExtras(kitchen.data())
-	},
-	seed: () => kitchen.seed(get(t)('domains.kitchen.name')),
-	subscribe: () => bindKitchenSignals(),
-	tools: kitchenTools,
-	// a store goes to a model without what it remembers, its picture or its address (D-101, D-105)
-	pack: { [KITCHEN.store]: storeForPack },
-	labels: { [KITCHEN.list]: listLabel },
-	quickActionHandlers: kitchenQuickActions,
-	quickActionLaunchers: { 'capture-haul': () => capture.start() },
-	commitDraft: kitchenCommitDraft,
-	openDraft: (card, settle) => kitchenOpenDraft(card, settle, { recipes: openRecipes }),
 	overlay: HaulCapture,
 })

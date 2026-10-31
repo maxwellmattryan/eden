@@ -12,7 +12,7 @@
 	const chicken = stock[0]!
 	/** What the Expiring filter keeps: anything dated on or before Friday 10-02. */
 	const expiring = stock.filter((item) => item.expiry && item.expiry <= '10-02')
-	/** The stock rows in the page: grid rows on desktop, list items in the swipe rows on mobile. The navs' items sit outside main. */
+	/** The stock rows in the page: grid rows on both platforms, swiping on mobile. The navs' items sit outside main. */
 	const rowsIn = (canvas: ReturnType<typeof canvasOf>) => {
 		const main = within(canvas.getByRole('main'))
 		return main.queryAllByRole('row').length + main.queryAllByRole('listitem').length
@@ -26,7 +26,7 @@
 			docs: {
 				description: {
 					component:
-						'Hearth’s Stock view (product/domains/kitchen.md), mocked from kit components under D-54. The page header carries Capture a haul as the primary action with Take stock and Add beside it, the domain’s three tabs and the Expiring, Low stock and Sort chips, the last a menu (expiry, name, newest); a quick-add line sits above one List per location (Fridge, Freezer, Pantry, Counter). Every row leads with the item’s picture, or its category’s glyph on a tile of the same size (D-90), then quantities in mono, `estimated` where the capture guessed, a warning where stock is low, the info button where an item has a tip (D-87). On desktop the selected item opens in a detail pane with its picture and its tip beside its name, its fields and the row’s actions, and Edit opens its form in a sheet over the page (D-95), picture included; a List in select mode offers Move, Add to grocery and Delete on the selection. On mobile every row sits in a SwipeRow whose trailing action deletes.',
+						'Hearth’s Stock view (product/domains/kitchen.md), mocked from kit components under D-54. The page header carries Capture a haul as the primary action with Take stock and Add beside it, the domain’s three tabs and the Expiring, Low stock and Sort chips, the last a menu (expiry, name, newest); a quick-add line sits above one List per location (Fridge, Freezer, Pantry, Counter). Every row leads with the item’s picture, or its category’s glyph on a tile of the same size (D-90), then quantities in mono, `estimated` where the capture guessed, a warning where stock is low, the info button where an item has a tip (D-87). On desktop the selected item opens in a detail pane with its picture and its tip beside its name, its fields and the row’s actions, and Edit opens its form in a sheet over the page (D-95), picture included; a List in select mode offers Move, Add to grocery and Delete on the selection. On mobile the same lists’ rows swipe: Ran out to the right, Delete to the left, and a tap opens the item.',
 				},
 			},
 		},
@@ -88,8 +88,11 @@
 			await expect(pane.queryByText('Storage tip')).toBeNull()
 			await expect(canvas.getByRole('complementary', { name: chicken.name }).querySelector('img.picture')).toBeVisible()
 		} else {
-			await expect(canvas.getByRole('heading', { level: 2, name: /Fridge/ })).toBeVisible()
+			// the phone: the same lists, every row with its two swipe actions behind it and no ⋯ button
+			await expect(canvas.getByRole('grid', { name: 'Fridge' })).toBeVisible()
+			await expect(canvas.getAllByRole('button', { name: 'Ran out' })).toHaveLength(stock.length)
 			await expect(canvas.getAllByRole('button', { name: 'Delete' })).toHaveLength(stock.length)
+			await expect(canvas.queryByRole('button', { name: strings.actionsFor(chicken.name) })).toBeNull()
 		}
 	}}
 />
@@ -127,7 +130,7 @@
 	}}
 />
 
-<!-- The phone alone: 44 px rows, each in a SwipeRow whose trailing action deletes -->
+<!-- The phone alone: 44 px rows that swipe, Ran out to the right and Delete to the left -->
 <Story name="Mobile" {template} parameters={{ platforms: ['mobile'] }} />
 
 <!-- The item's form in its sheet (D-95): the chicken's picture with the buttons that change it, then its name, amount, location, date,

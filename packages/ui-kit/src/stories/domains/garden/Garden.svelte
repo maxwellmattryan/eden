@@ -75,8 +75,8 @@
 
 <script lang="ts">
 	// The Garden (product/substrate/shell.md, "The Garden"): a quick-navigation row of domain tiles, the Phase 1 widget
-	// grid read from `gardenLayout` so the mockup and the app share one list, and the activity feed in a column of its
-	// own on desktop. Widgets compute from their declared reads and show a one-line prompt until data exists; on first
+	// grid read from `gardenLayout` so the mockup and the app share one list, and the activity feed: in a column of its
+	// own on desktop, under the tiles on the phone. Widgets compute from their declared reads and show a one-line prompt until data exists; on first
 	// run every one of them is empty. Offline, the Sky widgets say when their forecast is from.
 	import {
 		DailyLine,
@@ -299,24 +299,22 @@
 						{/if}
 					{/each}
 				</WidgetGrid>
-				{#if platform === 'desktop'}
-					<aside class="feed" aria-label={copy.activity}>
-						<h2 class="feed-title">{copy.activity}</h2>
-						{#if firstRun}
-							<p class="meta">{copy.empty.feed}</p>
-						{:else}
-							<ol class="feed-list">
-								{#each feed as entry (entry.id)}
-									<li class="feed-row">
-										<Icon name={domainGlyph(entry.domain)} size="sm" class="feed-glyph" />
-										<span class="row-text">{entry.line}</span>
-										<span class="row-meta">{entry.when}</span>
-									</li>
-								{/each}
-							</ol>
-						{/if}
-					</aside>
-				{/if}
+				<aside class="feed" aria-label={copy.activity}>
+					<h2 class="feed-title">{copy.activity}</h2>
+					{#if firstRun}
+						<p class="meta">{copy.empty.feed}</p>
+					{:else}
+						<ol class="feed-list">
+							{#each feed as entry (entry.id)}
+								<li class="feed-row">
+									<Icon name={domainGlyph(entry.domain)} size="sm" class="feed-glyph" />
+									<span class="row-text">{entry.line}</span>
+									<span class="row-meta">{entry.when}</span>
+								</li>
+							{/each}
+						</ol>
+					{/if}
+				</aside>
 			</div>
 		</div>
 	{/snippet}
@@ -371,7 +369,7 @@
 		outline: 2px solid transparent;
 		box-shadow: var(--focus-ring);
 	}
-	/* The grid, and on desktop the feed in a column beside it */
+	/* The grid and the feed: beside it on desktop, under it on the phone */
 	.content {
 		display: grid;
 		gap: var(--space-6);

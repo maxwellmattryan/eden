@@ -29,6 +29,9 @@
 		{ id: 'delete', label: 'Delete', icon: 'trash', destructive: true, onselect: fn() },
 	]
 
+	const swipeLeading = { label: 'Done', icon: 'check' as const, onaction: fn() }
+	const swipeTrailing = { label: 'Delete', icon: 'trash' as const, onaction: fn() }
+
 	const { Story } = defineMeta({
 		title: 'Components/Data/ListRow',
 		component: ListRow,
@@ -255,6 +258,37 @@
 
 <!-- The 44 px row and the larger text on the phone -->
 <Story name="Mobile" args={{ icon: 'leaf', actions }} parameters={{ platforms: ['mobile'] }} {template} />
+
+<!-- A row that swipes on the phone: Done behind its leading edge, Delete behind its trailing one. It has no menu of
+     its own, so the two are its menu, without a ⋯ button: a held press opens it, which is how they are reached
+     under reduced motion, where nothing travels. On its own the row leaves the buttons in the tab order -->
+<Story
+	name="Swipe"
+	args={{ icon: 'leaf', swipeLeading, swipeTrailing }}
+	parameters={{ platforms: ['mobile'] }}
+	{template}
+	play={async ({ canvasElement, userEvent: user }) => {
+		if (!canvasElement.querySelector('.ed-canvas')) return
+		const canvas = canvasOf(canvasElement)
+		const row = canvas.getByRole('listitem')
+		const content = row.querySelector<HTMLElement>('.ed-swipe-content')!
+		await expect(canvas.queryByRole('button', { name: strings.actionsFor(chicken.name) })).toBeNull()
+		const [done, removed] = [swipeLeading.onaction.mock.calls.length, swipeTrailing.onaction.mock.calls.length]
+		await user.pointer([
+			{ keys: '[MouseLeft>]', target: content, coords: { x: 100, y: 20 } },
+			{ coords: { x: 170, y: 21 } },
+			{ coords: { x: 240, y: 22 } },
+			{ keys: '[/MouseLeft]' },
+		])
+		await expect(swipeLeading.onaction).toHaveBeenCalledTimes(done + 1)
+		// a held press opens the row's menu, which is the two actions
+		await user.pointer({ keys: '[TouchA>]', target: content })
+		const menu = await canvas.findByRole('menu', {}, { timeout: 2000 })
+		await user.pointer({ keys: '[/TouchA]' })
+		await user.click(within(menu).getByRole('menuitem', { name: 'Delete' }))
+		await waitFor(() => expect(swipeTrailing.onaction).toHaveBeenCalledTimes(removed + 1))
+	}}
+/>
 
 <style>
 	.stack {

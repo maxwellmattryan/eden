@@ -36,3 +36,11 @@ export function withdrawSignal(name: string, dedupeKey: string): Promise<string[
 export function showNotification(title: string, body: string): Promise<boolean> {
 	return call('show_notification', { title, body }, () => false)
 }
+
+/**
+ * Asks the system whether Eden may show notifications: on a phone the first call raises the system's own prompt.
+ * Answers whether it is allowed; desktop and a plain browser answer yes without asking (D-158).
+ */
+export function requestNotificationPermission(): Promise<boolean> {
+	return call('request_notification_permission', {}, () => true)
+}

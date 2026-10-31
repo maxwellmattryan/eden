@@ -21,6 +21,9 @@
 	// so the last row can leave too, and it is a grid only while it has rows. A leaving row that holds focus hands it
 	// to the row that takes its place, or to the one before it when it was last (`onleave`).
 	// With a `dragGroup` the rows can be dragged out, by a desktop pointer, to a DropTarget that accepts the group.
+	// With `leading` or `trailing` the rows swipe on the phone (ListRow draws them through SwipeRow,
+	// D-167); a row with no menu of its own takes the two actions as its menu on both platforms, so they
+	// are never reached by a swipe alone.
 	import type { Snippet } from 'svelte'
 	import type { HTMLAttributes } from 'svelte/elements'
 	import { untrack } from 'svelte'
@@ -28,8 +31,9 @@
 	import { useStrings } from '../../i18n/context.js'
 	import { roving } from '../../internal/roving.js'
 	import Button from '../Button/Button.svelte'
-	import ListRow from '../ListRow/ListRow.svelte'
+	import ListRow, { swipeItems } from '../ListRow/ListRow.svelte'
 	import type { MenuItem } from '../Menu/Menu.svelte'
+	import type { SwipeLeading, SwipeTrailing } from '../SwipeRow/SwipeRow.svelte'
 
 	type Props = Omit<HTMLAttributes<HTMLDivElement>, 'children' | 'onselect'> & {
 		/** The section name, in the small title style; it names the grid. */
@@ -64,6 +68,13 @@
 		/** The selected ids after every toggle, and [] when Done clears them. */
 		onselect?: (ids: string[]) => void
 		/**
+		 * The action a drag to the right reveals on the phone, per row (done, check); nothing for a row without one.
+		 * Its own `onaction` is the whole of it: the list's `onaction` never hears a swipe action.
+		 */
+		leading?: (row: ListRowData) => SwipeLeading | undefined
+		/** The action a drag to the left reveals on the phone, per row (delete, on the danger ground). */
+		trailing?: (row: ListRowData) => SwipeTrailing | undefined
+		/**
 		 * Makes the rows ones a desktop pointer can drag to a `DropTarget` that accepts this group. Off while
 		 * selecting.
 		 */
@@ -91,6 +102,8 @@
 		oncheck,
 		onaction,
 		onselect,
+		leading,
+		trailing,
 		dragGroup,
 		ondragstate,
 		children,
@@ -152,7 +165,8 @@
 		onselect?.([...selection])
 	}
 	function actionsFor(row: ListRowData): MenuItem[] {
-		const own = row.actions ?? []
+		// a row with no menu of its own takes its swipe actions as one
+		const own = row.actions?.length ? row.actions : swipeItems(leading?.(row), trailing?.(row))
 		return selectable && !selecting ? [selectItem, ...own] : own
 	}
 	/** The rows of the grid that are staying: those still in `rows`, by id, so a row on its way out is not counted. */
@@ -226,6 +240,8 @@
 				}}
 				onselect={(on) => toggle(row, on)}
 				{onleave}
+				swipeLeading={leading?.(row)}
+				swipeTrailing={trailing?.(row)}
 				dragGroup={selecting ? undefined : dragGroup}
 				{ondragstate}
 			/>

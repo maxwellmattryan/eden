@@ -8,8 +8,8 @@
 			{ "id": "garden", "group": "shell", "order": 0, "place": true }
 		],
 		"pinned": [
-			{ "id": "gardener", "key": "G" },
-			{ "id": "settings", "key": "," }
+			{ "id": "gardener", "key": "G", "place": true },
+			{ "id": "settings", "key": ",", "place": false }
 		]
 	},
 	"tabs": { "places": ["garden", "today"], "pinned": ["kitchen", "weather"], "more": "more" },

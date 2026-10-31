@@ -21,7 +21,7 @@ const isolation = domainIds.map((id) => {
 	// Sky's model, providers and store are in @eden/shared/weather
 	const shared = id === 'weather' ? `domains/(?:${others})` : `(?:domains/(?:${others})|weather)`
 	return {
-		files: [`apps/*/src/lib/domains/${id}/**/*.{ts,svelte}`, `packages/shared/src/domains/${id}/**/*.ts`],
+		files: [`apps/*/src/lib/domains/${id}/**/*.{ts,svelte}`, `packages/shared/src/domains/${id}/**/*.{ts,svelte}`],
 		rules: {
 			'no-restricted-imports': [
 				'error',
@@ -125,6 +125,31 @@ export default defineConfig(
 					selector:
 						'CallExpression[callee.object.name=/^(window|document)$/][callee.property.name=/^(add|remove)EventListener$/]',
 					message: 'Use an attachment from src/lib/internal instead of listening on window or document.',
+				},
+			],
+		},
+	},
+	{
+		// @eden/shared holds views as well as logic, and both apps compile it from source: nothing in it may lean on
+		// one app's aliases or on SvelteKit's runtime, and it never imports itself by name. Navigation goes through
+		// the seam in src/navigation, whose hrefs each app resolves. A rule of its own name, so the domain isolation
+		// blocks below (no-restricted-imports on the same files) are not replaced by it.
+		files: ['packages/shared/src/**/*.{ts,svelte}'],
+		rules: {
+			'svelte/no-navigation-without-resolve': 'off',
+			'@typescript-eslint/no-restricted-imports': [
+				'error',
+				{
+					patterns: [
+						{
+							group: ['$lib', '$lib/*', '$app/*', '$env/*'],
+							message: 'Shared code belongs to neither app: relative imports, and the navigation seam for routing.',
+						},
+						{
+							group: ['@eden/shared', '@eden/shared/*'],
+							message: 'Relative imports inside the package.',
+						},
+					],
 				},
 			],
 		},

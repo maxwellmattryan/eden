@@ -6,7 +6,6 @@ import {
 	accents,
 	brandLevels,
 	densities,
-	storageKeys,
 	themes,
 	type Accent,
 	type BrandLevel,
@@ -16,6 +15,7 @@ import {
 import { GRADES } from '../gardener/types.js'
 import { setLanguage as setI18nLanguage } from '../i18n/index.js'
 import { parseLayout, type StoredLayout } from '../manifest/garden.js'
+import { parsePinned } from '../manifest/pinned.js'
 import {
 	clockFormats,
 	fontSettings,
@@ -35,28 +35,8 @@ import {
 	type WeatherProvider,
 	type WeekStart,
 } from '../types/index.js'
+import { deviceStorage, storage } from './keys.js'
 import { measurementFrom } from './migrate.js'
-
-/** Every key the settings persist: the kit's five plus the app's own. */
-export const storage = {
-	...storageKeys,
-	language: 'eden:language',
-	subtitles: 'eden:subtitles',
-	measurement: 'eden:measurement',
-	weekStart: 'eden:week-start',
-	clock: 'eden:clock',
-	weatherProvider: 'eden:weather-provider',
-	mapsApp: 'eden:maps-app',
-	placesDiscovery: 'eden:places-discovery',
-	placesWeekly: 'eden:places-weekly',
-	placesDetailsOff: 'eden:places-details-off',
-	home: 'eden:home',
-	gardenerGrade: 'eden:gardener-grade',
-	gardenerPanelWidth: 'eden:gardener-panel-width',
-	sidebarWidth: 'eden:sidebar-width',
-	sidebarCollapsed: 'eden:sidebar-collapsed',
-	gardenLayout: 'eden:garden-layout',
-} as const
 
 function read(key: string): string | null {
 	try {
@@ -129,6 +109,11 @@ export class Settings {
 	sidebarCollapsed = $state(false)
 	/** The Garden as the owner arranged it on this device (D-156); nothing until they edit it, and it shows its default. */
 	gardenLayout = $state<StoredLayout | undefined>(undefined)
+	/**
+	 * The two domains in the phone's tab bar as the owner chose them on this device (D-160); nothing
+	 * until they choose, and the bar shows the declared pair. Read through `pinnedPair`, which mends a stale choice.
+	 */
+	pinnedTabs = $state<string[] | undefined>(undefined)
 	/** The theme on <html>: the choice, or what "system" resolves to right now. */
 	resolvedTheme = $state<Theme>('light')
 
@@ -160,7 +145,8 @@ export class Settings {
 		this.gardenerPanelWidth = positiveInt(read(storage.gardenerPanelWidth))
 		this.sidebarWidth = positiveInt(read(storage.sidebarWidth))
 		this.sidebarCollapsed = read(storage.sidebarCollapsed) === 'on'
-		this.gardenLayout = parseLayout(read(storage.gardenLayout))
+		this.gardenLayout = parseLayout(read(deviceStorage.gardenLayout))
+		this.pinnedTabs = parsePinned(read(deviceStorage.pinnedTabs))
 		this.resolvedTheme = this.resolveTheme(this.theme)
 		this.apply()
 		if (typeof window !== 'undefined' && window.matchMedia && !this.#media) {
@@ -320,7 +306,13 @@ export class Settings {
 	/** Keeps the Garden's layout, or with nothing goes back to the default. */
 	setGardenLayout(layout: StoredLayout | undefined) {
 		this.gardenLayout = layout
-		write(storage.gardenLayout, layout ? JSON.stringify(layout) : null)
+		write(deviceStorage.gardenLayout, layout ? JSON.stringify(layout) : null)
+	}
+
+	/** Keeps the tab bar's pinned pair on this device, or with nothing goes back to the declared pair. */
+	setPinnedTabs(ids: readonly string[] | undefined) {
+		this.pinnedTabs = ids?.length ? [...ids] : undefined
+		write(deviceStorage.pinnedTabs, this.pinnedTabs ? this.pinnedTabs.join(',') : null)
 	}
 
 	/** The choices as they are stored, by name: what an export bundle carries. A choice left at its default is absent. */

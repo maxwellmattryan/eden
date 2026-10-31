@@ -109,7 +109,7 @@ function sources(change = () => {}) {
 				sidebar: {
 					groups: ['today', 'shell', 'domains'],
 					entries: [{ id: 'today', group: 'today', order: 0, place: true }],
-					pinned: [{ id: 'settings', key: ',' }],
+					pinned: [{ id: 'settings', key: ',', place: false }],
 				},
 				tabs: { places: ['today'], pinned: ['kitchen'], more: 'more' },
 				tiles: [{ id: 'today', glyph: 'today', sizes: ['m'], reads: ['task'] }],
