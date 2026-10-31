@@ -30,8 +30,6 @@ export interface GardenerRequest {
 	provider?: GardenerProviderId
 	/** A conversation's Claude Code session: a new one under `id`, or `id` resumed. None for a delegated request. */
 	session?: { id: string; resume: boolean }
-	/** The owner's override of where the `claude` binary is, kept on this device only. */
-	claudePath?: string
 }
 
 /** The providers a build runs the Gardener on (D-178). */
@@ -45,6 +43,8 @@ export interface ClaudeStatus {
 	signedIn: boolean
 	authMethod: string | null
 	subscription: string | null
+	/** The owner's override of the binary's path, which the crate keeps on this device (never the webview). */
+	overridePath: string | null
 }
 
 /** One usage window of the subscription as a process last read it (D-180); `resetsAt` in seconds since the epoch. */

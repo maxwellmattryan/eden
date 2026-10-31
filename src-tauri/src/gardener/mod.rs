@@ -49,6 +49,8 @@ pub struct ClaudeStatus {
     pub signed_in: bool,
     pub auth_method: Option<String>,
     pub subscription: Option<String>,
+    /// The owner's override of the binary's path as the crate keeps it, or none.
+    pub override_path: Option<String>,
 }
 
 /// One usage window of the subscription as the last reading gave it.
@@ -87,9 +89,6 @@ pub struct GardenerRequest {
     /// A conversation's session under `claude-code`; none for a delegated or research request.
     #[serde(default)]
     pub session: Option<SessionSpec>,
-    /// The owner's override of where the `claude` binary is, kept on this device only.
-    #[serde(default)]
-    pub claude_path: Option<String>,
 }
 
 impl GardenerRequest {
@@ -301,7 +300,7 @@ mod tests {
 
         let request: GardenerRequest = serde_json::from_value(serde_json::json!({
             "id": "r", "model": "m", "maxTokens": 10, "system": "s", "messages": [],
-            "provider": "claude-code", "session": { "id": "abc", "resume": true }, "claudePath": "/bin/claude"
+            "provider": "claude-code", "session": { "id": "abc", "resume": true }
         }))
         .unwrap();
         assert_eq!(request.provider(), CLAUDE_CODE);
@@ -312,7 +311,6 @@ mod tests {
                 resume: true
             })
         );
-        assert_eq!(request.claude_path.as_deref(), Some("/bin/claude"));
 
         let event = GardenerEvent::Limits {
             status: "allowed".into(),

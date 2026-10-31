@@ -137,6 +137,28 @@ fn app_data(app: &tauri::AppHandle) -> Result<std::path::PathBuf> {
         .map_err(|e| EdenError::Refused(format!("gardener:no-claude: no app data folder: {e}")))
 }
 
+/// The app's folders as the Claude Code adapter needs them: where its files live, and every folder of the app's,
+/// none of which may hold the binary it runs.
+#[cfg(feature = "desktop")]
+fn device(app: &tauri::AppHandle) -> Result<claude_code::Device> {
+    use tauri::Manager;
+    let path = app.path();
+    let app_dirs = [
+        path.app_data_dir(),
+        path.app_local_data_dir(),
+        path.app_config_dir(),
+        path.app_cache_dir(),
+        path.app_log_dir(),
+    ]
+    .into_iter()
+    .filter_map(|dir| dir.ok())
+    .collect();
+    Ok(claude_code::Device {
+        app_data: app_data(app)?,
+        app_dirs,
+    })
+}
+
 /// One request as a Claude Code process: a conversation's tools are served by the bridge while it runs, and the
 /// bytes written to its stdin are counted in the ledger before it starts.
 #[cfg(feature = "desktop")]
@@ -148,13 +170,14 @@ async fn send_claude_code(
     on_event: Channel<GardenerEvent>,
 ) -> Result<()> {
     use tauri::Manager;
-    let app_data = app_data(app)?;
+    let device = device(app)?;
+    let app_data = device.app_data.clone();
     let bridge = app.try_state::<McpBridge>();
     let endpoint = bridge.as_ref().map(|bridge| claude_code::McpEndpoint {
         port: bridge.port(),
         token: bridge.token().to_string(),
     });
-    let prepared = claude_code::prepare(&request, &app_data, endpoint.as_ref()).await?;
+    let prepared = claude_code::prepare(&request, &device, endpoint.as_ref()).await?;
     if let Err(e) = workspace.write(|ctx| {
         egress::record(
             ctx.conn,
@@ -223,38 +246,58 @@ pub struct ToolAnswer {
     pub is_error: bool,
 }
 
-/// This device's Claude Code: found or not, its version, signed in or not (D-178). Never on the phone.
+/// This device's Claude Code: found or not, its version, signed in or not, at the override the crate keeps (D-178).
+/// Never on the phone.
 #[tauri::command]
-pub async fn gardener_claude_status(path: Option<String>) -> Result<ClaudeStatus> {
+pub async fn gardener_claude_status(app: tauri::AppHandle) -> Result<ClaudeStatus> {
     #[cfg(feature = "desktop")]
     {
-        Ok(claude_code::status(path.as_deref()).await)
+        Ok(claude_code::status(&device(&app)?).await)
     }
     #[cfg(not(feature = "desktop"))]
     {
-        let _ = path;
+        let _ = app;
         Ok(ClaudeStatus::default())
+    }
+}
+
+/// Keeps the owner's override of the binary's path on the crate's side (none clears it) and answers the status at
+/// it. Refused `gardener:claude-path` for a path that is not Claude Code outside the app's folders.
+#[tauri::command]
+pub async fn gardener_set_claude_path(
+    app: tauri::AppHandle,
+    path: Option<String>,
+) -> Result<ClaudeStatus> {
+    #[cfg(feature = "desktop")]
+    {
+        let device = device(&app)?;
+        claude_code::set_override(&device, path.as_deref()).await?;
+        Ok(claude_code::status(&device).await)
+    }
+    #[cfg(not(feature = "desktop"))]
+    {
+        let _ = (app, path);
+        Err(EdenError::Refused(
+            "gardener:no-claude: Claude Code runs on desktop only".to_string(),
+        ))
     }
 }
 
 /// Removes a deleted thread's Claude Code session file, best effort. Answers whether a file went.
 #[tauri::command]
-pub async fn gardener_forget_session(
-    app: tauri::AppHandle,
-    session_id: String,
-    path: Option<String>,
-) -> Result<bool> {
+pub async fn gardener_forget_session(app: tauri::AppHandle, session_id: String) -> Result<bool> {
     #[cfg(feature = "desktop")]
     {
-        let work = claude_code::work_dir(&app_data(&app)?);
-        let Some(projects) = claude_code::projects_dir(path.as_deref()).await else {
+        let device = device(&app)?;
+        let work = claude_code::work_dir(&device.app_data);
+        let Some(projects) = claude_code::projects_dir(&device).await else {
             return Ok(false);
         };
         Ok(claude_code::forget_session(&projects, &work, &session_id))
     }
     #[cfg(not(feature = "desktop"))]
     {
-        let _ = (app, session_id, path);
+        let _ = (app, session_id);
         Ok(false)
     }
 }

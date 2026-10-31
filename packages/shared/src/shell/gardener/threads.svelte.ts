@@ -22,7 +22,6 @@ import {
 	type Thread,
 	type ThreadTier,
 } from '../../gardener/index.js'
-import { gardenerSetup } from './setup.svelte.js'
 
 export type Undo = () => void
 
@@ -230,7 +229,7 @@ export class ThreadStore {
 	 */
 	#forgetSession(thread: Thread): void {
 		if (!thread.claudeSessionId) return
-		void gardenerForgetSession(thread.claudeSessionId, gardenerSetup.claudePath || null).catch(() => false)
+		void gardenerForgetSession(thread.claudeSessionId).catch(() => false)
 	}
 
 	rename(id: string, title: string): void {

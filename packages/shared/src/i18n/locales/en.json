@@ -2023,7 +2023,7 @@
 				"override": "Path to claude",
 				"save": "Save",
 				"clear": "Clear",
-				"notExecutable": "Not an executable file.",
+				"notClaude": "Not Claude Code. Use the path of an executable file named claude, outside Eden's own folders.",
 				"warnAt": "Warn at",
 				"stopAt": "Stop at",
 				"windowsHelp": "The usage windows are your Claude Code subscription's. Eden warns once a day when one is this full, and stops asking until it resets. Tokens per request is the most one request may carry.",

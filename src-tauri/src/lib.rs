@@ -173,6 +173,7 @@ pub fn run() {
             commands::gardener::gardener_cancel,
             commands::gardener::gardener_tool_answer,
             commands::gardener::gardener_claude_status,
+            commands::gardener::gardener_set_claude_path,
             commands::gardener::gardener_forget_session,
             commands::gardener::record_audit,
             commands::gardener::query_audit,

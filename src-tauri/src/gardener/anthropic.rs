@@ -494,7 +494,6 @@ mod tests {
             effort: None,
             provider: None,
             session: None,
-            claude_path: None,
         }
     }
 

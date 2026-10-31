@@ -69,15 +69,70 @@ fn home_dir() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("/"))
 }
 
-/// The binary this device runs: the first executable candidate, else what the login shell's PATH finds (a GUI app
-/// does not inherit it). An override that is not executable answers none.
-pub async fn find_binary(override_path: Option<&str>) -> Option<PathBuf> {
-    let list = candidates(&home_dir(), override_path);
+/// Where the crate keeps the owner's override of the binary's path, on this device only. The webview never names
+/// the binary on a call: it sets the override through `set_override`, and every use checks it again, since the
+/// webview may write this folder.
+pub fn override_file(app_data: &Path) -> PathBuf {
+    app_data.join("gardener").join("claude-path")
+}
+
+/// The app's folders on this device: the app data dir the crate's files live in, and every folder of the app's,
+/// which the webview may write and so never holds a binary the crate runs.
+#[derive(Debug, Clone)]
+pub struct Device {
+    pub app_data: PathBuf,
+    pub app_dirs: Vec<PathBuf>,
+}
+
+impl Device {
+    /// The override as the crate keeps it, or none.
+    pub fn override_path(&self) -> Option<String> {
+        std::fs::read_to_string(override_file(&self.app_data))
+            .ok()
+            .map(|text| text.trim().to_string())
+            .filter(|text| !text.is_empty())
+    }
+}
+
+/// Why an override is refused before anything runs it, or none: it must be an absolute path to an executable file
+/// named `claude`, outside every folder of the app's (where the webview could have written it).
+pub fn override_refusal(path: &str, app_dirs: &[PathBuf]) -> Option<&'static str> {
+    let path = Path::new(path.trim());
+    if !path.is_absolute() {
+        return Some("not an absolute path");
+    }
+    if path.file_name().and_then(|name| name.to_str()) != Some("claude") {
+        return Some("not a file named claude");
+    }
+    if !is_executable(path) {
+        return Some("not an executable file");
+    }
+    let real = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    let inside = app_dirs.iter().any(|dir| {
+        let dir_real = std::fs::canonicalize(dir).unwrap_or_else(|_| dir.clone());
+        [path, real.as_path()]
+            .iter()
+            .any(|at| at.starts_with(dir) || at.starts_with(&dir_real))
+    });
+    inside.then_some("inside the app's own folders")
+}
+
+/// Whether `--version` printed Claude Code's name (`2.1.316 (Claude Code)`).
+fn names_claude_code(version: &str) -> bool {
+    version.contains("Claude Code")
+}
+
+/// The binary this device runs: the override alone when there is one and it passes `override_refusal`, else the
+/// first executable candidate, else what the login shell's PATH finds (a GUI app does not inherit it).
+pub async fn find_binary(override_path: Option<&str>, app_dirs: &[PathBuf]) -> Option<PathBuf> {
+    if let Some(path) = override_path.map(str::trim).filter(|path| !path.is_empty()) {
+        return override_refusal(path, app_dirs)
+            .is_none()
+            .then(|| PathBuf::from(path));
+    }
+    let list = candidates(&home_dir(), None);
     if let Some(found) = list.iter().find(|path| is_executable(path)) {
         return Some(found.clone());
-    }
-    if override_path.is_some_and(|path| !path.trim().is_empty()) {
-        return None;
     }
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
     let out = output(Path::new(&shell), &["-lc", "command -v claude"], 5).await?;
@@ -116,14 +171,24 @@ async fn auth_status(binary: &Path) -> Option<Value> {
     serde_json::from_str(out.trim()).ok()
 }
 
-/// What Settings shows: found or not, the version, signed in or not.
-pub async fn status(override_path: Option<&str>) -> ClaudeStatus {
-    let Some(binary) = find_binary(override_path).await else {
-        return ClaudeStatus::default();
+/// What Settings shows: found or not (a binary whose `--version` does not name Claude Code is not), the version,
+/// signed in or not, and the override the crate keeps.
+pub async fn status(device: &Device) -> ClaudeStatus {
+    let override_path = device.override_path();
+    let missing = ClaudeStatus {
+        override_path: override_path.clone(),
+        ..ClaudeStatus::default()
     };
-    let version = output(&binary, &["--version"], 5)
+    let Some(binary) = find_binary(override_path.as_deref(), &device.app_dirs).await else {
+        return missing;
+    };
+    let Some(version) = output(&binary, &["--version"], 5)
         .await
-        .and_then(|out| out.split_whitespace().next().map(str::to_string));
+        .filter(|out| names_claude_code(out))
+    else {
+        return missing;
+    };
+    let version = version.split_whitespace().next().map(str::to_string);
     let auth = auth_status(&binary).await.unwrap_or(Value::Null);
     let signed_in = auth
         .get("loggedIn")
@@ -141,7 +206,42 @@ pub async fn status(override_path: Option<&str>) -> ClaudeStatus {
         signed_in,
         auth_method: field("authMethod"),
         subscription: field("subscriptionType"),
+        override_path,
     }
+}
+
+/// Keeps the owner's override (none or empty clears it). Refused `gardener:claude-path` and not kept when the path
+/// fails `override_refusal` or its `--version` does not name Claude Code.
+pub async fn set_override(device: &Device, path: Option<&str>) -> Result<()> {
+    let file = override_file(&device.app_data);
+    let Some(path) = path.map(str::trim).filter(|path| !path.is_empty()) else {
+        return match std::fs::remove_file(&file) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(e.into()),
+            _ => Ok(()),
+        };
+    };
+    if let Some(why) = override_refusal(path, &device.app_dirs) {
+        return Err(EdenError::Refused(format!(
+            "gardener:claude-path: the path is {why}"
+        )));
+    }
+    let named = output(Path::new(path), &["--version"], 5).await;
+    if !named.as_deref().is_some_and(names_claude_code) {
+        return Err(EdenError::Refused(
+            "gardener:claude-path: the file there is not Claude Code".to_string(),
+        ));
+    }
+    if let Some(dir) = file.parent() {
+        std::fs::create_dir_all(dir)?;
+    }
+    let mut out = std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .mode(0o600)
+        .open(&file)?;
+    std::io::Write::write_all(&mut out, path.as_bytes())?;
+    Ok(())
 }
 
 // The process.
@@ -286,10 +386,22 @@ fn safe_id(id: &str) -> bool {
             .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
 }
 
-/// Writes a conversation's `--mcp-config` (mode 0600; the bearer is never in argv, where `ps` would show it).
+/// A session id is a hyphenated UUID, as Claude Code names its session files; the spawn and the forget hold to it.
+fn session_uuid(id: &str) -> bool {
+    uuid::Uuid::parse_str(id)
+        .is_ok_and(|parsed| parsed.hyphenated().to_string() == id.to_ascii_lowercase())
+}
+
+/// Writes a conversation's `--mcp-config` (mode 0600 in a 0700 folder, always a new file; the bearer is never in
+/// argv, where `ps` would show it).
 fn write_mcp_config(app_data: &Path, request_id: &str, mcp: &McpEndpoint) -> Result<PathBuf> {
+    use std::os::unix::fs::DirBuilderExt;
     let dir = app_data.join("gardener").join("mcp");
-    std::fs::create_dir_all(&dir)?;
+    std::fs::DirBuilder::new()
+        .recursive(true)
+        .mode(0o700)
+        .create(&dir)?;
+    std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700))?;
     let path = dir.join(format!("{request_id}.json"));
     let config = json!({ "mcpServers": { "eden": {
         "type": "http",
@@ -301,8 +413,7 @@ fn write_mcp_config(app_data: &Path, request_id: &str, mcp: &McpEndpoint) -> Res
     } } });
     let mut file = std::fs::OpenOptions::new()
         .write(true)
-        .create(true)
-        .truncate(true)
+        .create_new(true)
         .mode(0o600)
         .open(&path)?;
     std::io::Write::write_all(&mut file, config.to_string().as_bytes())?;
@@ -319,10 +430,11 @@ pub struct Prepared {
     pub mcp_config: Option<PathBuf>,
 }
 
-/// Finds the binary and lays out the process. Refused `gardener:no-claude` when there is no binary.
+/// Finds the binary (at the override the crate keeps, never one the request names) and lays out the process.
+/// Refused `gardener:no-claude` when there is no binary, and `gardener:request` for an id that names no file.
 pub async fn prepare(
     request: &GardenerRequest,
-    app_data: &Path,
+    device: &Device,
     mcp: Option<&McpEndpoint>,
 ) -> Result<Prepared> {
     if !safe_id(&request.id) {
@@ -330,13 +442,23 @@ pub async fn prepare(
             "gardener:request: the request id is not a ULID".to_string(),
         ));
     }
-    let program = find_binary(request.claude_path.as_deref())
+    if request
+        .session
+        .as_ref()
+        .is_some_and(|session| !session_uuid(&session.id))
+    {
+        return Err(EdenError::Refused(
+            "gardener:request: the session id is not a UUID".to_string(),
+        ));
+    }
+    let program = find_binary(device.override_path().as_deref(), &device.app_dirs)
         .await
         .ok_or_else(|| {
             EdenError::Refused(
                 "gardener:no-claude: Claude Code was not found on this device".to_string(),
             )
         })?;
+    let app_data = device.app_data.as_path();
     let cwd = work_dir(app_data);
     std::fs::create_dir_all(&cwd)?;
     let mcp_config = match (&request.session, mcp) {
@@ -859,10 +981,7 @@ pub fn slug(path: &Path) -> String {
 /// Removes a thread's session from Claude Code's projects folder: `<projects>/<slug of the work folder>/<id>.jsonl`
 /// and the folder of the same name beside it, and nothing when `id` is not a UUID. Answers whether a file went.
 pub fn forget_session(projects_dir: &Path, work: &Path, id: &str) -> bool {
-    let Ok(parsed) = uuid::Uuid::parse_str(id) else {
-        return false;
-    };
-    if parsed.hyphenated().to_string() != id.to_ascii_lowercase() || !projects_dir.is_absolute() {
+    if !session_uuid(id) || !projects_dir.is_absolute() {
         return false;
     }
     let work = std::fs::canonicalize(work).unwrap_or_else(|_| work.to_path_buf());
@@ -874,8 +993,8 @@ pub fn forget_session(projects_dir: &Path, work: &Path, id: &str) -> bool {
 }
 
 /// The projects folder Claude Code keeps sessions in, as `auth status` names it.
-pub async fn projects_dir(override_path: Option<&str>) -> Option<PathBuf> {
-    let binary = find_binary(override_path).await?;
+pub async fn projects_dir(device: &Device) -> Option<PathBuf> {
+    let binary = find_binary(device.override_path().as_deref(), &device.app_dirs).await?;
     let auth = auth_status(&binary).await?;
     auth.get("projectsDirectory")
         .and_then(Value::as_str)
@@ -903,15 +1022,19 @@ mod tests {
             effort: None,
             provider: Some("claude-code".into()),
             session: None,
-            claude_path: None,
         }
     }
 
-    fn executable(dir: &Path, name: &str, mode: u32) -> PathBuf {
+    fn script(dir: &Path, name: &str, mode: u32, version: &str) -> PathBuf {
+        std::fs::create_dir_all(dir).unwrap();
         let path = dir.join(name);
-        std::fs::write(&path, "#!/bin/sh\necho 2.1.316 '(Claude Code)'\n").unwrap();
+        std::fs::write(&path, format!("#!/bin/sh\necho {version}\n")).unwrap();
         std::fs::set_permissions(&path, std::fs::Permissions::from_mode(mode)).unwrap();
         path
+    }
+
+    fn executable(dir: &Path, name: &str, mode: u32) -> PathBuf {
+        script(dir, name, mode, "2.1.316 '(Claude Code)'")
     }
 
     #[tokio::test]
@@ -932,25 +1055,102 @@ mod tests {
         );
 
         let dir = temp_dir("claude-discovery");
-        let good = executable(&dir, "claude", 0o755);
-        let plain = executable(&dir, "plain", 0o644);
-        let good_text = good.to_string_lossy().into_owned();
-        assert_eq!(find_binary(Some(&good_text)).await, Some(good.clone()));
-        // A wrong override is not found, and the search does not fall through to the usual places.
-        assert_eq!(find_binary(Some(&plain.to_string_lossy())).await, None);
-        assert_eq!(find_binary(Some("claude")).await, None);
+        let app_data = dir.join("app data");
+        let device = Device {
+            app_data: app_data.clone(),
+            app_dirs: vec![app_data.clone(), dir.join("app cache")],
+        };
+        let dirs = device.app_dirs.clone();
+        let text = |path: &Path| path.to_string_lossy().into_owned();
+        let good = executable(&dir.join("bin"), "claude", 0o755);
+        let plain = executable(&dir.join("plain"), "claude", 0o644);
+        let renamed = executable(&dir.join("bin"), "claude-real", 0o755);
+        let planted = executable(&app_data.join("bin"), "claude", 0o755);
+        let cached = executable(&dir.join("app cache"), "claude", 0o755);
+        let impostor = script(&dir.join("other"), "claude", 0o755, "1.0.0");
+        let linked = dir.join("link").join("claude");
+        std::fs::create_dir_all(linked.parent().unwrap()).unwrap();
+        std::os::unix::fs::symlink(&planted, &linked).unwrap();
+
         assert_eq!(
-            find_binary(Some(&dir.join("missing").to_string_lossy())).await,
-            None
+            find_binary(Some(&text(&good)), &dirs).await,
+            Some(good.clone())
         );
-        assert_eq!(find_binary(Some(&dir.to_string_lossy())).await, None);
-        let found = status(Some(&plain.to_string_lossy())).await;
-        assert!(!found.found);
-        let found = status(Some(&good_text)).await;
+        assert_eq!(override_refusal(&text(&good), &dirs), None);
+        // A wrong override is not found, and the search does not fall through to the usual places.
+        for (path, why) in [
+            (text(&plain), "not an executable file"),
+            ("claude".to_string(), "not an absolute path"),
+            (
+                text(&dir.join("missing").join("claude")),
+                "not an executable file",
+            ),
+            (text(&dir.join("bin")), "not a file named claude"),
+            (text(&renamed), "not a file named claude"),
+            // a binary in a folder the webview may write is never run, by its own path or through a link
+            (text(&planted), "inside the app's own folders"),
+            (text(&cached), "inside the app's own folders"),
+            (text(&linked), "inside the app's own folders"),
+        ] {
+            assert_eq!(override_refusal(&path, &dirs), Some(why), "{path}");
+            assert_eq!(find_binary(Some(&path), &dirs).await, None, "{path}");
+        }
+
+        // The override is the crate's: set through `set_override`, checked again on every use.
+        assert_eq!(device.override_path(), None);
+        set_override(&device, Some(&text(&good))).await.unwrap();
+        assert_eq!(device.override_path(), Some(text(&good)));
+        let found = status(&device).await;
         assert!(found.found);
+        assert_eq!(found.path, Some(text(&good)));
+        assert_eq!(found.override_path, Some(text(&good)));
         assert_eq!(found.version.as_deref(), Some("2.1.316"));
         assert!(!found.signed_in);
+        let mode = std::fs::metadata(override_file(&app_data))
+            .unwrap()
+            .permissions()
+            .mode();
+        assert_eq!(mode & 0o777, 0o600);
+        for refused in [text(&planted), text(&linked), text(&impostor), text(&plain)] {
+            let e = set_override(&device, Some(&refused)).await.unwrap_err();
+            assert!(e.to_string().contains("gardener:claude-path: "), "{e}");
+            assert_eq!(
+                device.override_path(),
+                Some(text(&good)),
+                "{refused} was kept"
+            );
+        }
+        // a file someone else wrote is held to the same rules
+        std::fs::write(override_file(&app_data), text(&planted)).unwrap();
+        let tampered = status(&device).await;
+        assert!(!tampered.found);
+        assert_eq!(tampered.override_path, Some(text(&planted)));
+        let e = prepare(&request(), &device, None).await.unwrap_err();
+        assert!(e.to_string().contains("gardener:no-claude: "), "{e}");
+        assert_eq!(projects_dir(&device).await, None);
+        std::fs::write(override_file(&app_data), text(&impostor)).unwrap();
+        assert!(!status(&device).await.found);
+        set_override(&device, None).await.unwrap();
+        assert_eq!(device.override_path(), None);
+        set_override(&device, Some("  ")).await.unwrap();
         std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn a_session_id_must_be_a_uuid_to_spawn() {
+        let device = Device {
+            app_data: PathBuf::from("/nowhere/app data"),
+            app_dirs: Vec::new(),
+        };
+        for id in ["abc", "--resume", "11111111222243338444555555555555"] {
+            let mut chat = request();
+            chat.session = Some(SessionSpec {
+                id: id.into(),
+                resume: true,
+            });
+            let e = prepare(&chat, &device, None).await.unwrap_err();
+            assert!(e.to_string().contains("gardener:request: "), "{id}: {e}");
+        }
     }
 
     fn pair(args: &[String], flag: &str) -> Option<String> {

@@ -11,6 +11,7 @@ import {
 	deleteSecret,
 	effectiveSetup,
 	gardenerClaudeStatus,
+	gardenerSetClaudePath,
 	getPolicy,
 	hasSecret,
 	isDevEnvironment,
@@ -32,15 +33,14 @@ import {
 } from '../../gardener/index.js'
 import { settings } from '../../settings/index.js'
 
-/** Where the owner pointed this device at its `claude`: on the device only, so no bundle carries a path elsewhere. */
-export const CLAUDE_PATH_KEY = 'eden:gardener-claude-path'
-
-function storedPath(): string {
-	try {
-		return localStorage.getItem(CLAUDE_PATH_KEY) ?? ''
-	} catch {
-		return ''
-	}
+const NO_CLAUDE: ClaudeStatus = {
+	found: false,
+	path: null,
+	version: null,
+	signedIn: false,
+	authMethod: null,
+	subscription: null,
+	overridePath: null,
 }
 
 export class GardenerSetup {
@@ -54,8 +54,10 @@ export class GardenerSetup {
 	claude = $state<ClaudeStatus | undefined>()
 	/** The status could not be read at all. */
 	claudeFailed = $state(false)
-	/** The owner's override of the binary's path, or empty. */
-	claudePath = $state(storedPath())
+	/** The last override the crate refused: not kept, and named in Settings until the next change. */
+	claudePathRefused = $state(false)
+	/** The owner's override of the binary's path as the crate keeps it (on this device, never here), or empty. */
+	readonly claudePath = $derived(this.claude?.overridePath ?? '')
 	policy = $state<GardenerPolicy>(readPolicy(null))
 	/** This month's spend in USD, from the audit log. */
 	spentThisMonth = $state(0)
@@ -114,27 +116,31 @@ export class GardenerSetup {
 
 	/** Reads this device's Claude Code again: after the owner installed it, signed in, or changed the override. */
 	async refreshClaude(): Promise<void> {
+		const kept = this.claude?.overridePath ?? null
 		this.claude = undefined
 		try {
-			this.claude = await gardenerClaudeStatus(this.claudePath || null)
+			this.claude = await gardenerClaudeStatus()
 			this.claudeFailed = false
 		} catch {
 			this.claudeFailed = true
-			this.claude = { found: false, path: null, version: null, signedIn: false, authMethod: null, subscription: null }
+			this.claude = { ...NO_CLAUDE, overridePath: kept }
 		}
 	}
 
-	/** Keeps the override on this device (empty clears it) and reads the status at it. */
+	/**
+	 * Hands the override to the crate, which checks and keeps it (empty clears it), and reads the status at it. A
+	 * path the crate refuses is not kept: the override stays as it was and `claudePathRefused` says so.
+	 */
 	async setClaudePath(path: string): Promise<void> {
-		const next = path.trim()
-		this.claudePath = next
+		this.claudePathRefused = false
 		try {
-			if (next) localStorage.setItem(CLAUDE_PATH_KEY, next)
-			else localStorage.removeItem(CLAUDE_PATH_KEY)
-		} catch {
-			// no storage: the override lasts until the app closes
+			this.claude = await gardenerSetClaudePath(path.trim() || null)
+			this.claudeFailed = false
+		} catch (e) {
+			// a refusal names the path; anything else is a status that could not be read, with its retry
+			if (String(e).includes('gardener:claude-path')) this.claudePathRefused = true
+			else this.claudeFailed = true
 		}
-		await this.refreshClaude()
 	}
 
 	/** Reads this month's spend again, after a request was audited. */

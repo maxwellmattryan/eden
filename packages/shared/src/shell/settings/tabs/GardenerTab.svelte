@@ -69,8 +69,13 @@
 	/** The seed of the provider this build runs on: the API's on the phone, Claude Code's on desktop (D-178). */
 	const providerSeed = $derived(seedOf(gardenerSetup.providerId))
 	const seedFor = (grade: ModelGrade) => providerSeed.models.find((model) => model.id === providerSeed.grades[grade])
-	/** The override names a path that is not an executable file: the status reads not found, and says why. */
-	const rejected = $derived(!!gardenerSetup.claudePath && !!gardenerSetup.claude && !gardenerSetup.claude.found)
+	/** The crate refused the path just given, or the override it keeps no longer names Claude Code: says why. */
+	const rejected = $derived(
+		gardenerSetup.claudePathRefused ||
+			(!!gardenerSetup.claudePath && !!gardenerSetup.claude && !gardenerSetup.claude.found)
+	)
+	/** The status is being read; never once a read has failed, which shows its own error with a retry. */
+	const reading = $derived(checking || (!gardenerSetup.claude && !gardenerSetup.claudeFailed))
 	/** The account line: signed in, how, and on which plan; never the email or the organisation. */
 	const account = $derived(
 		gardenerSetup.claude?.signedIn
@@ -118,7 +123,8 @@
 		checking = true
 		try {
 			await gardenerSetup.setClaudePath(path)
-			claudePath = gardenerSetup.claudePath
+			// a refused path stays in the field to be corrected
+			if (!gardenerSetup.claudePathRefused) claudePath = gardenerSetup.claudePath
 		} finally {
 			checking = false
 		}
@@ -263,13 +269,13 @@
 					</div>
 				{/if}
 				<!-- always here: it helps after an install, a sign-in, a Save or a Clear; the arrows turn while it reads -->
-				<span class={['recheck', (checking || !gardenerSetup.claude) && 'recheck-busy']}>
+				<span class={['recheck', reading && 'recheck-busy']}>
 					<IconButton
 						icon="refresh-cw"
 						size="xs"
 						label={$t('settings.gardener.claude.check')}
 						tooltip
-						aria-busy={checking || !gardenerSetup.claude}
+						aria-busy={reading}
 						disabled={checking}
 						onclick={() => void recheck()}
 					/>
@@ -299,7 +305,7 @@
 				{/if}
 			</form>
 			{#if rejected}
-				<InlineError message={$t('settings.gardener.claude.notExecutable')} live />
+				<InlineError message={$t('settings.gardener.claude.notClaude')} live />
 			{/if}
 		</div>
 	</SettingsRow>

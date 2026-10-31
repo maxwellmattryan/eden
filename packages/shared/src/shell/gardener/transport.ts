@@ -14,18 +14,11 @@ export interface Transport {
 }
 
 /**
- * The crate's stream, sent to the provider this build runs on (D-178): Claude Code on desktop, with the owner's path
- * override when there is one, and the API on the phone.
+ * The crate's stream, sent to the provider this build runs on (D-178): Claude Code on desktop (at the path the crate
+ * keeps; a request never names the binary), and the API on the phone.
  */
 export const crateTransport: Transport = (request, onEvent) =>
-	gardenerSend(
-		{
-			...request,
-			provider: gardenerSetup.providerId,
-			...(gardenerSetup.onClaude && gardenerSetup.claudePath ? { claudePath: gardenerSetup.claudePath } : {}),
-		},
-		onEvent
-	)
+	gardenerSend({ ...request, provider: gardenerSetup.providerId }, onEvent)
 
 /**
  * A scripted reply: the text streamed word by word, then a stop. What `yarn dev:web` answers with. A message that

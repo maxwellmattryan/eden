@@ -25,6 +25,10 @@ use super::GardenerEvent;
 /// The longest request head read, and the largest body.
 const HEAD_CAP: usize = 64 * 1024;
 const BODY_CAP: usize = 16 * 1024 * 1024;
+/// The connections served at once; one more is closed unread. Each Claude Code process keeps one or two.
+const CONNECTION_CAP: usize = 64;
+/// How long a refused connection is drained, unread, before it is dropped, so the caller reads the refusal.
+const DRAIN_MS: u64 = 1000;
 
 /// What the webview answers a call with.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -46,6 +50,7 @@ struct Inner {
     port: u16,
     token: String,
     requests: Mutex<HashMap<String, Open>>,
+    connections: Arc<tokio::sync::Semaphore>,
 }
 
 /// The bridge, managed by the app on desktop. Cheap to clone.
@@ -154,10 +159,12 @@ struct HttpRequest {
     body: Vec<u8>,
 }
 
-/// Reads one request off a kept-alive connection; none when it closed or broke.
+/// Reads one request off a kept-alive connection; none when it closed or broke. `gate` sees the head before any of
+/// the body is read, so a caller without the bearer never makes the bridge hold a body; its status is answered.
 async fn read_request(
     stream: &mut TcpStream,
     buffer: &mut Vec<u8>,
+    gate: impl Fn(&HashMap<String, String>) -> Option<u16>,
 ) -> std::result::Result<Option<HttpRequest>, u16> {
     let mut chunk = vec![0u8; 8192];
     let end = loop {
@@ -182,6 +189,9 @@ async fn read_request(
         .filter_map(|line| line.split_once(':'))
         .map(|(name, value)| (name.trim().to_ascii_lowercase(), value.trim().to_string()))
         .collect();
+    if let Some(status) = gate(&headers) {
+        return Err(status);
+    }
     let length: usize = headers
         .get("content-length")
         .and_then(|value| value.parse().ok())
@@ -238,6 +248,7 @@ impl McpBridge {
                 port: listener.local_addr()?.port(),
                 token: mint(),
                 requests: Mutex::new(HashMap::new()),
+                connections: Arc::new(tokio::sync::Semaphore::new(CONNECTION_CAP)),
             }),
         };
         let serving = bridge.clone();
@@ -252,8 +263,18 @@ impl McpBridge {
             loop {
                 match listener.accept().await {
                     Ok((stream, _)) => {
+                        let Ok(permit) = serving.inner.connections.clone().try_acquire_owned()
+                        else {
+                            log::warn!(
+                                "The Gardener's MCP bridge closed a connection over its cap"
+                            );
+                            continue;
+                        };
                         let bridge = serving.clone();
-                        tauri::async_runtime::spawn(async move { bridge.serve(stream).await });
+                        tauri::async_runtime::spawn(async move {
+                            bridge.serve(stream).await;
+                            drop(permit);
+                        });
                     }
                     Err(e) => {
                         log::warn!("The Gardener's MCP bridge missed a connection: {e}");
@@ -316,11 +337,19 @@ impl McpBridge {
     async fn serve(&self, mut stream: TcpStream) {
         let mut buffer = Vec::new();
         loop {
-            let request = match read_request(&mut stream, &mut buffer).await {
+            let gate = |headers: &HashMap<String, String>| self.refusal(headers);
+            let request = match read_request(&mut stream, &mut buffer, gate).await {
                 Ok(Some(request)) => request,
                 Ok(None) => return,
                 Err(status) => {
+                    // the body is never read into memory: the rest is drained and dropped so the refusal arrives
                     let _ = write_response(&mut stream, &Response::empty(status)).await;
+                    let _ = stream.shutdown().await;
+                    let mut sink = [0u8; 8192];
+                    let drain =
+                        async { while matches!(stream.read(&mut sink).await, Ok(n) if n > 0) {} };
+                    let _ = tokio::time::timeout(std::time::Duration::from_millis(DRAIN_MS), drain)
+                        .await;
                     return;
                 }
             };
@@ -335,19 +364,21 @@ impl McpBridge {
         }
     }
 
-    async fn handle(&self, request: HttpRequest) -> Response {
-        // A browser always sends an Origin; Claude Code never does.
-        if request.headers.contains_key("origin") {
-            return Response::empty(403);
+    /// The status a request's head is refused with, or none: 403 with an `Origin` (a browser always sends one;
+    /// Claude Code never does), 401 without the bearer.
+    fn refusal(&self, headers: &HashMap<String, String>) -> Option<u16> {
+        if headers.contains_key("origin") {
+            return Some(403);
         }
-        let bearer = request
-            .headers
+        let bearer = headers
             .get("authorization")
             .and_then(|value| value.strip_prefix("Bearer "))
             .unwrap_or_default();
-        if !same(bearer.as_bytes(), self.inner.token.as_bytes()) {
-            return Response::empty(401);
-        }
+        (!same(bearer.as_bytes(), self.inner.token.as_bytes())).then_some(401)
+    }
+
+    /// Answers a request that passed `refusal`.
+    async fn handle(&self, request: HttpRequest) -> Response {
         let request_id = request
             .path
             .split('?')
@@ -565,6 +596,18 @@ mod tests {
             .0,
             403
         );
+        // The head is refused before any body is read: a caller without the bearer gets its 401 at once.
+        let mut stream = TcpStream::connect((Ipv4Addr::LOCALHOST, port))
+            .await
+            .unwrap();
+        let head = format!("POST /mcp/r1 HTTP/1.1\r\nContent-Length: {BODY_CAP}\r\n\r\n");
+        stream.write_all(head.as_bytes()).await.unwrap();
+        let mut answer = [0u8; 64];
+        let n = tokio::time::timeout(std::time::Duration::from_secs(5), stream.read(&mut answer))
+            .await
+            .expect("the refusal waited for the body")
+            .unwrap();
+        assert!(String::from_utf8_lossy(&answer[..n]).starts_with("HTTP/1.1 401 "));
         assert_eq!(
             post(port, "/mcp/r2", &[("Authorization", &bearer)], &list)
                 .await
