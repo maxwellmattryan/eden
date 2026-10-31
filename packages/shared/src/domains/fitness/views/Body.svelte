@@ -100,6 +100,7 @@
 				titles={month.map((weight) => dayLine(weight.day, lang))}
 				format={(value) => value.toFixed(1)}
 				height={176}
+				extremes={false}
 				label={$t('domains.fitness.body.chartLabel', {
 					values: {
 						first: values[0]?.toFixed(1) ?? '',

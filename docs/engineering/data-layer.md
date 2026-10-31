@@ -4,7 +4,7 @@ status: draft
 summary: The workspace database and everything over it: the SQLCipher file and its key on each platform, the schema and its conventions, the append-only migrations, stamps and ids, the registry, the grant store, the egress ledger, the profile, the home Place and addresses, the tables of the scheduler and of signals, the IPC boundary command by command, the frontend module and its browser fallback, how a store sits on rows, the Today store on the task rows, the export bundle, the import, and how it is tested.
 read-this-if: You are reading or writing the owner's data from Rust or from an app, adding a table, a migration, a command, an entity type or a fact type, moving a store onto rows, or touching export, import or the database key.
 depends-on: [product/substrate/data, product/substrate/primitives, product/substrate/registry, engineering/app-scaffold]
-updated: 2026-10-02
+updated: 2026-10-31
 ---
 
 ## Where it stands
@@ -285,6 +285,15 @@ SQLite is where the owner's data is; a store is what a page sees of it, in memor
 | Sky | `forecast`, a mirror | the place, the fetch time and the forecast; when the alerts were answered and whether the place is covered; when a slot nothing covers was asked for |
 | | `air-quality`, `allergens`, mirrors | the slot's fetch time, status and data; the row's source is the slot's |
 | | `alert`, a mirror | the alert, the place it was answered for, and `dismissed` |
+| Vigor | `workout-template` | title, `minutes` (estimated), `exercises` (`exerciseId`, name, target `sets` and `reps`); an `exerciseId` is a bundled exercise's (`x-<kebab>`, constants, never rows) or a custom `exercise` row's (D-177) |
+| | `exercise` | a custom move: name, `muscles`, `equipment`; made when a template names one not in the library |
+| | `workout-log` | `templateId`, title, `date` (`YYYY-MM-DD`), `gymId`, `minutes`, `rpe` (1 to 10), `exercises` (`exerciseId`, name, `sets` of `reps` and `load` in kg), and `sessionId` with a `for` link to the Event when it was done for a planned session |
+| | `gym` | name, `equipment`, `hours`, `notes`, and `placeId`, the id of a `venue` Place, read and never written |
+| | `training-goal` | `kind` (`weight`), `target` in kg, `by` (`YYYY-MM-DD`); one row, rewritten |
+| | `body-metric` | `kind` (`weight`, `body-fat`, `waist`), `value` in kg, % or cm (shown in lb and in under the imperial system, D-58), `at`, `source` (`manual`, `quick-log`) |
+| | `supplement` | name, brand, dose, `when` (`daily`, `pre-workout`, `as-needed`), and `stockItemUri`, a Hearth `stock-item` read and never written |
+| | `intake-log` | `supplementId`, `at` |
+| | `event`, a primitive, kind `workout-session` | a planned session: its template's title and `startAt`, linked `from` its `workout-template` (D-177) |
 | Today (the shell) | `task`, a primitive | its fields as columns; `recurrence`, `target` and `progress` as JSON the frontend shapes (D-75, below) |
 
 A storage tip is a line on its item or its recipe by decision (D-87), not a row waiting for its issue. Left as they are, for the issues that own them: brainstorm sessions and parts lists as rows of their own, the shop day as an Event, a project's next steps as Tasks, and nothing of the home, which is its Place row now (D-141).

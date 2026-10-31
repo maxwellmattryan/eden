@@ -81,6 +81,7 @@
 						labels={weightDays.map((day) => dayLabel(day).slice(4))}
 						format={one}
 						height={176}
+						extremes={false}
 						label="Weight, last 30 days, from {one(weightSeries[0]!)} to {one(latest)} kg"
 						references={[
 							{ value: weightAverage, label: `average ${one(weightAverage)}` },

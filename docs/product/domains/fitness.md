@@ -4,7 +4,7 @@ status: draft
 summary: Workouts and templates, an exercise library, gyms, goals, body metrics with a weight trend, supplements and doses, and a training schedule as routines. Owns the body until Wellspring exists. Id `fitness`, Phase 2.
 read-this-if: You are working on workouts, body metrics, weight logging, gyms or supplements.
 depends-on: [substrate/registry, substrate/primitives, substrate/tasks, substrate/grants, substrate/shell, substrate/ai]
-updated: 2026-10-02
+updated: 2026-10-31
 ---
 
 ## 1. Purpose
@@ -107,6 +107,17 @@ Open: OQ-8. A future `parent: health` is a manifest field, not a data move.
 
 Appended under Vigor: facts `gym-preference` T1, `training-schedule` T1, `equipment` T1, `fitness-goal` T1, `favorite-supplement` T1, `training-limitation` T2, `current-weight` T2; entities `exercise` T0, `workout-template` T1, `workout-log` T1, `gym` T1, `training-goal` T1, `body-metric` T2, `supplement` T1, `intake-log` T1; kind `workout-session` (event, T1).
 
+## Built
+
+Issue 6, D-177. The mocks are `Domains/Vigor/{Workouts,History,Body,Gyms,Supplements,Widgets}` in Storybook; the page is `/fitness/[[tab]]` on both apps, one shared page (`packages/shared/src/domains/fitness/views/Vigor.svelte`) whose narrow layout is the phone's, reached from More there and pickable as a pinned tab (D-160). The five tabs (Workouts, History, Body, Gyms, Supplements), every write with an undo toast and a feed line, the sample data, the four tiles (none in the default Garden), and the three quick actions: `log-weight` (a number in kg, or lb under the imperial system, refused outside 0 to 1000 with a toast that says why; its readout is the last value, the last seven daily weights and their average, which the Garden's `quick-log` tile draws), `workout-done` (today's planned template first) and `took-supplement`. `body-metric.logged` and `workout.logged` are emitted; nothing answers them yet. The pure rules (streak, average, the week's sessions, units, the weight's parse and the readouts, the rows) are in `packages/shared/src/domains/fitness/` with their tests. Vigor has no crate module: its rows go through the generic entity and event commands. Its facts are live as the registry's rows, so the owner may assert them on the profile; Vigor writes none of them yet.
+
 ## Handoffs
 
-- **The weight quick log (issue 6; D-12, D-145).** Quick Log is built and waits for a number. Declare the quick action in Vigor's manifest as `kind: "number"` with its `unit` and a `keyword` ("Weight"), and bind two things in Vigor's `logic.ts` (`engineering/domain-module.md`, "Two halves"): a handler in `quickActionHandlers` that writes a `body-metric` with source `quick-log` and answers its undo, and a readout in `quickActionReadouts` that answers `last`, `series` (seven days, oldest first) and `reference` (the average or the goal). The sheet's tab then shows the unit, the last value and the sparkline, the Garden's `quick-log` tile (`packages/shared/src/shell/garden/widgets/QuickLogTile.svelte`, on both apps) draws the same series in place of its prompt, and "log weight 82.4" parses, with no change to the shell. The supplement dose is a `check` whose readout answers `options`.
+- **Gardener tools (§5).** None of `generate-workout`, `log-workout`, `log-body-metric`, `took-supplement`, `progress-summary` or `suggest-progression` is declared, since a declared tool needs a handler (`engineering/gardener.md`, "Tools"). Declare each in `manifest.json` with its handler in `logic.ts`; `log-quick` can carry the three quick actions once `QUICK_ACTION_WORDS` (`packages/shared/src/gardener/tools.ts`) has a line for each.
+- **The schedule as a routine, reminders, weekly progress, dose notifications.** A planned session is an Event (D-177). The notifications in §7 need `notificationKinds` and a rule that answers `workout.logged` and `body-metric.logged`; the session reminder needs the Event's time on the scheduler, not a routine.
+- **Facts Vigor writes.** `current-weight` (derived from the latest weight; its shape is in `packages/shared/src/profile/shapes.ts`, marked derived), `gym-preference`, `equipment`, `favorite-supplement`, `training-schedule`, `fitness-goal`, `training-limitation`: written by the owner on the profile today; Vigor deriving any of them is open.
+- **The header motif (D-123).** Vigor's page has none; `VigorPage.svelte` in the mocks has no `motif` snippet yet.
+- **Settings (§9).** The rest timer, the library filters, the Quick Log defaults and the weight tile's visibility have no settings yet; units and week start come from General (D-58).
+- **Export formats.** `export` lists Vigor's types, so they are in a whole-workspace bundle; `logic.ts` has no `extras` for formats made for reading.
+- **The Quick Log sheet's own error line.** A refused weight is said in an error toast (`QuickLogRefusal`, `packages/shared/src/domains/define.ts`); the kit's `QuickLogSheet` has no error line under its field to say it in place.
+- **A gym's Place from the sample.** The seed links Castle Hill Fitness to a venue Place of that name when the workspace has one; Meadow's sample has none, so the seeded gym shows no Place until the owner links one.
