@@ -36,8 +36,12 @@ describe('the registry', () => {
 	})
 
 	it('lets a write name a live resource only, and a read any', () => {
-		expect(resource('workout-session')).toMatchObject({ owner: 'fitness', phase: 2, live: false })
-		expect(isKind('event', 'workout-session')).toBe(false)
+		// Sanctuary is Phase 2 and not built; Vigor is Phase 2 and built (D-177)
+		expect(resource('reading-log')).toMatchObject({ owner: 'spirit', phase: 2, live: false })
+		expect(isEntityType('reading-log')).toBe(false)
+		expect(resource('workout-session')).toMatchObject({ owner: 'fitness', phase: 2, live: true })
+		expect(isKind('event', 'workout-session')).toBe(true)
+		expect(isEntityType('workout-log')).toBe(true)
 		expect(isEntityType('account')).toBe(false)
 		expect(isKind('event', 'shop-day')).toBe(true)
 		expect(isKind('task', 'shop-day')).toBe(false)
@@ -45,7 +49,7 @@ describe('the registry', () => {
 
 	it('lists the live kinds of a primitive, whoever owns them', () => {
 		expect(kindsOf('task')).toEqual(['todo', 'checklist', 'routine', 'habit', 'reminder'])
-		expect(kindsOf('event')).toEqual(['local-event', 'shop-day', 'outing'])
+		expect(kindsOf('event')).toEqual(['local-event', 'shop-day', 'outing', 'workout-session'])
 		expect(kindsOf('place')).toEqual(['home', 'venue'])
 		expect(kindsOf('attachment')).toEqual([
 			'document',

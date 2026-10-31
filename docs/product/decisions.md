@@ -4,7 +4,7 @@ status: draft
 summary: Everything settled (D-n) and everything open (OQ-n), with ids the other docs cite. Entries are never deleted; a superseded decision stays with a note.
 read-this-if: You are about to make a design choice, or a doc cites an id you need to resolve.
 depends-on: []
-updated: 2026-10-02
+updated: 2026-10-31
 ---
 
 ## How to use this doc
@@ -192,6 +192,7 @@ Cite ids; never restate. To settle an open question, add a `D-n` entry and mark 
 | D-174 | Hearth on the phone opens on Grocery, the tab a shop needs; desktop keeps Stock first. Stock, Grocery and the Hearth page are the phone's own; the forms, the item's detail, the recipes and the capture sheet are the shared views desktop mounts. |
 | D-175 | The phone's Stock: a card per location that holds something, then Ran out. A row swipes right to Ran out and left to Delete, each with undo; in Ran out the right swipe adds the item to the grocery list. A tap opens the item's detail in a sheet, which holds Edit, Move to and Add to grocery. Select mode is as desktop's (D-41): one write and one undo, the floating + standing down while it lasts. Nothing is dragged on the phone. |
 | D-176 | The phone's Grocery is built for one hand in a shop: a tap anywhere on a row checks or unchecks it, with no toast, since the row is its own undo; checked rows keep their place, and Complete sits under a list once anything is checked as well as in its head. A row's menu holds Edit, Move to and Delete; it swipes right to check and left to delete. Every list shows, and a row of chips stands in one store for the session. Nothing is dragged on the phone. |
+| D-177 | Vigor is built on both apps at its own phase, so its rows are live (D-130). Every measure is stored metric (weight in kg, waist in cm) and shown in the owner's system (D-58), rounded to one decimal. The streak is the number of workout logs in the unbroken run of calendar weeks, from the week start, that each hold at least one, ending at the current week; the current week does not break the run while it is still empty, and no logs is no streak. The seven-day average is the mean of the daily weights (the last one logged each day) over the seven calendar days ending at the latest one, the days without a weight skipped. A planned session is a `workout-session` Event titled after its template and linked from it, not a routine; a log of that template on its day names it and links `for` it, and the session counts as done. The exercise library is bundled constants; a move the owner types that is not in it becomes a custom `exercise` row. None of Vigor's four tiles is in the default Garden. `TrendChart` takes up to two named `references` rather than drawing a rolling average. A gym keeps its venue Place's id and a supplement its Hearth `stock-item`'s URI in their payloads, read on load, rather than `links` rows, since nothing queries them from the other side yet. |
 
 ## Open questions
 

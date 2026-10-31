@@ -148,7 +148,11 @@
 			"quickLog": "Weight",
 			"groceryQuickAdd": "Grocery list",
 			"nearbyFavorites": "Favourites nearby",
-			"upcomingListings": "This weekend"
+			"upcomingListings": "This weekend",
+			"thisWeekTraining": "This week",
+			"streak": "Streak",
+			"nextSession": "Next session",
+			"weightTrend": "Weight trend"
 		},
 		"empty": {
 			"weatherNow": "Set a home place to see the sky.",
@@ -163,7 +167,11 @@
 			"feed": "Nothing has happened yet.",
 			"groceryQuickAdd": "Add what you need next.",
 			"nearbyFavorites": "Save a place and mark it a favourite.",
-			"upcomingListings": "Nothing found for the weekend yet."
+			"upcomingListings": "Nothing found for the weekend yet.",
+			"thisWeekTraining": "Plan a session or log a workout to see your week.",
+			"streak": "Log a workout to start a streak.",
+			"nextSession": "Plan a session from a template.",
+			"weightTrend": "Log a weight to start the trend."
 		},
 		"actions": {
 			"today": "Open Today",
@@ -173,7 +181,11 @@
 			"quickLog": "Log weight",
 			"groceryQuickAdd": "Open the list",
 			"nearbyFavorites": "Open the map",
-			"upcomingListings": "Open listings"
+			"upcomingListings": "Open listings",
+			"thisWeekTraining": "Open history",
+			"streak": "Open history",
+			"nextSession": "Open workouts",
+			"weightTrend": "Open body"
 		},
 		"untouched": "{days, plural, one {# day untouched} other {# days untouched}}",
 		"minutes": "{minutes} min",
@@ -240,7 +252,22 @@
 			"collectionRemoved": "Collection {name} deleted",
 			"outingInterested": "Interested in {title}",
 			"outingGoing": "Going to {title}",
-			"outingRemoved": "{title} taken off the calendar"
+			"outingRemoved": "{title} taken off the calendar",
+			"weightLogged": "Weight logged",
+			"metricLogged": "{kind} logged",
+			"metricRemoved": "{kind} {value} deleted",
+			"goalSet": "Weight goal set for {date}",
+			"workoutLogged": "Completed {title}",
+			"workoutRemoved": "{title} log deleted",
+			"templateSaved": "{title} saved to workouts",
+			"templateRemoved": "{title} deleted",
+			"sessionPlanned": "{title} planned",
+			"sessionRemoved": "{title} taken off the plan",
+			"gymSaved": "{name} saved to gyms",
+			"gymRemoved": "{name} deleted",
+			"supplementSaved": "{name} saved to supplements",
+			"supplementRemoved": "{name} deleted",
+			"supplementTaken": "Took {name}"
 		},
 		"profile": "What Eden knows"
 	},
@@ -968,6 +995,210 @@
 				}
 			}
 		},
+		"fitness": {
+			"name": "Vigor",
+			"subtitle": "Workouts, gyms, body metrics",
+			"tabs": {
+				"workouts": "Workouts",
+				"history": "History",
+				"body": "Body",
+				"gyms": "Gyms",
+				"supplements": "Supplements"
+			},
+			"tabsLabel": "Vigor sections",
+			"saveFailed": "Vigor couldn't save your last change.",
+			"actionsFor": "Actions for {name}",
+			"edit": "Edit",
+			"delete": "Delete",
+			"cancel": "Cancel",
+			"save": "Save",
+			"exercises": "{count, plural, one {# exercise} other {# exercises}}",
+			"minutes": "{minutes} min",
+			"rpe": "RPE {rpe}",
+			"quick": {
+				"weight": "Log weight",
+				"weightKeyword": "Weight",
+				"weightPlaceholder": "82.4",
+				"weightInvalid": "Enter a weight above 0 and below 1000.",
+				"workoutDone": "Workout done",
+				"workoutKeyword": "Workout",
+				"tookSupplement": "Took a supplement",
+				"supplementKeyword": "Supplement",
+				"unknownOption": "Pick one of the options."
+			},
+			"workouts": {
+				"log": "Log a workout",
+				"newTemplate": "New template",
+				"list": "Templates",
+				"start": "Start",
+				"plan": "Plan",
+				"exercisesIn": "Exercises in {title}",
+				"exercise": "Exercise",
+				"setsReps": "Sets × reps",
+				"setsRepsValue": "{sets} × {reps}",
+				"empty": {
+					"title": "No workouts yet",
+					"text": "Make a template from the exercise library, then start it to log a session set by set."
+				}
+			},
+			"templateForm": {
+				"titleNew": "New template",
+				"titleEdit": "Edit template",
+				"title": "Title",
+				"minutes": "Estimated time",
+				"exercises": "Exercises",
+				"exercise": "Exercise {n}",
+				"pick": "Pick an exercise",
+				"custom": "Custom…",
+				"customName": "Name",
+				"sets": "Sets",
+				"reps": "Reps",
+				"moveUp": "Move exercise {n} up",
+				"moveDown": "Move exercise {n} down",
+				"remove": "Remove exercise {n}",
+				"add": "Add exercise"
+			},
+			"logForm": {
+				"title": "Log a workout",
+				"titleFor": "Log {title}",
+				"template": "Template",
+				"none": "None",
+				"date": "Date",
+				"gym": "Gym",
+				"duration": "Duration",
+				"rpe": "RPE",
+				"notRated": "Not rated",
+				"reps": "Reps",
+				"load": "Load",
+				"removeSet": "Remove set {n} of {name}",
+				"addSet": "Add set",
+				"noExercises": "Pick a template to fill in its exercises."
+			},
+			"planForm": {
+				"title": "Plan {title}",
+				"date": "Date",
+				"time": "Time"
+			},
+			"history": {
+				"planned": "Planned",
+				"weekOf": "Week of {date}",
+				"setsIn": "Sets in {title}",
+				"exercise": "Exercise",
+				"set": "Set",
+				"reps": "Reps",
+				"load": "Load",
+				"bodyweight": "bodyweight",
+				"noSets": "No sets were logged.",
+				"empty": {
+					"title": "Nothing logged yet",
+					"text": "Log a workout after a session, or start one from a template, and it lands here by week."
+				}
+			},
+			"body": {
+				"logWeight": "Log weight",
+				"latest": "Latest",
+				"average": "7-day average",
+				"goal": "Goal",
+				"goalBy": "{unit} by {date}",
+				"noGoal": "None set",
+				"setGoal": "Set goal",
+				"chart": "Weight, last 30 days",
+				"chartLabel": "Weight, last 30 days, from {first} to {last} {unit}",
+				"referenceAverage": "average {value}",
+				"referenceGoal": "goal {value}",
+				"others": "Other metrics",
+				"kinds": {
+					"weight": "Weight",
+					"body-fat": "Body fat",
+					"waist": "Waist"
+				},
+				"log": "Log",
+				"logKind": "Log {kind}",
+				"notLogged": "not logged yet",
+				"goalForm": {
+					"title": "Set a goal",
+					"target": "Target weight",
+					"by": "By"
+				},
+				"metricForm": {
+					"title": "Log a metric",
+					"kind": "Kind",
+					"value": "Value",
+					"date": "Date"
+				},
+				"empty": {
+					"title": "No weight logged yet",
+					"text": "Log a weight from anywhere with Quick Log; a week of them draws the trend and its seven-day average."
+				}
+			},
+			"gyms": {
+				"add": "Add gym",
+				"list": "Gyms",
+				"equipmentCount": "{count, plural, one {# piece of equipment} other {# pieces of equipment}}",
+				"equipment": "Equipment",
+				"hours": "Hours",
+				"notes": "Notes",
+				"place": "Place",
+				"form": {
+					"titleNew": "Add gym",
+					"titleEdit": "Edit gym",
+					"name": "Name",
+					"equipmentHelper": "Type a piece and press Enter.",
+					"equipmentToSave": "Equipment to save",
+					"remove": "Remove {name}",
+					"notLinked": "Not linked"
+				},
+				"empty": {
+					"title": "No gyms yet",
+					"text": "Add the places you train, with the equipment they have, so a workout can fit what is there."
+				}
+			},
+			"supplements": {
+				"add": "Add supplement",
+				"list": "Supplements",
+				"tookIt": "Took it",
+				"took": "Took {name}",
+				"when": {
+					"daily": "daily",
+					"pre-workout": "pre-workout",
+					"as-needed": "as needed"
+				},
+				"notTaken": "not taken yet",
+				"today": "today {time}",
+				"yesterday": "yesterday {time}",
+				"stock": "Hearth: {name}, {quantity} left",
+				"openStock": "Open in Hearth",
+				"notLinked": "Not linked to stock",
+				"intakes": "Intake log",
+				"noIntakes": "None logged yet.",
+				"form": {
+					"titleNew": "Add supplement",
+					"titleEdit": "Edit supplement",
+					"name": "Name",
+					"brand": "Brand",
+					"dose": "Dose",
+					"when": "When",
+					"whenDaily": "Daily",
+					"whenPreWorkout": "Pre-workout",
+					"whenAsNeeded": "As needed",
+					"stockItem": "Stock item",
+					"notLinked": "Not linked"
+				},
+				"empty": {
+					"title": "No supplements yet",
+					"text": "Add what you take and when, and log a dose with one press. Link it to Hearth to keep it stocked."
+				}
+			},
+			"widgets": {
+				"done": "Done",
+				"planned": "Planned",
+				"weekDone": "{done} of {total} done",
+				"sessions": "{count, plural, one {session} other {sessions}}",
+				"goalLine": "Goal {target} {unit} by {date}",
+				"trendLabel": "Weight over 14 days, latest {latest} {unit}, seven-day average {average}",
+				"averageLegend": "7-day average"
+			}
+		},
 		"places": {
 			"name": "Meadow",
 			"subtitle": "Places, events, vibes, favourites",
@@ -1360,7 +1591,14 @@
 			"owned-hardware": "Owned hardware",
 			"preferred-tool": "Preferred tool",
 			"medical-dietary-restriction": "Medical dietary restriction",
-			"favorite-vibe": "Favourite vibe"
+			"favorite-vibe": "Favourite vibe",
+			"gym-preference": "Gym preference",
+			"training-schedule": "Training schedule",
+			"equipment": "Equipment",
+			"fitness-goal": "Fitness goal",
+			"favorite-supplement": "Favourite supplement",
+			"training-limitation": "Training limitation",
+			"current-weight": "Current weight"
 		},
 		"fields": {
 			"street": "Street",

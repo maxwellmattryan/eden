@@ -703,10 +703,280 @@ export const hearthMotif = {
 	expiring: stock.filter((item) => item.expiry !== undefined && item.expiry <= '10-02').length,
 }
 
-/** Daily weight in kg, 09-17 to 09-30; seven-day average 82.7; goal 80.0 by 12-31. */
+// ---- Vigor (design/sample-data.md, "Vigor") ------------------------------------------------------------------------
+
+/** Daily weight in kg, 09-17 to 09-30; seven-day average 82.6 (the mean of 09-24 to 09-30); goal 80.0 by 12-31. */
 export const weightSeries = [83.6, 83.4, 83.5, 83.1, 83.2, 82.9, 83.0, 82.8, 82.7, 82.9, 82.6, 82.5, 82.6, 82.4]
-export const weightAverage = 82.7
+export const weightAverage = 82.6
 export const weightGoal = 80.0
+/** The day of each weight in `weightSeries` (`MM-DD`), oldest first. */
+export const weightDays = [
+	'09-17',
+	'09-18',
+	'09-19',
+	'09-20',
+	'09-21',
+	'09-22',
+	'09-23',
+	'09-24',
+	'09-25',
+	'09-26',
+	'09-27',
+	'09-28',
+	'09-29',
+	'09-30',
+] as const
+/** When each morning's weight was taken. */
+export const weightTime = '06:48'
+/** The goal's date (`MM-DD`). */
+export const weightGoalBy = '12-31'
+/** Workout logs in the unbroken run of weeks ending this one: two this week, two last, two the week before. */
+export const trainingStreak = 6
+
+/** The bundled exercises the templates use (the app bundles about thirty; `@eden/shared/domains/fitness`). */
+export const exerciseLibrary = [
+	{ id: 'x-bench-press', name: 'Bench press', muscles: ['chest', 'triceps'], equipment: ['barbell', 'bench'] },
+	{ id: 'x-incline-dumbbell-press', name: 'Incline dumbbell press', muscles: ['chest'], equipment: ['dumbbells'] },
+	{ id: 'x-cable-fly', name: 'Cable fly', muscles: ['chest'], equipment: ['cable'] },
+	{ id: 'x-dip', name: 'Dip', muscles: ['chest', 'triceps'], equipment: ['dip station'] },
+	{ id: 'x-triceps-pushdown', name: 'Triceps pushdown', muscles: ['triceps'], equipment: ['cable'] },
+	{ id: 'x-deadlift', name: 'Deadlift', muscles: ['back', 'hamstrings'], equipment: ['barbell'] },
+	{ id: 'x-pull-up', name: 'Pull-up', muscles: ['back', 'biceps'], equipment: ['pull-up bar'] },
+	{ id: 'x-barbell-row', name: 'Barbell row', muscles: ['back'], equipment: ['barbell'] },
+	{ id: 'x-face-pull', name: 'Face pull', muscles: ['shoulders', 'back'], equipment: ['cable'] },
+	{ id: 'x-biceps-curl', name: 'Biceps curl', muscles: ['biceps'], equipment: ['dumbbells'] },
+	{ id: 'x-back-squat', name: 'Back squat', muscles: ['quads', 'glutes'], equipment: ['barbell', 'rack'] },
+	{ id: 'x-romanian-deadlift', name: 'Romanian deadlift', muscles: ['hamstrings', 'glutes'], equipment: ['barbell'] },
+	{ id: 'x-walking-lunge', name: 'Walking lunge', muscles: ['quads', 'glutes'], equipment: ['dumbbells'] },
+	{ id: 'x-calf-raise', name: 'Calf raise', muscles: ['calves'], equipment: ['machine'] },
+] as const
+
+export interface SampleTemplateExercise {
+	exerciseId: string
+	name: string
+	sets: number
+	reps: number
+}
+export interface SampleWorkoutTemplate {
+	id: string
+	title: string
+	/** Estimated minutes. */
+	minutes: number
+	exercises: SampleTemplateExercise[]
+}
+const move = (exerciseId: string, sets: number, reps: number): SampleTemplateExercise => ({
+	exerciseId,
+	name: exerciseLibrary.find((exercise) => exercise.id === exerciseId)!.name,
+	sets,
+	reps,
+})
+/** No overhead pressing in any of them: the owner's shoulder (Facts, `training-limitation`). */
+export const workoutTemplates: SampleWorkoutTemplate[] = [
+	{
+		id: 'wt-01',
+		title: 'Push A',
+		minutes: 55,
+		exercises: [
+			move('x-bench-press', 4, 6),
+			move('x-incline-dumbbell-press', 3, 10),
+			move('x-cable-fly', 3, 12),
+			move('x-dip', 3, 8),
+			move('x-triceps-pushdown', 3, 12),
+		],
+	},
+	{
+		id: 'wt-02',
+		title: 'Pull A',
+		minutes: 50,
+		exercises: [
+			move('x-deadlift', 3, 5),
+			move('x-pull-up', 4, 6),
+			move('x-barbell-row', 3, 8),
+			move('x-face-pull', 3, 15),
+			move('x-biceps-curl', 3, 12),
+		],
+	},
+	{
+		id: 'wt-03',
+		title: 'Legs',
+		minutes: 60,
+		exercises: [
+			move('x-back-squat', 4, 6),
+			move('x-romanian-deadlift', 3, 8),
+			move('x-walking-lunge', 3, 10),
+			move('x-calf-raise', 4, 12),
+		],
+	},
+]
+
+export interface SampleSet {
+	reps: number
+	/** kg; none for bodyweight. */
+	load?: number
+}
+export interface SampleWorkoutLog {
+	id: string
+	templateId: string
+	title: string
+	/** `MM-DD`. */
+	day: string
+	gymId: string
+	minutes: number
+	rpe: number
+	exercises: { exerciseId: string; name: string; sets: SampleSet[] }[]
+}
+/** A log of a template at its targets, each exercise at one load (kg; `undefined` for bodyweight). */
+function logged(
+	id: string,
+	templateId: string,
+	day: string,
+	gymId: string,
+	minutes: number,
+	rpe: number,
+	loads: (number | undefined)[]
+): SampleWorkoutLog {
+	const template = workoutTemplates.find((entry) => entry.id === templateId)!
+	return {
+		id,
+		templateId,
+		title: template.title,
+		day,
+		gymId,
+		minutes,
+		rpe,
+		exercises: template.exercises.map((exercise, i) => ({
+			exerciseId: exercise.exerciseId,
+			name: exercise.name,
+			sets: Array.from({ length: exercise.sets }, () => ({
+				reps: exercise.reps,
+				...(loads[i] === undefined ? {} : { load: loads[i] }),
+			})),
+		})),
+	}
+}
+/** Newest first. The week of 09-07 is empty, so the streak counts the six from 09-14 on, not the Pull A of 09-02. */
+export const workoutLogs: SampleWorkoutLog[] = [
+	logged('wl-07', 'wt-03', '09-29', 'g-01', 58, 8, [100, 80, 20, 60]),
+	{
+		// Monday's Pull A, set by set: the last pull-up set short of its target
+		id: 'wl-06',
+		templateId: 'wt-02',
+		title: 'Pull A',
+		day: '09-28',
+		gymId: 'g-01',
+		minutes: 52,
+		rpe: 7,
+		exercises: [
+			{
+				exerciseId: 'x-deadlift',
+				name: 'Deadlift',
+				sets: [
+					{ reps: 5, load: 140 },
+					{ reps: 5, load: 140 },
+					{ reps: 5, load: 140 },
+				],
+			},
+			{
+				exerciseId: 'x-pull-up',
+				name: 'Pull-up',
+				sets: [{ reps: 6 }, { reps: 6 }, { reps: 6 }, { reps: 5 }],
+			},
+			{
+				exerciseId: 'x-barbell-row',
+				name: 'Barbell row',
+				sets: [
+					{ reps: 8, load: 70 },
+					{ reps: 8, load: 70 },
+					{ reps: 8, load: 70 },
+				],
+			},
+			{
+				exerciseId: 'x-face-pull',
+				name: 'Face pull',
+				sets: [
+					{ reps: 15, load: 20 },
+					{ reps: 15, load: 20 },
+					{ reps: 15, load: 20 },
+				],
+			},
+			{
+				exerciseId: 'x-biceps-curl',
+				name: 'Biceps curl',
+				sets: [
+					{ reps: 12, load: 14 },
+					{ reps: 12, load: 14 },
+					{ reps: 12, load: 14 },
+				],
+			},
+		],
+	},
+	logged('wl-05', 'wt-02', '09-25', 'g-02', 48, 6, [135, undefined, 70, 20, 14]),
+	logged('wl-04', 'wt-01', '09-23', 'g-01', 54, 7, [90, 30, 15, undefined, 25]),
+	logged('wl-03', 'wt-01', '09-17', 'g-01', 56, 8, [87.5, 28, 15, undefined, 25]),
+	logged('wl-02', 'wt-03', '09-14', 'g-02', 61, 7, [97.5, 80, 20, 60]),
+	logged('wl-01', 'wt-02', '09-02', 'g-01', 50, 6, [130, undefined, 67.5, 20, 12]),
+]
+
+/** Sessions still to come: Friday's Push A, a `workout-session` Event. */
+export const plannedSessions = [{ id: 'ps-01', templateId: 'wt-01', title: 'Push A', day: '10-02', time: '18:00' }]
+
+export interface SampleGym {
+	id: string
+	name: string
+	equipment: string[]
+	hours?: string
+	notes?: string
+	/** The `venue` Place it is linked to, as the detail shows it. */
+	place?: { name: string; address: string }
+}
+export const gyms: SampleGym[] = [
+	{
+		id: 'g-01',
+		name: 'Castle Hill Fitness',
+		equipment: ['Squat racks', 'Benches', 'Dumbbells to 50 kg', 'Cable stack', 'Pull-up bar', 'Dip station'],
+		hours: 'Mon–Fri 05:00–23:00, Sat–Sun 07:00–21:00',
+		notes: 'Quiet before 07:00; the back racks have the better bars.',
+		place: { name: 'Castle Hill Fitness', address: '1112 N Lamar Blvd, Austin' },
+	},
+	{
+		id: 'g-02',
+		name: 'Home rack',
+		equipment: ['Power rack', 'Barbell', 'Plates to 140 kg', 'Adjustable bench'],
+		notes: 'In the garage. No cables, so face pulls on a band.',
+	},
+]
+
+export type SupplementWhen = 'daily' | 'pre-workout' | 'as-needed'
+export interface SampleSupplement {
+	id: string
+	name: string
+	brand?: string
+	dose: string
+	when: SupplementWhen
+	/** The Hearth stock item it is kept as, by name; none when it is not linked. */
+	stockItem?: string
+}
+export const supplements: SampleSupplement[] = [
+	{ id: 'su-01', name: 'LMNT citrus', brand: 'LMNT', dose: '1 packet', when: 'pre-workout', stockItem: 'LMNT citrus' },
+	{ id: 'su-02', name: 'Creatine', brand: 'Thorne', dose: '5 g', when: 'daily' },
+]
+/** Intakes, newest first: `MM-DD` and `HH:MM`. LMNT this morning at 06:50. */
+export const intakeLog = [
+	{ id: 'in-06', supplementId: 'su-01', day: '09-30', time: '06:50' },
+	{ id: 'in-05', supplementId: 'su-02', day: '09-29', time: '07:10' },
+	{ id: 'in-04', supplementId: 'su-01', day: '09-29', time: '06:46' },
+	{ id: 'in-03', supplementId: 'su-02', day: '09-28', time: '07:05' },
+	{ id: 'in-02', supplementId: 'su-01', day: '09-28', time: '06:52' },
+	{ id: 'in-01', supplementId: 'su-01', day: '09-25', time: '17:20' },
+] as const
+
+/** The metrics other than weight, newest first: body fat in %, waist in cm. */
+export const bodyMetrics = [
+	{ id: 'bm-04', kind: 'body-fat', value: 18.4, day: '09-27' },
+	{ id: 'bm-03', kind: 'waist', value: 84.0, day: '09-27' },
+	{ id: 'bm-02', kind: 'body-fat', value: 18.9, day: '09-13' },
+	{ id: 'bm-01', kind: 'waist', value: 84.5, day: '09-13' },
+] as const
 
 export const dailyLines = [
 	{ line: 'Waste no more time arguing what a good man should be. Be one.', source: 'Marcus Aurelius' },
@@ -871,6 +1141,7 @@ const sidebarGroups = [
 		{ id: 'kitchen', name: 'Hearth', subtitle: 'Food, recipes, pantry, groceries', shortcut: '⌘4' },
 		{ id: 'weather', name: 'Sky', subtitle: 'Weather, forecasts, sun and moon', shortcut: '⌘5' },
 		{ id: 'places', name: 'Meadow', subtitle: 'Places, events, vibes, favourites', shortcut: '⌘6' },
+		{ id: 'fitness', name: 'Vigor', subtitle: 'Workouts, gyms, body metrics', shortcut: '⌘7' },
 	],
 ]
 
@@ -891,6 +1162,7 @@ const sidebarJaGroups = [
 		{ id: 'kitchen', name: '台所', subtitle: '食材、レシピ、買い物' },
 		{ id: 'weather', name: '空', subtitle: '天気、日の出と月' },
 		{ id: 'places', name: '野原', subtitle: '場所、イベント、雰囲気' },
+		{ id: 'fitness', name: '活力', subtitle: 'トレーニング、ジム、体の記録' },
 	],
 ]
 

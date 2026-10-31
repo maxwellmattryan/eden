@@ -292,7 +292,7 @@
 	},
 	{
 		"name": "propose-fact",
-		"description": "Offers one fact about the owner for their profile, as a card they accept or dismiss; nothing is saved until they accept. Use it when the owner states something lasting about themselves that fits a type below and is not already among their facts: the context holds some, and `read-rows` gives the rest of a type. When it corrects a fact that is there, pass that fact’s id as `replaces`, and accepting the card puts the new one in its place. When the owner gave an end (\"until November\"), pass it as `until`. Passing remarks and one-off choices are not facts (\"pasta tonight\" is not a preference). The types, and how to write `value` for each:\n- preferred-name: a word or a short phrase\n- allergy: {\"substance\": a word or a short phrase, \"kind\": one of food, drug, environmental, \"severity\": one of mild, moderate, severe}\n- dietary-preference: one of vegetarian, vegan, pescatarian, halal, kosher, low-sodium, low-sugar, gluten-free, alcohol-free, or another word when none fits\n- disliked-ingredient: a word or a short phrase\n- cuisine-preference: {\"name\": a word, \"weight\": how much it counts, 0 to 1}\n- household-size: a whole number from 1 to 20\n- skill: {\"name\": a word or a short phrase, \"level\": one of beginner, intermediate, advanced, expert}\n- owned-hardware: a word or a short phrase\n- preferred-tool: a word or a short phrase\n- favorite-vibe: {\"name\": a word, \"weight\": how much it counts, 0 to 1}\n- medical-dietary-restriction: a word or a short phrase\nReturns the proposal’s id, or an error that names the shape it expected.",
+		"description": "Offers one fact about the owner for their profile, as a card they accept or dismiss; nothing is saved until they accept. Use it when the owner states something lasting about themselves that fits a type below and is not already among their facts: the context holds some, and `read-rows` gives the rest of a type. When it corrects a fact that is there, pass that fact’s id as `replaces`, and accepting the card puts the new one in its place. When the owner gave an end (\"until November\"), pass it as `until`. Passing remarks and one-off choices are not facts (\"pasta tonight\" is not a preference). The types, and how to write `value` for each:\n- preferred-name: a word or a short phrase\n- allergy: {\"substance\": a word or a short phrase, \"kind\": one of food, drug, environmental, \"severity\": one of mild, moderate, severe}\n- dietary-preference: one of vegetarian, vegan, pescatarian, halal, kosher, low-sodium, low-sugar, gluten-free, alcohol-free, or another word when none fits\n- disliked-ingredient: a word or a short phrase\n- cuisine-preference: {\"name\": a word, \"weight\": how much it counts, 0 to 1}\n- household-size: a whole number from 1 to 20\n- skill: {\"name\": a word or a short phrase, \"level\": one of beginner, intermediate, advanced, expert}\n- owned-hardware: a word or a short phrase\n- preferred-tool: a word or a short phrase\n- favorite-vibe: {\"name\": a word, \"weight\": how much it counts, 0 to 1}\n- gym-preference: a word or a short phrase\n- training-schedule: a word or a short phrase\n- equipment: a word or a short phrase\n- fitness-goal: a word or a short phrase\n- favorite-supplement: a word or a short phrase\n- training-limitation: a word or a short phrase\n- medical-dietary-restriction: a word or a short phrase\nReturns the proposal’s id, or an error that names the shape it expected.",
 		"input_schema": {
 			"type": "object",
 			"properties": {
@@ -309,6 +309,12 @@
 						"owned-hardware",
 						"preferred-tool",
 						"favorite-vibe",
+						"gym-preference",
+						"training-schedule",
+						"equipment",
+						"fitness-goal",
+						"favorite-supplement",
+						"training-limitation",
 						"medical-dietary-restriction"
 					],
 					"description": "The fact type, from the list above."

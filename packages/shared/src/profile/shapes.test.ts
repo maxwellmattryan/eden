@@ -9,10 +9,10 @@ describe('the value shapes', () => {
 		const live = RESOURCES.filter((row) => row.category === 'fact' && row.live).map((row) => row.id)
 		expect([...LIVE_FACT_TYPES]).toEqual(live)
 		expect(Object.keys(FACT_SHAPES).sort()).toEqual([...live].sort())
-		expect(live).toHaveLength(12)
-		// Meadow is built ahead of its phase, so its fact is live; Vigor's is not
-		expect(isLiveFact('favorite-vibe')).toBe(true)
-		expect(isLiveFact('allergy') && !isLiveFact('gym-preference') && !isLiveFact('recipe')).toBe(true)
+		expect(live).toHaveLength(19)
+		// Meadow is built ahead of its phase and Vigor at its own, so their facts are live; Sanctuary's are not
+		expect(isLiveFact('favorite-vibe') && isLiveFact('gym-preference')).toBe(true)
+		expect(isLiveFact('allergy') && !isLiveFact('followed-tradition') && !isLiveFact('recipe')).toBe(true)
 	})
 
 	it('accept the sample values and refuse the wrong ones', () => {
@@ -34,6 +34,8 @@ describe('the value shapes', () => {
 			['owned-hardware', 'Raspberry Pi 5'],
 			['preferred-tool', 'Neovim'],
 			['medical-dietary-restriction', 'low sodium'],
+			['gym-preference', 'Castle Hill Fitness, mornings'],
+			['training-limitation', 'left shoulder impingement, no overhead pressing'],
 		]
 		for (const [type, value] of fine) expect(validateValue(type, value), type).toBeUndefined()
 
@@ -53,7 +55,8 @@ describe('the value shapes', () => {
 			['household-size', 0],
 			['household-size', '2'],
 			['skill', { name: 'Rust', level: 'wizard' }],
-			['gym-preference', 'mornings'],
+			['followed-tradition', 'Stoicism'],
+			['gym-preference', ''],
 		]
 		for (const [type, value] of wrong)
 			expect(validateValue(type, value), `${type} ${JSON.stringify(value)}`).toBeDefined()

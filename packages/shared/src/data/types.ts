@@ -162,7 +162,7 @@ export type TaskRow = Row & { type: 'task' } & Stored<TaskFields, 'kind' | 'titl
 export type TaskInput = Input<TaskFields, 'kind' | 'title'>
 export type TaskPatch = Patch<TaskFields, 'kind' | 'title' | 'priority' | 'streak' | 'done'>
 
-export type EventKind = 'local-event' | 'shop-day' | 'outing'
+export type EventKind = 'local-event' | 'shop-day' | 'outing' | 'workout-session'
 export interface EventFields {
 	kind: EventKind
 	title: string

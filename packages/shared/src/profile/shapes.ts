@@ -101,6 +101,15 @@ export const FACT_SHAPES: Record<LiveFactId, FactShape> = {
 	'favorite-vibe': { shape: { kind: 'weighted' }, multi: true },
 	'preferred-tool': { shape: string(120), multi: true },
 	'medical-dietary-restriction': { shape: string(200), multi: true },
+	// Vigor's (D-177): the owner may assert them; Vigor writes none of them yet (a handoff in domains/fitness.md)
+	'gym-preference': { shape: string(120), multi: true },
+	'training-schedule': { shape: string(200), multi: false },
+	equipment: { shape: string(120), multi: true },
+	'fitness-goal': { shape: string(200), multi: true },
+	'favorite-supplement': { shape: string(120), multi: true },
+	'training-limitation': { shape: string(200), multi: true },
+	// derived from the latest weight once Vigor writes it, so a model never proposes it
+	'current-weight': { shape: string(40), multi: false, derived: true },
 }
 
 export function isLiveFact(id: string): id is LiveFactId {

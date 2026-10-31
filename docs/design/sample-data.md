@@ -4,7 +4,7 @@ status: draft
 summary: One consistent fictional dataset for every mockup: an owner, facts, stock by location, a captured haul, recipes, a grocery list, ideas and projects, a calendar week with layers, a weather week, workouts and a weight series, places and listings, daily lines, notifications, feed and audit entries.
 read-this-if: You are drawing a mockup or seeding an empty state with sample data.
 depends-on: [product/domains/README]
-updated: 2026-10-02
+updated: 2026-10-31
 ---
 
 ## The owner
@@ -109,7 +109,21 @@ Holiday annotations that week: none in the US; Japan none. A future month shows 
 
 ## Vigor
 
-Templates: "Push A", "Pull A", "Legs". Logs: Mon Pull A (5 exercises, RPE 7, 52 min), Fri Push A planned. Gyms: Castle Hill Fitness (venue, 1112 N Lamar), home rack. Weight series (kg), daily 09-17 to 09-30: 83.6, 83.4, 83.5, 83.1, 83.2, 82.9, 83.0, 82.8, 82.7, 82.9, 82.6, 82.5, 82.6, **82.4**; seven-day average 82.7; goal line 80.0 by 12-31. Supplements: LMNT citrus, 1 packet daily, pre-workout; intake logged today 06:50. Streak: 6 sessions.
+Templates (`workoutTemplates`), none with overhead pressing (the shoulder in Facts), from the bundled library (`exerciseLibrary`, ids `x-<kebab>`):
+
+| template | minutes | exercises (sets × reps) |
+|---|---|---|
+| Push A | 55 | bench press 4 × 6, incline dumbbell press 3 × 10, cable fly 3 × 12, dip 3 × 8, triceps pushdown 3 × 12 |
+| Pull A | 50 | deadlift 3 × 5, pull-up 4 × 6, barbell row 3 × 8, face pull 3 × 15, biceps curl 3 × 12 |
+| Legs | 60 | back squat 4 × 6, Romanian deadlift 3 × 8, walking lunge 3 × 10, calf raise 4 × 12 |
+
+Logs (`workoutLogs`, newest first, loads in kg): Tue 09-29 Legs (Castle Hill, RPE 8, 58 min); **Mon 09-28 Pull A** (Castle Hill, 5 exercises, RPE 7, 52 min; deadlift 3 × 5 at 140, the last pull-up set 5 of 6); Fri 09-25 Pull A (home rack, RPE 6, 48 min); Wed 09-23 Push A (Castle Hill, RPE 7, 54 min); Thu 09-17 Push A (Castle Hill, RPE 8, 56 min); Mon 09-14 Legs (home rack, RPE 7, 61 min); Wed 09-02 Pull A (Castle Hill, RPE 6, 50 min). The week of 09-07 holds none, so the streak (`trainingStreak`) is the six from 09-14 on, whether the week starts on Monday or Sunday. Planned (`plannedSessions`): Fri 10-02 18:00 Push A, a `workout-session` Event; this week reads 2 of 3 done.
+
+Gyms (`gyms`): Castle Hill Fitness (squat racks, benches, dumbbells to 50 kg, cable stack, pull-up bar, dip station; Mon–Fri 05:00–23:00, Sat–Sun 07:00–21:00; quiet before 07:00; the venue Place at 1112 N Lamar Blvd, Austin) and Home rack (power rack, barbell, plates to 140 kg, adjustable bench; in the garage; no Place).
+
+Weight series (kg, `weightSeries` over `weightDays`), daily 09-17 to 09-30 at 06:48: 83.6, 83.4, 83.5, 83.1, 83.2, 82.9, 83.0, 82.8, 82.7, 82.9, 82.6, 82.5, 82.6, **82.4**; seven-day average 82.6 (09-24 to 09-30, `weightAverage`); goal 80.0 by 12-31 (`weightGoal`, `weightGoalBy`). Other metrics (`bodyMetrics`): body fat 18.4 % and waist 84.0 cm on 09-27, 18.9 % and 84.5 cm on 09-13.
+
+Supplements (`supplements`): LMNT citrus (LMNT, 1 packet, pre-workout; linked to Hearth's LMNT citrus stock, 9 packets) and Creatine (Thorne, 5 g, daily; not linked). Intakes (`intakeLog`): LMNT today 06:50, 09-29 06:46, 09-28 06:52, 09-25 17:20; creatine 09-29 07:10, 09-28 07:05.
 
 ## Sanctuary
 

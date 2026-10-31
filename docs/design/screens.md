@@ -4,7 +4,7 @@ status: draft
 summary: The screen inventory for mockups: a template per screen, the shell screens, the domain screens, mobile variants, and the priority order for Claude Design.
 read-this-if: You are drawing mockups or checking that a screen covers its states.
 depends-on: [ux-patterns, sample-data, product/substrate/shell]
-updated: 2026-10-02
+updated: 2026-10-31
 ---
 
 ## Screen template
@@ -54,9 +54,11 @@ Each screen below lists: id, platform, purpose, must show, primary actions, stat
 | `almanac-week` | desktop | the week | timeline with Events by kind colour, task markers | | | |
 | `almanac-agenda` | both | the list | days with Events and annotations | | | |
 | `almanac-detail` | both | an Event | fields, source, links, mirror note | edit local, open in Google | | dinner at Mom's (T2 source) |
-| `vigor-workouts` | both | templates and sessions | templates, start, log form | start, log | | Push A |
-| `vigor-body` | both | weight trend | chart with average and goal line, metrics list | quick log | empty | the weight series |
-| `vigor-supplements` | both | supplements and doses | list with stock link, intake log | took it | | LMNT |
+| `vigor-workouts`, mocked as `Domains/Vigor/Workouts` (Default, Pushed, Log form, Template form, Plan, Empty, Error), built in both apps | both | templates and sessions | templates with exercise count and minutes, the open one with its exercises at sets × reps, Start (primary) and Plan; the log form with a block of set rows per exercise and RPE as a `Select`; the template form from the bundled library or a custom name | log a workout, new template, start, plan, edit, delete | empty, error (the page's `InlineError` with Retry, every tab), pushed on a narrow page | Push A |
+| `vigor-history`, mocked as `Domains/Vigor/History` (Default, Empty), built in both apps | both | what was done | Planned above, then logs newest first under week headings from the week start (D-58), the open log's sets | log a workout, delete (with undo) | empty | Monday's Pull A, Friday's Push A |
+| `vigor-body`, mocked as `Domains/Vigor/Body` (Default, Set goal, Empty), built in both apps | both | weight trend | latest, seven-day average and goal as Stats with Set goal beside them, the weights as a `TrendChart` with the average and the goal as named references, other metrics with Log | log weight (Quick Log), set goal, log a metric | empty (no Stats, no chart), imperial (lb, in) | the weight series |
+| `vigor-gyms`, mocked as `Domains/Vigor/Gyms` (Default, Form, Empty), built in both apps | both | where the owner trains | gyms with their equipment count, the open one's equipment as chips, hours, notes and its venue Place | add, edit, delete (with undo) | empty | Castle Hill Fitness, Home rack |
+| `vigor-supplements`, mocked as `Domains/Vigor/Supplements` (Default, Empty), built in both apps | both | supplements and doses | list with the last intake and Took it, the open one's Hearth stock link (Open in Hearth) or "Not linked to stock", intake log | took it (with undo), add, edit, delete | empty | LMNT |
 | `sanctuary-line` | both | today's line | large serif line, source, save | share as text | | Wednesday |
 | `sanctuary-library` | desktop | sources and excerpts | by theme, search | add excerpt | | |
 | `meadow-map`, mocked as `Domains/Meadow/Map` (Default, Filtered, Place selected, Suggestions, Searching, No provider, Empty, Offline, Search failed), built in `apps/desktop` and `apps/mobile` | both | places | the page of D-129: the header's live motif (D-123), the map with saved pins, the home pin and suggestion pins in the Gardener's green, the filter panel (the four facets of vibes, category, price, distance, collection, alcohol-free, open now, favourites, a line of text), the results list, the picked place's detail (picture, hours with their source, why it fits, notes, visits), "Find more" with what is sent and the estimate under it; a still drawing for the ground in the mock. On the phone a full map, the filter in a sheet and the place in a sheet | pick a pin or a row, filter, find more, save or dismiss a suggestion, favourite, log a visit, edit, add to a collection, open in Maps, import | filtered, a place picked, suggestions, searching, no provider, empty, offline, search failed | `meadowPlaces`, `meadowSuggestions`, `meadowSearch`, `meadowMap` |

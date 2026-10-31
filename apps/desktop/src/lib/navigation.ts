@@ -15,6 +15,7 @@ const paths: Record<PlaceId, ((tab?: string) => string) | undefined> = {
 	toolbench: (tab) => resolve('/toolbench/[[tab]]', tab ? { tab } : {}),
 	weather: () => resolve('/weather'),
 	places: (tab) => resolve('/places/[[tab]]', tab ? { tab } : {}),
+	fitness: (tab) => resolve('/fitness/[[tab]]', tab ? { tab } : {}),
 	// the phone's own place
 	more: undefined,
 }
