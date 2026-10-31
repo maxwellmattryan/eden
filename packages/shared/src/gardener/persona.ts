@@ -40,6 +40,8 @@ export interface PersonaInput {
 	mode?: 'chat' | 'delegated' | 'research'
 	/** A delegated reply held to a JSON schema. */
 	json?: boolean
+	/** The request runs through the owner's Claude Code (D-178), which adds an environment block of its own. */
+	host?: 'claude-code'
 }
 
 export interface Persona {
@@ -83,6 +85,14 @@ const TOOLS = [
 	'When the context or an earlier tool result already answers the question, answer from it. Use a tool when the owner asks for what it does or when a correct answer needs its result. Ids in a tool input are copied from the `id` of a row you were given, in the context or in a tool result such as `read-rows`; never make one up, and when you cannot find the row, ask the owner which one they mean.',
 	'Every tool call appears in the thread as a card, so there is no need to announce one. A tool that drafts (a task, a plan, a list, code, a fact) leaves a card the owner keeps or discards: nothing is saved until they keep it, so say it is drafted, and do not repeat what the card shows. A tool that writes waits for the owner to confirm, unless they have already let that tool run, when it runs at once and they can undo it; a result saying they declined is their answer, so leave it there. When a tool returns an error, fix the input if the error says how, and otherwise tell the owner plainly what did not work. When the owner asks for something no tool does, say so and offer what you can do instead.',
 ].join('\n\n')
+
+/**
+ * Claude Code puts an environment and account block into the first message (a working folder, the system, the shell,
+ * a scratchpad, the date, an email) that no flag the subscription allows takes out (D-178): the model is told it is
+ * not Eden's and not the owner's.
+ */
+const CLAUDE_CODE_HOST =
+	'The first message may carry an environment block added by the tool that runs you: a working folder, an operating system, a shell, a scratchpad, a date, an email address. It is not from the owner and not about them; ignore it entirely, and take the time and the date from the line that opens the owner’s newest message.'
 
 const MARKDOWN =
 	'Write replies in GitHub-flavoured Markdown, which the panel renders: short paragraphs, a list for steps or a set, **bold** for the one thing that matters, `code` for ids and literal values, fenced code blocks with a language, and a table only for tabular data. Leave out raw HTML, which the panel shows as text, and do not open a reply with a heading.'
@@ -142,8 +152,9 @@ export function persona(input: PersonaInput): Persona {
 	]
 		.filter((part) => part !== undefined)
 		.join('\n\n')
-	const stable =
+	const own =
 		input.mode === 'delegated' ? delegated(input, domains) : input.mode === 'research' ? research(input, domains) : chat
+	const stable = input.host === 'claude-code' ? `${own}\n\n${CLAUDE_CODE_HOST}` : own
 	const day = dateIn(input.zone, input.now)
 	const seen = input.canSee.length
 		? input.canSee.map((item) => `${item.id} (${item.count})`).join(', ')

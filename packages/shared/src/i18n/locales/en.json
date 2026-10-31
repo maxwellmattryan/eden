@@ -334,6 +334,7 @@
 				"no-key": "Add your Anthropic key in Settings, under Gardener, and this can be read.",
 				"unavailable": "No model you have set up can read this. Change models in Settings, under Gardener.",
 				"budget": "This would pass your monthly spending cap. Raise it in Settings, under Gardener.",
+				"limit": "Your Claude Code usage window is at its limit. Try again once it resets.",
 				"network": "The request did not get through. Check the connection and try again.",
 				"refusal": "The model declined to read this.",
 				"max-tokens": "The answer was cut short before it finished. Try fewer files at a time.",
@@ -1474,6 +1475,7 @@
 				"no-key": "There is no key on this device, so the Gardener cannot be asked.",
 				"unavailable": "No model that can search the web is set up for this.",
 				"budget": "This would pass your monthly cap. Raise it in Settings, under Gardener.",
+				"limit": "Your Claude Code usage window is at its limit, so nothing was searched. Try again once it resets.",
 				"busy": "The Gardener is busy with another request. Try again in a moment.",
 				"network": "The search could not be reached. Nothing was saved.",
 				"refusal": "The model declined this search.",
@@ -2008,6 +2010,25 @@
 				"tokensDefault": "The model's context",
 				"spent": "{spent} of {cap} USD this month."
 			},
+			"claude": {
+				"label": "Claude Code",
+				"help": "Runs on your own Claude Code sign-in, on this device.",
+				"found": "Found",
+				"notFound": "Not found",
+				"signedIn": "Signed in",
+				"notSignedIn": "Not signed in",
+				"install": "Install Claude Code, then run “claude” once in a terminal to sign in.",
+				"check": "Check again",
+				"statusError": "Couldn't read Claude Code's status.",
+				"override": "Path to claude",
+				"save": "Save",
+				"clear": "Clear",
+				"notExecutable": "Not an executable file.",
+				"warnAt": "Warn at",
+				"stopAt": "Stop at",
+				"windowsHelp": "The usage windows are your Claude Code subscription's. Eden warns once a day when one is this full, and stops asking until it resets. Tokens per request is the most one request may carry.",
+				"thresholdsError": "Use whole percentages from 1 to 100, with Warn at no higher than Stop at. Nothing was saved."
+			},
 			"audit": {
 				"label": "Audit log",
 				"help": "One entry per request: what it read, what it ran, what it cost.",
@@ -2134,6 +2155,16 @@
 		"devClamp": "Development build: light and standard run on {model}, deep on {deep}.",
 		"budgetReached": "The monthly budget is reached. Raise it in Settings → Gardener to keep asking.",
 		"budgetWarning": "The Gardener has used {percent}% of this month's budget.",
+		"noClaude": {
+			"title": "Claude Code is not ready",
+			"text": "The Gardener runs on your own Claude Code on this computer. Install it and run “claude” once in a terminal to sign in.",
+			"open": "Open settings"
+		},
+		"limitReached": "The {window} window is at {percent}%. It resets at {time}.",
+		"limitWarning": "Your Claude Code {window} window is at {percent}%. It resets at {time}.",
+		"chip": {
+			"window": "the {window} window"
+		},
 		"openBudgets": "Open budgets",
 		"saveFailed": "Couldn't save the conversation.",
 		"attach": "Attach files",
@@ -2258,6 +2289,17 @@
 			},
 			"ofCap": "of ${cap} · {percent}%",
 			"estimate": "Estimates from the prices in Settings, counted on this device. The provider bills what it measured.",
+			"estimateListPrice": "List-price equivalents from the prices in Settings, counted on this device. Requests run on your Claude Code subscription, which bills no dollars per request.",
+			"windows": {
+				"five_hour": "5-hour",
+				"seven_day": "Weekly",
+				"seven_day_opus": "Weekly (Opus)",
+				"seven_day_sonnet": "Weekly (Sonnet)",
+				"empty": "Usage windows appear after your first request.",
+				"resets": "resets {time}",
+				"near": "Near limit",
+				"paused": "Paused"
+			},
 			"spend": "Spend",
 			"cachedShare": "{percent}% of what was sent over this stretch was read from the provider's cache, at about a tenth of the price.",
 			"periodsLabel": "Spend by",

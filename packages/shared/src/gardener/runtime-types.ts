@@ -26,6 +26,31 @@ export interface GardenerRequest {
 	outputFormat?: unknown
 	/** The effort the model is asked to work at, as its provider names the level (D-146); left out for a model with none. */
 	effort?: string
+	/** Where the request goes (D-178): the API when left out, or the desktop's Claude Code. */
+	provider?: GardenerProviderId
+	/** A conversation's Claude Code session: a new one under `id`, or `id` resumed. None for a delegated request. */
+	session?: { id: string; resume: boolean }
+	/** The owner's override of where the `claude` binary is, kept on this device only. */
+	claudePath?: string
+}
+
+/** The providers a build runs the Gardener on (D-178). */
+export type GardenerProviderId = 'anthropic' | 'claude-code'
+
+/** What this device knows of its Claude Code (D-178). Never the account's email or organisation. */
+export interface ClaudeStatus {
+	found: boolean
+	path: string | null
+	version: string | null
+	signedIn: boolean
+	authMethod: string | null
+	subscription: string | null
+}
+
+/** One usage window of the subscription as a process last read it (D-180); `resetsAt` in seconds since the epoch. */
+export interface LimitWindow {
+	utilization: number
+	resetsAt: number | null
 }
 
 export type GardenerEvent =
@@ -43,6 +68,31 @@ export type GardenerEvent =
 	| { type: 'usage'; input: number; output: number; cacheRead: number; cacheWrite: number; searches?: number }
 	| { type: 'stop'; reason: string; refusal: string | null }
 	| { type: 'error'; status: number | null; message: string }
+	// Claude Code's (D-178, D-179):
+	/** The session the process runs in. */
+	| { type: 'session'; sessionId: string }
+	/** The subscription's usage windows, by name (`five_hour`, `seven_day`, …). */
+	| {
+			type: 'limits'
+			status: string
+			resetsAt: number | null
+			rateLimitType: string | null
+			windows: Record<string, LimitWindow>
+	  }
+	/** The close of the turn: usage summed over every round, the cost at list price, a schema-held answer. */
+	| {
+			type: 'result'
+			usage: unknown
+			costUsd: number | null
+			structuredOutput: unknown
+			terminalReason: string | null
+			denials: unknown[]
+			isError: boolean
+	  }
+	/** A tool result Claude Code fed back to the model, whether or not its call reached the bridge. */
+	| { type: 'tool_result'; toolUseId: string; isError: boolean; content: string }
+	/** A call of an Eden tool through the bridge, to run and answer with `gardenerToolAnswer`. */
+	| { type: 'tool_call'; callId: string; requestId: string; name: string; input: unknown; toolUseId: string | null }
 
 /** A server tool's block as the crate hands it over. */
 export type ServerBlock =
@@ -58,6 +108,8 @@ export interface Thread {
 	title: string
 	/** The highest tier the thread read; a T2 thread is never packed again without a grant. */
 	tier: ThreadTier
+	/** The Claude Code session the thread's conversation runs in on desktop (D-178); none until its first reply. */
+	claudeSessionId?: string | null
 	createdAt: string
 	updatedAt: string
 	deletedAt: string | null
@@ -74,6 +126,8 @@ export interface ThreadPatch {
 	title?: string
 	tier?: ThreadTier
 	domain?: string | null
+	/** A session id sets it, null clears it. */
+	claudeSessionId?: string | null
 }
 
 export interface ThreadQuery {
@@ -423,11 +477,16 @@ export type MessageBlock =
 
 /** The owner's Gardener settings, the value of the `gardener` policy row: synced as workspace policy (D-37). */
 export interface GardenerPolicy {
-	provider: 'anthropic'
+	/** The provider the setup resolved to; the build chooses it (D-178), so nothing writes it. */
+	provider: GardenerProviderId
 	edits: ProviderEdits
 	overrides: ModelOverrides
-	/** The monthly hard stop across providers, USD. */
+	/** The monthly hard stop across providers, USD; not applied on desktop (D-180). */
 	monthlyCapUsd: number
 	/** The per-request token cap; the model's context size when null. */
 	requestTokenCap: number | null
+	/** The share of a usage window, in (0, 1], at which the desktop warns once a day (D-180). */
+	usageWarnAt: number
+	/** The share at which the desktop declines until the window resets; never below `usageWarnAt`. */
+	usageStopAt: number
 }

@@ -4,6 +4,7 @@
 // shape, so a page that runs a tool itself (Hearth's capture sheet) can be walked in the browser too.
 import { isTauri } from '../../api/index.js'
 import { gardenerSend, type GardenerEvent, type GardenerRequest } from '../../gardener/index.js'
+import { gardenerSetup } from './setup.svelte.js'
 
 export interface Transport {
 	(
@@ -12,8 +13,19 @@ export interface Transport {
 	): { done: Promise<void>; cancel: () => Promise<boolean> }
 }
 
-/** The crate's stream. */
-export const crateTransport: Transport = (request, onEvent) => gardenerSend(request, onEvent)
+/**
+ * The crate's stream, sent to the provider this build runs on (D-178): Claude Code on desktop, with the owner's path
+ * override when there is one, and the API on the phone.
+ */
+export const crateTransport: Transport = (request, onEvent) =>
+	gardenerSend(
+		{
+			...request,
+			provider: gardenerSetup.providerId,
+			...(gardenerSetup.onClaude && gardenerSetup.claudePath ? { claudePath: gardenerSetup.claudePath } : {}),
+		},
+		onEvent
+	)
 
 /**
  * A scripted reply: the text streamed word by word, then a stop. What `yarn dev:web` answers with. A message that

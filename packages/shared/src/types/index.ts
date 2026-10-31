@@ -69,6 +69,9 @@ export interface AppInfo {
 	/** Where the updater asks for the latest build, so the egress ledger can count the check; `null` in development
 	 * and in a browser. */
 	updaterEndpoint: string | null
+	/** The provider this build's Gardener runs on (D-178): `claude-code` on desktop, `anthropic` on the phone and in
+	 * a browser. */
+	gardenerProvider: 'anthropic' | 'claude-code'
 }
 
 export type DiagnosticLevel = 'error' | 'warning'

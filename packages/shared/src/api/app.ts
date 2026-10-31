@@ -11,6 +11,8 @@ export async function getAppInfo(): Promise<AppInfo> {
 			isDev: true,
 			dataDir: '',
 			updaterEndpoint: null,
+			// the browser keeps the scripted stream, which stands in for the API (D-178)
+			gardenerProvider: 'anthropic',
 		}
 	}
 	return invoke<AppInfo>('get_app_info')

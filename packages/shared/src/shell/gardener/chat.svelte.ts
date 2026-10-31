@@ -58,8 +58,9 @@ class ChatSession {
 	readonly face = $derived(gardenerUi.domain ? domainFace(gardenerUi.domain) : undefined)
 	/** The thread's last reply carries the eye that says what it read (D-149). */
 	readonly lastReply = $derived(threads.messages.filter((message) => message.role !== 'owner').at(-1)?.id)
-	readonly canAsk = $derived((this.inApp ? gardenerSetup.hasKey : true) && !gardenerSetup.failed)
-	readonly blocked = $derived(gardenerSetup.percent >= 100 && gardenerSetup.capUsd > 0)
+	readonly canAsk = $derived((this.inApp ? gardenerSetup.canAsk : true) && !gardenerSetup.failed)
+	/** The month's cap is reached; on desktop the usage windows are the budget instead, and the gate declines (D-180). */
+	readonly blocked = $derived(!gardenerSetup.onClaude && gardenerSetup.percent >= 100 && gardenerSetup.capUsd > 0)
 	readonly ownerName = $derived.by(() => {
 		const fact = profile.facts.find((entry) => entry.type === 'preferred-name' && !profile.isExpired(entry))
 		return typeof fact?.value === 'string' ? fact.value.trim() || undefined : undefined

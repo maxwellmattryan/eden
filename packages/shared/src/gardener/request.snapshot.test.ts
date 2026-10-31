@@ -57,6 +57,33 @@ describe('what a request carries', () => {
 		await expect(`${text}\n`).toMatchFileSnapshot('./__snapshots__/system-prompt.chat.txt')
 	})
 
+	it('the system prompt of a chat request on Claude Code (D-178)', async () => {
+		const pack = await buildPack(
+			{
+				reads: ['stock-item', 'recipe', 'task', 'allergy'],
+				thread: [],
+				message: 'What can I cook tonight?',
+				tools: toolsFor(toolIndex(declarations)),
+				model: ANTHROPIC_SEED.models[1]!,
+				outputReserve: 4096,
+				tokenCap: null,
+				subject: 'anthropic',
+				now: Date.UTC(2026, 8, 30, 14, 40),
+				zone: 'America/Chicago',
+				lang: 'en',
+				domain: 'kitchen',
+				domainName: 'Hearth',
+				domains: declarations.map((domain) => ({ id: domain.id, name: NAMES[domain.id] ?? domain.id })),
+				grade: 'standard',
+				markdown: true,
+				host: 'claude-code',
+			},
+			empty
+		)
+		const text = written(pack)
+		await expect(`${text}\n`).toMatchFileSnapshot('./__snapshots__/system-prompt.chat.claude-code.txt')
+	})
+
 	it('the system prompt of a delegated request', async () => {
 		const pack = await buildPack(
 			{
