@@ -827,7 +827,7 @@ mod tests {
             (input("spaceship", json!("x")), "fact:invalid"),
             (input("recipe", json!("x")), "fact:invalid"),
             (input("home", json!("x")), "fact:invalid"),
-            (input("gym-preference", json!("x")), "fact:invalid"),
+            (input("followed-tradition", json!("x")), "fact:invalid"),
             (input("preferred-name", Value::Null), "fact:invalid"),
             (
                 FactInput {

@@ -146,7 +146,8 @@ mod tests {
         assert!(entity_types_of("toolbench").contains(&"idea"));
         assert!(is_owner("weather") && !is_owner("finance"));
         assert!(is_fact("allergy") && is_fact("medical-dietary-restriction"));
-        assert!(!is_fact("gym-preference") && !is_fact("recipe") && !is_fact("home"));
+        assert!(is_fact("gym-preference") && is_fact("current-weight"));
+        assert!(!is_fact("followed-tradition") && !is_fact("recipe") && !is_fact("home"));
         assert_eq!(facts_of("substrate"), ["preferred-name", "home-area"]);
         assert!(facts_of("fitness").contains(&"training-limitation"));
         assert!(facts_of("weather").is_empty());
@@ -154,14 +155,15 @@ mod tests {
 
     #[test]
     fn a_write_names_a_live_resource_and_a_read_any() {
-        // Vigor is Phase 2: Sky may declare that it reads a workout, and nothing may create one yet
-        let session = resource("workout-session").expect("registered");
+        // Sanctuary is Phase 2 and not built: a domain may declare that it reads a reading log, and nothing may
+        // create one yet
+        let log = resource("reading-log").expect("registered");
         assert_eq!(
-            (session.owner, session.tier, session.phase),
-            ("fitness", Tier::T1, Some(2))
+            (log.owner, log.tier, log.phase),
+            ("spirit", Tier::T1, Some(2))
         );
-        assert!(!session.live() && !is_kind("event", "workout-session"));
-        assert!(!is_owner("fitness") && entity_types_of("fitness").is_empty());
+        assert!(!log.live() && !is_entity_type("reading-log"));
+        assert!(!is_owner("spirit") && entity_types_of("spirit").is_empty());
         // a fact the owner may assert before its domain ships does not make the domain an owner of rows
         assert!(resource("medical-dietary-restriction").is_some_and(Resource::live));
         assert!(!is_owner("health"));
@@ -176,13 +178,22 @@ mod tests {
 
     #[test]
     fn a_built_domain_writes_its_rows_at_its_own_phase() {
-        // Meadow is Phase 3 and built (D-130): its rows are live, where Vigor's of Phase 2 are not
+        // Meadow is Phase 3 and built (D-130), Vigor Phase 2 and built (D-177): their rows are live, where
+        // Sanctuary's of Phase 2 are not
         let profile = resource("place-profile").expect("registered");
         assert_eq!((profile.owner, profile.phase), ("places", Some(3)));
         assert!(profile.live() && is_entity_type("place-profile"));
         assert!(is_fact("favorite-vibe") && is_owner("places"));
         assert!(is_kind("event", "outing") && is_kind("attachment", "place-photo"));
         assert!(entity_types_of("places").contains(&"place-suggestion"));
-        assert!(!is_entity_type("workout-log") && !is_owner("fitness"));
+        let session = resource("workout-session").expect("registered");
+        assert_eq!(
+            (session.owner, session.tier, session.phase),
+            ("fitness", Tier::T1, Some(2))
+        );
+        assert!(session.live() && is_kind("event", "workout-session"));
+        assert!(is_owner("fitness") && is_entity_type("workout-log"));
+        assert!(entity_types_of("fitness").contains(&"body-metric"));
+        assert!(!is_entity_type("reading-log") && !is_owner("spirit"));
     }
 }

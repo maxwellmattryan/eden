@@ -117,8 +117,22 @@ export interface DomainLogic<D extends BuiltDomainId = BuiltDomainId> {
 	openDraft?: (card: DraftCard, settle: (state: 'committed' | 'discarded') => void) => boolean
 }
 
-/** What a store knows of a quick action's log, in the words the sheet shows. */
-export type QuickLogReadout = Pick<QuickLog, 'last' | 'series' | 'reference' | 'options' | 'value'>
+/**
+ * What a store knows of a quick action's log, in the words the sheet shows. A `unit` overrides the declared one: a
+ * weight declared in kg is typed in lb under the imperial system (D-58).
+ */
+export type QuickLogReadout = Pick<QuickLog, 'last' | 'series' | 'reference' | 'options' | 'value' | 'unit'>
+
+/**
+ * What a quick action's handler throws for a value it will not write (a weight of 0): the save is refused and the
+ * message, a locale key, is what the owner is told.
+ */
+export class QuickLogRefusal extends Error {
+	constructor(readonly key: string) {
+		super(key)
+		this.name = 'QuickLogRefusal'
+	}
+}
 
 /** A quick action's write: the value as typed, the undo back. */
 export type QuickActionHandler = (value: string) => { undo: () => void } | Promise<{ undo: () => void }>

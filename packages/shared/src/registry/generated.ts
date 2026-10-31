@@ -535,6 +535,150 @@ export const RESOURCES = [
 		"live": true
 	},
 	{
+		"id": "gym-preference",
+		"category": "fact",
+		"primitive": null,
+		"owner": "fitness",
+		"tier": "T1",
+		"phase": 2,
+		"live": true
+	},
+	{
+		"id": "training-schedule",
+		"category": "fact",
+		"primitive": null,
+		"owner": "fitness",
+		"tier": "T1",
+		"phase": 2,
+		"live": true
+	},
+	{
+		"id": "equipment",
+		"category": "fact",
+		"primitive": null,
+		"owner": "fitness",
+		"tier": "T1",
+		"phase": 2,
+		"live": true
+	},
+	{
+		"id": "fitness-goal",
+		"category": "fact",
+		"primitive": null,
+		"owner": "fitness",
+		"tier": "T1",
+		"phase": 2,
+		"live": true
+	},
+	{
+		"id": "favorite-supplement",
+		"category": "fact",
+		"primitive": null,
+		"owner": "fitness",
+		"tier": "T1",
+		"phase": 2,
+		"live": true
+	},
+	{
+		"id": "training-limitation",
+		"category": "fact",
+		"primitive": null,
+		"owner": "fitness",
+		"tier": "T2",
+		"phase": 2,
+		"live": true
+	},
+	{
+		"id": "current-weight",
+		"category": "fact",
+		"primitive": null,
+		"owner": "fitness",
+		"tier": "T2",
+		"phase": 2,
+		"live": true
+	},
+	{
+		"id": "exercise",
+		"category": "entity",
+		"primitive": null,
+		"owner": "fitness",
+		"tier": "T0",
+		"phase": 2,
+		"live": true
+	},
+	{
+		"id": "workout-template",
+		"category": "entity",
+		"primitive": null,
+		"owner": "fitness",
+		"tier": "T1",
+		"phase": 2,
+		"live": true
+	},
+	{
+		"id": "workout-log",
+		"category": "entity",
+		"primitive": null,
+		"owner": "fitness",
+		"tier": "T1",
+		"phase": 2,
+		"live": true
+	},
+	{
+		"id": "gym",
+		"category": "entity",
+		"primitive": null,
+		"owner": "fitness",
+		"tier": "T1",
+		"phase": 2,
+		"live": true
+	},
+	{
+		"id": "training-goal",
+		"category": "entity",
+		"primitive": null,
+		"owner": "fitness",
+		"tier": "T1",
+		"phase": 2,
+		"live": true
+	},
+	{
+		"id": "body-metric",
+		"category": "entity",
+		"primitive": null,
+		"owner": "fitness",
+		"tier": "T2",
+		"phase": 2,
+		"live": true
+	},
+	{
+		"id": "supplement",
+		"category": "entity",
+		"primitive": null,
+		"owner": "fitness",
+		"tier": "T1",
+		"phase": 2,
+		"live": true
+	},
+	{
+		"id": "intake-log",
+		"category": "entity",
+		"primitive": null,
+		"owner": "fitness",
+		"tier": "T1",
+		"phase": 2,
+		"live": true
+	},
+	{
+		"id": "workout-session",
+		"category": "kind",
+		"primitive": "event",
+		"owner": "fitness",
+		"tier": "T1",
+		"phase": 2,
+		"live": true
+	},
+	{
 		"id": "layer",
 		"category": "entity",
 		"primitive": null,
@@ -568,150 +712,6 @@ export const RESOURCES = [
 		"owner": "calendar",
 		"tier": "by-source",
 		"phase": "later",
-		"live": false
-	},
-	{
-		"id": "gym-preference",
-		"category": "fact",
-		"primitive": null,
-		"owner": "fitness",
-		"tier": "T1",
-		"phase": 2,
-		"live": false
-	},
-	{
-		"id": "training-schedule",
-		"category": "fact",
-		"primitive": null,
-		"owner": "fitness",
-		"tier": "T1",
-		"phase": 2,
-		"live": false
-	},
-	{
-		"id": "equipment",
-		"category": "fact",
-		"primitive": null,
-		"owner": "fitness",
-		"tier": "T1",
-		"phase": 2,
-		"live": false
-	},
-	{
-		"id": "fitness-goal",
-		"category": "fact",
-		"primitive": null,
-		"owner": "fitness",
-		"tier": "T1",
-		"phase": 2,
-		"live": false
-	},
-	{
-		"id": "favorite-supplement",
-		"category": "fact",
-		"primitive": null,
-		"owner": "fitness",
-		"tier": "T1",
-		"phase": 2,
-		"live": false
-	},
-	{
-		"id": "training-limitation",
-		"category": "fact",
-		"primitive": null,
-		"owner": "fitness",
-		"tier": "T2",
-		"phase": 2,
-		"live": false
-	},
-	{
-		"id": "current-weight",
-		"category": "fact",
-		"primitive": null,
-		"owner": "fitness",
-		"tier": "T2",
-		"phase": 2,
-		"live": false
-	},
-	{
-		"id": "exercise",
-		"category": "entity",
-		"primitive": null,
-		"owner": "fitness",
-		"tier": "T0",
-		"phase": 2,
-		"live": false
-	},
-	{
-		"id": "workout-template",
-		"category": "entity",
-		"primitive": null,
-		"owner": "fitness",
-		"tier": "T1",
-		"phase": 2,
-		"live": false
-	},
-	{
-		"id": "workout-log",
-		"category": "entity",
-		"primitive": null,
-		"owner": "fitness",
-		"tier": "T1",
-		"phase": 2,
-		"live": false
-	},
-	{
-		"id": "gym",
-		"category": "entity",
-		"primitive": null,
-		"owner": "fitness",
-		"tier": "T1",
-		"phase": 2,
-		"live": false
-	},
-	{
-		"id": "training-goal",
-		"category": "entity",
-		"primitive": null,
-		"owner": "fitness",
-		"tier": "T1",
-		"phase": 2,
-		"live": false
-	},
-	{
-		"id": "body-metric",
-		"category": "entity",
-		"primitive": null,
-		"owner": "fitness",
-		"tier": "T2",
-		"phase": 2,
-		"live": false
-	},
-	{
-		"id": "supplement",
-		"category": "entity",
-		"primitive": null,
-		"owner": "fitness",
-		"tier": "T1",
-		"phase": 2,
-		"live": false
-	},
-	{
-		"id": "intake-log",
-		"category": "entity",
-		"primitive": null,
-		"owner": "fitness",
-		"tier": "T1",
-		"phase": 2,
-		"live": false
-	},
-	{
-		"id": "workout-session",
-		"category": "kind",
-		"primitive": "event",
-		"owner": "fitness",
-		"tier": "T1",
-		"phase": 2,
 		"live": false
 	},
 	{
@@ -2100,6 +2100,192 @@ export const DECLARATIONS = {
 			"collection",
 			"visit"
 		]
+	},
+	"fitness": {
+		"id": "fitness",
+		"phase": 2,
+		"name": "domains.fitness.name",
+		"subtitle": "domains.fitness.subtitle",
+		"sidebar": {
+			"group": "domains",
+			"order": 40,
+			"visible": true
+		},
+		"tabs": [
+			{
+				"id": "workouts",
+				"label": "domains.fitness.tabs.workouts"
+			},
+			{
+				"id": "history",
+				"label": "domains.fitness.tabs.history"
+			},
+			{
+				"id": "body",
+				"label": "domains.fitness.tabs.body"
+			},
+			{
+				"id": "gyms",
+				"label": "domains.fitness.tabs.gyms"
+			},
+			{
+				"id": "supplements",
+				"label": "domains.fitness.tabs.supplements"
+			}
+		],
+		"resources": [
+			"gym-preference",
+			"training-schedule",
+			"equipment",
+			"fitness-goal",
+			"favorite-supplement",
+			"training-limitation",
+			"current-weight",
+			"exercise",
+			"workout-template",
+			"workout-log",
+			"gym",
+			"training-goal",
+			"body-metric",
+			"supplement",
+			"intake-log",
+			"workout-session"
+		],
+		"reads": [
+			"venue",
+			"stock-item"
+		],
+		"widgets": [
+			{
+				"id": "this-week-training",
+				"sizes": [
+					"m"
+				],
+				"default": false,
+				"planned": false,
+				"reads": [
+					"workout-log",
+					"workout-session"
+				],
+				"title": "garden.widgets.thisWeekTraining",
+				"empty": "garden.empty.thisWeekTraining"
+			},
+			{
+				"id": "streak",
+				"sizes": [
+					"s"
+				],
+				"default": false,
+				"planned": false,
+				"reads": [
+					"workout-log"
+				],
+				"title": "garden.widgets.streak",
+				"empty": "garden.empty.streak"
+			},
+			{
+				"id": "next-session",
+				"sizes": [
+					"s"
+				],
+				"default": false,
+				"planned": false,
+				"reads": [
+					"workout-session"
+				],
+				"title": "garden.widgets.nextSession",
+				"empty": "garden.empty.nextSession"
+			},
+			{
+				"id": "weight-trend",
+				"sizes": [
+					"m"
+				],
+				"default": false,
+				"planned": false,
+				"reads": [
+					"body-metric",
+					"training-goal"
+				],
+				"title": "garden.widgets.weightTrend",
+				"empty": "garden.empty.weightTrend"
+			}
+		],
+		"quickActions": [
+			{
+				"id": "log-weight",
+				"label": "domains.fitness.quick.weight",
+				"icon": "gauge",
+				"kind": "number",
+				"keyword": "domains.fitness.quick.weightKeyword",
+				"placeholder": "domains.fitness.quick.weightPlaceholder",
+				"unit": "kg"
+			},
+			{
+				"id": "workout-done",
+				"label": "domains.fitness.quick.workoutDone",
+				"icon": "dumbbell",
+				"kind": "check",
+				"keyword": "domains.fitness.quick.workoutKeyword"
+			},
+			{
+				"id": "took-supplement",
+				"label": "domains.fitness.quick.tookSupplement",
+				"icon": "pill",
+				"kind": "check",
+				"keyword": "domains.fitness.quick.supplementKeyword"
+			}
+		],
+		"captureSources": [],
+		"tools": [],
+		"signals": [
+			"body-metric.logged",
+			"workout.logged"
+		],
+		"notificationKinds": [],
+		"schedules": [],
+		"intents": [],
+		"deviceCapabilities": [],
+		"palette": {
+			"entries": [
+				{
+					"id": "fitness.log-weight",
+					"verb": "run",
+					"label": "domains.fitness.quick.weight",
+					"icon": "gauge",
+					"quickAction": "log-weight"
+				},
+				{
+					"id": "fitness.workout-done",
+					"verb": "run",
+					"label": "domains.fitness.quick.workoutDone",
+					"icon": "dumbbell",
+					"quickAction": "workout-done"
+				},
+				{
+					"id": "fitness.took-supplement",
+					"verb": "run",
+					"label": "domains.fitness.quick.tookSupplement",
+					"icon": "pill",
+					"quickAction": "took-supplement"
+				}
+			],
+			"search": [
+				"workout-template",
+				"gym",
+				"supplement"
+			]
+		},
+		"export": [
+			"exercise",
+			"workout-template",
+			"workout-log",
+			"gym",
+			"training-goal",
+			"body-metric",
+			"supplement",
+			"intake-log"
+		]
 	}
 } as const
 
@@ -2109,7 +2295,8 @@ export const SHELL = {
 		"kitchen",
 		"toolbench",
 		"weather",
-		"places"
+		"places",
+		"fitness"
 	],
 	"sidebar": {
 		"groups": [

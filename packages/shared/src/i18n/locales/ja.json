@@ -148,7 +148,11 @@
 			"quickLog": "体重",
 			"groceryQuickAdd": "買い物リスト",
 			"nearbyFavorites": "近くのお気に入り",
-			"upcomingListings": "今週末"
+			"upcomingListings": "今週末",
+			"thisWeekTraining": "今週のトレーニング",
+			"streak": "連続記録",
+			"nextSession": "次のセッション",
+			"weightTrend": "体重の推移"
 		},
 		"empty": {
 			"weatherNow": "自宅の場所を設定すると空が見えます。",
@@ -163,7 +167,11 @@
 			"feed": "まだ何も起きていません。",
 			"groceryQuickAdd": "次に必要なものを追加しましょう。",
 			"nearbyFavorites": "場所を保存してお気に入りにしてください。",
-			"upcomingListings": "今週末の催しはまだ見つかっていません。"
+			"upcomingListings": "今週末の催しはまだ見つかっていません。",
+			"thisWeekTraining": "セッションを予定するか、トレーニングを記録すると今週が見えます。",
+			"streak": "トレーニングを記録すると連続記録が始まります。",
+			"nextSession": "テンプレートからセッションを予定しましょう。",
+			"weightTrend": "体重を記録すると推移が始まります。"
 		},
 		"actions": {
 			"today": "今日を開く",
@@ -173,7 +181,11 @@
 			"quickLog": "体重を記録",
 			"groceryQuickAdd": "リストを開く",
 			"nearbyFavorites": "地図を開く",
-			"upcomingListings": "催しを開く"
+			"upcomingListings": "催しを開く",
+			"thisWeekTraining": "履歴を開く",
+			"streak": "履歴を開く",
+			"nextSession": "トレーニングを開く",
+			"weightTrend": "体の記録を開く"
 		},
 		"untouched": "{days}日間手つかず",
 		"minutes": "{minutes}分",
@@ -240,7 +252,22 @@
 			"collectionRemoved": "コレクション「{name}」を削除",
 			"outingInterested": "{title}に興味あり",
 			"outingGoing": "{title}に行く",
-			"outingRemoved": "{title}をカレンダーから外した"
+			"outingRemoved": "{title}をカレンダーから外した",
+			"weightLogged": "{value} {unit}を記録した",
+			"metricLogged": "{kind} {value}を記録した",
+			"metricRemoved": "{kind} {value}を削除した",
+			"goalSet": "目標を設定：{date}までに{target} {unit}",
+			"workoutLogged": "{title}を完了した",
+			"workoutRemoved": "{title}の記録を削除した",
+			"templateSaved": "{title}をトレーニングに保存した",
+			"templateRemoved": "{title}を削除した",
+			"sessionPlanned": "{title}を予定した",
+			"sessionRemoved": "{title}を予定から外した",
+			"gymSaved": "{name}をジムに保存した",
+			"gymRemoved": "{name}を削除した",
+			"supplementSaved": "{name}をサプリメントに保存した",
+			"supplementRemoved": "{name}を削除した",
+			"supplementTaken": "{name}を摂った"
 		},
 		"profile": "Edenが知っていること"
 	},
@@ -968,6 +995,210 @@
 				}
 			}
 		},
+		"fitness": {
+			"name": "活力",
+			"subtitle": "トレーニング、ジム、体の記録",
+			"tabs": {
+				"workouts": "トレーニング",
+				"history": "履歴",
+				"body": "体",
+				"gyms": "ジム",
+				"supplements": "サプリメント"
+			},
+			"tabsLabel": "活力のセクション",
+			"saveFailed": "活力は最後の変更を保存できませんでした。",
+			"actionsFor": "{name}の操作",
+			"edit": "編集",
+			"delete": "削除",
+			"cancel": "キャンセル",
+			"save": "保存",
+			"exercises": "{count}種目",
+			"minutes": "{minutes}分",
+			"rpe": "RPE {rpe}",
+			"quick": {
+				"weight": "体重を記録",
+				"weightKeyword": "体重",
+				"weightPlaceholder": "82.4",
+				"weightInvalid": "0より大きく1000未満の体重を入力してください。",
+				"workoutDone": "トレーニング完了",
+				"workoutKeyword": "トレーニング",
+				"tookSupplement": "サプリメントを摂った",
+				"supplementKeyword": "サプリメント",
+				"unknownOption": "選択肢から一つ選んでください。"
+			},
+			"workouts": {
+				"log": "トレーニングを記録",
+				"newTemplate": "新しいテンプレート",
+				"list": "テンプレート",
+				"start": "開始",
+				"plan": "予定",
+				"exercisesIn": "{title}の種目",
+				"exercise": "種目",
+				"setsReps": "セット × 回数",
+				"setsRepsValue": "{sets} × {reps}",
+				"empty": {
+					"title": "トレーニングはまだありません",
+					"text": "種目ライブラリからテンプレートを作り、開始してセットごとに記録しましょう。"
+				}
+			},
+			"templateForm": {
+				"titleNew": "新しいテンプレート",
+				"titleEdit": "テンプレートを編集",
+				"title": "名前",
+				"minutes": "目安の時間",
+				"exercises": "種目",
+				"exercise": "種目 {n}",
+				"pick": "種目を選ぶ",
+				"custom": "自分で入力…",
+				"customName": "種目名",
+				"sets": "セット",
+				"reps": "回数",
+				"moveUp": "種目 {n} を上へ",
+				"moveDown": "種目 {n} を下へ",
+				"remove": "種目 {n} を外す",
+				"add": "種目を追加"
+			},
+			"logForm": {
+				"title": "トレーニングを記録",
+				"titleFor": "{title}を記録",
+				"template": "テンプレート",
+				"none": "なし",
+				"date": "日付",
+				"gym": "ジム",
+				"duration": "時間",
+				"rpe": "RPE",
+				"notRated": "未評価",
+				"reps": "回数",
+				"load": "重量",
+				"removeSet": "{name}のセット {n} を外す",
+				"addSet": "セットを追加",
+				"noExercises": "テンプレートを選ぶと種目が入ります。"
+			},
+			"planForm": {
+				"title": "{title}を予定",
+				"date": "日付",
+				"time": "時刻"
+			},
+			"history": {
+				"planned": "予定",
+				"weekOf": "{date}の週",
+				"setsIn": "{title}のセット",
+				"exercise": "種目",
+				"set": "セット",
+				"reps": "回数",
+				"load": "重量",
+				"bodyweight": "自重",
+				"noSets": "セットは記録されていません。",
+				"empty": {
+					"title": "まだ記録がありません",
+					"text": "セッションの後に記録するか、テンプレートから開始すると、週ごとにここに並びます。"
+				}
+			},
+			"body": {
+				"logWeight": "体重を記録",
+				"latest": "最新",
+				"average": "7日平均",
+				"goal": "目標",
+				"goalBy": "{unit}（{date}まで）",
+				"noGoal": "未設定",
+				"setGoal": "目標を設定",
+				"chart": "体重、過去30日",
+				"chartLabel": "体重、過去30日、{first}から{last} {unit}",
+				"referenceAverage": "平均 {value}",
+				"referenceGoal": "目標 {value}",
+				"others": "その他の記録",
+				"kinds": {
+					"weight": "体重",
+					"body-fat": "体脂肪率",
+					"waist": "ウエスト"
+				},
+				"log": "記録",
+				"logKind": "{kind}を記録",
+				"notLogged": "まだ記録なし",
+				"goalForm": {
+					"title": "目標を設定",
+					"target": "目標体重",
+					"by": "期限"
+				},
+				"metricForm": {
+					"title": "記録する",
+					"kind": "種類",
+					"value": "値",
+					"date": "日付"
+				},
+				"empty": {
+					"title": "体重の記録はまだありません",
+					"text": "クイックログでどこからでも体重を記録できます。一週間分で推移と7日平均が描かれます。"
+				}
+			},
+			"gyms": {
+				"add": "ジムを追加",
+				"list": "ジム",
+				"equipmentCount": "器具 {count}点",
+				"equipment": "器具",
+				"hours": "営業時間",
+				"notes": "メモ",
+				"place": "場所",
+				"form": {
+					"titleNew": "ジムを追加",
+					"titleEdit": "ジムを編集",
+					"name": "名前",
+					"equipmentHelper": "器具を入力して Enter を押します。",
+					"equipmentToSave": "保存する器具",
+					"remove": "{name}を外す",
+					"notLinked": "つながっていません"
+				},
+				"empty": {
+					"title": "ジムはまだありません",
+					"text": "トレーニングする場所を器具と一緒に追加すると、そこにあるものに合わせたトレーニングができます。"
+				}
+			},
+			"supplements": {
+				"add": "サプリメントを追加",
+				"list": "サプリメント",
+				"tookIt": "摂った",
+				"took": "{name}を摂った",
+				"when": {
+					"daily": "毎日",
+					"pre-workout": "トレーニング前",
+					"as-needed": "必要なとき"
+				},
+				"notTaken": "まだ摂っていません",
+				"today": "今日 {time}",
+				"yesterday": "昨日 {time}",
+				"stock": "台所：{name}、残り{quantity}",
+				"openStock": "台所で開く",
+				"notLinked": "在庫とつながっていません",
+				"intakes": "摂取の記録",
+				"noIntakes": "まだ記録がありません。",
+				"form": {
+					"titleNew": "サプリメントを追加",
+					"titleEdit": "サプリメントを編集",
+					"name": "名前",
+					"brand": "ブランド",
+					"dose": "量",
+					"when": "タイミング",
+					"whenDaily": "毎日",
+					"whenPreWorkout": "トレーニング前",
+					"whenAsNeeded": "必要なとき",
+					"stockItem": "在庫の品",
+					"notLinked": "つながっていません"
+				},
+				"empty": {
+					"title": "サプリメントはまだありません",
+					"text": "摂るものとタイミングを追加すれば、ワンタップで記録できます。台所とつなぐと在庫も保てます。"
+				}
+			},
+			"widgets": {
+				"done": "完了",
+				"planned": "予定",
+				"weekDone": "{total}回中{done}回完了",
+				"sessions": "回",
+				"goalLine": "目標 {target} {unit}（{date}まで）",
+				"trendLabel": "14日間の体重、最新 {latest} {unit}、7日平均 {average}",
+				"averageLegend": "7日平均"
+			}
+		},
 		"places": {
 			"name": "野原",
 			"subtitle": "場所、イベント、雰囲気、お気に入り",
@@ -1360,7 +1591,14 @@
 			"owned-hardware": "所有する機材",
 			"preferred-tool": "好みのツール",
 			"medical-dietary-restriction": "医療上の食事制限",
-			"favorite-vibe": "好きな雰囲気"
+			"favorite-vibe": "好きな雰囲気",
+			"gym-preference": "好みのジム",
+			"training-schedule": "トレーニングの予定",
+			"equipment": "器具",
+			"fitness-goal": "フィットネスの目標",
+			"favorite-supplement": "好きなサプリメント",
+			"training-limitation": "トレーニングの制限",
+			"current-weight": "現在の体重"
 		},
 		"fields": {
 			"street": "通り",

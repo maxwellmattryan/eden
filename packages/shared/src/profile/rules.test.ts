@@ -39,7 +39,7 @@ describe('validateFact', () => {
 		expect(validateFact(input({ type: 'medical-dietary-restriction', value: 'low sodium' }))).toBeUndefined()
 		expect(validateFact(input({ type: 'spaceship' as never }))?.[0]).toBe('fact:invalid')
 		expect(validateFact(input({ type: 'recipe' as never }))?.[0]).toBe('fact:invalid')
-		expect(validateFact(input({ type: 'gym-preference' }))?.[0]).toBe('fact:invalid')
+		expect(validateFact(input({ type: 'followed-tradition' as never }))?.[0]).toBe('fact:invalid')
 		expect(validateFact(input({ value: null }))?.[0]).toBe('fact:invalid')
 		expect(validateFact(input({ value: undefined }))?.[0]).toBe('fact:invalid')
 	})

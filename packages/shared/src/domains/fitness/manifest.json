@@ -1,0 +1,84 @@
+{
+	"id": "fitness",
+	"phase": 2,
+	"sidebar": { "group": "domains", "order": 40, "visible": true },
+	"tabs": ["workouts", "history", "body", "gyms", "supplements"],
+	"resources": {
+		"facts": [
+			{ "id": "gym-preference", "tier": "T1" },
+			{ "id": "training-schedule", "tier": "T1" },
+			{ "id": "equipment", "tier": "T1" },
+			{ "id": "fitness-goal", "tier": "T1" },
+			{ "id": "favorite-supplement", "tier": "T1" },
+			{ "id": "training-limitation", "tier": "T2" },
+			{ "id": "current-weight", "tier": "T2" }
+		],
+		"entities": [
+			{ "id": "exercise", "tier": "T0" },
+			{ "id": "workout-template", "tier": "T1" },
+			{ "id": "workout-log", "tier": "T1" },
+			{ "id": "gym", "tier": "T1" },
+			{ "id": "training-goal", "tier": "T1" },
+			{ "id": "body-metric", "tier": "T2" },
+			{ "id": "supplement", "tier": "T1" },
+			{ "id": "intake-log", "tier": "T1" }
+		],
+		"kinds": [{ "id": "workout-session", "primitive": "event", "tier": "T1" }]
+	},
+	"reads": ["venue", "stock-item"],
+	"widgets": [
+		{ "id": "this-week-training", "sizes": ["m"], "default": false, "reads": ["workout-log", "workout-session"] },
+		{ "id": "streak", "sizes": ["s"], "default": false, "reads": ["workout-log"] },
+		{ "id": "next-session", "sizes": ["s"], "default": false, "reads": ["workout-session"] },
+		{ "id": "weight-trend", "sizes": ["m"], "default": false, "reads": ["body-metric", "training-goal"] }
+	],
+	"quickActions": [
+		{
+			"id": "log-weight",
+			"label": "domains.fitness.quick.weight",
+			"icon": "gauge",
+			"kind": "number",
+			"keyword": "domains.fitness.quick.weightKeyword",
+			"placeholder": "domains.fitness.quick.weightPlaceholder",
+			"unit": "kg"
+		},
+		{
+			"id": "workout-done",
+			"label": "domains.fitness.quick.workoutDone",
+			"icon": "dumbbell",
+			"kind": "check",
+			"keyword": "domains.fitness.quick.workoutKeyword"
+		},
+		{
+			"id": "took-supplement",
+			"label": "domains.fitness.quick.tookSupplement",
+			"icon": "pill",
+			"kind": "check",
+			"keyword": "domains.fitness.quick.supplementKeyword"
+		}
+	],
+	"captureSources": [],
+	"tools": [],
+	"signals": ["body-metric.logged", "workout.logged"],
+	"notificationKinds": [],
+	"intents": [],
+	"deviceCapabilities": [],
+	"palette": {
+		"entries": [
+			{ "verb": "run", "quickAction": "log-weight" },
+			{ "verb": "run", "quickAction": "workout-done" },
+			{ "verb": "run", "quickAction": "took-supplement" }
+		],
+		"search": ["workout-template", "gym", "supplement"]
+	},
+	"export": [
+		"exercise",
+		"workout-template",
+		"workout-log",
+		"gym",
+		"training-goal",
+		"body-metric",
+		"supplement",
+		"intake-log"
+	]
+}

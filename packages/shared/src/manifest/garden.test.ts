@@ -143,7 +143,14 @@ describe('parseLayout', () => {
 describe('catalogGroups', () => {
 	it('groups by owner in the declared order, the shell last, and marks what is placed', () => {
 		const groups = catalogGroups(gardenCatalog(declarations, shell), DEFAULT)
-		expect(groups.map((group) => group.owner)).toEqual(['kitchen', 'toolbench', 'weather', 'places', 'shell'])
+		expect(groups.map((group) => group.owner)).toEqual([
+			'kitchen',
+			'toolbench',
+			'weather',
+			'places',
+			'fitness',
+			'shell',
+		])
 		expect(groups[0]?.entries.map((entry) => [entry.id, entry.placed])).toEqual([
 			['expiring-soon', true],
 			['cook-tonight', true],

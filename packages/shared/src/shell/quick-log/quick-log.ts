@@ -8,7 +8,7 @@ import { logError } from '../../api/index.js'
 import { t } from '../../i18n/index.js'
 import { quickActions, type QuickAction } from '../../manifest/index.js'
 import { parseQuickLog, type QuickLogCandidate } from '../../quick-log/index.js'
-import { declarations, logicFor } from '../../domains/index.js'
+import { QuickLogRefusal, declarations, logicFor } from '../../domains/index.js'
 import { undoToast } from '../undo.js'
 
 export interface QuickLogAction extends QuickAction {
@@ -103,6 +103,11 @@ export async function saveQuickLog(key: string, value: string): Promise<boolean>
 		undoToast(tr('quickLog.logged', { values: { value: text } }), result.undo)
 		return true
 	} catch (error) {
+		// a value the handler refuses (a weight of 0) is the owner's to fix, and says why; anything else failed
+		if (error instanceof QuickLogRefusal) {
+			toast({ message: tr(error.key), error: true })
+			return false
+		}
 		void logError('quick-log', `${key} could not be saved`, String(error)).catch(() => null)
 		toast({ message: tr('quickLog.failed'), error: true })
 		return false
