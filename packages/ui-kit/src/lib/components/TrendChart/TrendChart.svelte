@@ -5,14 +5,15 @@
 	// marked with their values, since those are what a reader looks for. It fills its container's width and keeps its
 	// height, and it needs no legend, since it draws one series and its axes say what that is. The point nearest the
 	// pointer is read out above itself (`hover`), on a hairline down to its tick; a finger pins the readout with a
-	// tap, moves it with a horizontal scrub and leaves it standing until a tap elsewhere (D-168). Colour
+	// tap, moves it with a horizontal scrub and leaves it standing until a tap elsewhere (D-168). Up to two references
+	// (an average, a goal) are dashed hairlines named at the right edge, and the scale holds them. Colour
 	// is not the only carrier: the SVG carries one accessible sentence.
 	import type { HTMLAttributes } from 'svelte/elements'
 	import { measure } from '../../internal/measure.js'
 	import { chartRead, type ChartPlace } from '../../internal/chart-read.js'
 	import ChartTip from '../ChartTip/ChartTip.svelte'
 	import { nearestIndex } from '../ChartTip/nearest.js'
-	import { trend } from './trend.js'
+	import { MAX_REFERENCES, trend, type TrendReference } from './trend.js'
 
 	type Props = Omit<HTMLAttributes<HTMLDivElement>, 'aria-label'> & {
 		/** The series, oldest first. Non-finite entries are skipped. */
@@ -37,6 +38,9 @@
 		hover?: boolean
 		/** What each point is called in the readout, where `labels` leaves some unnamed: every hour, not the round ones. */
 		titles?: readonly string[]
+		/** Dashed lines across the plot at given values, each named at the right edge: an average, a goal. The scale
+		 * widens to hold each, at most two are drawn, and their names end the accessible sentence. */
+		references?: readonly TrendReference[]
 	}
 	let {
 		values,
@@ -49,6 +53,7 @@
 		label,
 		hover = true,
 		titles,
+		references = [],
 		class: className = '',
 		...rest
 	}: Props = $props()
@@ -70,7 +75,12 @@
 			labels,
 			figures,
 			step,
+			references,
 		})
+	)
+	/** The sentence, with the references drawn named at its end: "…, average 82.6, goal 80.0". */
+	const sentence = $derived(
+		[label, ...references.slice(0, MAX_REFERENCES).map((reference) => reference.label)].join(', ')
 	)
 	const marks = $derived(extremes ? [geo.high, geo.low].flatMap((mark) => (mark ? [mark] : [])) : [])
 	const floor = $derived(geo.plot.y + geo.plot.height)
@@ -97,7 +107,7 @@
 	{...rest}
 >
 	{#if width > 0}
-		<svg class="ed-trend-svg" {width} {height} viewBox="0 0 {width} {height}" role="img" aria-label={label}>
+		<svg class="ed-trend-svg" {width} {height} viewBox="0 0 {width} {height}" role="img" aria-label={sentence}>
 			{#each geo.ticks as tick (tick.value)}
 				<line class="ed-trend-grid" x1={geo.plot.x} x2={geo.plot.x + geo.plot.width} y1={tick.y} y2={tick.y} />
 				<text class="ed-trend-figure" x={geo.plot.x - 8} y={tick.y} dy="0.32em">{format(tick.value)}</text>
@@ -116,6 +126,12 @@
 				{/if}
 			{/each}
 			{#if geo.area}<path class="ed-trend-area" d={geo.area} />{/if}
+			{#each geo.references as reference, i (i)}
+				<line class="ed-trend-ref" x1={geo.plot.x} x2={geo.plot.x + geo.plot.width} y1={reference.y} y2={reference.y} />
+				<text class="ed-trend-ref-label" x={geo.plot.x + geo.plot.width} y={reference.labelY} text-anchor="end"
+					>{reference.label}</text
+				>
+			{/each}
 			{#if reading}<line class="ed-trend-guide" x1={reading.x} x2={reading.x} y1={geo.plot.y} y2={floor} />{/if}
 			{#if geo.line}<path class="ed-trend-line" d={geo.line} />{/if}
 			{#if reading}<circle class="ed-trend-dot ed-trend-read" r="4" cx={reading.x} cy={reading.y} />{/if}
@@ -183,6 +199,22 @@
 	}
 	.ed-trend-dot {
 		fill: var(--chart-primary);
+	}
+	/* a reference: the Sparkline's dashed hairline, its name in secondary ink at the right edge, the ground behind it */
+	.ed-trend-ref {
+		fill: none;
+		stroke: var(--chart-reference);
+		stroke-width: 1;
+		stroke-dasharray: 3 3;
+		vector-effect: non-scaling-stroke;
+	}
+	.ed-trend-ref-label {
+		font: var(--ed-t-caption);
+		letter-spacing: var(--ed-t-caption-tracking);
+		fill: var(--text-secondary);
+		stroke: var(--surface-1);
+		stroke-width: 3;
+		paint-order: stroke;
 	}
 	/* the point being read: a hairline down to its tick, and its dot ringed with the ground */
 	.ed-trend-guide {

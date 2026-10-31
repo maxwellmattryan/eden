@@ -4,7 +4,7 @@ status: draft
 summary: The two apps and the crate they share: the workspace layout, what each package owns, the platform features, the commands, the domain module on each side, where its data lives, the pre-paint mechanism, and the placeholder identifier.
 read-this-if: You are building anything under apps/*, packages/shared or src-tauri, or wiring a domain into the shell.
 depends-on: [engineering/ui-kit, product/substrate/shell, product/substrate/settings-utilities]
-updated: 2026-10-02
+updated: 2026-10-31
 ---
 
 ## Layout
@@ -38,7 +38,7 @@ The apps and the shared package depend on the kit by exact version and consume e
 
 **File drops (D-84).** The window sets `dragDropEnabled: false`, in `tauri.conf.json` and again in the dev, staging and prod overlays, because an overlay's `windows` array replaces the base one. For the same reason each overlay repeats the window's `width`, `height`, `minWidth`, `minHeight` and `resizable` (D-112). Tauri's native handler is therefore off and a dropped file reaches the webview as an HTML5 drop. Each app's root layout puts `fileDropGuard` (`@eden/shared/api`) on `<svelte:window>`: a file drag that no kit `Dropzone` claimed is refused, so a file dropped on a page never opens in place of the app.
 
-Both apps have the same routes: `/garden`, `/garden/profile`, `/today`, `/gardener/[[tab]]`, `/kitchen/[[tab]]`, `/toolbench/[[tab]]`, `/weather` and `/places/[[tab]]`; the phone adds `/more`, which lists the domains its tab bar does not hold, the Gardener's page, the profile and Settings (D-158). A route renders its `PageHeader` and `EmptyState` from the locale until its approved mockup is implemented (D-54); the Garden, Today, Profile, the Gardener's page, Hearth (Stock, Recipes and Grocery), Sky, Toolbench (Ideas) and Meadow are built on both, and each story stays its reference; the tabs without a mockup yet (Projects, Lab, Studio, Notes) render an `EmptyState`. Hearth has no Tips tab (D-87) and opens on Grocery on the phone (D-174). Meadow (`places`, built ahead of its phase, D-130) has its four tabs on both (D-173; `engineering/meadow.md`).
+Both apps have the same routes: `/garden`, `/garden/profile`, `/today`, `/gardener/[[tab]]`, `/kitchen/[[tab]]`, `/toolbench/[[tab]]`, `/weather`, `/places/[[tab]]` and `/fitness/[[tab]]`; the phone adds `/more`, which lists the domains its tab bar does not hold, the Gardener's page, the profile and Settings (D-158). A route renders its `PageHeader` and `EmptyState` from the locale until its approved mockup is implemented (D-54); the Garden, Today, Profile, the Gardener's page, Hearth (Stock, Recipes and Grocery), Sky, Toolbench (Ideas) and Meadow are built on both, and each story stays its reference; the tabs without a mockup yet (Projects, Lab, Studio, Notes) render an `EmptyState`. Hearth has no Tips tab (D-87) and opens on Grocery on the phone (D-174). Meadow (`places`, built ahead of its phase, D-130) has its four tabs on both (D-173; `engineering/meadow.md`). Vigor (`fitness`) has its five tabs on both, one shared page whose narrow layout is the phone's (D-177; `product/domains/fitness.md`).
 
 ## Commands
 

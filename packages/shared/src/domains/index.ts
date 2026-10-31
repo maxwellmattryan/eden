@@ -3,6 +3,7 @@
 export { declarations } from '../manifest/index.js'
 export {
 	defineDomain,
+	QuickLogRefusal,
 	type DomainLogic,
 	type DomainManifest,
 	type DomainRoutes,

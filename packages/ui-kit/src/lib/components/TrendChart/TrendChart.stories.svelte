@@ -2,7 +2,7 @@
 	import { defineMeta } from '@storybook/addon-svelte-csf'
 	import { expect } from 'storybook/test'
 	import { canvasOf, hasCanvas, pointAcross, touchAcross } from '../../../storybook/play.js'
-	import { skyHours, weightSeries } from '../../../stories/sample-data.js'
+	import { skyHours, weightAverage, weightDays, weightGoal, weightSeries } from '../../../stories/sample-data.js'
 	import TrendChart from './TrendChart.svelte'
 
 	const temps = skyHours.map((hour) => hour.temp)
@@ -75,6 +75,32 @@
 <Story
 	name="Without labels"
 	args={{ labels: [], values: weightSeries, format: undefined, label: 'Weight over 14 days' }}
+/>
+
+<!-- The weight with its two references (Vigor's Body): the seven-day average and the goal, dashed, each named at the
+     right edge in secondary ink; the scale widens to hold the goal under the series, and the names end the sentence -->
+<Story
+	name="References"
+	args={{
+		values: weightSeries,
+		labels: weightDays,
+		format: (value: number) => value.toFixed(1),
+		label: 'Weight, last 14 days',
+		height: 160,
+		references: [
+			{ value: weightAverage, label: `average ${weightAverage.toFixed(1)}` },
+			{ value: weightGoal, label: `goal ${weightGoal.toFixed(1)}` },
+		],
+	}}
+	play={async ({ canvasElement }) => {
+		if (!hasCanvas(canvasElement)) return
+		const canvas = canvasOf(canvasElement)
+		const name = `Weight, last 14 days, average ${weightAverage.toFixed(1)}, goal ${weightGoal.toFixed(1)}`
+		await expect(await canvas.findByRole('img', { name })).toBeVisible()
+		const chart = canvasElement.querySelector('.ed-canvas .ed-trend')!
+		await expect(chart.querySelectorAll('.ed-trend-ref')).toHaveLength(2)
+		await expect(canvas.getByText(`goal ${weightGoal.toFixed(1)}`)).toBeVisible()
+	}}
 />
 
 <Story name="Short" args={{ height: 72 }} />

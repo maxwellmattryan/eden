@@ -807,6 +807,8 @@ export const DOMAIN_BLURBS: Readonly<Record<string, string>> = {
 	weather: 'the weather for the owner’s home area: the forecast, the alerts in force, sunrise, sunset and the moon',
 	places:
 		'where to go: the places the owner has saved, each a `venue` with a `place-profile` that holds its vibes (by facet: purpose, mood, setting, crowd), price, notes and whether it is a favourite, their collections and visits, and the listings found for the coming weekend, where an `outing` event is one the owner is interested in (tentative) or going to (confirmed)',
+	fitness:
+		'training and the body: workout templates with their exercises at target sets and reps, the workouts logged set by set (a `workout-log`, linked to the `workout-session` event it was planned as), the gyms with their equipment, body metrics (weight, body fat, waist, always stored in kg and cm), the weight goal, and the supplements with each intake',
 }
 
 const WIRE_NAME = /^[a-zA-Z0-9_-]{1,64}$/

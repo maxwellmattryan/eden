@@ -21,7 +21,20 @@ export interface TrendOptions {
 	/** The distance between two figures up the side: 10 for tens. The scale runs from the step at or below the
 	 * lowest value to the step at or above the highest. */
 	step?: number
+	/** Lines across the plot at given values: an average, a goal. The scale widens to hold each; at most two. */
+	references?: readonly TrendReference[]
+	/** The height of a reference's label line, in px: two labels closer than this in y are moved apart by it. */
+	lineHeight?: number
 }
+
+/** A dashed line across the plot at a value, with its name written at the right edge. */
+export interface TrendReference {
+	value: number
+	label: string
+}
+
+/** The most reference lines a chart draws; any beyond are left out. */
+export const MAX_REFERENCES = 2
 
 export interface TrendGeometry {
 	/** The plot's box. */
@@ -35,6 +48,9 @@ export interface TrendGeometry {
 	low: { x: number; y: number; value: number } | null
 	/** The round figures up the side, lowest first. */
 	ticks: { value: number; y: number }[]
+	/** Each reference drawn: the line's y, and the baseline of its label, which sits just above the line unless it
+	 * would touch the other's, when the lower of the two moves down a line. */
+	references: { value: number; label: string; y: number; labelY: number }[]
 }
 
 const fmt = (n: number) => n.toFixed(1)
@@ -106,7 +122,10 @@ export function trend(input: readonly number[], options: TrendOptions): TrendGeo
 		charWidth = 8,
 		figures = 3,
 		step,
+		references = [],
+		lineHeight = 18,
 	} = options
+	const lines = references.filter((reference) => Number.isFinite(reference.value)).slice(0, MAX_REFERENCES)
 	const kept = input
 		.map((value, i) => ({ value, label: labels[i] ?? '' }))
 		.filter((item) => Number.isFinite(item.value))
@@ -117,12 +136,13 @@ export function trend(input: readonly number[], options: TrendOptions): TrendGeo
 		width: Math.max(1, width - left - right),
 		height: Math.max(1, height - top - bottom),
 	}
-	if (!values.length) return { plot, line: '', area: '', points: [], ticks: [], high: null, low: null }
+	if (!values.length) return { plot, line: '', area: '', points: [], ticks: [], high: null, low: null, references: [] }
 
-	// the scale runs between round figures that hold the whole series: whole steps when a step is given, else steps
-	// of 1, 2 or 5 times a power of ten
-	const least = Math.min(...values)
-	const most = Math.max(...values)
+	// the scale runs between round figures that hold the whole series and every reference: whole steps when a step is
+	// given, else steps of 1, 2 or 5 times a power of ten
+	const scaled = [...values, ...lines.map((reference) => reference.value)]
+	const least = Math.min(...scaled)
+	const most = Math.max(...scaled)
 	const rounds = step ? stepTicks(least, most, step) : niceTicks(least, most, figures)
 	const lo = rounds[0]!
 	const hi = rounds[rounds.length - 1]!
@@ -156,5 +176,28 @@ export function trend(input: readonly number[], options: TrendOptions): TrendGeo
 		ticks: rounds.map((value) => ({ value, y: y(value) })),
 		high: top1 === bottom1 ? null : pick(top1),
 		low: top1 === bottom1 ? null : pick(bottom1),
+		references: placeReferences(
+			lines.map((reference) => ({ ...reference, y: y(reference.value) })),
+			lineHeight
+		),
 	}
+}
+
+/**
+ * Where each reference's label sits: its baseline a little above its line. When two lines are closer than a line
+ * height, the lower one's label moves down a line, so it reads under its line and the two never overlap.
+ */
+export function placeReferences(
+	lines: readonly { value: number; label: string; y: number }[],
+	lineHeight: number
+): { value: number; label: string; y: number; labelY: number }[] {
+	const placed = lines.map((line) => ({ ...line, labelY: line.y - 4 }))
+	if (placed.length === 2) {
+		const [a, b] = placed as [(typeof placed)[number], (typeof placed)[number]]
+		if (Math.abs(a.y - b.y) < lineHeight) {
+			const lower = a.y >= b.y ? a : b
+			lower.labelY += lineHeight
+		}
+	}
+	return placed
 }

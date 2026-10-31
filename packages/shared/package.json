@@ -36,6 +36,7 @@
 		"./domains/kitchen": "./src/domains/kitchen/index.ts",
 		"./domains/toolbench": "./src/domains/toolbench/index.ts",
 		"./domains/places": "./src/domains/places/index.ts",
+		"./domains/fitness": "./src/domains/fitness/index.ts",
 		"./domains/weather": "./src/domains/weather/index.ts",
 		"./geo": "./src/geo/index.ts",
 		"./address": "./src/address/index.ts",

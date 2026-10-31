@@ -15,7 +15,13 @@ function written(pack: Pack): string {
 	)
 }
 
-const NAMES: Record<string, string> = { kitchen: 'Hearth', toolbench: 'Toolbench', weather: 'Sky', places: 'Meadow' }
+const NAMES: Record<string, string> = {
+	kitchen: 'Hearth',
+	toolbench: 'Toolbench',
+	weather: 'Sky',
+	places: 'Meadow',
+	fitness: 'Vigor',
+}
 
 const empty: PackReaders = {
 	facts: async () => [],

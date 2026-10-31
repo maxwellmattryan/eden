@@ -56,7 +56,7 @@ Every doc in one table per layer: path, status, one-liner, size (S under 120 lin
 | product/domains/toolbench.md | draft | Toolbench: ideas, projects, homelab, generative-art studio, technical notes | S | ideas or projects |
 | product/domains/weather.md | draft | Sky: forecasts by a chosen provider, details, air quality, allergens, alerts, sun and moon, the default Garden widget | S | weather or ephemeris |
 | product/domains/calendar.md | draft | Almanac: Eden's own calendar with layers over Events, Google as a source | S | calendar work |
-| product/domains/fitness.md | draft | Vigor: workouts, gyms, body metrics, supplements, weight trend | S | fitness work |
+| product/domains/fitness.md | draft | Vigor: workouts, gyms, body metrics, supplements, weight trend; what is built on both apps (D-177) and its handoffs | M | fitness work |
 | product/domains/spirit.md | draft | Sanctuary: traditions, readings, values, the daily line, optional astrology | S | reflection features |
 | product/domains/places.md | draft | Meadow: places and listings on a map, vibes, favorites, outings | M | places or events near you |
 | product/domains/finance.md | stub | Orchard stub: budgets, read-only accounts, categories including housing | S | finance scope |

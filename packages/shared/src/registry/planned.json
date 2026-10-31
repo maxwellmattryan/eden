@@ -13,29 +13,6 @@
 				{ "id": "ics-event", "primitive": "event", "tier": "by-source", "phase": "later" }
 			]
 		},
-		"fitness": {
-			"phase": 2,
-			"facts": [
-				{ "id": "gym-preference", "tier": "T1" },
-				{ "id": "training-schedule", "tier": "T1" },
-				{ "id": "equipment", "tier": "T1" },
-				{ "id": "fitness-goal", "tier": "T1" },
-				{ "id": "favorite-supplement", "tier": "T1" },
-				{ "id": "training-limitation", "tier": "T2" },
-				{ "id": "current-weight", "tier": "T2" }
-			],
-			"entities": [
-				{ "id": "exercise", "tier": "T0" },
-				{ "id": "workout-template", "tier": "T1" },
-				{ "id": "workout-log", "tier": "T1" },
-				{ "id": "gym", "tier": "T1" },
-				{ "id": "training-goal", "tier": "T1" },
-				{ "id": "body-metric", "tier": "T2" },
-				{ "id": "supplement", "tier": "T1" },
-				{ "id": "intake-log", "tier": "T1" }
-			],
-			"kinds": [{ "id": "workout-session", "primitive": "event", "tier": "T1" }]
-		},
 		"spirit": {
 			"phase": 2,
 			"facts": [
