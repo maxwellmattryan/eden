@@ -12,6 +12,8 @@ const storybookProject = (platform: 'desktop' | 'mobile') => ({
 	],
 	test: {
 		name: `sb-${platform}`,
+		// a whole domain page with its axe pass runs near the browser default of 15 s on a loaded CI runner
+		testTimeout: 30_000,
 		browser: {
 			enabled: true,
 			headless: true,
