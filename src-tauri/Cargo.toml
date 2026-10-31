@@ -45,7 +45,7 @@ tauri-plugin-clipboard-manager = "2.4"
 tauri-plugin-notification = "2.5"
 tauri-plugin-window-state = { version = "2.5", optional = true }
 tauri-plugin-process = { version = "2.4", optional = true }
-tauri-plugin-updater = { version = "2.13", optional = true }
+tauri-plugin-updater = { version = "2.14.1", optional = true }
 tauri-plugin-haptics = { version = "2.4", optional = true }
 
 serde = { version = "1.0", features = ["derive"] }
@@ -64,9 +64,9 @@ rusqlite = { version = "0.38.0", features = ["bundled-sqlcipher-vendored-openssl
 ulid = "1"
 # The hash of an attachment's bytes, and of each file in an export bundle; already in the tree.
 sha2 = "0.10"
-# The export bundle is a zip archive, which every system opens without a tool. Direct, so that mobile has it too: it
-# is otherwise in the tree only through the desktop updater.
-zip = { version = "4", default-features = false, features = ["deflate"] }
+# The export bundle is a zip archive, which every system opens without a tool. Direct, so that mobile has it too: the
+# desktop updater brings it only on Windows.
+zip = { version = "9", default-features = false, features = ["deflate"] }
 # The Gardener's one provider call (docs/engineering/gardener.md, D-76): the same reqwest and rustls the desktop
 # updater brings, with the same features, so mobile has them too and no second TLS stack is built. The crate installs
 # the ring provider once at setup; `rustls-no-provider` leaves that to it.
