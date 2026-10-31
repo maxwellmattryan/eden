@@ -108,4 +108,52 @@ describe('trend', () => {
 		expect(geo.low).toMatchObject({ value: 21, x: geo.points[4]!.x })
 		expect(trend([20, 20, 20], options).high).toBeNull()
 	})
+
+	it('widens the scale to hold every reference', () => {
+		const series = [83.6, 83.1, 82.4]
+		const plain = trend(series, options)
+		const geo = trend(series, {
+			...options,
+			references: [
+				{ value: 82.6, label: 'average 82.6' },
+				{ value: 80, label: 'goal 80.0' },
+			],
+		})
+		expect(plain.ticks[0]!.value).toBeGreaterThan(80)
+		expect(geo.ticks[0]!.value).toBeLessThanOrEqual(80)
+		expect(geo.ticks.at(-1)!.value).toBeGreaterThanOrEqual(83.6)
+		expect(geo.references.map((reference) => reference.label)).toEqual(['average 82.6', 'goal 80.0'])
+		for (const reference of geo.references) {
+			expect(reference.y).toBeGreaterThanOrEqual(geo.plot.y)
+			expect(reference.y).toBeLessThanOrEqual(geo.plot.y + geo.plot.height)
+		}
+		// a third is left out, and none leaves the chart as it was
+		const three = trend(series, { ...options, references: [...geo.references, { value: 70, label: 'low' }] })
+		expect(three.references).toHaveLength(2)
+		expect(trend(series, { ...options, references: [] })).toEqual(plain)
+	})
+
+	it('moves the lower of two close labels down a line', () => {
+		const geo = trend([82, 84], {
+			...options,
+			lineHeight: 18,
+			references: [
+				{ value: 83, label: 'average 83.0' },
+				{ value: 82.9, label: 'goal 82.9' },
+			],
+		})
+		const [average, goal] = geo.references as [(typeof geo.references)[number], (typeof geo.references)[number]]
+		expect(goal.y).toBeGreaterThan(average.y)
+		expect(average.labelY).toBe(average.y - 4)
+		expect(goal.labelY).toBe(goal.y - 4 + 18)
+		// far apart, each label sits above its own line
+		const apart = trend([80, 90], {
+			...options,
+			references: [
+				{ value: 88, label: 'a' },
+				{ value: 81, label: 'b' },
+			],
+		})
+		for (const reference of apart.references) expect(reference.labelY).toBe(reference.y - 4)
+	})
 })
