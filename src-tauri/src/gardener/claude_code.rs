@@ -9,6 +9,7 @@
 //! remove it but needs an API key, so the persona tells the model to ignore it.
 
 use std::collections::HashSet;
+#[cfg(unix)]
 use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -55,11 +56,18 @@ pub fn candidates(home: &Path, override_path: Option<&str>) -> Vec<PathBuf> {
     }
 }
 
-/// An absolute path to a file someone may execute (a symlink is followed).
+/// An absolute path to a file someone may execute (a symlink is followed). Windows has no execute bit, so there any
+/// file counts.
 pub fn is_executable(path: &Path) -> bool {
     path.is_absolute()
         && std::fs::metadata(path)
-            .map(|meta| meta.is_file() && meta.permissions().mode() & 0o111 != 0)
+            .map(|meta| {
+                #[cfg(unix)]
+                let runnable = meta.permissions().mode() & 0o111 != 0;
+                #[cfg(not(unix))]
+                let runnable = true;
+                meta.is_file() && runnable
+            })
             .unwrap_or(false)
 }
 
@@ -234,12 +242,11 @@ pub async fn set_override(device: &Device, path: Option<&str>) -> Result<()> {
     if let Some(dir) = file.parent() {
         std::fs::create_dir_all(dir)?;
     }
-    let mut out = std::fs::OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .mode(0o600)
-        .open(&file)?;
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    options.mode(0o600);
+    let mut out = options.open(&file)?;
     std::io::Write::write_all(&mut out, path.as_bytes())?;
     Ok(())
 }
@@ -395,12 +402,16 @@ fn session_uuid(id: &str) -> bool {
 /// Writes a conversation's `--mcp-config` (mode 0600 in a 0700 folder, always a new file; the bearer is never in
 /// argv, where `ps` would show it).
 fn write_mcp_config(app_data: &Path, request_id: &str, mcp: &McpEndpoint) -> Result<PathBuf> {
-    use std::os::unix::fs::DirBuilderExt;
     let dir = app_data.join("gardener").join("mcp");
-    std::fs::DirBuilder::new()
-        .recursive(true)
-        .mode(0o700)
-        .create(&dir)?;
+    let mut builder = std::fs::DirBuilder::new();
+    builder.recursive(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt;
+        builder.mode(0o700);
+    }
+    builder.create(&dir)?;
+    #[cfg(unix)]
     std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700))?;
     let path = dir.join(format!("{request_id}.json"));
     let config = json!({ "mcpServers": { "eden": {
@@ -411,11 +422,11 @@ fn write_mcp_config(app_data: &Path, request_id: &str, mcp: &McpEndpoint) -> Res
         // server's own timeout lifts that for a confirm the owner takes their time over.
         "timeout": MCP_TOOL_TIMEOUT_MS,
     } } });
-    let mut file = std::fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .mode(0o600)
-        .open(&path)?;
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    options.mode(0o600);
+    let mut file = options.open(&path)?;
     std::io::Write::write_all(&mut file, config.to_string().as_bytes())?;
     Ok(path)
 }
@@ -545,8 +556,9 @@ async fn run_process(
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .kill_on_drop(true)
-        .process_group(0);
+        .kill_on_drop(true);
+    #[cfg(unix)]
+    command.process_group(0);
     let (removed, set) = env_for();
     for name in removed {
         command.env_remove(name);
@@ -1006,6 +1018,7 @@ mod tests {
     use super::*;
     use crate::db::testing::temp_dir;
     use crate::gardener::SessionSpec;
+    use std::os::unix::fs::PermissionsExt;
 
     fn request() -> GardenerRequest {
         GardenerRequest {

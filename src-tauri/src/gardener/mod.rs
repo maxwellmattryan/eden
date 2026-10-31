@@ -235,7 +235,7 @@ impl Inflight {
 
 /// Ends a process group: TERM now, KILL after two seconds for whatever is left. Through the system `kill`, so the
 /// crate needs no `libc`.
-#[cfg(feature = "desktop")]
+#[cfg(all(feature = "desktop", unix))]
 pub fn kill_group(pgid: u32) {
     let group = format!("-{pgid}");
     let signal = |name: &str| {
@@ -254,6 +254,16 @@ pub fn kill_group(pgid: u32) {
             .stderr(std::process::Stdio::null())
             .status();
     });
+}
+
+/// Windows has no process groups to signal: `taskkill /T` ends the process and its children.
+#[cfg(all(feature = "desktop", not(unix)))]
+pub fn kill_group(pid: u32) {
+    let _ = std::process::Command::new("taskkill")
+        .args(["/PID", &pid.to_string(), "/T", "/F"])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status();
 }
 
 #[cfg(test)]
