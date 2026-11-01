@@ -22,7 +22,7 @@ const THREAD_TYPE: &str = "thread";
 const MESSAGE_TYPE: &str = "message";
 const ATTACHMENT_TYPE: &str = "attachment";
 /// The fields a thread patch may name.
-const PATCHABLE: &[&str] = &["title", "tier", "domain"];
+const PATCHABLE: &[&str] = &["title", "tier", "domain", "claudeSessionId"];
 
 /// The tier of a thread: the highest tier of anything it read, `T0` until it reads something. Its text is the
 /// registry's, capitals and all, so it is not a `text_enum!`.
@@ -66,6 +66,9 @@ pub struct Thread {
     pub domain: Option<String>,
     pub title: String,
     pub tier: Tier,
+    /// The Claude Code session the conversation runs in on desktop (D-178); none until its first reply there.
+    #[serde(default)]
+    pub claude_session_id: Option<String>,
     pub created_at: String,
     pub updated_at: String,
     #[serde(default)]
@@ -125,7 +128,8 @@ pub struct MessageInput {
     pub request_id: Option<String>,
 }
 
-const THREAD_COLUMNS: &str = "id, domain, title, tier, created_at, updated_at, deleted_at";
+const THREAD_COLUMNS: &str =
+    "id, domain, title, tier, created_at, updated_at, deleted_at, claude_session_id";
 const MESSAGE_COLUMNS: &str =
     "id, thread_id, role, blocks, request_id, created_at, updated_at, deleted_at";
 
@@ -144,7 +148,24 @@ fn thread_from_row(row: &Row<'_>) -> rusqlite::Result<Thread> {
         created_at: row.get(4)?,
         updated_at: row.get(5)?,
         deleted_at: row.get(6)?,
+        claude_session_id: row.get(7)?,
     })
+}
+
+/// A session id as Claude Code takes one: a UUID's letters, digits and dashes, and short.
+fn check_session(session: Option<&str>) -> Result<()> {
+    match session {
+        Some(session)
+            if session.is_empty()
+                || session.len() > 64
+                || !session
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '-') =>
+        {
+            Err(refused(format!("not a session id: {session:?}")))
+        }
+        _ => Ok(()),
+    }
 }
 
 fn message_from_row(row: &Row<'_>) -> rusqlite::Result<Message> {
@@ -234,7 +255,7 @@ pub fn create_thread(ctx: &mut WriteCtx, input: ThreadInput) -> Result<Thread> {
     Ok(thread)
 }
 
-/// Edits a live thread in place: its `title`, its `tier` and its `domain`.
+/// Edits a live thread in place: its `title`, its `tier`, its `domain` and its Claude Code session (`null` clears it).
 pub fn update_thread(ctx: &mut WriteCtx, id: &str, patch: &ThreadPatch) -> Result<Thread> {
     let conn = ctx.conn;
     let before = require_thread(conn, id)?;
@@ -264,12 +285,26 @@ pub fn update_thread(ctx: &mut WriteCtx, id: &str, patch: &ThreadPatch) -> Resul
         Some(Value::String(domain)) => after.domain = Some(domain.clone()),
         Some(_) => return Err(refused("a domain is text")),
     }
+    match patch.get("claudeSessionId") {
+        None => {}
+        Some(Value::Null) => after.claude_session_id = None,
+        Some(Value::String(session)) => after.claude_session_id = Some(session.clone()),
+        Some(_) => return Err(refused("a session id is text")),
+    }
     check_domain(after.domain.as_deref())?;
+    check_session(after.claude_session_id.as_deref())?;
 
     let stamp = hlc::next(conn)?;
     conn.execute(
-        "UPDATE threads SET title = ?1, tier = ?2, domain = ?3, updated_at = ?4 WHERE id = ?5",
-        rusqlite::params![after.title, after.tier.as_str(), after.domain, stamp, id],
+        "UPDATE threads SET title = ?1, tier = ?2, domain = ?3, claude_session_id = ?4, updated_at = ?5 WHERE id = ?6",
+        rusqlite::params![
+            after.title,
+            after.tier.as_str(),
+            after.domain,
+            after.claude_session_id,
+            stamp,
+            id
+        ],
     )?;
     let thread = require_thread(conn, id)?;
     ctx.record(&thread.uri, ChangeOp::Updated);
@@ -542,11 +577,12 @@ pub(crate) fn exportable_messages(conn: &Connection) -> Result<Vec<Message>> {
         .collect::<rusqlite::Result<Vec<_>>>()?)
 }
 
-/// A tombstone as it leaves: its id, its tier and its stamps, and no title.
+/// A tombstone as it leaves: its id, its tier and its stamps, and no title or session.
 pub(crate) fn stripped_thread(thread: &Thread) -> Thread {
     Thread {
         title: String::new(),
         domain: None,
+        claude_session_id: None,
         ..thread.clone()
     }
 }
@@ -571,6 +607,8 @@ pub(crate) fn validate_imported_thread(thread: &Thread) -> std::result::Result<(
         ));
     }
     check_domain(thread.domain.as_deref()).map_err(|e| format!("{}: {e}", thread.id))?;
+    check_session(thread.claude_session_id.as_deref())
+        .map_err(|e| format!("{}: {e}", thread.id))?;
     if !stamps_ok(
         &thread.created_at,
         &thread.updated_at,
@@ -609,8 +647,9 @@ pub(crate) fn validate_imported_message(message: &Message) -> std::result::Resul
 /// Writes a thread as it is, stamps and all.
 pub(crate) fn put_thread(conn: &Connection, thread: &Thread) -> Result<()> {
     conn.execute(
-        "INSERT OR REPLACE INTO threads (id, domain, title, tier, created_at, updated_at, deleted_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        "INSERT OR REPLACE INTO threads
+         (id, domain, title, tier, created_at, updated_at, deleted_at, claude_session_id)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         rusqlite::params![
             thread.id,
             thread.domain,
@@ -619,6 +658,7 @@ pub(crate) fn put_thread(conn: &Connection, thread: &Thread) -> Result<()> {
             thread.created_at,
             thread.updated_at,
             thread.deleted_at,
+            thread.claude_session_id,
         ],
     )?;
     Ok(())
@@ -731,11 +771,40 @@ mod tests {
             .unwrap();
         assert!(of_kitchen.is_empty());
 
+        // the Claude Code session is set, kept through other edits, and cleared with null (D-178)
+        assert_eq!(edited.claude_session_id, None);
+        let session = "11111111-2222-4333-8444-555555555555";
+        let held = ws
+            .write(|ctx| {
+                update_thread(
+                    ctx,
+                    &first.id,
+                    &patch(json!({ "claudeSessionId": session })),
+                )
+            })
+            .unwrap();
+        assert_eq!(held.claude_session_id.as_deref(), Some(session));
+        let renamed = ws
+            .write(|ctx| update_thread(ctx, &first.id, &patch(json!({ "title": "Dinner" }))))
+            .unwrap();
+        assert_eq!(renamed.claude_session_id.as_deref(), Some(session));
+        assert_eq!(
+            serde_json::to_value(&renamed).unwrap()["claudeSessionId"],
+            json!(session)
+        );
+        let cleared = ws
+            .write(|ctx| update_thread(ctx, &first.id, &patch(json!({ "claudeSessionId": null }))))
+            .unwrap();
+        assert_eq!(cleared.claude_session_id, None);
+
         for bad in [
             json!({ "tier": "T3" }),
             json!({ "domain": "Kitchen" }),
             json!({ "title": 3 }),
             json!({ "colour": "green" }),
+            json!({ "claudeSessionId": 7 }),
+            json!({ "claudeSessionId": "../etc" }),
+            json!({ "claudeSessionId": "" }),
         ] {
             assert_eq!(
                 code(ws.write(|ctx| update_thread(ctx, &first.id, &patch(bad)))),
@@ -937,16 +1006,28 @@ mod tests {
         let (thread, message) = ws
             .write(|ctx| {
                 let opened = create_thread(ctx, thread("Secret dinner", Some("kitchen")))?;
+                update_thread(
+                    ctx,
+                    &opened.id,
+                    &patch(json!({ "claudeSessionId": "11111111-2222-4333-8444-555555555555" })),
+                )?;
                 let message = append_message(ctx, message(&opened.id, Role::Owner, "the words"))?;
                 let thread = delete_thread(ctx, &opened.id)?;
                 let message = get_message(ctx.conn, &message.id)?.unwrap();
                 Ok((thread, message))
             })
             .unwrap();
+        assert!(thread.claude_session_id.is_some());
         let gone = stripped_thread(&thread);
         assert_eq!(gone.title, "");
         assert_eq!(gone.domain, None);
+        assert_eq!(gone.claude_session_id, None);
         assert_eq!(validate_imported_thread(&gone), Ok(()));
+        assert!(validate_imported_thread(&Thread {
+            claude_session_id: Some("a/b".into()),
+            ..thread.clone()
+        })
+        .is_err());
         let gone = stripped_message(&message);
         assert_eq!(gone.blocks, json!([]));
         assert_eq!(validate_imported_message(&gone), Ok(()));

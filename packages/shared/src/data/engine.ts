@@ -1249,6 +1249,7 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 					domain: input.domain ?? null,
 					title: input.title,
 					tier: input.tier ?? 'T0',
+					claudeSessionId: null,
 					createdAt: at,
 					updatedAt: at,
 					deletedAt: null,
@@ -1267,6 +1268,7 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 				if (patch.title !== undefined) row.title = patch.title
 				if (patch.tier !== undefined) row.tier = patch.tier
 				if ('domain' in patch) row.domain = patch.domain ?? null
+				if ('claudeSessionId' in patch) row.claudeSessionId = patch.claudeSessionId ?? null
 				row.updatedAt = stamp(state)
 				return structuredClone(row)
 			})

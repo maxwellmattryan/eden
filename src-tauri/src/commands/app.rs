@@ -26,7 +26,18 @@ pub fn get_app_info(app: tauri::AppHandle) -> Result<AppInfo, String> {
         is_dev,
         data_dir,
         updater_endpoint: updater_endpoint(&app.config().plugins),
+        gardener_provider: gardener_provider().to_string(),
     })
+}
+
+/// The Gardener's provider, chosen by the build and never by the synced policy row (D-178): the desktop runs every
+/// request through the owner's Claude Code, the phone keeps the API.
+pub fn gardener_provider() -> &'static str {
+    if cfg!(feature = "desktop") {
+        "claude-code"
+    } else {
+        "anthropic"
+    }
 }
 
 /// The first updater endpoint of the build's config: the staging and production overlays set one, development none.
@@ -44,6 +55,16 @@ fn updater_endpoint(plugins: &PluginConfig) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn app_info_names_the_gardener_provider() {
+        let expected = if cfg!(feature = "desktop") {
+            "claude-code"
+        } else {
+            "anthropic"
+        };
+        assert_eq!(gardener_provider(), expected);
+    }
 
     #[test]
     fn the_updater_endpoint_is_read_from_the_config() {

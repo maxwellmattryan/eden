@@ -393,5 +393,10 @@ pub fn get_migrations() -> Vec<&'static str> {
         WHERE outcome NOT IN ('declined', 'budget')
         GROUP BY 1, 2, 3, 4, 5, 6, 7;
         "#,
+        // Migration 10: the Claude Code session a thread's conversation runs in on desktop (D-178). It rides the
+        // bundle with the thread; on another device the resume fails and a new session is seeded from the thread.
+        r#"
+        ALTER TABLE threads ADD COLUMN claude_session_id TEXT;
+        "#,
     ]
 }

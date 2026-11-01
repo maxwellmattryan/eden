@@ -84,6 +84,8 @@ export interface PackRequest {
 	mode?: 'chat' | 'delegated' | 'research'
 	/** A delegated reply held to a JSON schema. */
 	json?: boolean
+	/** The request runs through the owner's Claude Code (D-178): the persona gains its one sentence. */
+	host?: 'claude-code'
 }
 
 export interface SystemBlock {
@@ -144,7 +146,7 @@ function sortFacts(facts: Fact[]): Fact[] {
 }
 
 /** One turn as the API takes it: plain words, or the blocks of a turn that called tools or answers them. */
-interface Turn {
+export interface Turn {
 	role: 'user' | 'assistant'
 	content: string | Record<string, unknown>[]
 }
@@ -197,7 +199,7 @@ function fileBlock(block: AttachmentBlock, sent: PackAttachment | undefined): Re
  * each answered, in the order they happened, so a follow-up knows what was drafted, read and refused. A call's
  * result carries what became of the card it left. `full` keeps a long result whole; an earlier reply's is left out.
  */
-function turnsOf(message: Message, full: boolean): Turn[] {
+export function turnsOf(message: Message, full: boolean): Turn[] {
 	const blocks = (message.blocks as MessageBlock[]).filter(Boolean)
 	const role = message.role === 'owner' ? 'user' : 'assistant'
 	const cards = new Map<string, string>()
@@ -546,6 +548,7 @@ export async function buildPack(request: PackRequest, readers: PackReaders): Pro
 	if (request.markdown) Object.assign(of, { markdown: true })
 	if (request.mode) Object.assign(of, { mode: request.mode })
 	if (request.json) Object.assign(of, { json: true })
+	if (request.host) Object.assign(of, { host: request.host })
 	const stable = persona({ ...of, canSee: [], locked, trimmed: [] }).stable
 
 	const canSee = () => sections.map((section) => ({ id: section.id, count: section.rows.length }))

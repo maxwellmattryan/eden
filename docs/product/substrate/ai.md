@@ -1,10 +1,10 @@
 ---
 title: The Gardener
 status: draft
-summary: Eden's AI layer: one persona across every surface, bring-your-own-key providers and local models, model grades, declared reads and the context pack, typed tools with access levels, the Council, the Phase 1 privacy pipeline, hard budgets, and the audit log.
+summary: Eden's AI layer: one persona across every surface, the desktop on the owner's Claude Code and the phone on bring-your-own-key providers, local models, model grades, declared reads and the context pack, typed tools with access levels, the Council, the Phase 1 privacy pipeline, hard budgets and usage windows, and the audit log.
 read-this-if: You are designing any feature that involves a model, or anything the Gardener can see or do.
 depends-on: [privacy, registry, grants, primitives]
-updated: 2026-10-02
+updated: 2026-10-31
 ---
 
 ## Persona and voice
@@ -20,6 +20,8 @@ One assistant, the Gardener, everywhere: the global panel, each domain's chat, i
 | 3 | plugin-provided tools under the same rules |
 
 The provider registry holds each provider's models, each with its flags (`tools`, `vision`, `search`), its context size and a pricing row, which holds the price of one web search (D-132), and the provider's map from grade to model. Both are seeded and the owner's to edit. The seed is Anthropic's alone: OpenAI and Google AI each get one, with its price rows and dated model ids wherever the provider has them, when their adapters are built, and until then a request to either resolves to no provider. The seed and the resolution are `@eden/shared/gardener` (`engineering/domain-module.md`, "Model grades"). The owner's edits to a map and the overrides are kept as a sparse overlay on the seed, synced as workspace policy like grants (D-37), so a new seed reaches an owner who never edited it: the `gardener` row of the policy table (D-76). In a development build the light and the standard grade run on the light model and the deep grade on the standard one (D-81). The runtime is `engineering/gardener.md`. A model the seed lists and maps to no grade may come with terms of its own, which the request handles: Anthropic's Fable needs 30-day data retention on the owner's organization and answers 400 without it, and it can stop with a refusal. **Keys are T3 and per device** (D-37): a workspace can be "Gardener configured, no key on this device", shown as a grey chip with one-tap key entry.
+
+**The desktop runs on Claude Code** (D-178): the build, not the policy, chooses the provider. Every desktop request is a process of the owner's own Claude Code on their subscription, under the provider id `claude-code` with the Anthropic seed's models, grades and prices, and the phone keeps the Anthropic API and its key. On desktop Settings shows Claude Code's status (found, signed in) and a path override kept on that device, and "not ready" (no binary, or not signed in) is the grey chip. Eden's tools reach the process through a localhost MCP bridge in the app (D-179), which runs each call through the same cards, grants and confirms as on the API. A conversation is a Claude Code session, resumed on the next message.
 
 ## Surfaces
 
@@ -65,13 +67,15 @@ grants gate → fields excluded by tier → deterministic scrub of emails, phone
 
 Before a request is sent its tool is resolved to a provider and a model (`resolveTool`, and `resolveGrade` for the conversation), and its estimate comes from that model's pricing row. A tool request that resolves to `deep`, and any request that would run above its declared grade, shows its estimate and waits for the owner's confirm, and nothing is sent while that confirm is owed (D-74). The status bar's Gardener chip names the conversation's grade and model, switches the grade, and shows the budget meter. A Council run previews its cost before sending, and Capture's sheet names the provider, the model and the estimate beside its Read (D-86). When a cap is reached the Gardener declines with the reason and a link to the budget settings.
 
+On desktop the monthly cap is not applied (D-180): the subscription's usage windows are the budget. Settings holds two thresholds, Warn at and Stop at (80 % and 95 % by default); a window at the first warns once a day, and one at the second declines until it resets, naming the window and the local reset time. The Usage tab shows each window with its reset, and the dollars there are list-price equivalents, since the subscription bills no dollars per request; the audit keeps them as a reference.
+
 ## Audit log
 
 One entry per request, a delegated one included: id, time, surface, the thread, the request that called it (for a delegated one), the tool, the declared and the resolved grade, how the model was chosen (tool override, domain override or map), provider and model, registry ids read with row counts, entity ids touched, tools called with access and the confirm outcome, the outcome of a deep or escalation confirm, tokens in and out, cost, outcome, and the grants that allowed it. From any entry the owner can walk to the chat, the tool call, the provider and the model behind it (D-74). A file the owner attached to a message is logged by hash, type and size, and an image's pixels, never its bytes or its name (D-83). Capture's sources are logged the same way, on an entry with no thread (D-86). Tokens written to the provider's cache are kept beside the ones read from it, each priced at its own rate (D-116). Retention 90 days by default. The log is a tab of the Gardener's page (D-113), a table sorted, filtered and paged in the address (D-114), linked from Settings → Gardener and from the profile; the link from every fact ("used by N requests") and from every "can see" chip is not built yet (`engineering/gardener.md`, handoffs). What the entries came to is rolled up by day and kept past the log's ninety days, which is what the page's Usage tab shows (D-115).
 
 ## Offline and unconfigured states
 
-Offline: cloud models are unavailable, local models work on desktop, the panel says which. No key on this device: the chip is grey and the panel offers key entry or a local model. Budget exhausted: the panel says so. In every state, nothing else in Eden depends on the Gardener.
+Offline: cloud models are unavailable, local models work on desktop, the panel says which. No key on this device: the chip is grey and the panel offers key entry or a local model. Claude Code not ready on desktop: the chip is grey and the panel points to Settings (D-178). Budget exhausted, or a usage window at its stop threshold: the panel says so. In every state, nothing else in Eden depends on the Gardener.
 
 ## Non-goals
 

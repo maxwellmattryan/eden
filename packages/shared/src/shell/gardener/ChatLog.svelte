@@ -18,7 +18,10 @@
 	type Props = {
 		/** What stands under the "no key on this device" notice: the panel's key field, the sheet's way to Settings. */
 		nokey?: Snippet
-		/** Opens the budgets, from the notice that says the month's cap is reached. */
+		/**
+		 * Opens Settings → Gardener: the budgets, from the notice that says the month's cap is reached, and the Claude
+		 * Code row, from the one that says it is not ready.
+		 */
 		onbudgets: () => void
 		/** No padding of its own, where the surface already insets what it holds (a sheet). */
 		flush?: boolean
@@ -63,6 +66,16 @@
 <div class={['log', chat.greets && 'log-empty', flush && 'log-flush']} bind:this={log}>
 	{#if !chat.inApp}
 		<Notice tone="info" title={$t('gardener.runsInApp')} />
+	{:else if gardenerSetup.onClaude}
+		<!-- desktop runs on the owner's Claude Code (D-178): not found, or not signed in -->
+		{#if gardenerSetup.ready && gardenerSetup.claude && !gardenerSetup.canAsk}
+			<Notice
+				tone="info"
+				title={$t('gardener.noClaude.title')}
+				detail={$t('gardener.noClaude.text')}
+				action={{ label: $t('gardener.noClaude.open'), onclick: onbudgets }}
+			/>
+		{/if}
 	{:else if gardenerSetup.ready && !gardenerSetup.hasKey}
 		<Notice tone="info" title={$t('gardener.noKey.title')} detail={$t('gardener.noKey.text')} />
 		{@render nokey?.()}

@@ -1527,6 +1527,9 @@ mod tests {
                         tier: Some(threads::Tier::T1),
                     },
                 )?;
+                // the desktop's Claude Code session rides the bundle with its thread (D-178)
+                let session = json!({ "claudeSessionId": "11111111-2222-4333-8444-555555555555" });
+                threads::update_thread(ctx, &thread.id, session.as_object().unwrap())?;
                 let message = |role, text: &str| threads::MessageInput {
                     id: None,
                     thread_id: thread.id.clone(),
@@ -1857,6 +1860,10 @@ mod tests {
             .unwrap();
         assert_eq!(opened.len(), 1);
         assert_eq!(opened[0].title, "Dinner");
+        assert_eq!(
+            opened[0].claude_session_id.as_deref(),
+            Some("11111111-2222-4333-8444-555555555555")
+        );
         let said = second
             .read(|conn| threads::query_messages(conn, &opened[0].id))
             .unwrap();

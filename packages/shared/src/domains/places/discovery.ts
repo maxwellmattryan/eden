@@ -25,6 +25,8 @@ export type SourceFailure =
 	| 'no-key'
 	| 'unavailable'
 	| 'budget'
+	/** The desktop's subscription is at its usage limit until a window resets (D-180). */
+	| 'limit'
 	| 'busy'
 	| 'network'
 	| 'refusal'

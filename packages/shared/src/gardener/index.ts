@@ -61,10 +61,15 @@ export {
 	type GardenerPanelState,
 } from './panel-state.js'
 export { persona, type Persona, type PersonaDomain, type PersonaInput } from './persona.js'
-export { DEFAULT_POLICY, effectiveSetup, readPolicy, type EffectiveSetup } from './policy.js'
+export { DEFAULT_POLICY, effectiveSetup, parseThresholds, readPolicy, type EffectiveSetup } from './policy.js'
+export * from './claude-code.js'
+export * from './limits.js'
 export {
 	ANTHROPIC,
 	ANTHROPIC_SEED,
+	CLAUDE_CODE,
+	claudeCodeSeed,
+	seedOf,
 	effectiveProvider,
 	effortEdit,
 	gradeMapOf,

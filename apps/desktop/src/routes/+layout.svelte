@@ -57,7 +57,7 @@
 	import { gardenerSetup } from '@eden/shared/shell/gardener'
 	import { missingHandlers } from '@eden/shared/shell/gardener'
 	import { fileDropGuard, isTauri, logError } from '@eden/shared/api'
-	import { formatUsd, GRADES } from '@eden/shared/gardener'
+	import { formatUsd, GRADES, readLimits } from '@eden/shared/gardener'
 
 	let { children } = $props()
 
@@ -227,17 +227,39 @@
 	const GRADE_ICONS = { light: 'seed', standard: 'sprout', deep: 'tree-deciduous' } as const
 
 	// The status bar's Gardener chip (shell.md, "Status bar"): the conversation's grade and model with the switch,
-	// the budget meter, grey when this device has no key; it opens the panel.
+	// the budget meter, grey when the Gardener cannot be asked here; it opens the panel. On Claude Code (D-178, D-180)
+	// no monthly cap is applied: the subscription's windows are the budget, so the meter is the fullest one ("42% of
+	// the 5-hour window used"), and none shows before the first reading.
+	const fullestWindow = $derived.by(() => {
+		// read again whenever a request was audited, which is when a process reported the windows
+		void gardenerSetup.spentThisMonth
+		const now = Date.now()
+		const [name, reading] =
+			Object.entries(readLimits())
+				.filter(([, window]) => window.resetsAt === null || window.resetsAt > now)
+				.sort(([, a], [, b]) => b.utilization - a.utilization)[0] ?? []
+		return name && reading ? { name, percent: Math.min(100, Math.round(reading.utilization * 100)) } : undefined
+	})
 	const gardenerChip = $derived({
-		label: gardenerSetup.hasKey ? gardenerSetup.model : $t('shell.gardener'),
-		noKey: !gardenerSetup.hasKey,
-		budget: gardenerSetup.hasKey
-			? {
-					used: formatUsd(gardenerSetup.spentThisMonth),
-					cap: formatUsd(gardenerSetup.capUsd),
-					percent: gardenerSetup.percent,
-				}
-			: undefined,
+		label: gardenerSetup.canAsk ? gardenerSetup.model : $t('shell.gardener'),
+		noKey: !gardenerSetup.canAsk,
+		budget: !gardenerSetup.canAsk
+			? undefined
+			: gardenerSetup.onClaude
+				? fullestWindow && {
+						used: `${fullestWindow.percent}%`,
+						cap: $t('gardener.chip.window', {
+							values: {
+								window: $t(`gardenerPage.usage.windows.${fullestWindow.name}`, { default: fullestWindow.name }),
+							},
+						}),
+						percent: fullestWindow.percent,
+					}
+				: {
+						used: formatUsd(gardenerSetup.spentThisMonth),
+						cap: formatUsd(gardenerSetup.capUsd),
+						percent: gardenerSetup.percent,
+					},
 		grade: gardenerSetup.grade,
 		grades: GRADES.map((grade) => ({
 			id: grade,

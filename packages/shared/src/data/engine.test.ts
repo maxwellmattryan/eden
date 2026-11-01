@@ -824,6 +824,13 @@ describe('engine', () => {
 		const retitled = engine.updateThread(thread.id, { title: 'Dinner plans', tier: 'T2', domain: null })
 		expect(retitled).toMatchObject({ title: 'Dinner plans', tier: 'T2', domain: null })
 		expect(retitled.updatedAt > thread.updatedAt).toBe(true)
+		// the desktop's Claude Code session is set, kept through other edits and cleared with null (D-178)
+		expect(retitled.claudeSessionId).toBeNull()
+		const session = '11111111-2222-4333-8444-555555555555'
+		expect(engine.updateThread(thread.id, { claudeSessionId: session }).claudeSessionId).toBe(session)
+		expect(engine.updateThread(thread.id, { title: 'Dinner plans' }).claudeSessionId).toBe(session)
+		expect(engine.updateThread(thread.id, { claudeSessionId: null }).claudeSessionId).toBeNull()
+		expect(codeOf(() => engine.updateThread(thread.id, { claudeSessionId: '../x' }))).toBe('thread:invalid')
 		const edited = engine.updateMessage(answered.id, [{ kind: 'text', text: 'Dal.' }])
 		expect(edited.blocks).toEqual([{ kind: 'text', text: 'Dal.' }])
 		expect(edited.updatedAt > answered.updatedAt).toBe(true)

@@ -73,8 +73,21 @@ export const ANTHROPIC_SEED: ProviderRow = {
 	serverTools: { search: { type: 'web_search_20250305', name: 'web_search' } },
 }
 
+export const CLAUDE_CODE: ProviderId = 'claude-code'
+
+/**
+ * The desktop's provider (D-178): the same models, grades, list prices and web search as the API's, run through the
+ * owner's Claude Code on their subscription. The prices make the audit's costs list-price equivalents (D-180).
+ */
+export const claudeCodeSeed: ProviderRow = { ...ANTHROPIC_SEED, id: CLAUDE_CODE }
+
 /** Every seeded provider. */
-export const PROVIDERS: readonly ProviderRow[] = [ANTHROPIC_SEED]
+export const PROVIDERS: readonly ProviderRow[] = [ANTHROPIC_SEED, claudeCodeSeed]
+
+/** The seed of a provider id; the API's for one with no seed. */
+export function seedOf(providerId: ProviderId): ProviderRow {
+	return PROVIDERS.find((provider) => provider.id === providerId) ?? ANTHROPIC_SEED
+}
 
 /** A provider's map from grade to model, as refs. */
 export function gradeMapOf(provider: ProviderRow): GradeMap {

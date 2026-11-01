@@ -13,6 +13,8 @@ pub struct AppInfo {
     pub data_dir: String,
     /// Where the updater asks for the latest build, so the egress ledger can count the check; `None` in development.
     pub updater_endpoint: Option<String>,
+    /// The provider this build's Gardener runs on (D-178): `claude-code` on desktop, `anthropic` on mobile.
+    pub gardener_provider: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

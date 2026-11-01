@@ -4,8 +4,11 @@
 	// the day, the week, the month or the year, and where it went over that stretch: by model, by grade, by what ran.
 	// The figures are the usage rollup's, which outlives the audit log's ninety days. They are this device's estimates
 	// from the owner's price table: close to what the provider bills, never a statement of it. The page follows the
-	// mock in the kit's Storybook (Domains/Gardener/Usage).
+	// mock in the kit's Storybook (Domains/Gardener/Usage). On desktop the Gardener runs on the owner's Claude Code
+	// subscription (D-178, D-180): its usage windows lead the page, the dollars are list-price equivalents, and there
+	// is no cap to measure the month against.
 	import {
+		Badge,
 		BarChart,
 		DataTable,
 		EmptyState,
@@ -26,9 +29,11 @@
 		formatUsd,
 		queryUsage,
 		rangeStart,
+		readLimits,
 		SUBSTRATE,
 		sumUsage,
 		usageOf,
+		windowState,
 		type UsageDay,
 		type UsageRow,
 		type UsageSpan,
@@ -46,8 +51,11 @@
 	let ready = $state(false)
 	let failed = $state(false)
 	let span = $state(0)
+	// the usage windows as the last process read them, on this device (D-180)
+	let limits = $state(readLimits())
 
 	async function read() {
+		limits = readLimits()
 		try {
 			const rows = await queryUsage({ groupBy: ['day', 'provider', 'model', 'grade', 'kind', 'domain', 'tool'] })
 			days = rows.map(({ bucket, ...row }: UsageRow) => ({ ...row, day: bucket ?? '' }) as UsageDay)
@@ -74,6 +82,20 @@
 	const percent = $derived(
 		gardenerSetup.capUsd > 0 ? Math.min(100, Math.round((month.costUsd / gardenerSetup.capUsd) * 100)) : 0
 	)
+
+	// Each known window still ahead of its reset: how full it is, when it resets on the owner's clock, and its state
+	// as a word whenever it is near or at the limit, so colour is never all it says.
+	const resetFormat = $derived(
+		new Intl.DateTimeFormat($locale ?? 'en', { weekday: 'short', hour: '2-digit', minute: '2-digit' })
+	)
+	const windows = $derived.by(() => {
+		const now = Date.now()
+		const { usageWarnAt, usageStopAt } = gardenerSetup.policy
+		return Object.entries(limits)
+			.map(([name, reading]) => ({ name, reading, state: windowState(reading, usageWarnAt, usageStopAt, now) }))
+			.filter((entry) => entry.state !== 'past')
+			.sort((a, b) => a.name.localeCompare(b.name))
+	})
 
 	// The chart: the span's stretch up to today, a bar a bucket, the three grades stacked.
 	const by = $derived(SPANS[span] ?? 'day')
@@ -149,12 +171,44 @@
 	}
 </script>
 
+{#snippet usageWindows()}
+	{#if gardenerSetup.onClaude}
+		{#if windows.length}
+			<WidgetGrid>
+				{#each windows as entry (entry.name)}
+					<Widget title={$t(`gardenerPage.usage.windows.${entry.name}`, { default: entry.name })} icon="gauge">
+						<div class="window">
+							<Stat
+								value={`${Math.round(entry.reading.utilization * 100)}%`}
+								unit={entry.reading.resetsAt !== null
+									? $t('gardenerPage.usage.windows.resets', {
+											values: { time: resetFormat.format(entry.reading.resetsAt) },
+										})
+									: undefined}
+							/>
+							{#if entry.state === 'paused'}
+								<Badge kind="danger" label={$t('gardenerPage.usage.windows.paused')} />
+							{:else if entry.state === 'near'}
+								<Badge kind="warning" label={$t('gardenerPage.usage.windows.near')} />
+							{/if}
+						</div>
+					</Widget>
+				{/each}
+			</WidgetGrid>
+		{:else}
+			<p class="line">{$t('gardenerPage.usage.windows.empty')}</p>
+		{/if}
+	{/if}
+{/snippet}
+
 <div class="body">
 	{#if failed}
 		<InlineError message={$t('gardenerPage.usage.error')} onretry={read} live />
 	{:else if !ready}
 		<Skeleton rows={4} icon={false} />
 	{:else if !days.length}
+		<!-- before the first request the empty state speaks alone; windows read since then still show -->
+		{#if windows.length}{@render usageWindows()}{/if}
 		<EmptyState title={$t('gardenerPage.usage.empty.title')} text={$t('gardenerPage.usage.empty.text')} />
 	{:else}
 		{#if gardenerSetup.clamped}
@@ -165,11 +219,15 @@
 				})}
 			/>
 		{/if}
+		{@render usageWindows()}
 		<WidgetGrid>
 			<Widget title={$t('gardenerPage.usage.tiles.month')} icon="calendar">
+				<!-- the cap is not applied on desktop, so the month stands on its own there (D-180) -->
 				<Stat
 					value={money(month.costUsd)}
-					unit={$t('gardenerPage.usage.ofCap', { values: { cap: formatUsd(gardenerSetup.capUsd), percent } })}
+					unit={gardenerSetup.onClaude
+						? undefined
+						: $t('gardenerPage.usage.ofCap', { values: { cap: formatUsd(gardenerSetup.capUsd), percent } })}
 				/>
 			</Widget>
 			<Widget title={$t('gardenerPage.usage.tiles.last30')} icon="clock">
@@ -182,7 +240,9 @@
 				<Stat value={number.format(month.requests)} />
 			</Widget>
 		</WidgetGrid>
-		<p class="quiet">{$t('gardenerPage.usage.estimate')}</p>
+		<p class="quiet">
+			{$t(gardenerSetup.onClaude ? 'gardenerPage.usage.estimateListPrice' : 'gardenerPage.usage.estimate')}
+		</p>
 
 		<section class="card" aria-labelledby="gardener-usage-spend">
 			<header class="card-head">
@@ -250,6 +310,17 @@
 		margin: calc(-1 * var(--space-3)) 0 0;
 		font: var(--ed-t-body-sm);
 		color: var(--text-secondary);
+	}
+	.line {
+		margin: 0;
+		font: var(--ed-t-body-sm);
+		color: var(--text-secondary);
+	}
+	.window {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: var(--space-2);
 	}
 	.cached {
 		margin: 0;
