@@ -39,6 +39,7 @@ import {
 	normalLink,
 	PROPOSABLE_FACTS,
 	queryUsage,
+	readLimits,
 	readRows,
 	resolveLink,
 	untrusted,
@@ -411,9 +412,36 @@ export const substrateTools: Record<string, ToolHandler> = {
 								more: 'Only the first rows are here. Ask for fewer days or a coarser grouping.',
 							}
 						: {}),
-					capUsd: gardenerSetup.capUsd,
-					spentThisMonthUsd: usd(gardenerSetup.spentThisMonth),
-					note: 'Estimates from the owner’s price table on this device, not the provider’s bill. A request declined or stopped by the budget is not counted. An empty `domain`, `tool` or `grade` means the request had none.',
+					// on desktop the Gardener runs on the owner's Claude Code subscription (D-178, D-180): no monthly cap,
+					// the dollars are what the requests would cost at list price, and the windows are the budget
+					...(gardenerSetup.onClaude
+						? {
+								spentThisMonthUsd: usd(gardenerSetup.spentThisMonth),
+								windows: Object.fromEntries(
+									Object.entries(readLimits()).flatMap(([name, window]) =>
+										window.resetsAt !== null && window.resetsAt <= Date.now()
+											? []
+											: [
+													[
+														name,
+														{
+															usedPercent: Math.round(window.utilization * 100),
+															...(window.resetsAt !== null
+																? { resetsAt: new Date(window.resetsAt).toISOString() }
+																: {}),
+															...(window.rejected ? { rejected: true } : {}),
+														},
+													],
+												]
+									)
+								),
+								note: 'The figures are list-price equivalents from the owner’s price table on this device: the requests run on the owner’s Claude Code subscription, which bills no dollars per request, and no monthly cap applies. `windows` is how full each of the subscription’s usage windows was at the last request, and when it resets. A request declined by a usage window is not counted. An empty `domain`, `tool` or `grade` means the request had none.',
+							}
+						: {
+								capUsd: gardenerSetup.capUsd,
+								spentThisMonthUsd: usd(gardenerSetup.spentThisMonth),
+								note: 'Estimates from the owner’s price table on this device, not the provider’s bill. A request declined or stopped by the budget is not counted. An empty `domain`, `tool` or `grade` means the request had none.',
+							}),
 				},
 			}
 		},

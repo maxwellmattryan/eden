@@ -10,6 +10,7 @@ import {
 	createThread,
 	deleteMessage,
 	deleteThread,
+	gardenerForgetSession,
 	queryMessages,
 	queryThreads,
 	rememberGardenerPanel,
@@ -206,6 +207,31 @@ export class ThreadStore {
 		this.#queue.enqueue(() => updateThread(id, { tier }).then((stored) => this.#replaceThread(stored)))
 	}
 
+	/** The Claude Code session the thread's conversation runs in on desktop (D-178), when it has one. */
+	sessionOf(id: string): string | undefined {
+		return this.threads.find((entry) => entry.id === id)?.claudeSessionId ?? undefined
+	}
+
+	/** Keeps the thread's session, or clears it with null so the next message starts a new one. */
+	setSession(id: string, sessionId: string | null): void {
+		const thread = this.threads.find((entry) => entry.id === id)
+		if (!thread || (thread.claudeSessionId ?? null) === sessionId) return
+		thread.claudeSessionId = sessionId
+		if (this.current?.id === id) this.current = { ...this.current, claudeSessionId: sessionId }
+		this.#queue.enqueue(() =>
+			updateThread(id, { claudeSessionId: sessionId }).then((stored) => this.#replaceThread(stored))
+		)
+	}
+
+	/**
+	 * A deleted thread's session file goes too, best effort; the thread's undo brings it back without it, and its next
+	 * message seeds a new session from the thread.
+	 */
+	#forgetSession(thread: Thread): void {
+		if (!thread.claudeSessionId) return
+		void gardenerForgetSession(thread.claudeSessionId).catch(() => false)
+	}
+
 	rename(id: string, title: string): void {
 		const thread = this.threads.find((entry) => entry.id === id)
 		if (!thread) return
@@ -222,6 +248,7 @@ export class ThreadStore {
 		this.threads = this.threads.filter((entry) => entry.id !== id)
 		if (this.current?.id === id) this.close()
 		this.#queue.enqueue(() => deleteThread(id).then(() => undefined))
+		this.#forgetSession(thread)
 		return () => {
 			this.threads = [...this.threads.slice(0, at), thread, ...this.threads.slice(at)]
 			this.#queue.enqueue(() => restoreThread(id).then((stored) => this.#replaceThread(stored)))
@@ -235,7 +262,10 @@ export class ThreadStore {
 		if (!removed.length) return () => {}
 		this.threads = before.filter((entry) => !ids.includes(entry.id))
 		if (this.current && ids.includes(this.current.id)) this.close()
-		for (const thread of removed) this.#queue.enqueue(() => deleteThread(thread.id).then(() => undefined))
+		for (const thread of removed) {
+			this.#queue.enqueue(() => deleteThread(thread.id).then(() => undefined))
+			this.#forgetSession(thread)
+		}
 		return () => {
 			// the old order, with whatever was made since kept ahead of it and whatever else left since kept out
 			const live = this.threads

@@ -32,6 +32,8 @@ export type ToolFailure =
 	| 'no-key'
 	| 'unavailable'
 	| 'budget'
+	/** A usage window of the desktop's subscription is at its stop threshold until it resets (D-180). */
+	| 'limit'
 	| 'network'
 	| 'refusal'
 	| 'max-tokens'
@@ -47,7 +49,7 @@ export type ToolFailure =
 /** What a page shows before it runs a tool itself: who will answer and roughly what it costs, or why it cannot. */
 export type DirectPreview =
 	| { provider: string; model: string; estimateUsd: number }
-	| { unavailable: Extract<ToolFailure, 'no-key' | 'unavailable' | 'budget'> }
+	| { unavailable: Extract<ToolFailure, 'no-key' | 'unavailable' | 'budget' | 'limit'> }
 
 /** What a handler knows of the request it serves. */
 export interface ToolContext {

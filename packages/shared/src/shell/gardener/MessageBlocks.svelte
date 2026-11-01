@@ -233,7 +233,7 @@
 				/>
 			{:else if segment.block.kind === 'error'}
 				<Notice
-					tone={segment.block.code === 'budget' ? 'warning' : 'danger'}
+					tone={segment.block.code === 'budget' || segment.block.code === 'limit' ? 'warning' : 'danger'}
 					title={segment.block.message}
 					action={runtime.retryable(segment.block.code) ? again : undefined}
 				/>

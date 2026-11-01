@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { declarations } from '../manifest/index.js'
 import { clampForDevelopment, isDevEnvironment } from './dev.js'
-import { ANTHROPIC_SEED, gradeMapOf, modelLookup, PROVIDERS } from './providers.js'
+import { ANTHROPIC_SEED, claudeCodeSeed, gradeMapOf, modelLookup, PROVIDERS } from './providers.js'
 import { resolveGrade, resolveTool } from './resolve.js'
 import { toolIndex } from './tools.js'
 import { GRADES } from './types.js'
@@ -19,6 +19,14 @@ describe('the development clamp', () => {
 			light: { provider: 'anthropic', model: 'claude-haiku-4-5-20251001' },
 			standard: { provider: 'anthropic', model: 'claude-haiku-4-5-20251001' },
 			deep: { provider: 'anthropic', model: 'claude-sonnet-5-5' },
+		})
+	})
+
+	it('clamps the Claude Code seed to its own light model the same way', () => {
+		expect(clampForDevelopment(gradeMapOf(claudeCodeSeed), claudeCodeSeed)).toEqual({
+			light: { provider: 'claude-code', model: 'claude-haiku-4-5-20251001' },
+			standard: { provider: 'claude-code', model: 'claude-haiku-4-5-20251001' },
+			deep: { provider: 'claude-code', model: 'claude-sonnet-5-5' },
 		})
 	})
 

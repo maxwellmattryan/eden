@@ -4,12 +4,15 @@ import { declarations } from '../manifest/index.js'
 import {
 	ANTHROPIC,
 	ANTHROPIC_SEED,
+	CLAUDE_CODE,
+	claudeCodeSeed,
 	effectiveProvider,
 	effortEdit,
 	gradeMapOf,
 	modelLookup,
 	priceRatio,
 	PROVIDERS,
+	seedOf,
 	validateProvider,
 } from './providers.js'
 import { resolveTool } from './resolve.js'
@@ -18,8 +21,21 @@ import type { ModelRow, ProviderRow } from './types.js'
 const seeded = (id: string) => ANTHROPIC_SEED.models.find((model) => model.id === id) as ModelRow
 
 describe('the seed', () => {
+	it('runs the same models on Claude Code, under its own id (D-178)', () => {
+		expect(validateProvider(claudeCodeSeed)).toEqual([])
+		expect(claudeCodeSeed.id).toBe(CLAUDE_CODE)
+		const { id: _api, ...api } = ANTHROPIC_SEED
+		const { id: _cli, ...cli } = claudeCodeSeed
+		expect(cli).toEqual(api)
+		expect(cli.serverTools).toEqual({ search: { type: 'web_search_20250305', name: 'web_search' } })
+		expect(seedOf(CLAUDE_CODE)).toBe(claudeCodeSeed)
+		expect(seedOf(ANTHROPIC)).toBe(ANTHROPIC_SEED)
+		expect(seedOf('openai')).toBe(ANTHROPIC_SEED)
+		expect(modelLookup(PROVIDERS)({ provider: CLAUDE_CODE, model: 'claude-opus-5-5' })?.pricing.output).toBe(20)
+	})
+
 	it('validates, and lists the four models with their verified context and pricing', () => {
-		expect(PROVIDERS.map((provider) => provider.id)).toEqual([ANTHROPIC])
+		expect(PROVIDERS.map((provider) => provider.id)).toEqual([ANTHROPIC, CLAUDE_CODE])
 		expect(validateProvider(ANTHROPIC_SEED)).toEqual([])
 		expect(
 			ANTHROPIC_SEED.models.map(({ id, flags, contextTokens, pricing }) => [id, flags, contextTokens, pricing])

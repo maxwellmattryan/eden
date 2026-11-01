@@ -71,6 +71,11 @@ export function validateThreadPatch(patch: ThreadPatch): Refusal | undefined {
 	if ('title' in patch && !isTitle(patch.title)) return thread('a thread has a title')
 	if ('tier' in patch && !isThreadTier(patch.tier)) return thread(`not a tier: ${JSON.stringify(patch.tier)}`)
 	if ('domain' in patch && !isDomain(patch.domain)) return thread(`not a domain: ${JSON.stringify(patch.domain)}`)
+	if (
+		patch.claudeSessionId != null &&
+		!(typeof patch.claudeSessionId === 'string' && /^[A-Za-z0-9-]{1,64}$/.test(patch.claudeSessionId))
+	)
+		return thread(`not a session id: ${JSON.stringify(patch.claudeSessionId)}`)
 	return undefined
 }
 

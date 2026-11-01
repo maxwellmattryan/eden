@@ -12,6 +12,7 @@ import type {
 	AuditPage,
 	AuditPageQuery,
 	AuditQuery,
+	ClaudeStatus,
 	GardenerEvent,
 	GardenerRequest,
 	Message,
@@ -66,6 +67,45 @@ export function gardenerSend(request: GardenerRequest, onEvent: (event: Gardener
 		done: invoke<void>('gardener_send', { request, onEvent: channel }),
 		cancel: () => invoke<boolean>('gardener_cancel', { requestId: request.id }),
 	}
+}
+
+// Claude Code (D-178, D-179): the desktop's provider.
+
+const NO_CLAUDE: ClaudeStatus = {
+	found: false,
+	path: null,
+	version: null,
+	signedIn: false,
+	authMethod: null,
+	subscription: null,
+	overridePath: null,
+}
+
+/** Answers a tool call that reached the MCP bridge. Answers whether the call was still open. */
+export function gardenerToolAnswer(callId: string, result: { content: string; isError: boolean }): Promise<boolean> {
+	if (!isTauri()) return Promise.resolve(false)
+	return invoke<boolean>('gardener_tool_answer', { callId, result })
+}
+
+/** This device's Claude Code, at the override the crate keeps when there is one. Not found outside the app. */
+export function gardenerClaudeStatus(): Promise<ClaudeStatus> {
+	if (!isTauri()) return Promise.resolve(NO_CLAUDE)
+	return invoke<ClaudeStatus>('gardener_claude_status')
+}
+
+/**
+ * Hands the owner's override of the binary's path to the crate, which checks and keeps it (empty clears it), and
+ * answers the status at it. Rejects `gardener:claude-path` for a path that is not Claude Code.
+ */
+export function gardenerSetClaudePath(path: string | null): Promise<ClaudeStatus> {
+	if (!isTauri()) return Promise.reject(unavailable())
+	return invoke<ClaudeStatus>('gardener_set_claude_path', { path: path || null })
+}
+
+/** Removes a thread's Claude Code session file, best effort. Answers whether one went. */
+export function gardenerForgetSession(sessionId: string): Promise<boolean> {
+	if (!isTauri()) return Promise.resolve(false)
+	return invoke<boolean>('gardener_forget_session', { sessionId })
 }
 
 // The audit log (`audit.rs`): this device's, never exported.
