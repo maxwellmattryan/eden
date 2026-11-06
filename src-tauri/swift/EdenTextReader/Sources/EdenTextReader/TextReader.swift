@@ -129,15 +129,16 @@ private func encode(_ answer: Answer) -> UnsafeMutablePointer<CChar>? {
     return strdup(String(decoding: data, as: UTF8.self))
 }
 
-/// The caller's bytes, borrowed for the call: Rust keeps them alive until it returns.
-private func borrowed(_ pointer: UnsafePointer<UInt8>?, _ length: Int) -> Data? {
+/// A copy of the caller's bytes, owned by Swift: PDFKit and ImageIO may decode lazily or keep an object past the call,
+/// so they never hold Rust's buffer. The copy is at most `MAX_IMAGE_BYTES`.
+private func copied(_ pointer: UnsafePointer<UInt8>?, _ length: Int) -> Data? {
     guard let pointer, length > 0 else { return nil }
-    return Data(bytesNoCopy: UnsafeMutableRawPointer(mutating: pointer), count: length, deallocator: .none)
+    return Data(bytes: pointer, count: length)
 }
 
 @_cdecl("eden_text_read_image")
 public func edenTextReadImage(_ pointer: UnsafePointer<UInt8>?, _ length: Int) -> UnsafeMutablePointer<CChar>? {
-    guard let data = borrowed(pointer, length),
+    guard let data = copied(pointer, length),
         let source = CGImageSourceCreateWithData(data as CFData, nil),
         let decoded = CGImageSourceCreateImageAtIndex(source, 0, nil),
         let image = opaque(decoded)
@@ -158,7 +159,7 @@ public func edenTextReadPdf(
     _ length: Int,
     _ maxPages: UInt32
 ) -> UnsafeMutablePointer<CChar>? {
-    guard let data = borrowed(pointer, length), let document = PDFDocument(data: data), !document.isLocked else {
+    guard let data = copied(pointer, length), let document = PDFDocument(data: data), !document.isLocked else {
         return nil
     }
     let total = document.pageCount
