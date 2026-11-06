@@ -9,6 +9,11 @@ describe('archiveName', () => {
 	it('names one domain by its id', () => {
 		expect(archiveName({ kind: 'domain', domain: 'kitchen' }, day)).toBe('eden-kitchen-2026-10-02.zip')
 	})
+	it('names a sealed archive .eden and a plain one .zip', () => {
+		expect(archiveName({ kind: 'full' }, day, true)).toBe('eden-full-2026-10-02.eden')
+		expect(archiveName({ kind: 'domain', domain: 'kitchen' }, day, true)).toBe('eden-kitchen-2026-10-02.eden')
+		expect(archiveName({ kind: 'full' }, day, false)).toBe('eden-full-2026-10-02.zip')
+	})
 })
 
 describe('fileName', () => {
