@@ -4,7 +4,7 @@ status: draft
 summary: The single list of every resource a grant, a declared read or an audit entry can name: fact types, entity types and primitive kinds, each with an owner, a tier and a phase.
 read-this-if: You are declaring what an AI tool reads, writing a grant, adding an entity or a kind, or checking who owns a resource.
 depends-on: [privacy]
-updated: 2026-10-02
+updated: 2026-11-06
 ---
 
 ## Rules
@@ -172,20 +172,32 @@ updated: 2026-10-02
 | `medical-appointment` | kind (event) | T2 | later |
 | `insurance-card` | kind (attachment) | T3 | later; Vault only |
 
-## Orchard (`finance`), stub, after Phase 2
+## Orchard (`finance`), after Phase 2, built ahead of it
 
 | id | category | tier | notes |
 |---|---|---|---|
-| `monthly-income-band` | fact | T2 | later |
-| `savings-goal` | fact | T2 | later |
-| `account` | entity | T2 | later; number field T3 |
-| `transaction` | entity | T2 | later |
-| `budget` | entity | T2 | later |
-| `budget-category` | entity | T1 | later |
-| `recurring-charge` | entity | T2 | later |
-| `holding` | entity | T2 | later |
-| `receipt` | kind (attachment) | T2 | later |
-| `bill-due` | kind (event) | T2 | later |
+| `monthly-income-band` | fact | T2 | domain-derived from income sources |
+| `provider-link` | entity | T2 | one provider login on this device; its token is T3 in the secret store |
+| `account` | entity | T2 | number field T3 |
+| `file-import` | entity | T2 | a file's fingerprint and what it made; the file is not kept (D-189) |
+| `balance-snapshot` | entity | T2 | |
+| `transaction` | entity | T2 | |
+| `budget-category` | entity | T1 | |
+| `category-rule` | entity | T2 | |
+| `merchant` | entity | T2 | |
+| `money-rollup` | entity | T2 | derived, never edited, never exported |
+| `bill` | entity | T2 | policy number T3 |
+| `recurring-charge` | entity | T2 | |
+| `budget` | entity | T2 | |
+| `liability` | entity | T2 | |
+| `holding` | entity | T2 | |
+| `security` | entity | T0 | |
+| `asset` | entity | T2 | xpub T3 |
+| `income-source` | entity | T2 | |
+| `savings-goal` | entity | T2 | |
+| `contribution-limit` | entity | T0 | |
+| `spending-watch` | entity | T2 | |
+| `bill-due` | kind (event) | T2 | once Almanac exists (D-186) |
 
 ## Candidates, Phase 3 or later
 
