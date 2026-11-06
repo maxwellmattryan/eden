@@ -4,7 +4,7 @@ status: draft
 summary: The phases from docs to a synced, multi-domain Eden, what each ships, what "done" means, what can slip, and the risks and external dependencies.
 read-this-if: You are planning, scoping, or deciding what to build next.
 depends-on: [vision, decisions, domains/README]
-updated: 2026-10-01
+updated: 2026-11-06
 ---
 
 ## Phases
@@ -15,7 +15,7 @@ updated: 2026-10-01
 | 1 | Trellis | the scaffold, the shell, the substrate every later phase stands on, and three domains | the owner runs groceries and ideas in Eden daily, the Garden shows today's weather and moon, export round-trips |
 | 2 | Roots | time and the first integration: Almanac, Google read-only, Vigor, Sanctuary, Council, local models, Vault v0, mobile | Google events show under a grant, a digest fires, a Council run previews its cost, the phone captures a haul |
 | 3 | Canopy | Meadow (built ahead of its phase, see below), end-to-end sync, Google write, push, import, one promoted candidate, the first externalised plugin | two devices sync, places render on a map, a candidate domain is live |
-| after | | Orchard and Wellspring specs, plugins for others, more locales | |
+| after | | Orchard (specced and built ahead of its phase, D-182), the Wellspring spec, plugins for others, more locales | |
 
 ## Phase 1, Trellis
 
@@ -52,7 +52,7 @@ Cut line: push and the plugin exercise can slip; sync cannot.
 
 ## After Phase 3
 
-Orchard and Wellspring get their full specs (their stubs name the triggers). Plugins for other people, more locales, and any billing story are decided then, not before (D-3).
+Wellspring gets its full spec here (its stub names the trigger). Orchard is specced and built ahead of this phase, before sync (D-182, `domains/finance.md`), as Meadow is ahead of Phase 3; its rows stay planned until its manifest lands. Plugins for other people, more locales, and any billing story are decided then, not before (D-3).
 
 ## Risks and external dependencies
 

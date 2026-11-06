@@ -4,7 +4,7 @@ status: draft
 summary: The screen inventory for mockups: a template per screen, the shell screens, the domain screens, mobile variants, and the priority order for Claude Design.
 read-this-if: You are drawing mockups or checking that a screen covers its states.
 depends-on: [ux-patterns, sample-data, product/substrate/shell]
-updated: 2026-10-31
+updated: 2026-11-06
 ---
 
 ## Screen template
@@ -36,6 +36,7 @@ Each screen below lists: id, platform, purpose, must show, primary actions, stat
 | `settings-*` | both | each tab in `product/substrate/settings-utilities.md` | the tab's contents | | | |
 | `vault` | both | T3 attachments | count and lock; after auth, the list | open, share, add | locked | one identity document |
 | `status-bar` | desktop | global state | sync, integration chips, Gardener chip with budget, bell, + | | offline, no key, granted-not-connected | 2.84 of 10.00 |
+| `phone-lock` | phone | Eden locked on the phone (D-185, #68) | Face ID or the passcode, the wordmark; the privacy cover over the app in the app switcher | unlock | locked, unlocking, Face ID failed (passcode offered), the privacy cover | none |
 
 ## Domain screens
 
@@ -67,6 +68,17 @@ Each screen below lists: id, platform, purpose, must show, primary actions, stat
 | `meadow-collections`, mocked as `Domains/Meadow/Collections` (Default, Empty), built in `apps/desktop` | desktop | named groups of places | each collection with its note and its places, the saved places beside them to drag in (D-106) | new collection, add or remove a place, rename, delete | empty | `meadowCollections` |
 | `meadow-visits`, mocked as `Domains/Meadow/Visits` (Default, Empty), built in `apps/desktop` | desktop | where the owner has been | visits by day, each with its place, rating and note | open the place, delete with undo; a visit is logged from a place's detail, in a sheet (D-95) | empty | `meadowVisits` |
 | `meadow-widgets`, mocked as `Domains/Meadow/Widgets` (Default, Empty), built in `apps/desktop` | desktop | Meadow on the Garden | `nearby-favorites` and `upcoming-listings` as M tiles | open Meadow | empty | `meadowPlaces`, `meadowListings` |
+| `orchard-overview`, mocked in #70 | both | everything owned and owed, at a glance | net worth over time, cash flow by month, the low-balance forecast to payday, bills due in 14 days, budget status, goals, flags (a new fee, a price rise, a stale link), each account's last update | open an account, a bill, a flag or Activity filtered to it | empty (nothing linked), a stale link, a currency left out of totals | #70 adds it |
+| `orchard-activity`, mocked in #70 | both | every money event, filtered any way | the feed with a title, a kind icon and bank badges on every row (from → to for a transfer), search with a filter button and its anchored popover, active filters as removable chips with Clear, totals and the insights that follow the filter | search, filter, clear, open a row, categorise, split, mark reimbursable | empty, a stale link, a currency left out of totals, nothing matching the filters, pending rows | #70 adds it |
+| `orchard-accounts`, mocked in #70 | both | every account, linked or entered | accounts by institution with logo, last four digits, balance in its own currency and when it updated; manual assets | link a provider, reconnect, add an asset, close an account | empty, a stale link (reconnect), a currency left out of totals | #70 adds it |
+| `orchard-bills`, mocked in #70 | both | bills from letter to paid | bills by state (expected, upcoming, due soon, overdue, paid), each with payee, due date, estimate or actual and the payment that paid it | capture from a letter, add, match a payment, open the payee's site | empty, a stale link, a currency left out of totals, an ambiguous match | #70 adds it |
+| `orchard-budget`, mocked in #70 | both | the month against the plan | categories fixed and variable (D-16), spent against budget, rollover, sinking funds | edit a line, draft a budget with the Gardener | empty, a stale link, a currency left out of totals, over budget | #70 adds it |
+| `orchard-debt` | both | what is owed and what it costs | liabilities with APR and promo end, statement balance, minimum, due date, credit used, the payoff plan | change the payoff plan, add a loan Plaid cannot see | empty, a stale link, a currency left out of totals | #70 adds it |
+| `orchard-investments` | both | holdings and allocation | holdings with quantity, cost basis and value, allocation, retirement contributions against limits, crypto by quantity | add an asset or a watched address, open a holding | empty, a stale link, a currency left out of totals, a missing limit | #70 adds it |
+| `orchard-goals` | both | saving toward something | savings rate, targets with amount, date and earmark, emergency-fund months | add a goal, simulate a change | empty, a stale link, a currency left out of totals | #70 adds it |
+| `orchard-link-sheet` | both | link a bank through Plaid (#73) | Plaid Link in Eden's colours, the products asked for (read only, D-8), the 24-month window (D-187) | link, cancel | linking, linked, failed, no Plaid keys on this device (D-184) | #70 adds it |
+| `orchard-read-confirm-sheet`, mocked in #70 | both | a letter, statement or pay stub read on the device (#72, D-190) | the masked text to check and edit, what it will become, "Send the picture instead" | read, edit, confirm, send the picture instead | reading, read badly, masked numbers, already imported (D-189) | #70 adds it |
+| `orchard-widgets` | desktop | Orchard on the Garden (#87) | Orchard's tiles, sizes left to #87 | open Orchard | empty, a stale link | #70 adds it |
 
 ## Mobile variants (Phase 2)
 
