@@ -12,7 +12,8 @@ import { copyFile, mkdir, readFile, remove, writeFile } from '@tauri-apps/plugin
 import { getAppInfo } from '@eden/shared/api'
 import type { ArchiveFiles } from '@eden/shared/shell/settings'
 
-const ARCHIVE = [{ name: 'Eden', extensions: ['zip'] }]
+// `.eden` is a sealed archive (substrate/sealed.rs); the crate tells the two apart by their first bytes
+const ARCHIVE = [{ name: 'Eden', extensions: ['zip', 'eden'] }]
 
 /** A file name with nothing in it that could leave the folder it is written to. */
 const safeName = (name: string) => name.replace(/[^\w.-]+/g, '_').replace(/^\.+/, '') || 'archive.zip'

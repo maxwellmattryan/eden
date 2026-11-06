@@ -262,23 +262,35 @@ pub async fn export_bundle(app: tauri::AppHandle, request: ExportRequest) -> Res
         .await?
 }
 
-/// The manifest of a bundle, once every file in it has been checked against its hash.
+/// The manifest of a bundle, once every file in it has been checked against its hash. A sealed bundle needs its
+/// `passphrase`, and answers `bundle:locked` without one.
 #[tauri::command]
-pub async fn inspect_bundle(path: String) -> Result<Manifest> {
-    tauri::async_runtime::spawn_blocking(move || bundle::inspect(std::path::Path::new(&path)))
-        .await?
+pub async fn inspect_bundle(path: String, passphrase: Option<String>) -> Result<Manifest> {
+    tauri::async_runtime::spawn_blocking(move || {
+        bundle::inspect_with(std::path::Path::new(&path), passphrase.as_deref())
+    })
+    .await?
 }
 
-/// Brings a bundle in. A replace writes a backup of the whole workspace first, and names it in its answer.
+/// Brings a bundle in. A replace writes a backup of the whole workspace first, and names it in its answer; with a
+/// `backup_passphrase` the backup is sealed under it.
 #[tauri::command]
 pub async fn import_bundle(
     app: tauri::AppHandle,
     path: String,
     mode: Mode,
+    passphrase: Option<String>,
+    backup_passphrase: Option<String>,
 ) -> Result<ImportSummary> {
     use tauri::Manager;
     tauri::async_runtime::spawn_blocking(move || {
-        bundle::import(&app.state::<Workspace>(), std::path::Path::new(&path), mode)
+        bundle::import_with(
+            &app.state::<Workspace>(),
+            std::path::Path::new(&path),
+            mode,
+            passphrase.as_deref(),
+            backup_passphrase.as_deref(),
+        )
     })
     .await?
 }

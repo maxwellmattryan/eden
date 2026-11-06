@@ -4,7 +4,7 @@ status: draft
 summary: The sensitivity tiers T0–T3 and what each allows for storage, sync, AI and export; what never leaves the device; what third parties receive; the owner's controls; a one-screen threat model.
 read-this-if: Anything you are designing touches personal data, an external service, or the Gardener.
 depends-on: [decisions]
-updated: 2026-10-02
+updated: 2026-11-06
 ---
 
 ## Principles (Phase 1)
@@ -76,6 +76,8 @@ Grants gate → fields excluded by tier → deterministic scrub of emails, phone
 | Audit log: every AI request with registry ids read, tools run, tokens and cost | Settings → Gardener | 1 |
 | Egress ledger: requests and bytes out by destination and day, the bytes being what Eden hands over (D-71); the Vault → AI row is always zero | Settings → Privacy | 1 |
 | Grants ledger: list, revoke, history | Settings → Privacy & Grants | store 1, UI 2 |
+| Phone lock: Face ID or the passcode opens Eden, which locks again after time away (Lock after: Immediately, 1, 5 or 15 minutes; a minute by default; no off), per device; background work keeps running (D-185) | Settings → Privacy, phone only | 1 |
+| Hide amounts: money amounts show as dots while the owner shares their screen, per device, off by default | Settings → Privacy, both apps | 1 |
 | Purge: one integration, one domain, or the whole workspace, with export first | Settings → Sync & Data | 1 |
 | Per-open Vault audit naming the actor | Vault | 2 |
 
@@ -87,7 +89,7 @@ There is no telemetry. Diagnostics keep the last hundred entries and system info
 
 | threat | mitigation |
 |---|---|
-| lost or stolen device | encrypted workspace with a keychain-bound key; Vault behind biometrics with its own key; short Vault session timeout |
+| lost or stolen device | encrypted workspace with a keychain-bound key; the phone lock (Face ID or the passcode, again after time away) with an opaque cover in the iOS app switcher and Android's screenshot block (`FLAG_SECURE`); Vault behind biometrics with its own key; short Vault session timeout |
 | AI provider retention or misuse | declared reads, tier exclusion, scrub, bring-your-own-key so the contract is the owner's, local models on desktop |
 | compromised sync server | end-to-end encrypted blobs; the manifest reveals sizes and hashes only |
 | over-broad OAuth | narrowest scopes, read-only default, ledger, per-calendar write grants (OQ-6) |

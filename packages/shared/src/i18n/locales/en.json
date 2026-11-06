@@ -1876,16 +1876,56 @@
 				"subject": "You"
 			},
 			"notAvailable": "Export and import work in the installed app.",
+			"exportSheet": {
+				"titleFull": "Export the whole workspace",
+				"titleDomain": "Export {domain}",
+				"export": "Export",
+				"cancel": "Cancel"
+			},
+			"protect": {
+				"label": "Protect with a passphrase",
+				"backupLabel": "Protect the backup with a passphrase",
+				"warning": "Anyone who has this file can read everything in it.",
+				"backupWarning": "Anyone who has the backup can read everything in it.",
+				"passphrase": "Passphrase",
+				"confirm": "Confirm passphrase",
+				"help": "Eden can't recover a lost passphrase.",
+				"mismatch": "The passphrases don't match.",
+				"short": "Use at least 8 characters for the passphrase."
+			},
+			"unlock": {
+				"field": "Passphrase for this archive",
+				"action": "Unlock",
+				"unlocking": "Unlocking…"
+			},
 			"errors": {
 				"unreadable": "That file is not an archive Eden exported.",
 				"version": "That archive was written by a newer Eden. Update, then import it.",
 				"hash": "The archive was changed after it was exported. Nothing was imported.",
 				"backup": "The backup could not be written. Nothing was changed.",
 				"import": "The import did not finish. Nothing was changed.",
-				"export": "The archive could not be written."
+				"export": "The archive could not be written.",
+				"passphrase": "That passphrase doesn't open this archive.",
+				"passphraseShort": "Use at least 8 characters for the passphrase."
 			}
 		},
 		"privacy": {
+			"lock": {
+				"label": "Phone lock",
+				"help": "Face ID or the passcode opens Eden, and it locks again after time away. Background work keeps running.",
+				"after": "Lock after",
+				"noPasscode": "Set a passcode on this phone to lock Eden",
+				"choices": {
+					"immediately": "Immediately",
+					"1m": "After 1 minute",
+					"5m": "After 5 minutes",
+					"15m": "After 15 minutes"
+				}
+			},
+			"amounts": {
+				"label": "Hide amounts",
+				"help": "Covers money amounts with dots while you share your screen."
+			},
 			"tiers": {
 				"label": "How sensitive data is treated",
 				"help": "Every fact, entity and kind carries one tier, set once in the registry and enforced everywhere: storage, sync, export and the Gardener.",
@@ -2054,6 +2094,15 @@
 		"copied": "Copied",
 		"reset": "Restart {name}",
 		"unknown": "Unknown error"
+	},
+	"lock": {
+		"title": "{name} is locked",
+		"line": "Unlock to continue",
+		"unlock": "Unlock",
+		"unlockFace": "Unlock with Face ID",
+		"unlockTouch": "Unlock with Touch ID",
+		"failed": "Not unlocked. Try again.",
+		"reason": "Unlock {name}"
 	},
 	"error": {
 		"title": "This page could not be shown",

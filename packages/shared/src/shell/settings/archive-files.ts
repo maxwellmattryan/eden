@@ -18,10 +18,10 @@ export interface ArchiveFiles {
 	discard?: (path: string) => Promise<void>
 }
 
-/** The name an archive is offered under: its scope and the day it was made. */
-export function archiveName(scope: BundleScope, now: Date = new Date()): string {
+/** The name an archive is offered under: its scope and the day it was made; `.eden` when it is sealed. */
+export function archiveName(scope: BundleScope, now: Date = new Date(), sealed = false): string {
 	const name = scope.kind === 'full' ? 'full' : scope.domain
-	return `eden-${name}-${now.toISOString().slice(0, 10)}.zip`
+	return `eden-${name}-${now.toISOString().slice(0, 10)}.${sealed ? 'eden' : 'zip'}`
 }
 
 /** The last segment of a path, on either kind of separator. */
