@@ -4,7 +4,7 @@ status: draft
 summary: Every fixed term in Eden, the domain names in English and Japanese with their plain ids and subtitles, and the metaphor policy that decides what gets a themed name.
 read-this-if: You are naming anything, writing copy, or unsure what a word means in these docs.
 depends-on: []
-updated: 2026-10-02
+updated: 2026-11-06
 ---
 
 ## Core terms
@@ -62,7 +62,7 @@ Ids are plain and permanent. Display names are themed and translatable. The subt
 | `fitness` | **Vigor** | 活力 | Workouts, gyms, body metrics | full |
 | `spirit` | **Sanctuary** | 聖域 | Reflection, readings, values | full |
 | `places` | **Meadow** | 野原 | Places and events near you | full |
-| `finance` | **Orchard** | 果樹園 | Money, budgets, assets | stub |
+| `finance` | **Orchard** | 果樹園 | Money, budgets, assets | full |
 | `health` | **Wellspring** | 泉 | Medical, meds, care | stub |
 | `people` | **Companions** | 仲間 | Relationships | candidate |
 | `journal` | **Rings** | 年輪 | Daily reflection and mood | candidate |

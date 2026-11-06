@@ -4,7 +4,7 @@ status: draft
 summary: Stock by location, food and household consumables alike, recipes from what you have and from a link, a photo or pasted text, grocery lists, capture a haul from photos, receipts and order confirmations, take stock from photos of the shelves, a picture and a tip on the item, food allergies and supplements. Id `kitchen`, Phase 1.
 read-this-if: You are working on stock, recipes, grocery lists, capture, food allergies or supplements.
 depends-on: [substrate/registry, substrate/primitives, substrate/grants, substrate/tasks, substrate/shell, substrate/ai]
-updated: 2026-10-02
+updated: 2026-11-06
 ---
 
 ## 1. Purpose
@@ -197,7 +197,7 @@ Left for later issues, each where its agent will read it.
 
 - **Brand, size and prices (D-104, D-105), built on desktop.** Left for later, none of it started:
   - *Never run against a live model or in the installed app.* The capture prompt now asks for the name, the brand and the size apart, and for a receipt's line prices, shop and day; how reliably a model keeps a brand out of the name, and reads a price in cents with its package count, has not been seen. `captureRules` and the `capture-haul` schema in `packages/shared/src/domains/kitchen/tools.ts` are where to mend it, `unitPrice` and `haulReceipt` in `packages/shared/src/domains/kitchen/capture.ts` what reads the answer. A store row whose memory holds objects has not been written through the crate.
-  - *Purchase history.* A store holds the last price only. A row per purchase line (item, brand, store, price, size, day) would give trends and is what Orchard's `receipt` and `transaction` would reconcile against (`product/domains/finance.md`); the receipt's day and store already reach `commitHaul` (`HaulFrom` in `store.svelte.ts`), which is where such rows would be written.
+  - *Purchase history.* A store holds the last price only. A row per purchase line (item, brand, store, price, size, day) would give trends and is what Orchard's `transaction` rows would reconcile against (`product/domains/finance.md`); the receipt's day and store already reach `commitHaul` (`HaulFrom` in `store.svelte.ts`), which is where such rows would be written.
   - *Cost per serving.* A recipe's sum is one package of each missing ingredient. What a recipe uses of a package needs the package's size parsed against the ingredient's amount (`quantity.ts` converts within mass and volume); a weighed line's price is stored as paid, its weight as the size, and no price per weight is worked out.
   - *A store Hearth does not have.* A receipt from one is named on the sheet (`storeHint`) and teaches nothing. Adding the store from the sheet, inside the commit's undo (`addStore`), is the follow-up.
   - *The other brand's price.* A list's sum prices a line by the name alone, whatever brand the store remembers; `priceFor` in `prices.ts` is where a brand that differs would count as no price. The memory is keyed by name, so two brands of one thing at one store share an entry, the last bought.
