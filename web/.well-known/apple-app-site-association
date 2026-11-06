@@ -1,0 +1,10 @@
+{
+	"applinks": {
+		"details": [
+			{
+				"appIDs": ["883V548CV2.com.palekodama.eden"],
+				"components": [{ "/": "/plaid/oauth*", "comment": "Plaid Link's OAuth return (Orchard, #73)" }]
+			}
+		]
+	}
+}
