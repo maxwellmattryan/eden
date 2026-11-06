@@ -621,14 +621,16 @@
 	}
 	.feed {
 		display: flex;
-		flex: 999 1 30rem;
+		flex: 999 1 26rem;
 		flex-direction: column;
 		gap: var(--space-3);
 		min-width: 0;
 	}
+	/* wide enough that each insight table shows its last column whole; when the feed and it cannot both fit, it goes
+	   under the feed at full width (D-112) */
 	.insights {
 		display: flex;
-		flex: 1 1 20rem;
+		flex: 1 1 30rem;
 		flex-direction: column;
 		gap: var(--space-4);
 		min-width: 0;

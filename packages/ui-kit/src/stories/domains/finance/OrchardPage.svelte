@@ -147,12 +147,15 @@
 	/>
 {/snippet}
 
-{#snippet tabs()}
-	<Segmented items={[...ORCHARD_TABS]} selected={ORCHARD_TABS.indexOf(tab)} label="Orchard sections" />
-{/snippet}
-
 <AppFrame current="finance" {onnavigate}>
 	{#snippet children(platform)}
+		<!-- The tab row never runs past the page: tighter tabs on the phone so all five fit, and a scroll inside the row
+		     if the text is larger still. The padding keeps the focus ring clear of the scroll's edge. -->
+		{#snippet tabs()}
+			<div class={['tabs', { phone: platform === 'mobile' }]}>
+				<Segmented items={[...ORCHARD_TABS]} selected={ORCHARD_TABS.indexOf(tab)} label="Orchard sections" />
+			</div>
+		{/snippet}
 		<div class="page">
 			<PageHeader
 				name={orchard.name}
@@ -172,5 +175,16 @@
 		display: flex;
 		flex-direction: column;
 		padding-bottom: var(--space-8);
+	}
+	.tabs {
+		min-width: 0;
+		max-width: 100%;
+		margin: calc(-1 * var(--space-1));
+		padding: var(--space-1);
+		overflow-x: auto;
+		scrollbar-width: thin;
+	}
+	.tabs.phone :global(.ed-seg-tab) {
+		padding: 0 var(--space-2);
 	}
 </style>
