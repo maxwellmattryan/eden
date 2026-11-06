@@ -3,13 +3,14 @@
 // is that app's, bound through `defineDomain`. A domain is added here when its `logic.ts` is written.
 import { shell } from '../manifest/index.js'
 import type { DomainLogic } from './define.js'
+import { financeLogic } from './finance/logic.js'
 import { fitnessLogic } from './fitness/logic.js'
 import { kitchenLogic } from './kitchen/logic.js'
 import { placesLogic } from './places/logic.js'
 import { toolbenchLogic } from './toolbench/logic.js'
 import { weatherLogic } from './weather/logic.js'
 
-const bound: DomainLogic[] = [kitchenLogic, toolbenchLogic, weatherLogic, placesLogic, fitnessLogic]
+const bound: DomainLogic[] = [kitchenLogic, toolbenchLogic, weatherLogic, placesLogic, fitnessLogic, financeLogic]
 
 export const logic: readonly DomainLogic[] = shell.domains.flatMap((id) => bound.filter((entry) => entry.id === id))
 
