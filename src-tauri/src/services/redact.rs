@@ -94,16 +94,29 @@ fn replace_unprotected<'a>(text: &'a str, pattern: &Regex, with: &str) -> Cow<'a
     })
 }
 
-/// A `log::Log` that redacts each record's message before it reaches the platform logger it wraps.
+/// The crates whose records are dropped whole: the PDF libraries the document reader uses (`domains/finance`) log
+/// glyph names, font dictionaries and stream contents taken from the document being read.
+const SILENCED_TARGETS: &[&str] = &["pdf_extract", "lopdf"];
+
+fn silenced(target: &str) -> bool {
+    SILENCED_TARGETS.iter().any(|crate_name| {
+        target
+            .strip_prefix(crate_name)
+            .is_some_and(|rest| rest.is_empty() || rest.starts_with("::"))
+    })
+}
+
+/// A `log::Log` that redacts each record's message before it reaches the platform logger it wraps, and drops every
+/// record from `SILENCED_TARGETS`.
 pub struct RedactingLogger<L: log::Log>(pub L);
 
 impl<L: log::Log> log::Log for RedactingLogger<L> {
     fn enabled(&self, metadata: &log::Metadata) -> bool {
-        self.0.enabled(metadata)
+        !silenced(metadata.target()) && self.0.enabled(metadata)
     }
 
     fn log(&self, record: &log::Record) {
-        if !self.0.enabled(record.metadata()) {
+        if !self.enabled(record.metadata()) {
             return;
         }
         let message = record.args().to_string();
@@ -237,6 +250,22 @@ mod tests {
         );
         // Below the inner logger's level: dropped, as the inner logger would.
         record(log::Level::Debug, format_args!("debug $5"));
+        // The PDF libraries: dropped at any level, since their records can quote the document.
+        for target in ["lopdf::object", "pdf_extract", "pdf_extract::encodings"] {
+            logger.log(
+                &log::Record::builder()
+                    .args(format_args!("font {}", "Account 1234 5678"))
+                    .level(log::Level::Error)
+                    .target(target)
+                    .build(),
+            );
+        }
+        assert!(!logger.enabled(
+            &log::Metadata::builder()
+                .level(log::Level::Error)
+                .target("lopdf")
+                .build()
+        ));
 
         let seen = logger.0 .0.lock().unwrap().clone();
         assert_eq!(
