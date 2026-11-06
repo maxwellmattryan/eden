@@ -19,7 +19,16 @@
 		dialog.focus({ preventScroll: true })
 	}
 
-	// effect: imperative DOM. Opens the gate in the top layer, and keeps it on top of any dialog opened after it.
+	// The browser can close a modal without a cancellable `cancel` (Chromium closes it on a second Escape with no
+	// activation between), and a closed dialog no longer makes the page inert: while locked, it opens again at once.
+	// raise() closes and reopens it, so its own close arrives with the dialog open again, and is let be.
+	function reopen(dialog: HTMLDialogElement) {
+		if (dialog.open || phoneLock.phase === 'open' || $hasCrashed) return
+		raise(dialog)
+	}
+
+	// effect: imperative DOM. Opens the gate in the top layer, and keeps it on top of any dialog or popover (a menu, a
+	// toast) opened after it.
 	function gate(dialog: HTMLDialogElement) {
 		dismissToast()
 		// the crash card already up stays on top: the lock comes back with the relaunch it offers
@@ -32,7 +41,18 @@
 			if (opened) raise(dialog)
 		})
 		observer.observe(document.body, { attributes: true, attributeFilter: ['open'], subtree: true })
-		return () => observer.disconnect()
+		// `toggle` does not bubble, so it is heard in the capture phase
+		const onToggle = (event: Event) => {
+			if ($hasCrashed || !(event instanceof ToggleEvent) || event.newState !== 'open') return
+			const target = event.target
+			if (!(target instanceof HTMLElement) || !target.hasAttribute('popover') || dialog.contains(target)) return
+			raise(dialog)
+		}
+		document.addEventListener('toggle', onToggle, true)
+		return () => {
+			observer.disconnect()
+			document.removeEventListener('toggle', onToggle, true)
+		}
 	}
 </script>
 
@@ -45,6 +65,7 @@
 		tabindex="-1"
 		{@attach gate}
 		oncancel={(event) => event.preventDefault()}
+		onclose={(event) => reopen(event.currentTarget)}
 	>
 		<div class="lock-column">
 			<AppMark />
