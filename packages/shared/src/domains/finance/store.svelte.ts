@@ -374,6 +374,33 @@ export class FinanceStore {
 		})
 	}
 
+	/**
+	 * Writes what a provider read (a sync run, a new link) in its batches and in order, through the same queue as
+	 * every other write, with no undo and no toast: the bank said it, so there is nothing to take back. The page
+	 * shows the links and accounts once the batches have landed. Answers whether they did; a batch that failed waits
+	 * in the queue for the page's Retry, like any other write, and shows its rows when it lands.
+	 */
+	applySync(chunks: BatchOp[][], change: { links?: ProviderLink[]; accounts?: Account[] }): Promise<boolean> {
+		return new Promise((resolve) => {
+			this.#queue.enqueue(async () => {
+				try {
+					for (const ops of chunks) if (ops.length) await applyBatch(ops)
+				} catch (error) {
+					resolve(false)
+					throw error
+				}
+				const links = change.links ?? []
+				const linkOf = (id: string) => links.find((link) => link.id === id)
+				this.links = [
+					...this.links.map((link) => linkOf(link.id) ?? link),
+					...links.filter((link) => !this.links.some((entry) => entry.id === link.id)),
+				]
+				this.#withAccounts(...(change.accounts ?? []))
+				resolve(true)
+			})
+		})
+	}
+
 	// ---- Sample data ---------------------------------------------------------------------------------------------
 
 	/** Fills the store with the sample accounts; the undo puts back whatever was there. */

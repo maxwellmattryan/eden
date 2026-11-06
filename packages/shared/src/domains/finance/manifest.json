@@ -34,10 +34,13 @@
 	"quickActions": [],
 	"captureSources": [],
 	"tools": [],
-	"signals": [],
-	"notificationKinds": [],
+	"signals": ["finance.link-broken"],
+	"notificationKinds": [
+		{ "id": "link-needs-reconnecting", "channel": "in-app", "cadence": "when-found", "signal": "finance.link-broken" }
+	],
+	"schedules": [{ "id": "sync", "every": 3600 }],
 	"intents": [],
 	"deviceCapabilities": [],
 	"palette": { "entries": [], "search": ["account"] },
-	"export": ["account", "balance-snapshot", "asset"]
+	"export": ["account", "balance-snapshot", "asset", "transaction"]
 }

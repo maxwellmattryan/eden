@@ -2440,9 +2440,27 @@ export const DECLARATIONS = {
 		"quickActions": [],
 		"captureSources": [],
 		"tools": [],
-		"signals": [],
-		"notificationKinds": [],
-		"schedules": [],
+		"signals": [
+			"finance.link-broken"
+		],
+		"notificationKinds": [
+			{
+				"id": "link-needs-reconnecting",
+				"channel": "in-app",
+				"cadence": "when-found",
+				"default": true,
+				"signal": "finance.link-broken",
+				"when": null
+			}
+		],
+		"schedules": [
+			{
+				"id": "sync",
+				"name": "finance.sync",
+				"daily": null,
+				"every": 3600
+			}
+		],
 		"intents": [],
 		"deviceCapabilities": [],
 		"palette": {
@@ -2454,7 +2472,8 @@ export const DECLARATIONS = {
 		"export": [
 			"account",
 			"balance-snapshot",
-			"asset"
+			"asset",
+			"transaction"
 		]
 	}
 } as const
