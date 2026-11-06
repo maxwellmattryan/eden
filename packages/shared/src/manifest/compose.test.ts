@@ -19,7 +19,11 @@ describe('sidebarGroups', () => {
 	it('groups Today; Garden and Toolbench; then the domains, with the Gardener pinned (D-64, D-77)', () => {
 		const groups = sidebarGroups(declarations, shell)
 		expect(groups.map((group) => group.id)).toEqual(['today', 'shell', 'domains'])
-		expect(ids(groups)).toEqual([['today'], ['garden', 'toolbench'], ['kitchen', 'weather', 'places', 'fitness']])
+		expect(ids(groups)).toEqual([
+			['today'],
+			['garden', 'toolbench'],
+			['kitchen', 'weather', 'places', 'fitness', 'finance'],
+		])
 		expect(shell.sidebar.pinned.map((entry) => entry.id)).toEqual(['gardener', 'settings'])
 		expect(shell.sidebar.pinned[0]).toMatchObject({ id: 'gardener', name: 'shell.gardener', key: 'G' })
 		expect(groups[2]?.items[0]).toMatchObject({ kind: 'domain', name: 'domains.kitchen.name', place: true })
@@ -31,17 +35,18 @@ describe('sidebarGroups', () => {
 			'kitchen',
 			'places',
 			'fitness',
+			'finance',
 		])
 		expect(ids(sidebarGroups(declarations, shell, { order: ['weather', 'kitchen', 'toolbench'] }))).toEqual([
 			['today'],
 			['garden', 'toolbench'],
-			['weather', 'kitchen', 'places', 'fitness'],
+			['weather', 'kitchen', 'places', 'fitness', 'finance'],
 		])
 	})
 
 	it('leaves out what the owner hid, and a group with nothing in it', () => {
 		const groups = sidebarGroups(declarations, shell, {
-			hidden: ['kitchen', 'weather', 'toolbench', 'places', 'fitness'],
+			hidden: ['kitchen', 'weather', 'toolbench', 'places', 'fitness', 'finance'],
 		})
 		expect(ids(groups)).toEqual([['today'], ['garden']])
 	})
@@ -62,6 +67,7 @@ describe('shortcutPositions', () => {
 			['weather', 5],
 			['places', 6],
 			['fitness', 7],
+			['finance', 8],
 		])
 	})
 
@@ -78,7 +84,7 @@ describe('tabBar', () => {
 	it('pins Hearth and Sky after Garden and Today, and keeps the rest behind More', () => {
 		const bar = tabBar(declarations, shell)
 		expect(idsOf(bar.tabs)).toEqual(['garden', 'today', 'kitchen', 'weather'])
-		expect(idsOf(bar.more)).toEqual(['toolbench', 'places', 'fitness', 'gardener', 'settings'])
+		expect(idsOf(bar.more)).toEqual(['toolbench', 'places', 'fitness', 'finance', 'gardener', 'settings'])
 		expect(shell.tabs.more).toEqual({ id: 'more', name: 'shell.more' })
 	})
 
@@ -91,7 +97,7 @@ describe('tabBar', () => {
 	it("pins the owner's two, and no more than two", () => {
 		const bar = tabBar(declarations, shell, ['toolbench', 'weather', 'kitchen'])
 		expect(idsOf(bar.tabs)).toEqual(['garden', 'today', 'toolbench', 'weather'])
-		expect(idsOf(bar.more)).toEqual(['kitchen', 'places', 'fitness', 'gardener', 'settings'])
+		expect(idsOf(bar.more)).toEqual(['kitchen', 'places', 'fitness', 'finance', 'gardener', 'settings'])
 		// Vigor is pickable as a pinned tab (D-160)
 		expect(idsOf(tabBar(declarations, shell, ['fitness', 'kitchen']).tabs)).toEqual([
 			'garden',
@@ -198,6 +204,8 @@ describe('paletteIndex', () => {
 			'go.fitness.body',
 			'go.fitness.gyms',
 			'go.fitness.supplements',
+			'go.finance',
+			'go.finance.accounts',
 		])
 		expect(index.entries.find((entry) => entry.id === 'go.kitchen.recipes')).toEqual({
 			id: 'go.kitchen.recipes',
@@ -236,6 +244,7 @@ describe('paletteIndex', () => {
 			{ domain: 'kitchen', types: ['stock-item', 'recipe'] },
 			{ domain: 'toolbench', types: ['idea', 'project', 'note'] },
 			{ domain: 'fitness', types: ['workout-template', 'gym', 'supplement'] },
+			{ domain: 'finance', types: ['account'] },
 		])
 	})
 })

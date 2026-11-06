@@ -679,6 +679,204 @@ export const RESOURCES = [
 		"live": true
 	},
 	{
+		"id": "monthly-income-band",
+		"category": "fact",
+		"primitive": null,
+		"owner": "finance",
+		"tier": "T2",
+		"phase": "later",
+		"live": true
+	},
+	{
+		"id": "provider-link",
+		"category": "entity",
+		"primitive": null,
+		"owner": "finance",
+		"tier": "T2",
+		"phase": "later",
+		"live": true
+	},
+	{
+		"id": "account",
+		"category": "entity",
+		"primitive": null,
+		"owner": "finance",
+		"tier": "T2",
+		"phase": "later",
+		"live": true
+	},
+	{
+		"id": "file-import",
+		"category": "entity",
+		"primitive": null,
+		"owner": "finance",
+		"tier": "T2",
+		"phase": "later",
+		"live": true
+	},
+	{
+		"id": "balance-snapshot",
+		"category": "entity",
+		"primitive": null,
+		"owner": "finance",
+		"tier": "T2",
+		"phase": "later",
+		"live": true
+	},
+	{
+		"id": "transaction",
+		"category": "entity",
+		"primitive": null,
+		"owner": "finance",
+		"tier": "T2",
+		"phase": "later",
+		"live": true
+	},
+	{
+		"id": "budget-category",
+		"category": "entity",
+		"primitive": null,
+		"owner": "finance",
+		"tier": "T1",
+		"phase": "later",
+		"live": true
+	},
+	{
+		"id": "category-rule",
+		"category": "entity",
+		"primitive": null,
+		"owner": "finance",
+		"tier": "T2",
+		"phase": "later",
+		"live": true
+	},
+	{
+		"id": "merchant",
+		"category": "entity",
+		"primitive": null,
+		"owner": "finance",
+		"tier": "T2",
+		"phase": "later",
+		"live": true
+	},
+	{
+		"id": "money-rollup",
+		"category": "entity",
+		"primitive": null,
+		"owner": "finance",
+		"tier": "T2",
+		"phase": "later",
+		"live": true
+	},
+	{
+		"id": "bill",
+		"category": "entity",
+		"primitive": null,
+		"owner": "finance",
+		"tier": "T2",
+		"phase": "later",
+		"live": true
+	},
+	{
+		"id": "recurring-charge",
+		"category": "entity",
+		"primitive": null,
+		"owner": "finance",
+		"tier": "T2",
+		"phase": "later",
+		"live": true
+	},
+	{
+		"id": "budget",
+		"category": "entity",
+		"primitive": null,
+		"owner": "finance",
+		"tier": "T2",
+		"phase": "later",
+		"live": true
+	},
+	{
+		"id": "liability",
+		"category": "entity",
+		"primitive": null,
+		"owner": "finance",
+		"tier": "T2",
+		"phase": "later",
+		"live": true
+	},
+	{
+		"id": "holding",
+		"category": "entity",
+		"primitive": null,
+		"owner": "finance",
+		"tier": "T2",
+		"phase": "later",
+		"live": true
+	},
+	{
+		"id": "security",
+		"category": "entity",
+		"primitive": null,
+		"owner": "finance",
+		"tier": "T0",
+		"phase": "later",
+		"live": true
+	},
+	{
+		"id": "asset",
+		"category": "entity",
+		"primitive": null,
+		"owner": "finance",
+		"tier": "T2",
+		"phase": "later",
+		"live": true
+	},
+	{
+		"id": "income-source",
+		"category": "entity",
+		"primitive": null,
+		"owner": "finance",
+		"tier": "T2",
+		"phase": "later",
+		"live": true
+	},
+	{
+		"id": "savings-goal",
+		"category": "entity",
+		"primitive": null,
+		"owner": "finance",
+		"tier": "T2",
+		"phase": "later",
+		"live": true
+	},
+	{
+		"id": "contribution-limit",
+		"category": "entity",
+		"primitive": null,
+		"owner": "finance",
+		"tier": "T0",
+		"phase": "later",
+		"live": true
+	},
+	{
+		"id": "spending-watch",
+		"category": "entity",
+		"primitive": null,
+		"owner": "finance",
+		"tier": "T2",
+		"phase": "later",
+		"live": true
+	},
+	{
+		"id": "bill-due",
+		"category": "kind",
+		"primitive": "event",
+		"owner": "finance",
+		"tier": "T2",
+		"phase": 2,
+		"live": false
+	},
+	{
 		"id": "layer",
 		"category": "entity",
 		"primitive": null,
@@ -882,204 +1080,6 @@ export const RESOURCES = [
 		"primitive": "attachment",
 		"owner": "health",
 		"tier": "T3",
-		"phase": "later",
-		"live": false
-	},
-	{
-		"id": "monthly-income-band",
-		"category": "fact",
-		"primitive": null,
-		"owner": "finance",
-		"tier": "T2",
-		"phase": "later",
-		"live": false
-	},
-	{
-		"id": "provider-link",
-		"category": "entity",
-		"primitive": null,
-		"owner": "finance",
-		"tier": "T2",
-		"phase": "later",
-		"live": false
-	},
-	{
-		"id": "account",
-		"category": "entity",
-		"primitive": null,
-		"owner": "finance",
-		"tier": "T2",
-		"phase": "later",
-		"live": false
-	},
-	{
-		"id": "file-import",
-		"category": "entity",
-		"primitive": null,
-		"owner": "finance",
-		"tier": "T2",
-		"phase": "later",
-		"live": false
-	},
-	{
-		"id": "balance-snapshot",
-		"category": "entity",
-		"primitive": null,
-		"owner": "finance",
-		"tier": "T2",
-		"phase": "later",
-		"live": false
-	},
-	{
-		"id": "transaction",
-		"category": "entity",
-		"primitive": null,
-		"owner": "finance",
-		"tier": "T2",
-		"phase": "later",
-		"live": false
-	},
-	{
-		"id": "budget-category",
-		"category": "entity",
-		"primitive": null,
-		"owner": "finance",
-		"tier": "T1",
-		"phase": "later",
-		"live": false
-	},
-	{
-		"id": "category-rule",
-		"category": "entity",
-		"primitive": null,
-		"owner": "finance",
-		"tier": "T2",
-		"phase": "later",
-		"live": false
-	},
-	{
-		"id": "merchant",
-		"category": "entity",
-		"primitive": null,
-		"owner": "finance",
-		"tier": "T2",
-		"phase": "later",
-		"live": false
-	},
-	{
-		"id": "money-rollup",
-		"category": "entity",
-		"primitive": null,
-		"owner": "finance",
-		"tier": "T2",
-		"phase": "later",
-		"live": false
-	},
-	{
-		"id": "bill",
-		"category": "entity",
-		"primitive": null,
-		"owner": "finance",
-		"tier": "T2",
-		"phase": "later",
-		"live": false
-	},
-	{
-		"id": "recurring-charge",
-		"category": "entity",
-		"primitive": null,
-		"owner": "finance",
-		"tier": "T2",
-		"phase": "later",
-		"live": false
-	},
-	{
-		"id": "budget",
-		"category": "entity",
-		"primitive": null,
-		"owner": "finance",
-		"tier": "T2",
-		"phase": "later",
-		"live": false
-	},
-	{
-		"id": "liability",
-		"category": "entity",
-		"primitive": null,
-		"owner": "finance",
-		"tier": "T2",
-		"phase": "later",
-		"live": false
-	},
-	{
-		"id": "holding",
-		"category": "entity",
-		"primitive": null,
-		"owner": "finance",
-		"tier": "T2",
-		"phase": "later",
-		"live": false
-	},
-	{
-		"id": "security",
-		"category": "entity",
-		"primitive": null,
-		"owner": "finance",
-		"tier": "T0",
-		"phase": "later",
-		"live": false
-	},
-	{
-		"id": "asset",
-		"category": "entity",
-		"primitive": null,
-		"owner": "finance",
-		"tier": "T2",
-		"phase": "later",
-		"live": false
-	},
-	{
-		"id": "income-source",
-		"category": "entity",
-		"primitive": null,
-		"owner": "finance",
-		"tier": "T2",
-		"phase": "later",
-		"live": false
-	},
-	{
-		"id": "savings-goal",
-		"category": "entity",
-		"primitive": null,
-		"owner": "finance",
-		"tier": "T2",
-		"phase": "later",
-		"live": false
-	},
-	{
-		"id": "contribution-limit",
-		"category": "entity",
-		"primitive": null,
-		"owner": "finance",
-		"tier": "T0",
-		"phase": "later",
-		"live": false
-	},
-	{
-		"id": "spending-watch",
-		"category": "entity",
-		"primitive": null,
-		"owner": "finance",
-		"tier": "T2",
-		"phase": "later",
-		"live": false
-	},
-	{
-		"id": "bill-due",
-		"category": "kind",
-		"primitive": "event",
-		"owner": "finance",
-		"tier": "T2",
 		"phase": "later",
 		"live": false
 	},
@@ -2394,6 +2394,68 @@ export const DECLARATIONS = {
 			"supplement",
 			"intake-log"
 		]
+	},
+	"finance": {
+		"id": "finance",
+		"phase": "later",
+		"name": "domains.finance.name",
+		"subtitle": "domains.finance.subtitle",
+		"sidebar": {
+			"group": "domains",
+			"order": 50,
+			"visible": true
+		},
+		"tabs": [
+			{
+				"id": "accounts",
+				"label": "domains.finance.tabs.accounts"
+			}
+		],
+		"resources": [
+			"monthly-income-band",
+			"provider-link",
+			"account",
+			"file-import",
+			"balance-snapshot",
+			"transaction",
+			"budget-category",
+			"category-rule",
+			"merchant",
+			"money-rollup",
+			"bill",
+			"recurring-charge",
+			"budget",
+			"liability",
+			"holding",
+			"security",
+			"asset",
+			"income-source",
+			"savings-goal",
+			"contribution-limit",
+			"spending-watch",
+			"bill-due"
+		],
+		"reads": [],
+		"widgets": [],
+		"quickActions": [],
+		"captureSources": [],
+		"tools": [],
+		"signals": [],
+		"notificationKinds": [],
+		"schedules": [],
+		"intents": [],
+		"deviceCapabilities": [],
+		"palette": {
+			"entries": [],
+			"search": [
+				"account"
+			]
+		},
+		"export": [
+			"account",
+			"balance-snapshot",
+			"asset"
+		]
 	}
 } as const
 
@@ -2404,7 +2466,8 @@ export const SHELL = {
 		"toolbench",
 		"weather",
 		"places",
-		"fitness"
+		"fitness",
+		"finance"
 	],
 	"sidebar": {
 		"groups": [

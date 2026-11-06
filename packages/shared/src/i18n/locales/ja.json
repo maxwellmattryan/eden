@@ -1200,6 +1200,151 @@
 				"averageLegend": "7日平均"
 			}
 		},
+		"finance": {
+			"name": "果樹園",
+			"subtitle": "お金、予算、資産",
+			"tabs": {
+				"accounts": "口座"
+			},
+			"saveFailed": "果樹園は最後の変更を保存できませんでした。",
+			"cancel": "キャンセル",
+			"save": "保存",
+			"actions": {
+				"addAccount": "口座を追加",
+				"addAsset": "資産を追加",
+				"linkBank": "銀行を連携",
+				"reconnect": "再接続"
+			},
+			"totals": {
+				"label": "合計",
+				"assets": "資産",
+				"debts": "負債",
+				"netWorth": "純資産",
+				"leftOut": "{currencies}の{count}件の口座は合計に含まれていません",
+				"and": "{first}と{last}",
+				"staleSince": "{day}時点の残高を含みます"
+			},
+			"groups": {
+				"byHand": "手入力",
+				"assets": "資産",
+				"closed": "解約済み",
+				"updatedAt": "{time}に更新",
+				"updatedOn": "{day}に更新",
+				"asOf": "{day}時点",
+				"expiring": "{name}は{day}までに再ログインが必要です",
+				"actionsFor": "{name}の操作",
+				"removeLink": "連携を解除"
+			},
+			"stale": {
+				"title": "{name}に再ログインが必要です",
+				"detail": "{day}時点の残高"
+			},
+			"kinds": {
+				"checking": "当座",
+				"savings": "普通・貯蓄",
+				"credit-card": "クレジットカード",
+				"loan": "ローン",
+				"investment": "投資",
+				"retirement": "年金",
+				"cash": "現金",
+				"other": "その他"
+			},
+			"assetKinds": {
+				"vehicle": "車両",
+				"property": "不動産",
+				"crypto": "暗号資産",
+				"valuables": "貴重品",
+				"other": "その他"
+			},
+			"row": {
+				"last4": "••{last4}",
+				"share": "持ち分 {share}%",
+				"replaces": "{name}の後継",
+				"owed": "{amount} 未払い",
+				"notInTotals": "合計に含まない",
+				"noBalance": "残高なし",
+				"valued": "{day}に評価",
+				"approx": "≈ {amount}",
+				"closedOn": "{day}に解約"
+			},
+			"menu": {
+				"edit": "編集",
+				"updateBalance": "残高を更新",
+				"replaces": "この口座が置き換えるもの…",
+				"close": "口座を解約",
+				"reopen": "再開",
+				"delete": "削除"
+			},
+			"empty": {
+				"title": "まだ何もありません",
+				"text": "口座と持ち物を追加しましょう。残高はこのデバイスに保存されます。",
+				"sample": "サンプル口座を試す"
+			},
+			"accountForm": {
+				"titleNew": "口座を追加",
+				"titleEdit": "口座を編集",
+				"name": "名前",
+				"institution": "金融機関",
+				"kind": "種類",
+				"currency": "通貨",
+				"last4": "下4桁",
+				"balance": "残高",
+				"debtHelp": "借りている金額を正の数で入力してください。",
+				"share": "持ち分 %"
+			},
+			"assetForm": {
+				"titleNew": "資産を追加",
+				"titleEdit": "資産を編集",
+				"name": "名前",
+				"kind": "種類",
+				"currency": "通貨",
+				"value": "評価額",
+				"valuedOn": "評価日",
+				"quantity": "数量",
+				"unit": "単位"
+			},
+			"balanceForm": {
+				"title": "残高を更新",
+				"amount": "残高"
+			},
+			"replaceForm": {
+				"title": "この口座が置き換えるもの…",
+				"account": "以前の口座",
+				"text": "履歴とルールは以前の口座から引き継がれます。以前の口座が開いていれば解約されます。",
+				"none": "選べる口座がほかにありません。"
+			},
+			"removeLink": {
+				"title": "このデバイスから{name}を削除しますか？",
+				"text": "口座は解約され、履歴に残ります。Edenは読み込みをやめます。ほかのデバイスでは、そちらで削除してください。",
+				"verb": "連携を解除",
+				"subject": "あなた",
+				"resource": "金融機関の連携"
+			},
+			"errors": {
+				"name": "名前を入力してください",
+				"amount": "金額を入力してください",
+				"decimals": "{code}は小数点以下{decimals}桁までです",
+				"whole": "{code}は整数の{name}で入力してください",
+				"tooLarge": "大きすぎます",
+				"last4": "4桁で入力してください",
+				"share": "0.01〜100で入力してください",
+				"day": "日付を入力してください",
+				"quantity": "数値を入力してください",
+				"unit": "単位を入力してください"
+			},
+			"toasts": {
+				"accountAdded": "口座を追加しました",
+				"accountSaved": "口座を保存しました",
+				"balanceUpdated": "残高を更新しました",
+				"closed": "{name}を解約しました",
+				"reopened": "{name}を再開しました",
+				"deleted": "{name}を削除しました",
+				"replaced": "{name}を置き換えました",
+				"assetAdded": "資産を追加しました",
+				"assetSaved": "資産を保存しました",
+				"linkRemoved": "{name}を削除しました"
+			}
+		},
 		"places": {
 			"name": "野原",
 			"subtitle": "場所、イベント、雰囲気、お気に入り",
@@ -1761,6 +1906,8 @@
 			"imperial": "ヤード・ポンド法",
 			"weekStart": "週の始まり",
 			"weekStartHelp": "Edenが表示する週はこの曜日から始まります。",
+			"homeCurrency": "基準通貨",
+			"homeCurrencyHelp": "合計とグラフはこの通貨で表示されます。ほかの通貨の口座はその通貨のまま表示され、為替レートが使えるようになるまで合計に含まれません。",
 			"monday": "月曜日",
 			"sunday": "日曜日",
 			"clock": "時刻の表示",

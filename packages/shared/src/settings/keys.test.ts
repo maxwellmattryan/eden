@@ -9,6 +9,11 @@ describe('settings keys', () => {
 		expect(deviceStorage.pinnedTabs).toBe('eden:pinned-tabs')
 	})
 
+	it('carries the home currency in a bundle, as the week start is (D-188)', () => {
+		expect(storage.homeCurrency).toBe('eden:home-currency')
+		expect(Object.values(deviceStorage)).not.toContain('eden:home-currency')
+	})
+
 	it('keeps the phone lock and hidden amounts on this device, out of what a bundle carries', () => {
 		expect(Object.keys(storage)).not.toContain('lockAfter')
 		expect(Object.keys(storage)).not.toContain('hideAmounts')

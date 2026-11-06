@@ -42,6 +42,8 @@
 		meta?: string
 		/** Sets the meta in text-primary: due, expiring, overdue. */
 		metaWarn?: boolean
+		/** Sets the meta in the danger colour: an amount owed. Its words say so too; the colour is never alone. */
+		metaDanger?: boolean
 		/** A leading glyph. */
 		icon?: IconName
 		/** A small picture of the row's thing, as a URL the page may load; it takes the glyph's place. */
@@ -214,6 +216,7 @@
 		badges = [],
 		meta,
 		metaWarn = false,
+		metaDanger = false,
 		icon,
 		thumbnail,
 		tile = false,
@@ -385,7 +388,9 @@
 			</span>
 		{/if}
 	</span>
-	{#if meta}<span class="ed-row-meta" class:ed-row-meta-warn={metaWarn}>{meta}</span>{/if}
+	{#if meta}<span class="ed-row-meta" class:ed-row-meta-warn={metaWarn} class:ed-row-meta-danger={metaDanger}
+			>{meta}</span
+		>{/if}
 	{#if menu.length}
 		{#if showMore}
 			<span class="ed-row-more" bind:this={more}>
@@ -662,6 +667,9 @@
 	}
 	.ed-row-meta-warn {
 		color: var(--text-primary);
+	}
+	.ed-row-meta-danger {
+		color: var(--danger);
 	}
 	.ed-row-more {
 		display: inline-flex;

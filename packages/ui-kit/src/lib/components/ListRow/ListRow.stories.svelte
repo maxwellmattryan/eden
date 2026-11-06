@@ -97,6 +97,19 @@
 	{template}
 />
 
+<!-- An amount owed: the meta in the danger colour, its words saying "owed" as well -->
+<Story
+	name="Debt"
+	args={{
+		id: 'sapphire',
+		primary: 'Chase Sapphire Preferred',
+		secondary: 'Credit card · ••8823',
+		meta: '$1,204.18 owed',
+		metaDanger: true,
+	}}
+	{template}
+/>
+
 <!-- A tip about the row sits behind an info glyph right after the primary text. Pressing it shows the tip and never
      opens the row, nor toggles it in select mode (the second row) -->
 <Story

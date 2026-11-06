@@ -16,6 +16,7 @@ const paths: Record<PlaceId, ((tab?: string) => string) | undefined> = {
 	weather: () => resolve('/weather'),
 	places: (tab) => resolve('/places/[[tab]]', tab ? { tab } : {}),
 	fitness: (tab) => resolve('/fitness/[[tab]]', tab ? { tab } : {}),
+	finance: (tab) => resolve('/finance/[[tab]]', tab ? { tab } : {}),
 	more: () => resolve('/more'),
 }
 

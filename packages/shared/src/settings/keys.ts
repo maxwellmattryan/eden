@@ -10,6 +10,7 @@ export const storage = {
 	subtitles: 'eden:subtitles',
 	measurement: 'eden:measurement',
 	weekStart: 'eden:week-start',
+	homeCurrency: 'eden:home-currency',
 	clock: 'eden:clock',
 	weatherProvider: 'eden:weather-provider',
 	mapsApp: 'eden:maps-app',

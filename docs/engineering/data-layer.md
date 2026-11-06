@@ -314,6 +314,12 @@ SQLite is where the owner's data is; a store is what a page sees of it, in memor
 | | `supplement` | name, brand, dose, `when` (`daily`, `pre-workout`, `as-needed`), and `stockItemUri`, a Hearth `stock-item` read and never written |
 | | `intake-log` | `supplementId`, `at` |
 | | `event`, a primitive, kind `workout-session` | a planned session: its template's title and `startAt`, linked `from` its `workout-template` (D-177) |
+| Orchard | `provider-link` | `provider` (`plaid`), `institution` (name, `colour`, `logo`), `status` (`ok`, `needs-reauth`, `error`), `consentExpiresAt`, `lastSyncedAt`, `cursor`; this device's, never in the export (D-191) |
+| | `account` | name, `kind` (one of eight), `currency`, `institution`, `linkId` (none: entered by hand), `providerAccountId`, `last4`, `balance` as Money as the bank states it, `balanceAt`, `share` in basis points, `closedOn`, `replaces` (an account id), `lastSnapshot` (`id`, `day`) (D-191) |
+| | `balance-snapshot` | `accountId`, `day` (`YYYY-MM-DD`), `balance`; one per account per day, upserted, never loaded by the store |
+| | `asset` | name, `kind` (one of five), `value` as Money, `valuedOn`, `quantity` (a decimal string) with its `unit`, `share` in basis points |
+
+Money in a payload is `{ minor, currency }`: a safe integer of the currency's minor units and its ISO 4217 code (D-188). `@eden/shared/money` parses, formats, sums and shares it without a float, and `money.vectors.json` beside it is the contract the crate's port is held to.
 | Today (the shell) | `task`, a primitive | its fields as columns; `recurrence`, `target` and `progress` as JSON the frontend shapes (D-75, below) |
 
 A storage tip is a line on its item or its recipe by decision (D-87), not a row waiting for its issue. Left as they are, for the issues that own them: brainstorm sessions and parts lists as rows of their own, the shop day as an Event, a project's next steps as Tasks, and nothing of the home, which is its Place row now (D-141).
