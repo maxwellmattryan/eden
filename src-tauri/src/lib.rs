@@ -25,6 +25,12 @@ fn install_panic_hook() {
     let crash_log_path = std::env::temp_dir().join("eden-crash.log");
     let default_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
+        // The document reader catches a panic in the PDF library (D-190), and its message could quote the document:
+        // only where it happened is logged, never what it said.
+        if domains::finance::reading_a_text_layer() {
+            log::warn!("PANIC in the PDF text layer, caught; detail withheld");
+            return;
+        }
         let message = format!(
             "[{}] PANIC: {}\nLocation: {:?}\n\n",
             chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"),
@@ -219,6 +225,7 @@ pub fn run() {
             domains::documents::remove_domain_document,
             domains::weather::weatherkit_status,
             domains::weather::weatherkit_forecast,
+            domains::finance::read_document,
         ])
         .setup(|app| {
             // The app switcher's snapshot is taken under an opaque cover, never of Eden's content.
