@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { createEngine, type EngineStorage } from '../../data/engine.js'
 import type { BatchOp } from '../../data/index.js'
 import { createIdGenerator, isUlid } from '../../data/ulid.js'
-import { money } from '../../money/index.js'
-import { balanceOps, payloadOf, removeLinkOps, replaceOps } from './accounts.js'
+import { addMoney, money, negate } from '../../money/index.js'
+import { accountTotals, balanceOps, closeOps, payloadOf, removeLinkOps, reopenOps, replaceOps } from './accounts.js'
 import { financeFromRows, financeRows, financeUris } from './rows.js'
 import { seedData } from './seed.js'
 import { FINANCE, type Account, type SnapshotPayload } from './types.js'
@@ -122,6 +122,33 @@ describe('finance rows', () => {
 		expect(after.accounts.map((account) => account.balance)).toEqual(held.accounts.map((account) => account.balance))
 
 		engine.applyBatch(removal.inverse)
+		expect(readBack(engine)).toEqual(held)
+	})
+
+	it('closes an account out of every total, and reopening it counts it again', () => {
+		const { engine } = seeded()
+		const held = readBack(engine)
+		const totals = (data: ReturnType<typeof readBack>) => accountTotals({ ...data, home: 'USD', now: NOW })
+		const checking = held.accounts.find((account) => account.kind === 'checking')!
+
+		const closed = closeOps(checking, '2026-09-30')
+		engine.applyBatch(closed.ops)
+		const after = readBack(engine)
+		expect(after.accounts.find((account) => account.id === checking.id)?.closedOn).toBe('2026-09-30')
+		expect(totals(after).assets).toEqual(addMoney(totals(held).assets, negate(checking.balance!)))
+		expect(totals(after).debts).toEqual(totals(held).debts)
+
+		const reopened = reopenOps(closed.account)
+		engine.applyBatch(reopened.ops)
+		const back = readBack(engine)
+		expect(back.accounts.find((account) => account.id === checking.id)?.closedOn).toBeUndefined()
+		expect(back).toEqual(held)
+		expect(totals(back)).toEqual(totals(held))
+
+		// each way back undoes its own step
+		engine.applyBatch(reopened.inverse)
+		expect(readBack(engine).accounts.find((account) => account.id === checking.id)?.closedOn).toBe('2026-09-30')
+		engine.applyBatch(closed.inverse)
 		expect(readBack(engine)).toEqual(held)
 	})
 
