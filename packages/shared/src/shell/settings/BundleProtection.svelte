@@ -7,6 +7,7 @@
 	import { tick } from 'svelte'
 	import { Field, Notice, Toggle } from '@eden/ui-kit'
 	import { t } from '../../i18n/index.js'
+	import { protectionState } from './protection.js'
 
 	type Props = {
 		/** The switch's label. */
@@ -23,8 +24,6 @@
 	// eslint-disable-next-line no-useless-assignment -- bound props: the parent reads what this component writes
 	let { label, warning, passphrase = $bindable(), ready = $bindable(true), onsubmit }: Props = $props()
 
-	/** The crate's floor too (`sealed::check_passphrase`), in characters. */
-	const MIN = 8
 	const uid = $props.id()
 
 	let on = $state(false)
@@ -33,10 +32,10 @@
 	/** The passphrase field was left; typing in it again clears this, so no error shows while typing. */
 	let left = $state(false)
 
-	const length = $derived([...first].length)
-	const valid = $derived(length >= MIN && first === second)
-	const shortError = $derived(left && length > 0 && length < MIN ? $t('settings.sync.protect.short') : undefined)
-	const mismatchError = $derived(second !== '' && first !== second ? $t('settings.sync.protect.mismatch') : undefined)
+	const fields = $derived(protectionState(first, second, left))
+	const valid = $derived(fields.valid)
+	const shortError = $derived(fields.short ? $t('settings.sync.protect.short') : undefined)
+	const mismatchError = $derived(fields.mismatch ? $t('settings.sync.protect.mismatch') : undefined)
 
 	function sync() {
 		passphrase = on && valid ? first : undefined
