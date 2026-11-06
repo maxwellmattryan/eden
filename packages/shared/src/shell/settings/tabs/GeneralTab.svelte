@@ -1,12 +1,13 @@
 <script lang="ts">
 	// General: the language (D-20), the home every domain measures from (D-143), then the measurement system, the
-	// week start and the clock every domain reads (D-58). Units and the clock show an example of the current choice, written by the formatters the domains use.
+	// week start, the home currency totals are in (D-188) and the clock every domain reads (D-58). Units and the clock show an example of the current choice, written by the formatters the domains use.
 	// Date formats, timezone and work hours follow.
-	import { Button, Segmented } from '@eden/ui-kit'
+	import { Button, Segmented, Select } from '@eden/ui-kit'
 	import { formatAddress } from '../../../address/index.js'
 	import { formatTime } from '../../../dates/index.js'
 	import { home } from '../../../home/index.js'
 	import { t } from '../../../i18n/index.js'
+	import { currencyOptions } from '../../../money/index.js'
 	import { settings } from '../../../settings/index.js'
 	import { clockFormats, languages, measurementSystems, weekStarts } from '../../../types/index.js'
 	import { distance, pressure, rainfall, speed } from '../../../weather/index.js'
@@ -23,6 +24,7 @@
 	const selectedMeasurement = $derived(Math.max(0, measurementSystems.indexOf(settings.measurement)))
 	const weekStartItems = $derived([$t('settings.general.monday'), $t('settings.general.sunday')])
 	const selectedWeekStart = $derived(Math.max(0, weekStarts.indexOf(settings.weekStart)))
+	const currencies = $derived(currencyOptions(settings.language, settings.homeCurrency))
 	const clockItems = $derived([$t('settings.general.clock24'), $t('settings.general.clock12')])
 	const selectedClock = $derived(Math.max(0, clockFormats.indexOf(settings.clock)))
 
@@ -80,6 +82,15 @@
 		selected={selectedWeekStart}
 		label={$t('settings.general.weekStart')}
 		onchange={(index) => settings.setWeekStart(weekStarts[index] ?? 'monday')}
+	/>
+</SettingsRow>
+
+<SettingsRow label={$t('settings.general.homeCurrency')} help={$t('settings.general.homeCurrencyHelp')}>
+	<Select
+		aria-label={$t('settings.general.homeCurrency')}
+		options={currencies}
+		value={settings.homeCurrency}
+		onchange={(code) => settings.setHomeCurrency(code)}
 	/>
 </SettingsRow>
 

@@ -16,6 +16,7 @@ import { GRADES } from '../gardener/types.js'
 import { setLanguage as setI18nLanguage } from '../i18n/index.js'
 import { parseLayout, type StoredLayout } from '../manifest/garden.js'
 import { parsePinned } from '../manifest/pinned.js'
+import { DEFAULT_HOME_CURRENCY, isCurrency } from '../money/index.js'
 import {
 	clockFormats,
 	fontSettings,
@@ -37,6 +38,9 @@ import {
 } from '../types/index.js'
 import { deviceStorage, storage } from './keys.js'
 import { measurementFrom } from './migrate.js'
+
+/** A stored home currency, or USD for one that is missing or not a currency. */
+const homeCurrencyOf = (raw: string | null) => (raw !== null && isCurrency(raw) ? raw : DEFAULT_HOME_CURRENCY)
 
 function read(key: string): string | null {
 	try {
@@ -87,6 +91,8 @@ export class Settings {
 	measurement = $state<MeasurementSystem>('metric')
 	/** The day a week starts on (D-58). */
 	weekStart = $state<WeekStart>('monday')
+	/** The currency totals and charts are in (D-188); an amount in another stays in its own and out of totals. */
+	homeCurrency = $state(DEFAULT_HOME_CURRENCY)
 	/** The clock every time is written on (D-58). */
 	clock = $state<ClockFormat>('24h')
 	/** The forecast provider Sky asks first (D-56). */
@@ -135,6 +141,7 @@ export class Settings {
 		this.language = oneOf(read(storage.language), languages, this.systemLanguage())
 		this.measurement = this.#readMeasurement()
 		this.weekStart = oneOf(read(storage.weekStart), weekStarts, 'monday')
+		this.homeCurrency = homeCurrencyOf(read(storage.homeCurrency))
 		this.clock = oneOf(read(storage.clock), clockFormats, '24h')
 		this.weatherProvider = oneOf(read(storage.weatherProvider), weatherProviders, 'open-meteo')
 		this.mapsApp = oneOf(read(storage.mapsApp), mapsApps, this.systemMapsApp())
@@ -243,6 +250,12 @@ export class Settings {
 	setWeekStart(weekStart: WeekStart) {
 		this.weekStart = oneOf(weekStart, weekStarts, 'monday')
 		write(storage.weekStart, this.weekStart === 'monday' ? null : this.weekStart)
+	}
+
+	/** Changes which currency totals are in; nothing stored is re-expressed. */
+	setHomeCurrency(code: string) {
+		this.homeCurrency = homeCurrencyOf(code)
+		write(storage.homeCurrency, this.homeCurrency === DEFAULT_HOME_CURRENCY ? null : this.homeCurrency)
 	}
 
 	setClock(clock: ClockFormat) {

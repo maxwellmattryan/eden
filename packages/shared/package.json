@@ -38,6 +38,8 @@
 		"./domains/places": "./src/domains/places/index.ts",
 		"./domains/fitness": "./src/domains/fitness/index.ts",
 		"./domains/weather": "./src/domains/weather/index.ts",
+		"./domains/finance": "./src/domains/finance/index.ts",
+		"./money": "./src/money/index.ts",
 		"./geo": "./src/geo/index.ts",
 		"./address": "./src/address/index.ts",
 		"./home": "./src/home/index.ts",

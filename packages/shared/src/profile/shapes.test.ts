@@ -9,9 +9,10 @@ describe('the value shapes', () => {
 		const live = RESOURCES.filter((row) => row.category === 'fact' && row.live).map((row) => row.id)
 		expect([...LIVE_FACT_TYPES]).toEqual(live)
 		expect(Object.keys(FACT_SHAPES).sort()).toEqual([...live].sort())
-		expect(live).toHaveLength(19)
-		// Meadow is built ahead of its phase and Vigor at its own, so their facts are live; Sanctuary's are not
+		expect(live).toHaveLength(20)
+		// Meadow and Orchard are built ahead of their phase, Vigor at its own: their facts are live, Sanctuary's not
 		expect(isLiveFact('favorite-vibe') && isLiveFact('gym-preference')).toBe(true)
+		expect(isLiveFact('monthly-income-band')).toBe(true)
 		expect(isLiveFact('allergy') && !isLiveFact('followed-tradition') && !isLiveFact('recipe')).toBe(true)
 	})
 

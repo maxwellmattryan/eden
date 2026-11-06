@@ -2046,7 +2046,7 @@ mod tests {
         }
         let nobody = ExportRequest {
             scope: Scope::Domain {
-                domain: "finance".into(),
+                domain: "people".into(),
             },
             ..request(Vec::new())
         };

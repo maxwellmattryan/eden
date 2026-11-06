@@ -9,6 +9,11 @@ describe('settings keys', () => {
 		expect(deviceStorage.pinnedTabs).toBe('eden:pinned-tabs')
 	})
 
+	it('carries the home currency in a bundle, as the week start is (D-188)', () => {
+		expect(storage.homeCurrency).toBe('eden:home-currency')
+		expect(Object.values(deviceStorage)).not.toContain('eden:home-currency')
+	})
+
 	it('never stores one key in both groups', () => {
 		const carried = new Set<string>(Object.values(storage))
 		for (const key of Object.values(deviceStorage)) expect(carried.has(key)).toBe(false)

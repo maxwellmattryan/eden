@@ -1,0 +1,52 @@
+{
+	"note": "The Money contract (D-188): what parseMoney reads from text and what formatMoney writes, shared by packages/shared/src/money/money.test.ts and the crate's port (#73). A parse case gives `minor` or `error`; a format case gives `formatted`, with `sign` when it is not \"auto\".",
+	"decimals": [
+		{ "currency": "USD", "decimals": 2 },
+		{ "currency": "JPY", "decimals": 0 },
+		{ "currency": "EUR", "decimals": 2 },
+		{ "currency": "KWD", "decimals": 3 }
+	],
+	"parse": [
+		{ "text": "1,234.56", "locale": "en", "currency": "USD", "minor": 123456 },
+		{ "text": "1234.5", "locale": "en", "currency": "USD", "minor": 123450 },
+		{ "text": "12", "locale": "en", "currency": "USD", "minor": 1200 },
+		{ "text": ".5", "locale": "en", "currency": "USD", "minor": 50 },
+		{ "text": "-0.05", "locale": "en", "currency": "USD", "minor": -5 },
+		{ "text": "−0.05", "locale": "en", "currency": "USD", "minor": -5 },
+		{ "text": "$1,204.18", "locale": "en", "currency": "USD", "minor": 120418 },
+		{ "text": "  1 204.18 ", "locale": "en", "currency": "USD", "minor": 120418 },
+		{ "text": "0", "locale": "en", "currency": "USD", "minor": 0 },
+		{ "text": "-0", "locale": "en", "currency": "USD", "minor": 0 },
+		{ "text": "12.340", "locale": "en", "currency": "USD", "minor": 1234 },
+		{ "text": "12.345", "locale": "en", "currency": "USD", "error": "too-many-decimals" },
+		{ "text": "84,000", "locale": "en", "currency": "JPY", "minor": 84000 },
+		{ "text": "84000", "locale": "ja", "currency": "JPY", "minor": 84000 },
+		{ "text": "¥84,000", "locale": "en", "currency": "JPY", "minor": 84000 },
+		{ "text": "84000.5", "locale": "en", "currency": "JPY", "error": "too-many-decimals" },
+		{ "text": "1.5", "locale": "en", "currency": "JPY", "error": "too-many-decimals" },
+		{ "text": "1.234,56", "locale": "de", "currency": "EUR", "minor": 123456 },
+		{ "text": "90071992547409.91", "locale": "en", "currency": "USD", "minor": 9007199254740991 },
+		{ "text": "90071992547409.92", "locale": "en", "currency": "USD", "error": "too-large" },
+		{ "text": "9007199254740992", "locale": "en", "currency": "JPY", "error": "too-large" },
+		{ "text": "", "locale": "en", "currency": "USD", "error": "empty" },
+		{ "text": "   ", "locale": "en", "currency": "USD", "error": "empty" },
+		{ "text": "abc", "locale": "en", "currency": "USD", "error": "not-a-number" },
+		{ "text": "1.2.3", "locale": "en", "currency": "USD", "error": "not-a-number" },
+		{ "text": "1e5", "locale": "en", "currency": "USD", "error": "not-a-number" },
+		{ "text": ".", "locale": "en", "currency": "USD", "error": "not-a-number" }
+	],
+	"format": [
+		{ "minor": 84000, "currency": "JPY", "locale": "en", "formatted": "¥84,000" },
+		{ "minor": -120418, "currency": "USD", "locale": "en", "formatted": "-$1,204.18" },
+		{ "minor": -120418, "currency": "USD", "locale": "en", "sign": "never", "formatted": "$1,204.18" },
+		{ "minor": 120418, "currency": "USD", "locale": "en", "formatted": "$1,204.18" },
+		{ "minor": 0, "currency": "USD", "locale": "en", "formatted": "$0.00" },
+		{ "minor": 0, "currency": "JPY", "locale": "en", "formatted": "¥0" },
+		{ "minor": 5, "currency": "USD", "locale": "en", "formatted": "$0.05" },
+		{ "minor": -5, "currency": "USD", "locale": "en", "formatted": "-$0.05" },
+		{ "minor": 9007199254740991, "currency": "USD", "locale": "en", "formatted": "$90,071,992,547,409.91" },
+		{ "minor": 9007199254740991, "currency": "JPY", "locale": "en", "formatted": "¥9,007,199,254,740,991" },
+		{ "minor": 1234500, "currency": "KWD", "locale": "en", "formatted": "KWD 1,234.500" },
+		{ "minor": 84000, "currency": "JPY", "locale": "ja", "formatted": "￥84,000" }
+	]
+}

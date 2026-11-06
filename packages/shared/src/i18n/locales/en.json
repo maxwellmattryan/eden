@@ -1200,6 +1200,151 @@
 				"averageLegend": "7-day average"
 			}
 		},
+		"finance": {
+			"name": "Orchard",
+			"subtitle": "Money, budgets, assets",
+			"tabs": {
+				"accounts": "Accounts"
+			},
+			"saveFailed": "Orchard couldn't save your last change.",
+			"cancel": "Cancel",
+			"save": "Save",
+			"actions": {
+				"addAccount": "Add an account",
+				"addAsset": "Add an asset",
+				"linkBank": "Link a bank",
+				"reconnect": "Reconnect"
+			},
+			"totals": {
+				"label": "Totals",
+				"assets": "Assets",
+				"debts": "Debts",
+				"netWorth": "Net worth",
+				"leftOut": "{count, plural, one {# account in {currencies} is left out of totals} other {# accounts in {currencies} are left out of totals}}",
+				"and": "{first} and {last}",
+				"staleSince": "Includes balances as of {day}"
+			},
+			"groups": {
+				"byHand": "Entered by hand",
+				"assets": "Assets",
+				"closed": "Closed",
+				"updatedAt": "Updated {time}",
+				"updatedOn": "Updated {day}",
+				"asOf": "as of {day}",
+				"expiring": "{name} asks you to sign in again by {day}",
+				"actionsFor": "Actions for {name}",
+				"removeLink": "Remove link"
+			},
+			"stale": {
+				"title": "{name} needs you to sign in again",
+				"detail": "Balances as of {day}"
+			},
+			"kinds": {
+				"checking": "Checking",
+				"savings": "Savings",
+				"credit-card": "Credit card",
+				"loan": "Loan",
+				"investment": "Investment",
+				"retirement": "Retirement",
+				"cash": "Cash",
+				"other": "Other"
+			},
+			"assetKinds": {
+				"vehicle": "Vehicle",
+				"property": "Property",
+				"crypto": "Crypto",
+				"valuables": "Valuables",
+				"other": "Other"
+			},
+			"row": {
+				"last4": "••{last4}",
+				"share": "Your share {share}%",
+				"replaces": "Replaces {name}",
+				"owed": "{amount} owed",
+				"notInTotals": "Not in totals",
+				"noBalance": "No balance yet",
+				"valued": "Valued {day}",
+				"approx": "≈ {amount}",
+				"closedOn": "Closed {day}"
+			},
+			"menu": {
+				"edit": "Edit",
+				"updateBalance": "Update balance",
+				"replaces": "This replaces…",
+				"close": "Close account",
+				"reopen": "Reopen",
+				"delete": "Delete"
+			},
+			"empty": {
+				"title": "Nothing here yet",
+				"text": "Add your accounts and what you own. Balances stay on this device.",
+				"sample": "Try sample accounts"
+			},
+			"accountForm": {
+				"titleNew": "Add an account",
+				"titleEdit": "Edit account",
+				"name": "Name",
+				"institution": "Institution",
+				"kind": "Kind",
+				"currency": "Currency",
+				"last4": "Last four digits",
+				"balance": "Balance",
+				"debtHelp": "Enter the amount you owe as a positive number.",
+				"share": "Your share %"
+			},
+			"assetForm": {
+				"titleNew": "Add an asset",
+				"titleEdit": "Edit asset",
+				"name": "Name",
+				"kind": "Kind",
+				"currency": "Currency",
+				"value": "Value",
+				"valuedOn": "Valued on",
+				"quantity": "Quantity",
+				"unit": "Unit"
+			},
+			"balanceForm": {
+				"title": "Update balance",
+				"amount": "Balance"
+			},
+			"replaceForm": {
+				"title": "This replaces…",
+				"account": "Old account",
+				"text": "History and rules carry on from the old account. It closes if it is still open.",
+				"none": "No other accounts to choose from."
+			},
+			"removeLink": {
+				"title": "Remove {name} from this device?",
+				"text": "Its accounts close and stay in history. Eden stops reading them. On other devices, remove it there too.",
+				"verb": "Remove link",
+				"subject": "You",
+				"resource": "provider link"
+			},
+			"errors": {
+				"name": "Enter a name",
+				"amount": "Enter an amount",
+				"decimals": "Use at most {decimals} decimals for {code}",
+				"whole": "Use whole {name} for {code}",
+				"tooLarge": "Too large",
+				"last4": "Enter 4 digits",
+				"share": "Between 0.01 and 100",
+				"day": "Enter a day",
+				"quantity": "Enter a number",
+				"unit": "Enter a unit"
+			},
+			"toasts": {
+				"accountAdded": "Account added",
+				"accountSaved": "Account saved",
+				"balanceUpdated": "Balance updated",
+				"closed": "{name} closed",
+				"reopened": "{name} reopened",
+				"deleted": "{name} deleted",
+				"replaced": "{name} replaced",
+				"assetAdded": "Asset added",
+				"assetSaved": "Asset saved",
+				"linkRemoved": "{name} removed"
+			}
+		},
 		"places": {
 			"name": "Meadow",
 			"subtitle": "Places, events, vibes, favourites",
@@ -1761,6 +1906,8 @@
 			"imperial": "Imperial",
 			"weekStart": "Week starts on",
 			"weekStartHelp": "Every week Eden shows begins on this day.",
+			"homeCurrency": "Home currency",
+			"homeCurrencyHelp": "Totals and charts are in this currency. Accounts in other currencies show in their own and stay out of totals until exchange rates exist.",
 			"monday": "Monday",
 			"sunday": "Sunday",
 			"clock": "Clock",

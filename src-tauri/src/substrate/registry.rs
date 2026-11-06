@@ -144,7 +144,7 @@ mod tests {
             ["haul-photo", "item-photo", "recipe-photo", "store-photo"]
         );
         assert!(entity_types_of("toolbench").contains(&"idea"));
-        assert!(is_owner("weather") && !is_owner("finance"));
+        assert!(is_owner("weather") && is_owner("finance") && !is_owner("people"));
         assert!(is_fact("allergy") && is_fact("medical-dietary-restriction"));
         assert!(is_fact("gym-preference") && is_fact("current-weight"));
         assert!(!is_fact("followed-tradition") && !is_fact("recipe") && !is_fact("home"));
@@ -168,6 +168,8 @@ mod tests {
         assert!(resource("medical-dietary-restriction").is_some_and(Resource::live));
         assert!(!is_owner("health"));
         assert_eq!(resource("account").map(|row| row.phase), Some(None));
+        // Orchard is built ahead of its phase, but its bill-due kind waits on Phase 2 (D-186)
+        assert!(is_entity_type("account") && !is_kind("event", "bill-due"));
         assert_eq!(resource("event").map(|row| row.tier), Some(Tier::ByKind));
         assert_eq!(
             resource("identity-document").map(|row| row.tier),
