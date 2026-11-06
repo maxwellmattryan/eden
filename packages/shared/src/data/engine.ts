@@ -661,6 +661,10 @@ export function createEngine(storage: EngineStorage, options: EngineOptions = {}
 				.filter((row) => row.type === filter.type)
 				.filter((row) => filter.includeDeleted || !row.deletedAt)
 				.filter((row) => !filter.ids || filter.ids.includes(row.id))
+				.filter((row) => filter.source === undefined || row.source === filter.source)
+				.filter(
+					(row) => !filter.externalIds || (row.externalId !== null && filter.externalIds.includes(row.externalId))
+				)
 				.filter((row) => !filter.linkedTo || linked(state, row, filter.linkedTo))
 				.sort((a, b) => byText(a.id, b.id))
 				.map((row) => withLinks<Entity<T>>(state, row))
