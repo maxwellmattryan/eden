@@ -4,7 +4,7 @@ status: draft
 summary: The first-launch wizard step by step, each domain's first run and empty states, the guided tour, adding a domain later, and re-running onboarding from settings.
 read-this-if: You are designing first launch, empty states, or the moment a grant is first requested.
 depends-on: [grants, shell, profile]
-updated: 2026-10-01
+updated: 2026-11-06
 ---
 
 ## Goals
@@ -27,6 +27,8 @@ Get the owner to a useful Garden in under five minutes, ask for exactly the gran
 | 10 | Ready | the daily line (neutral until Sanctuary is enabled), "Open the Garden" | Crate's ReadyStep |
 
 A step indicator shows progress; back is always allowed; the wizard resumes where it left off if closed.
+
+Handoff for #26 (the phone's wizard): the phone gains a **Lock** step after Welcome (D-185). It explains the phone lock in a sentence (Face ID or the passcode opens Eden, it locks again after time away, background work keeps running), then runs the first unlock through `phoneLock.unlock()` (`@eden/shared/shell/lock`), which is when iOS asks for Face ID. It has no Skip while the device has a passcode. Without one (`phoneLock.unavailable`), it says to set a passcode to lock Eden and moves on. The lock itself is built (`engineering/app-scaffold.md`, "The phone lock"); desktop has no such step.
 
 ## Per-domain first run
 

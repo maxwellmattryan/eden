@@ -1,10 +1,10 @@
 ---
 title: Sample data
 status: draft
-summary: One consistent fictional dataset for every mockup: an owner, facts, stock by location, a captured haul, recipes, a grocery list, ideas and projects, a calendar week with layers, a weather week, workouts and a weight series, places and listings, daily lines, notifications, feed and audit entries.
+summary: One consistent fictional dataset for every mockup: an owner, facts, stock by location, a captured haul, recipes, a grocery list, ideas and projects, a calendar week with layers, a weather week, workouts and a weight series, places and listings, accounts, transactions, bills and a budget, daily lines, notifications, feed and audit entries.
 read-this-if: You are drawing a mockup or seeding an empty state with sample data.
 depends-on: [product/domains/README]
-updated: 2026-10-31
+updated: 2026-11-06
 ---
 
 ## The owner
@@ -157,6 +157,49 @@ The pasted list (`meadowImport`), six lines as a note's bullets, and the rows it
 
 The map fixture (`meadowMap`): the ground a mock's map stands on (D-129), central Austin drawn by hand in degrees: square bounds, Lady Bird Lake, three parks, ten roads (I-35 and MoPac heavier than the streets) and six labels (Downtown, East Austin, Zilker, South Congress, Hyde Park, Lady Bird Lake).
 
+## Orchard
+
+Money is `{ minor, currency }` (`SampleMoney`, D-188): cents for USD, whole yen for JPY. Rowan is paid semimonthly by Northwind Labs, on the 15th and the last day, $2,430.00 net; today's paycheck has posted. A stale link is Chase's: its balances read "as of Sun 27 Sep" (`orchardStaleSince`).
+
+Institutions (`orchardInstitutions`, the colour only ever a swatch beside the name): Chase `#117ACA` and Ally `#650360`, updated 07:12; M1 `#1F2A44` and Fidelity `#368727`, updated 06:58.
+
+Accounts (`orchardAccounts`):
+
+| account | last four | balance |
+|---|---|---|
+| Chase Total Checking | 4417 | 3,412.18 USD |
+| Chase Sapphire Preferred | 8823 | −1,204.18 USD |
+| Chase Auto Loan | 6610 | −9,812.00 USD |
+| Ally Online Savings | 2290 | 12,800.00 USD |
+| M1 Brokerage | 5501 | 9,640.55 USD |
+| Fidelity 401(k) | 0912 | 21,388.40 USD |
+| Japan Post Bank Yucho savings (entered by hand) | 7731 | ¥84,000, left out of totals |
+
+Assets entered by hand (`orchardAssets`): the 2019 Subaru Outback at 14,200.00 USD, valued Tue 09-01; Bitcoin in cold storage, 0.0412 BTC at 63,000.00 USD, 2,595.60 USD. Assets come to 64,036.73 USD and debts to 11,016.18, so net worth is **53,020.55 USD** (`orchardNetWorthNow`), up 1,104.20 this month (`orchardNetWorthChange`). Net worth by month (`orchardNetWorth` over `orchardNetWorthMonths`), Oct 2025 to Sep 2026: 46,210.40, 46,880.12, 47,102.77, 47,950.30, 48,420.15, 48,190.60, 49,005.85, 49,870.20, 50,412.90, 51,203.44, 51,916.35, 53,020.55.
+
+Cash flow (`orchardCashFlow`), in and out by month; moves between Rowan's own accounts are neither: Apr 4,860.00 / 3,640.22; May 4,860.00 / 4,105.80; Jun 4,860.00 / 3,720.15; Jul 4,860.00 / 4,380.60; Aug 4,860.00 / 3,855.10; **Sep 4,860.00 / 3,912.40**, net +947.60.
+
+Before payday (`orchardForecast`, built from `orchardForecastEvents`): checking from 3,412.18 on 09-30, less rent 1,850.00 on 10-01, Spotify 11.99 on 10-05, water 64.00 on 10-08, the Sapphire payment 1,204.18 on 10-12 and small spending 13.59 on 10-14, to its **lowest, 268.42, on Wed 10-14**; payday adds 2,430.00 on 10-15.
+
+Transactions (`orchardTransactions`), 29 rows from 09-21 to 09-30, newest first, covering all twelve kinds: Blue Bottle Coffee −6.75 (dining, Sapphire, pending, today 07:18); Northwind Labs +2,430.00 paycheck to checking (today); Ally interest earned +41.07; H-E-B −86.43 and −71.88, Whole Foods Market −63.12 (groceries); Torchy's Tacos −24.18, Sushi Ota −84.20 (Sapphire, split, 42.10 reimbursable), Veracruz All Natural −14.50, Home Slice Pizza −38.60, Pinthouse Brewing −27.25 (dining); a transfer of 500.00 from checking to Ally; a card payment of 1,180.00 from checking to Sapphire; Target −42.67 and −31.40, an REI refund +54.99 (shopping); Shell −38.20, Uber −18.64, Capital Metro −2.50 (transport); an ATM fee −3.00 on checking; Netflix −17.99 (subscriptions, recurring); Chase interest charged −18.42 on Sapphire; an M1 VTI dividend +23.16, a VTI buy −500.00 and a fractional SCHD sell +112.40; Barton Creek Farmers Market −22.00 (uncategorised); Austin Energy bill payment −142.37 from checking on 09-22 (part of a bill); Google Fi −65.00 (phone, recurring); and a manual yen row, Japan Post ATM ¥−10,000. Activity's totals over all of them read "29 transactions · Out $819.10 · In $2,549.22": the yen row and the moves (transfers, card payments, investment buys and sells) are in neither. Its insights are derived from the rows in view, so its month row covers 21 to 30 Sep only, not the whole of September above. "Typical" for a category (`orchardTypical`) is what it usually comes to over the same days of a month.
+
+Bills (`orchardBills`):
+
+| payee | state | due | amount | notes |
+|---|---|---|---|---|
+| Texas Gas Service | overdue | Sat 09-26 | 38.10 | monthly; two candidates: Mon 09-28 "TXGAS SVC" 38.10 and Tue 09-29 "TEXAS GAS AUTOPAY" 38.00 |
+| Hyde Park Lofts rent | due soon | Thu 10-01 | 1,850.00 | monthly |
+| City of Austin water | upcoming | Thu 10-08 | about 64.00 | monthly, an estimate |
+| Chase Sapphire statement | upcoming | Mon 10-12 | 1,204.18 | card statement, minimum 35.00 |
+| Seton Medical EOB | expected | | about 240.00 | one-off, from a letter |
+| Austin Energy September | paid | | 142.37 | from a letter; paid Tue 09-22 from Chase ••4417 |
+
+Budget for September 2026 (`orchardBudget`), planned against spent: fixed (D-16) Rent 1,850.00 / 1,850.00, Utilities 160.00 / 142.37, Phone 65.00 / 65.00, Subscriptions 48.00 / 52.97 (over by 4.97); variable Groceries 600.00 / 541.20 (+22.00 rolled over), Dining 300.00 / 312.40 (over by 12.40), Transport 150.00 / 96.10, Shopping 200.00 / 88.45. Planned 3,373.00, spent 3,148.49, left 224.51. Sinking funds (`orchardSinkingFunds`): Car insurance 520.00 of 780.00 by Jan 2027, 130.00 a month; Holiday travel 800.00 of 1,200.00 by Dec 2026.
+
+Goals (`orchardGoals`): the emergency fund, 8,400 of 15,000 by Jun 2027. Flags (`orchardFlags`): interest charged on Chase Sapphire, 18.42; Netflix up from 15.49 to 17.99.
+
+The letter (`orchardLetter`) for the read-and-confirm sheet: `austin-energy-2026-09.pdf`, PDF, 1 page; Austin Energy's September statement, 142.37 due, with the account number masked as ••••7781 and the meter as ••••2045 (two numbers masked, D-190), a garbled reading of the same, read before on Tue 09-22, when it made the Austin Energy bill for September; drafted by Claude Sonnet for about $0.01.
+
 ## Notifications and feed
 
 Inbox (unread 2): "Spinach and avocados expire tomorrow" (Hearth), "Showers from 16:00, your 17:30 session may get wet" (Sky). Activity feed: "Logged 82.4 kg" 06:52; "Took LMNT citrus" 06:50; "Captured a haul: 9 items" yesterday 18:14; "Completed Pull A" Monday.
@@ -171,7 +214,7 @@ Egress ledger for 09-30: Anthropic (Hearth chat) 4 requests, 18.2 kB out; Open-M
 
 ## Japanese screenshots
 
-Sidebar: 今日, 庭, 台所, 空, 工房, 暦, 活力, 聖域, 野原, 庭師, 設定. The daily line in Japanese: 「足るを知る」.
+Sidebar: 今日, 庭, 台所, 空, 工房, 暦, 活力, 果樹園, 聖域, 野原, 庭師, 設定. The daily line in Japanese: 「足るを知る」.
 
 ## Mirror in code
 

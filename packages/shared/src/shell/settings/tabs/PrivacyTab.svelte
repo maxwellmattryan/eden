@@ -2,8 +2,9 @@
 	// Privacy and grants (product/substrate/settings-utilities.md, product/substrate/privacy.md): the four tiers in
 	// plain words, the egress ledger of the last seven days with the Vault → AI row at zero (D-71), the never-automated
 	// list (D-8), and how many standing grants there are. The grants ledger with revoke and history arrives in Phase 2.
+	// Above them, the phone's lock (only where the app passes `phoneLock`) and Hide amounts, both kept per device.
 	import { onMount } from 'svelte'
-	import { Badge, Button, DataTable, InlineError, type DataTableColumn } from '@eden/ui-kit'
+	import { Badge, Button, DataTable, InlineError, Notice, Select, Toggle, type DataTableColumn } from '@eden/ui-kit'
 	import { formatDateOf, todayIso } from '../../../dates/index.js'
 	import {
 		DESTINATIONS,
@@ -19,8 +20,16 @@
 	import { navigation } from '../../../navigation/index.js'
 	import { settings } from '../../../settings/index.js'
 	import { grants } from '../../grants.svelte.js'
+	import { LOCK_AFTER, parseLockAfter, phoneLock as lock } from '../../lock/index.js'
 	import { settingsUi } from '../settings-ui.svelte.js'
 	import SettingsRow from '../SettingsRow.svelte'
+
+	/** The phone's app passes it: the lock row shows only there. */
+	let { phoneLock = false }: { phoneLock?: boolean } = $props()
+
+	const lockChoices = $derived(
+		LOCK_AFTER.map((value) => ({ value, label: $t(`settings.privacy.lock.choices.${value}`) }))
+	)
 
 	const DAYS = 7
 	const TIERS = [
@@ -75,6 +84,30 @@
 	}
 </script>
 
+{#if phoneLock}
+	<SettingsRow label={$t('settings.privacy.lock.label')} help={$t('settings.privacy.lock.help')}>
+		<div class="lock">
+			<Select
+				label={$t('settings.privacy.lock.after')}
+				options={lockChoices}
+				value={settings.lockAfter}
+				disabled={lock.unavailable}
+				onchange={(value) => settings.setLockAfter(parseLockAfter(value))}
+			/>
+			{#if lock.unavailable}
+				<Notice tone="info" title={$t('settings.privacy.lock.noPasscode')} />
+			{/if}
+		</div>
+	</SettingsRow>
+{/if}
+
+<Toggle
+	label={$t('settings.privacy.amounts.label')}
+	description={$t('settings.privacy.amounts.help')}
+	checked={settings.hideAmounts}
+	onchange={(on) => settings.setHideAmounts(on)}
+/>
+
 <SettingsRow label={$t('settings.privacy.profile.label')} help={$t('settings.privacy.profile.help')}>
 	<Button variant="secondary" icon="id-card" label={$t('settings.privacy.profile.open')} onclick={openProfile} />
 </SettingsRow>
@@ -121,6 +154,11 @@
 </SettingsRow>
 
 <style>
+	.lock {
+		display: grid;
+		gap: var(--space-2);
+		justify-items: start;
+	}
 	.tiers {
 		display: grid;
 		grid-template-columns: max-content 1fr;

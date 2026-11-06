@@ -128,6 +128,8 @@ The weekly digest, from the same tools on a schedule, and the flag signals as th
 
 **Sheets**: the Link sheet (#73), Plaid Link in Eden's colours; the read-and-confirm sheet (#72), a letter, statement or pay stub as text to check (D-190). **Garden widgets** come in #87, which sets their sizes. **The phone lock and privacy cover** (#68, D-185), with the hide-amounts toggle on both apps.
 
+**Mocks** (#70, D-54): `Domains/Orchard/{Overview,Activity,Accounts,Bills,Budget,ReadConfirm}` in `packages/ui-kit/src/stories/domains/finance/`, over Orchard's sample data (`design/sample-data.md`, Orchard). They are the reference the later issues build against. The tabs are the five mocked pages; Debt, Investments and Goals take their place when #86, #76 and #88 mock them. What the mocks leave to others: grouped in/out bars for Overview's Cash flow (#87; `BarChart` only stacks, so Overview shows Out as bars and In, Out and Net as Stats); a kit progress meter for budget lines (#84; the mock's meter is story-local); the transaction detail (#83; rows in the mock have only a menu); the header motif (D-123); the tab list growing to eight when Debt, Investments and Goals land.
+
 ### Activity
 
 One feed of every money event across every account, with a title, a kind and the bank on every row. The totals and charts follow the filter.
@@ -254,7 +256,12 @@ Critical path: #67, #69, #70, #71, #72, #73, #75, #77, #78, #79, #83. The Garden
 
 - `substrate/tasks.md` and the `draft-tasks` schema gain `about` (#78).
 - `substrate/ai.md` and `engineering/gardener.md` update their tool counts (#90).
-- `design/sample-data.md` gains Orchard's data (#70).
+- `design/sample-data.md` gains Orchard's data (#70); done, with the mocks in §6.
+- Grouped in/out bars for Overview's Cash flow (#87): the kit's `BarChart` only stacks.
+- A kit progress meter for budget lines (#84): the Budget mock draws its own `role="meter"`.
+- The transaction detail (#83): Activity's rows in the mock open nothing.
+- The header motif for Orchard's pages (D-123).
+- The tab list grows from five to eight when Debt (#86), Investments (#76) and Goals (#88) are mocked.
 - The manifest replaces the `finance` block of `packages/shared/src/registry/planned.json` (#71, done).
 - The integrations catalog's per-row phases are revisited when #73 lands.
 

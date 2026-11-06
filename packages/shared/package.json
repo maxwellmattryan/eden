@@ -30,6 +30,7 @@
 		"./shell/profile": "./src/shell/profile/index.ts",
 		"./shell/home": "./src/shell/home/index.ts",
 		"./shell/inbox": "./src/shell/inbox/index.ts",
+		"./shell/lock": "./src/shell/lock/index.ts",
 		"./shell/quick-log": "./src/shell/quick-log/index.ts",
 		"./shell/settings": "./src/shell/settings/index.ts",
 		"./domains": "./src/domains/index.ts",

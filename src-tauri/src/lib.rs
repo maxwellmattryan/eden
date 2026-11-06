@@ -28,7 +28,7 @@ fn install_panic_hook() {
         let message = format!(
             "[{}] PANIC: {}\nLocation: {:?}\n\n",
             chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"),
-            info,
+            services::redact::redact(&info.to_string()),
             info.location(),
         );
         let _ = std::fs::OpenOptions::new()
@@ -42,23 +42,36 @@ fn install_panic_hook() {
 }
 
 /// Route `log` output where each platform can see it: os_log on iOS (the app's identifier as subsystem), logcat on
-/// Android, stderr with `RUST_LOG` on desktop.
+/// Android, stderr with `RUST_LOG` on desktop. Every record is redacted first (`services::redact`).
 fn init_logging(subsystem: &str) {
+    use services::redact::RedactingLogger;
+
     #[cfg(target_os = "ios")]
-    oslog::OsLogger::new(subsystem)
-        .level_filter(log::LevelFilter::Info)
-        .init()
-        .ok();
+    let (inner, max_level) = (
+        oslog::OsLogger::new(subsystem).level_filter(log::LevelFilter::Info),
+        log::LevelFilter::Info,
+    );
     #[cfg(target_os = "android")]
-    android_logger::init_once(
-        android_logger::Config::default()
-            .with_max_level(log::LevelFilter::Info)
-            .with_tag(subsystem),
+    let (inner, max_level) = (
+        android_logger::AndroidLogger::new(
+            android_logger::Config::default()
+                .with_max_level(log::LevelFilter::Info)
+                .with_tag(subsystem),
+        ),
+        log::LevelFilter::Info,
     );
     #[cfg(not(any(target_os = "ios", target_os = "android")))]
-    {
+    let (inner, max_level) = {
         let _ = subsystem;
-        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+        let inner =
+            env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
+                .build();
+        let max_level = inner.filter();
+        (inner, max_level)
+    };
+
+    if log::set_boxed_logger(Box::new(RedactingLogger(inner))).is_ok() {
+        log::set_max_level(max_level);
     }
 }
 
@@ -94,9 +107,12 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_window_state::Builder::default().build());
 
-    // Mobile-only plugins: haptics (light impact feedback on tap).
+    // Mobile-only plugins: haptics (light impact feedback on tap) and biometric, which the phone lock calls from Rust
+    // (commands/lock.rs).
     #[cfg(feature = "mobile")]
-    let builder = builder.plugin(tauri_plugin_haptics::init());
+    let builder = builder
+        .plugin(tauri_plugin_haptics::init())
+        .plugin(tauri_plugin_biometric::init());
 
     // If the OS kills the WKWebView content process (iOS jetsam under memory pressure: the screen goes white), reload
     // the webview so the UI recovers instead of staying blank until a relaunch. iOS/macOS only.
@@ -116,6 +132,8 @@ pub fn run() {
             commands::diagnostics::get_diagnostics_report,
             commands::diagnostics::clear_diagnostic_entries,
             commands::diagnostics::log_error,
+            commands::lock::phone_lock_status,
+            commands::lock::phone_lock_unlock,
             commands::data::create_entity,
             commands::data::update_entity,
             commands::data::query_entities,
@@ -203,6 +221,9 @@ pub fn run() {
             domains::weather::weatherkit_forecast,
         ])
         .setup(|app| {
+            // The app switcher's snapshot is taken under an opaque cover, never of Eden's content.
+            #[cfg(target_os = "ios")]
+            services::privacy_cover::install();
             let app_data_dir = app
                 .path()
                 .app_data_dir()

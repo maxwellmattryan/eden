@@ -23,8 +23,9 @@ desktop = [
   "dep:tauri-plugin-process",
   "dep:tauri-plugin-updater",
 ]
-# Mobile-only: haptics (light impact feedback on tap).
-mobile = ["dep:tauri-plugin-haptics"]
+# Mobile-only: haptics (light impact feedback on tap) and biometric (the phone lock: Face ID, Touch ID or fingerprint,
+# falling back to the device passcode).
+mobile = ["dep:tauri-plugin-haptics", "dep:tauri-plugin-biometric"]
 devtools = ["tauri/devtools"]
 
 [build-dependencies]
@@ -47,6 +48,8 @@ tauri-plugin-window-state = { version = "2.5", optional = true }
 tauri-plugin-process = { version = "2.4", optional = true }
 tauri-plugin-updater = { version = "2.14.1", optional = true }
 tauri-plugin-haptics = { version = "2.4", optional = true }
+# The phone lock (commands/lock.rs) calls it from Rust only, so the webview needs no permission for it.
+tauri-plugin-biometric = { version = "2", optional = true }
 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -67,6 +70,15 @@ sha2 = "0.10"
 # The export bundle is a zip archive, which every system opens without a tool. Direct, so that mobile has it too: the
 # desktop updater brings it only on Windows.
 zip = { version = "9", default-features = false, features = ["deflate"] }
+# The sealed bundle (substrate/sealed.rs): a passphrase-protected export is the zip encrypted whole with
+# XChaCha20-Poly1305 in the STREAM construction, its key derived with Argon2id. zip's own AES derives its key with
+# PBKDF2-SHA1 at 1000 rounds and leaves file names in clear, so it is not used.
+chacha20poly1305 = { version = "0.10", features = ["stream"] }
+argon2 = "0.5"
+# Wipes the derived bundle key from memory once it is dropped; already in the tree.
+zeroize = "1"
+# The redaction every log line and diagnostics entry passes through (services/redact.rs); already in the tree.
+regex = "1"
 # The Gardener's one provider call (docs/engineering/gardener.md, D-76): the same reqwest and rustls the desktop
 # updater brings, with the same features, so mobile has them too and no second TLS stack is built. The crate installs
 # the ring provider once at setup; `rustls-no-provider` leaves that to it.

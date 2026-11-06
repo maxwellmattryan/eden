@@ -7,7 +7,7 @@
 //! tombstone and nothing of what it held.
 
 use std::collections::BTreeMap;
-use std::io::{Read, Write};
+use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
 
 use rusqlite::{Connection, OptionalExtension};
@@ -27,7 +27,7 @@ use super::policy::{self, PolicyRow};
 use super::primitives::{self, Primitive, Query, ATTACHMENT, PLACE};
 use super::rows::table_for;
 use super::threads::{self, Message, Thread};
-use super::{registry, Workspace, WriteCtx};
+use super::{registry, sealed, Workspace, WriteCtx};
 use crate::error::{EdenError, Result};
 
 const FORMAT: &str = "eden-bundle";
@@ -132,6 +132,9 @@ pub struct ExportRequest {
     pub settings: Option<Value>,
     #[serde(default)]
     pub extras: Vec<Extra>,
+    /// Seals the whole archive under this passphrase (`sealed.rs`), at least 8 characters. Never stored or logged.
+    #[serde(default)]
+    pub passphrase: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -163,7 +166,7 @@ pub struct ImportSummary {
     pub settings: Option<Value>,
 }
 
-fn bundle_error(code: &str, detail: impl std::fmt::Display) -> EdenError {
+pub(super) fn bundle_error(code: &str, detail: impl std::fmt::Display) -> EdenError {
     EdenError::Bundle(format!("bundle:{code}: {detail}"))
 }
 
@@ -432,12 +435,46 @@ fn readme(manifest: &Manifest) -> String {
     text
 }
 
-fn default_path(workspace: &Workspace, folder: &str, prefix: &str, scope: &Scope) -> PathBuf {
+/// `<folder>/<prefix>-<scope>-<time>.<extension>`: `zip` for a plain bundle, `eden` for a sealed one.
+fn default_path(
+    workspace: &Workspace,
+    folder: &str,
+    prefix: &str,
+    scope: &Scope,
+    extension: &str,
+) -> PathBuf {
     let stamp = chrono::Utc::now().format("%Y%m%d-%H%M%S");
     workspace
         .dir()
         .join(folder)
-        .join(format!("{prefix}-{}-{stamp}.zip", scope.name()))
+        .join(format!("{prefix}-{}-{stamp}.{extension}", scope.name()))
+}
+
+/// The archive itself: the manifest, the README, the collected files and the attachments, in that order.
+fn write_zip<W: Write + std::io::Seek>(
+    writer: W,
+    workspace: &Workspace,
+    manifest: &Manifest,
+    readme: &[u8],
+    files: &[(String, Vec<u8>, RowCount)],
+    attachments: &[String],
+) -> Result<W> {
+    let mut archive = zip::ZipWriter::new(writer);
+    let options = SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+    archive.start_file(MANIFEST, options)?;
+    archive.write_all(&serde_json::to_vec_pretty(manifest)?)?;
+    archive.start_file(README, options)?;
+    archive.write_all(readme)?;
+    for (name, bytes, _) in files {
+        archive.start_file(name.as_str(), options)?;
+        archive.write_all(bytes)?;
+    }
+    for id in attachments {
+        archive.start_file(format!("attachments/{id}"), options)?;
+        let mut file = std::fs::File::open(workspace.attachment_path(id))?;
+        std::io::copy(&mut file, &mut archive)?;
+    }
+    Ok(archive.finish()?)
 }
 
 /// The path of an extra inside the bundle: under `friendly/`, and nowhere else.
@@ -457,6 +494,9 @@ fn extra_path(path: &str) -> Result<String> {
 }
 
 pub fn export(workspace: &Workspace, request: ExportRequest) -> Result<ExportResult> {
+    if let Some(passphrase) = &request.passphrase {
+        sealed::check_passphrase(passphrase)?;
+    }
     if let Scope::Domain { domain } = &request.scope {
         if !registry::is_owner(domain) {
             return Err(EdenError::InvalidOperation(format!(
@@ -574,33 +614,50 @@ pub fn export(workspace: &Workspace, request: ExportRequest) -> Result<ExportRes
     });
     manifest.files.sort_by(|a, b| a.path.cmp(&b.path));
 
+    let extension = if request.passphrase.is_some() {
+        "eden"
+    } else {
+        "zip"
+    };
     let path = match request.path {
         Some(path) => PathBuf::from(path),
-        None => default_path(workspace, "exports", "eden", &scope),
+        None => default_path(workspace, "exports", "eden", &scope, extension),
     };
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)?;
     }
-    // Written beside its place and moved into it, so a bundle that is there is a whole one.
-    let partial = path.with_extension("zip.partial");
+    // Written beside its place and moved into it, so a bundle that is there is a whole one. A sealed bundle's zip is
+    // built in memory, so its plaintext never touches the disk.
+    let partial = path.with_extension(format!("{extension}.partial"));
     let written = (|| -> Result<()> {
-        let mut archive = zip::ZipWriter::new(std::fs::File::create(&partial)?);
-        let options =
-            SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
-        archive.start_file(MANIFEST, options)?;
-        archive.write_all(&serde_json::to_vec_pretty(&manifest)?)?;
-        archive.start_file(README, options)?;
-        archive.write_all(&readme)?;
-        for (name, bytes, _) in &collected.files {
-            archive.start_file(name.as_str(), options)?;
-            archive.write_all(bytes)?;
+        match &request.passphrase {
+            None => {
+                write_zip(
+                    std::fs::File::create(&partial)?,
+                    workspace,
+                    &manifest,
+                    &readme,
+                    &collected.files,
+                    &collected.attachments,
+                )?;
+            }
+            Some(passphrase) => {
+                let zip = zeroize::Zeroizing::new(
+                    write_zip(
+                        std::io::Cursor::new(Vec::new()),
+                        workspace,
+                        &manifest,
+                        &readme,
+                        &collected.files,
+                        &collected.attachments,
+                    )?
+                    .into_inner(),
+                );
+                let mut file = std::io::BufWriter::new(std::fs::File::create(&partial)?);
+                sealed::seal(&zip, passphrase, &mut file)?;
+                file.flush()?;
+            }
         }
-        for id in &collected.attachments {
-            archive.start_file(format!("attachments/{id}"), options)?;
-            let mut file = std::fs::File::open(workspace.attachment_path(id))?;
-            std::io::copy(&mut file, &mut archive)?;
-        }
-        archive.finish()?;
         std::fs::rename(&partial, &path)?;
         Ok(())
     })();
@@ -618,11 +675,44 @@ pub fn export(workspace: &Workspace, request: ExportRequest) -> Result<ExportRes
 
 // Import
 
-type Archive = zip::ZipArchive<std::fs::File>;
+trait ReadSeek: Read + std::io::Seek {}
+impl<T: Read + std::io::Seek> ReadSeek for T {}
 
-fn open(path: &Path) -> Result<Archive> {
-    let file = std::fs::File::open(path).map_err(|e| bundle_error("unreadable", e))?;
-    zip::ZipArchive::new(file).map_err(|e| bundle_error("unreadable", e))
+type Archive = zip::ZipArchive<Box<dyn ReadSeek>>;
+
+/// The archive at `path`: the file itself, or, when its first bytes are the sealed magic, the zip inside it, opened
+/// in memory with `passphrase`. A sealed file with no passphrase is `bundle:locked`, the interface's cue to ask.
+fn open(path: &Path, passphrase: Option<&str>) -> Result<Archive> {
+    let mut file = std::fs::File::open(path).map_err(|e| bundle_error("unreadable", e))?;
+    let mut prefix = [0u8; sealed::MAGIC.len()];
+    let read = read_prefix(&mut file, &mut prefix).map_err(|e| bundle_error("unreadable", e))?;
+    let reader: Box<dyn ReadSeek> = if sealed::is_sealed(&prefix[..read]) {
+        let Some(passphrase) = passphrase else {
+            return Err(bundle_error(
+                "locked",
+                "the bundle is sealed with a passphrase",
+            ));
+        };
+        let bytes = std::fs::read(path).map_err(|e| bundle_error("unreadable", e))?;
+        Box::new(std::io::Cursor::new(sealed::open(&bytes, passphrase)?))
+    } else {
+        file.seek(std::io::SeekFrom::Start(0))
+            .map_err(|e| bundle_error("unreadable", e))?;
+        Box::new(file)
+    };
+    zip::ZipArchive::new(reader).map_err(|e| bundle_error("unreadable", e))
+}
+
+/// Reads up to `buf.len()` bytes, fewer only at the end of the file.
+fn read_prefix(file: &mut std::fs::File, buf: &mut [u8]) -> std::io::Result<usize> {
+    let mut read = 0;
+    while read < buf.len() {
+        match file.read(&mut buf[read..])? {
+            0 => break,
+            n => read += n,
+        }
+    }
+    Ok(read)
 }
 
 fn entry(archive: &mut Archive, name: &str) -> Result<Vec<u8>> {
@@ -659,9 +749,16 @@ fn verify(archive: &mut Archive) -> Result<Manifest> {
     Ok(manifest)
 }
 
-/// The manifest of a bundle, once every file in it has been checked: what the interface shows before an import.
+/// `inspect_with` and no passphrase: the tests' shorthand.
+#[cfg(test)]
 pub fn inspect(path: &Path) -> Result<Manifest> {
-    verify(&mut open(path)?)
+    inspect_with(path, None)
+}
+
+/// The manifest of a bundle, once every file in it has been checked: what the interface shows before an import. A
+/// sealed bundle needs `passphrase`, which opens it and is used for nothing else.
+pub fn inspect_with(path: &Path, passphrase: Option<&str>) -> Result<Manifest> {
+    verify(&mut open(path, passphrase)?)
 }
 
 struct Incoming {
@@ -1197,8 +1294,26 @@ fn clear(conn: &Connection, scope: &Scope) -> Result<Vec<String>> {
     Ok(removed_files)
 }
 
+#[cfg(test)]
 pub fn import(workspace: &Workspace, path: &Path, mode: Mode) -> Result<ImportSummary> {
-    let mut archive = open(path)?;
+    import_with(workspace, path, mode, None, None)
+}
+
+/// `import`, for a bundle that may be sealed. `passphrase` opens the bundle; `backup_passphrase` seals the backup a
+/// replace writes first (`backups/pre-replace-full-<time>.eden`), and is checked before anything is cleared.
+pub fn import_with(
+    workspace: &Workspace,
+    path: &Path,
+    mode: Mode,
+    passphrase: Option<&str>,
+    backup_passphrase: Option<&str>,
+) -> Result<ImportSummary> {
+    if mode == Mode::Replace {
+        if let Some(backup_passphrase) = backup_passphrase {
+            sealed::check_passphrase(backup_passphrase)?;
+        }
+    }
+    let mut archive = open(path, passphrase)?;
     let manifest = verify(&mut archive)?;
     if let Scope::Domain { domain } = &manifest.scope {
         if !registry::is_owner(domain) {
@@ -1281,12 +1396,18 @@ pub fn import(workspace: &Workspace, path: &Path, mode: Mode) -> Result<ImportSu
         .collect();
 
     if mode == Mode::Replace {
-        let backup = default_path(workspace, "backups", "pre-replace", &Scope::Full);
+        let extension = if backup_passphrase.is_some() {
+            "eden"
+        } else {
+            "zip"
+        };
+        let backup = default_path(workspace, "backups", "pre-replace", &Scope::Full, extension);
         let request = ExportRequest {
             scope: Scope::Full,
             path: Some(backup.to_string_lossy().into_owned()),
             settings: None,
             extras: Vec::new(),
+            passphrase: backup_passphrase.map(str::to_string),
         };
         export(workspace, request).map_err(|e| bundle_error("backup", e))?;
         summary.backup_path = Some(backup.to_string_lossy().into_owned());
@@ -1569,13 +1690,33 @@ mod tests {
                 path: Some(path.to_string_lossy().into_owned()),
                 settings: Some(json!({ "measurement": "metric" })),
                 extras: Vec::new(),
+                passphrase: None,
             },
         )
         .unwrap()
     }
 
+    const PASSPHRASE: &str = "a long enough passphrase";
+
+    fn export_sealed(workspace: &Workspace, path: &Path, passphrase: &str) -> Result<ExportResult> {
+        export(
+            workspace,
+            ExportRequest {
+                scope: Scope::Full,
+                path: Some(path.to_string_lossy().into_owned()),
+                settings: Some(json!({ "measurement": "metric" })),
+                extras: Vec::new(),
+                passphrase: Some(passphrase.to_string()),
+            },
+        )
+    }
+
+    fn code_of(error: EdenError) -> String {
+        error.to_string().split(": ").next().unwrap().to_string()
+    }
+
     fn unzip(path: &Path) -> BTreeMap<String, Vec<u8>> {
-        let mut archive = open(path).unwrap();
+        let mut archive = open(path, None).unwrap();
         let names: Vec<String> = archive
             .file_names()
             .map(|name| name.unwrap().into_owned())
@@ -1929,6 +2070,106 @@ mod tests {
     }
 
     #[test]
+    fn a_sealed_bundle_round_trips_and_holds_no_plaintext() {
+        let scratch = temp_dir("bundle-sealed");
+        let first = populated(&scratch);
+        export_to(&first, &scratch.join("a.zip"), Scope::Full);
+        let sealed_path = scratch.join("a.eden");
+        export_sealed(&first, &sealed_path, PASSPHRASE).unwrap();
+
+        // The file is sealed whole: the magic, and nothing of a row, a file name or an attachment in clear.
+        let bytes = std::fs::read(&sealed_path).unwrap();
+        assert_eq!(&bytes[..8], b"EDENLOCK");
+        let holds = |needle: &[u8]| bytes.windows(needle.len()).any(|window| window == needle);
+        for needle in [
+            b"Cook the dal".as_slice(),
+            b"manifest.json",
+            b"not really a photo",
+            b"recipe",
+            b"PK\x03\x04",
+        ] {
+            assert!(!holds(needle), "{}", String::from_utf8_lossy(needle));
+        }
+        assert!(!scratch.join("a.eden.partial").exists());
+
+        // No passphrase is the cue to ask for one; a wrong one does not open it.
+        assert_eq!(code_of(inspect(&sealed_path).unwrap_err()), "bundle:locked");
+        assert_eq!(
+            code_of(inspect_with(&sealed_path, Some("not the passphrase")).unwrap_err()),
+            "bundle:passphrase"
+        );
+        let manifest = inspect_with(&sealed_path, Some(PASSPHRASE)).unwrap();
+        assert_eq!(
+            manifest.counts,
+            inspect(&scratch.join("a.zip")).unwrap().counts
+        );
+
+        // The rows it brings are the rows the plain export brings.
+        let second = Workspace::in_memory();
+        assert_eq!(
+            code_of(import(&second, &sealed_path, Mode::Merge).unwrap_err()),
+            "bundle:locked"
+        );
+        let summary =
+            import_with(&second, &sealed_path, Mode::Merge, Some(PASSPHRASE), None).unwrap();
+        assert_eq!((summary.inserted, summary.skipped), (21, 1));
+        export_to(&second, &scratch.join("b.zip"), Scope::Full);
+        assert_same_bundle(&scratch.join("a.zip"), &scratch.join("b.zip"));
+
+        // A short passphrase writes nothing.
+        let short = scratch.join("short.eden");
+        assert_eq!(
+            code_of(export_sealed(&first, &short, "seven77").unwrap_err()),
+            "bundle:passphrase-short"
+        );
+        assert!(!short.exists());
+        cleanup(&scratch, &[&first, &second]);
+    }
+
+    #[test]
+    fn a_replace_seals_its_backup_when_given_a_passphrase() {
+        let scratch = temp_dir("bundle-sealed-backup");
+        let first = populated(&scratch);
+        export_to(&first, &scratch.join("a.zip"), Scope::Full);
+        let second = populated(&scratch);
+        let before = count(&second, "entities");
+
+        // A short backup passphrase is refused before anything is cleared or written.
+        let error = import_with(
+            &second,
+            &scratch.join("a.zip"),
+            Mode::Replace,
+            None,
+            Some("seven77"),
+        )
+        .unwrap_err();
+        assert_eq!(code_of(error), "bundle:passphrase-short");
+        assert_eq!(count(&second, "entities"), before);
+        assert!(!second.dir().join("backups").exists());
+
+        let summary = import_with(
+            &second,
+            &scratch.join("a.zip"),
+            Mode::Replace,
+            None,
+            Some(PASSPHRASE),
+        )
+        .unwrap();
+        let backup = PathBuf::from(summary.backup_path.unwrap());
+        assert!(backup.starts_with(second.dir().join("backups")));
+        let name = backup.file_name().unwrap().to_string_lossy().into_owned();
+        assert!(
+            name.starts_with("pre-replace-full-") && name.ends_with(".eden"),
+            "{name}"
+        );
+        assert_eq!(&std::fs::read(&backup).unwrap()[..8], b"EDENLOCK");
+        assert_eq!(code_of(inspect(&backup).unwrap_err()), "bundle:locked");
+        let kept = inspect_with(&backup, Some(PASSPHRASE)).unwrap();
+        assert_eq!(kept.counts["recipe"], 1);
+        cleanup(&scratch, &[&first, &second]);
+    }
+
+    #[test]
     fn a_domain_bundle_holds_what_the_domain_owns() {
         let scratch = temp_dir("bundle-domain");
         let workspace = populated(&scratch);
@@ -1940,6 +2181,7 @@ mod tests {
             path: Some(path.to_string_lossy().into_owned()),
             settings: Some(json!({ "measurement": "metric" })),
             extras,
+            passphrase: None,
         };
         export(
             &workspace,

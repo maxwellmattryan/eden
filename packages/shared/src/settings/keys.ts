@@ -25,10 +25,13 @@ export const storage = {
 } as const
 
 /**
- * What this device keeps for itself: the Garden as the owner arranged it here (D-156) and the phone's pinned tabs
- * (D-160). Read and written like the rest, and never part of `snapshot()` or `restore()`.
+ * What this device keeps for itself: the Garden as the owner arranged it here (D-156), the phone's pinned tabs
+ * (D-160), how long the phone may be away before it locks, and whether amounts are hidden on this screen. Read and
+ * written like the rest, and never part of `snapshot()` or `restore()`.
  */
 export const deviceStorage = {
 	gardenLayout: 'eden:garden-layout',
 	pinnedTabs: 'eden:pinned-tabs',
+	lockAfter: 'eden:lock-after',
+	hideAmounts: 'eden:hide-amounts',
 } as const

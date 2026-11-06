@@ -1142,6 +1142,7 @@ const sidebarGroups = [
 		{ id: 'weather', name: 'Sky', subtitle: 'Weather, forecasts, sun and moon', shortcut: '⌘5' },
 		{ id: 'places', name: 'Meadow', subtitle: 'Places, events, vibes, favourites', shortcut: '⌘6' },
 		{ id: 'fitness', name: 'Vigor', subtitle: 'Workouts, gyms, body metrics', shortcut: '⌘7' },
+		{ id: 'finance', name: 'Orchard', subtitle: 'Money, budgets, assets', shortcut: '⌘8' },
 	],
 ]
 
@@ -1163,6 +1164,7 @@ const sidebarJaGroups = [
 		{ id: 'weather', name: '空', subtitle: '天気、日の出と月' },
 		{ id: 'places', name: '野原', subtitle: '場所、イベント、雰囲気' },
 		{ id: 'fitness', name: '活力', subtitle: 'トレーニング、ジム、体の記録' },
+		{ id: 'finance', name: '果樹園', subtitle: 'お金、予算、資産' },
 	],
 ]
 
@@ -1906,4 +1908,668 @@ export const homeAddressJa = {
 	region: '13',
 	city: '渋谷区',
 	line1: '神宮前1-2-3',
+}
+
+// ---- Orchard (design/sample-data.md, "Orchard") --------------------------------------------------------------------
+// Rowan is paid semimonthly, on the 15th and the last day, by Northwind Labs: $2,430.00 net; today's has posted.
+
+/** An amount in its currency's minor units: cents for USD, whole yen for JPY (D-188). */
+export interface SampleMoney {
+	minor: number
+	currency: string
+}
+const usd = (dollars: number): SampleMoney => ({ minor: Math.round(dollars * 100), currency: 'USD' })
+
+export interface SampleInstitution {
+	id: string
+	name: string
+	/** The institution's own colour, as Plaid gives it: a swatch beside its name, never the colour of text. */
+	colour: string
+	lastUpdated: string
+}
+export const orchardInstitutions: SampleInstitution[] = [
+	{ id: 'chase', name: 'Chase', colour: '#117ACA', lastUpdated: '07:12' },
+	{ id: 'ally', name: 'Ally', colour: '#650360', lastUpdated: '07:12' },
+	{ id: 'm1', name: 'M1', colour: '#1F2A44', lastUpdated: '06:58' },
+	{ id: 'fidelity', name: 'Fidelity', colour: '#368727', lastUpdated: '06:58' },
+]
+/** The day a stale link last read its balances (Stale link stories): Chase has asked Rowan to sign in again. */
+export const orchardStaleSince = '09-27'
+
+export type SampleAccountType = 'checking' | 'credit' | 'loan' | 'savings' | 'brokerage' | 'retirement'
+export interface SampleAccount {
+	id: string
+	/** The linked institution's id; a manual account has none. */
+	institution?: string
+	/** What a bank pill calls a manual account, where there is no institution. */
+	bank?: string
+	name: string
+	type: SampleAccountType
+	last4: string
+	/** Debts are negative. */
+	balance: SampleMoney
+	/** Entered by hand, not linked. */
+	manual?: boolean
+}
+export const orchardAccounts: SampleAccount[] = [
+	{
+		id: 'chase-checking',
+		institution: 'chase',
+		name: 'Chase Total Checking',
+		type: 'checking',
+		last4: '4417',
+		balance: usd(3412.18),
+	},
+	{
+		id: 'chase-sapphire',
+		institution: 'chase',
+		name: 'Chase Sapphire Preferred',
+		type: 'credit',
+		last4: '8823',
+		balance: usd(-1204.18),
+	},
+	{ id: 'chase-auto', institution: 'chase', name: 'Chase Auto Loan', type: 'loan', last4: '6610', balance: usd(-9812) },
+	{
+		id: 'ally-savings',
+		institution: 'ally',
+		name: 'Ally Online Savings',
+		type: 'savings',
+		last4: '2290',
+		balance: usd(12800),
+	},
+	{
+		id: 'm1-brokerage',
+		institution: 'm1',
+		name: 'M1 Brokerage',
+		type: 'brokerage',
+		last4: '5501',
+		balance: usd(9640.55),
+	},
+	{
+		id: 'fidelity-401k',
+		institution: 'fidelity',
+		name: 'Fidelity 401(k)',
+		type: 'retirement',
+		last4: '0912',
+		balance: usd(21388.4),
+	},
+	{
+		id: 'jp-post',
+		bank: 'Japan Post',
+		name: 'Japan Post Bank Yucho savings',
+		type: 'savings',
+		last4: '7731',
+		balance: { minor: 84000, currency: 'JPY' },
+		manual: true,
+	},
+]
+
+export interface SampleAsset {
+	id: string
+	name: string
+	value: SampleMoney
+	/** `MM-DD`: the day it was last valued by hand. */
+	valuedOn?: string
+	/** A quantity priced daily: the units held and the price of one. */
+	quantity?: { amount: number; unit: string; price: SampleMoney }
+}
+export const orchardAssets: SampleAsset[] = [
+	{ id: 'as-01', name: '2019 Subaru Outback', value: usd(14200), valuedOn: '09-01' },
+	{
+		id: 'as-02',
+		name: 'Bitcoin in cold storage',
+		value: usd(2595.6),
+		quantity: { amount: 0.0412, unit: 'BTC', price: usd(63000) },
+	},
+]
+
+/** Every USD balance and asset: $53,020.55. The yen account is left out of totals (D-188). */
+export const orchardNetWorthNow = usd(53020.55)
+/** Since the end of August. */
+export const orchardNetWorthChange = usd(1104.2)
+/** Net worth at the end of each month, Oct 2025 to Sep 2026, in dollars. */
+export const orchardNetWorth = [
+	46210.4, 46880.12, 47102.77, 47950.3, 48420.15, 48190.6, 49005.85, 49870.2, 50412.9, 51203.44, 51916.35, 53020.55,
+]
+export const orchardNetWorthMonths = [
+	'Oct',
+	'Nov',
+	'Dec',
+	'Jan',
+	'Feb',
+	'Mar',
+	'Apr',
+	'May',
+	'Jun',
+	'Jul',
+	'Aug',
+	'Sep',
+]
+
+/** Money in and out of the owner's hands by month, Apr to Sep, in dollars; moves between their accounts are neither. */
+export const orchardCashFlow = [
+	{ month: 'Apr', in: 4860, out: 3640.22 },
+	{ month: 'May', in: 4860, out: 4105.8 },
+	{ month: 'Jun', in: 4860, out: 3720.15 },
+	{ month: 'Jul', in: 4860, out: 4380.6 },
+	{ month: 'Aug', in: 4860, out: 3855.1 },
+	{ month: 'Sep', in: 4860, out: 3912.4 },
+]
+
+/** What moves the checking balance from today to the next paycheck. */
+export const orchardForecastEvents = [
+	{ day: '10-01', label: 'Rent', amount: usd(-1850) },
+	{ day: '10-05', label: 'Spotify', amount: usd(-11.99) },
+	{ day: '10-08', label: 'Water', amount: usd(-64) },
+	{ day: '10-12', label: 'Sapphire payment', amount: usd(-1204.18) },
+	{ day: '10-14', label: 'Small spending', amount: usd(-13.59) },
+	{ day: '10-15', label: 'Payday', amount: usd(2430) },
+]
+const forecastDays = Array.from({ length: 16 }, (_, i) => {
+	const at = new Date(2026, 8, 30 + i)
+	return `${String(at.getMonth() + 1).padStart(2, '0')}-${String(at.getDate()).padStart(2, '0')}`
+})
+/** The checking balance at the end of each day, 09-30 to 10-15, in cents: lowest $268.42 on 10-14. */
+export const orchardForecast: { day: string; balance: SampleMoney }[] = forecastDays.map((day) => ({
+	day,
+	balance: {
+		currency: 'USD',
+		minor: orchardForecastEvents
+			.filter((event) => event.day <= day)
+			.reduce((sum, event) => sum + event.amount.minor, usd(3412.18).minor),
+	},
+}))
+
+/** The twelve kinds a money event can be (product/domains/finance.md §6). */
+export type SampleTxKind =
+	| 'purchase'
+	| 'refund'
+	| 'transfer'
+	| 'card-payment'
+	| 'bill-payment'
+	| 'income'
+	| 'interest-earned'
+	| 'dividend'
+	| 'interest-charged'
+	| 'fee'
+	| 'investment-buy'
+	| 'investment-sell'
+export type SampleTxFlag = 'recurring' | 'bill' | 'one-off'
+export interface SampleTransaction {
+	id: string
+	/** `MM-DD`. */
+	date: string
+	time?: string
+	/** The merchant or payee; for a move between the owner's accounts, the kind. */
+	title: string
+	kind: SampleTxKind
+	category?: string
+	account: string
+	/** The other side of a transfer or a card payment. */
+	toAccount?: string
+	/** Signed from `account`'s side: + is money in. */
+	amount: SampleMoney
+	pending?: boolean
+	flags?: SampleTxFlag[]
+	split?: boolean
+	/** The part someone owes back. */
+	reimbursable?: SampleMoney
+}
+/** 21 to 30 Sep, newest first: every kind at least once, one yen row. */
+export const orchardTransactions: SampleTransaction[] = [
+	{
+		id: 'tx-01',
+		date: '09-30',
+		time: '07:18',
+		title: 'Blue Bottle Coffee',
+		kind: 'purchase',
+		category: 'Dining',
+		account: 'chase-sapphire',
+		amount: usd(-6.75),
+		pending: true,
+	},
+	{
+		id: 'tx-02',
+		date: '09-30',
+		time: '06:00',
+		title: 'Northwind Labs',
+		kind: 'income',
+		category: 'Income',
+		account: 'chase-checking',
+		amount: usd(2430),
+		flags: ['recurring'],
+	},
+	{
+		id: 'tx-03',
+		date: '09-30',
+		title: 'Ally Bank',
+		kind: 'interest-earned',
+		category: 'Income',
+		account: 'ally-savings',
+		amount: usd(41.07),
+		flags: ['recurring'],
+	},
+	{
+		id: 'tx-04',
+		date: '09-29',
+		title: 'H-E-B',
+		kind: 'purchase',
+		category: 'Groceries',
+		account: 'chase-sapphire',
+		amount: usd(-86.43),
+	},
+	{
+		id: 'tx-05',
+		date: '09-29',
+		title: 'Torchy’s Tacos',
+		kind: 'purchase',
+		category: 'Dining',
+		account: 'chase-sapphire',
+		amount: usd(-24.18),
+	},
+	{
+		id: 'tx-06',
+		date: '09-29',
+		title: 'Transfer',
+		kind: 'transfer',
+		account: 'chase-checking',
+		toAccount: 'ally-savings',
+		amount: usd(-500),
+	},
+	{
+		id: 'tx-07',
+		date: '09-28',
+		title: 'Card payment',
+		kind: 'card-payment',
+		account: 'chase-checking',
+		toAccount: 'chase-sapphire',
+		amount: usd(-1180),
+	},
+	{
+		id: 'tx-08',
+		date: '09-28',
+		title: 'Target',
+		kind: 'purchase',
+		category: 'Shopping',
+		account: 'chase-sapphire',
+		amount: usd(-42.67),
+	},
+	{
+		id: 'tx-09',
+		date: '09-28',
+		title: 'Shell',
+		kind: 'purchase',
+		category: 'Transport',
+		account: 'chase-checking',
+		amount: usd(-38.2),
+	},
+	{
+		id: 'tx-10',
+		date: '09-28',
+		title: 'ATM fee',
+		kind: 'fee',
+		category: 'Fees',
+		account: 'chase-checking',
+		amount: usd(-3),
+	},
+	{
+		id: 'tx-11',
+		date: '09-27',
+		title: 'Sushi Ota',
+		kind: 'purchase',
+		category: 'Dining',
+		account: 'chase-sapphire',
+		amount: usd(-84.2),
+		flags: ['one-off'],
+		split: true,
+		reimbursable: usd(42.1),
+	},
+	{
+		id: 'tx-12',
+		date: '09-27',
+		title: 'Japan Post ATM',
+		kind: 'purchase',
+		category: 'Cash',
+		account: 'jp-post',
+		amount: { minor: -10000, currency: 'JPY' },
+	},
+	{
+		id: 'tx-13',
+		date: '09-27',
+		title: 'Veracruz All Natural',
+		kind: 'purchase',
+		category: 'Dining',
+		account: 'chase-checking',
+		amount: usd(-14.5),
+	},
+	{
+		id: 'tx-14',
+		date: '09-26',
+		title: 'VTI',
+		kind: 'dividend',
+		category: 'Investments',
+		account: 'm1-brokerage',
+		amount: usd(23.16),
+	},
+	{
+		id: 'tx-15',
+		date: '09-26',
+		title: 'VTI',
+		kind: 'investment-buy',
+		category: 'Investments',
+		account: 'm1-brokerage',
+		amount: usd(-500),
+	},
+	{
+		id: 'tx-16',
+		date: '09-26',
+		title: 'Netflix',
+		kind: 'purchase',
+		category: 'Subscriptions',
+		account: 'chase-sapphire',
+		amount: usd(-17.99),
+		flags: ['recurring'],
+	},
+	{
+		id: 'tx-17',
+		date: '09-25',
+		title: 'Chase',
+		kind: 'interest-charged',
+		category: 'Fees',
+		account: 'chase-sapphire',
+		amount: usd(-18.42),
+	},
+	{
+		id: 'tx-18',
+		date: '09-25',
+		title: 'REI',
+		kind: 'refund',
+		category: 'Shopping',
+		account: 'chase-sapphire',
+		amount: usd(54.99),
+	},
+	{
+		id: 'tx-19',
+		date: '09-25',
+		title: 'Whole Foods Market',
+		kind: 'purchase',
+		category: 'Groceries',
+		account: 'chase-sapphire',
+		amount: usd(-63.12),
+	},
+	{
+		id: 'tx-20',
+		date: '09-24',
+		title: 'SCHD',
+		kind: 'investment-sell',
+		category: 'Investments',
+		account: 'm1-brokerage',
+		amount: usd(112.4),
+	},
+	{
+		id: 'tx-21',
+		date: '09-24',
+		title: 'Uber',
+		kind: 'purchase',
+		category: 'Transport',
+		account: 'chase-sapphire',
+		amount: usd(-18.64),
+	},
+	{
+		id: 'tx-22',
+		date: '09-24',
+		title: 'Barton Creek Farmers Market',
+		kind: 'purchase',
+		account: 'chase-checking',
+		amount: usd(-22),
+	},
+	{
+		id: 'tx-23',
+		date: '09-23',
+		title: 'H-E-B',
+		kind: 'purchase',
+		category: 'Groceries',
+		account: 'chase-sapphire',
+		amount: usd(-71.88),
+	},
+	{
+		id: 'tx-24',
+		date: '09-23',
+		title: 'Capital Metro',
+		kind: 'purchase',
+		category: 'Transport',
+		account: 'chase-checking',
+		amount: usd(-2.5),
+	},
+	{
+		id: 'tx-25',
+		date: '09-22',
+		title: 'Austin Energy',
+		kind: 'bill-payment',
+		category: 'Utilities',
+		account: 'chase-checking',
+		amount: usd(-142.37),
+		flags: ['bill'],
+	},
+	{
+		id: 'tx-26',
+		date: '09-22',
+		title: 'Google Fi',
+		kind: 'purchase',
+		category: 'Phone',
+		account: 'chase-sapphire',
+		amount: usd(-65),
+		flags: ['recurring'],
+	},
+	{
+		id: 'tx-27',
+		date: '09-22',
+		title: 'Target',
+		kind: 'purchase',
+		category: 'Shopping',
+		account: 'chase-sapphire',
+		amount: usd(-31.4),
+	},
+	{
+		id: 'tx-28',
+		date: '09-21',
+		title: 'Home Slice Pizza',
+		kind: 'purchase',
+		category: 'Dining',
+		account: 'chase-sapphire',
+		amount: usd(-38.6),
+	},
+	{
+		id: 'tx-29',
+		date: '09-21',
+		title: 'Pinthouse Brewing',
+		kind: 'purchase',
+		category: 'Dining',
+		account: 'chase-checking',
+		amount: usd(-27.25),
+	},
+]
+/** What a category usually comes to over the same days of a month (21st to the end), in dollars: Activity's "typical". */
+export const orchardTypical: Record<string, number> = {
+	Groceries: 190,
+	Dining: 140,
+	Transport: 60,
+	Shopping: 70,
+	Subscriptions: 17.99,
+	Utilities: 150,
+	Phone: 65,
+	Fees: 0,
+}
+
+export type SampleBillState = 'overdue' | 'due-soon' | 'upcoming' | 'expected' | 'paid'
+export interface SampleBill {
+	id: string
+	payee: string
+	cadence: 'monthly' | 'one-off'
+	state: SampleBillState
+	/** `MM-DD`; an expected bill has none yet. */
+	due?: string
+	amount: SampleMoney
+	/** The amount is carried from the bill's history until the real figure arrives. */
+	estimate?: boolean
+	source: 'letter' | 'statement' | 'repeating'
+	/** A card statement's minimum due. */
+	minimum?: SampleMoney
+	/** The payment that paid it: its day (`MM-DD`) and account. */
+	paidBy?: { day: string; account: string }
+	/** The payee's own site; Eden never pays (D-8). */
+	url?: string
+	/** Payments that could each have paid it: the Ambiguous match story. */
+	candidates?: { id: string; day: string; printed: string; amount: SampleMoney }[]
+}
+export const orchardBills: SampleBill[] = [
+	{
+		id: 'bl-01',
+		payee: 'Texas Gas Service',
+		cadence: 'monthly',
+		state: 'overdue',
+		due: '09-26',
+		amount: usd(38.1),
+		source: 'repeating',
+		url: 'https://www.texasgasservice.com',
+		candidates: [
+			{ id: 'pm-01', day: '09-28', printed: 'TXGAS SVC', amount: usd(38.1) },
+			{ id: 'pm-02', day: '09-29', printed: 'TEXAS GAS AUTOPAY', amount: usd(38) },
+		],
+	},
+	{
+		id: 'bl-02',
+		payee: 'Hyde Park Lofts rent',
+		cadence: 'monthly',
+		state: 'due-soon',
+		due: '10-01',
+		amount: usd(1850),
+		source: 'repeating',
+		url: 'https://www.hydeparklofts.com',
+	},
+	{
+		id: 'bl-03',
+		payee: 'City of Austin water',
+		cadence: 'monthly',
+		state: 'upcoming',
+		due: '10-08',
+		amount: usd(64),
+		estimate: true,
+		source: 'repeating',
+		url: 'https://www.austintexas.gov/department/water',
+	},
+	{
+		id: 'bl-04',
+		payee: 'Chase Sapphire statement',
+		cadence: 'monthly',
+		state: 'upcoming',
+		due: '10-12',
+		amount: usd(1204.18),
+		minimum: usd(35),
+		source: 'statement',
+		url: 'https://www.chase.com',
+	},
+	{
+		id: 'bl-05',
+		payee: 'Seton Medical EOB',
+		cadence: 'one-off',
+		state: 'expected',
+		amount: usd(240),
+		estimate: true,
+		source: 'letter',
+	},
+	{
+		id: 'bl-06',
+		payee: 'Austin Energy September',
+		cadence: 'monthly',
+		state: 'paid',
+		amount: usd(142.37),
+		source: 'letter',
+		paidBy: { day: '09-22', account: 'chase-checking' },
+		url: 'https://austinenergy.com',
+	},
+]
+
+export interface SampleBudgetLine {
+	category: string
+	group: 'fixed' | 'variable'
+	planned: SampleMoney
+	spent: SampleMoney
+	/** Carried in from last month; absent when nothing was. */
+	rollover?: SampleMoney
+}
+/** September 2026: $3,373.00 planned, $3,148.49 spent; Dining and Subscriptions are over. */
+export const orchardBudget: { month: string; lines: SampleBudgetLine[] } = {
+	month: 'September 2026',
+	lines: [
+		{ category: 'Rent', group: 'fixed', planned: usd(1850), spent: usd(1850) },
+		{ category: 'Utilities', group: 'fixed', planned: usd(160), spent: usd(142.37) },
+		{ category: 'Phone', group: 'fixed', planned: usd(65), spent: usd(65) },
+		{ category: 'Subscriptions', group: 'fixed', planned: usd(48), spent: usd(52.97) },
+		{ category: 'Groceries', group: 'variable', planned: usd(600), spent: usd(541.2), rollover: usd(22) },
+		{ category: 'Dining', group: 'variable', planned: usd(300), spent: usd(312.4) },
+		{ category: 'Transport', group: 'variable', planned: usd(150), spent: usd(96.1) },
+		{ category: 'Shopping', group: 'variable', planned: usd(200), spent: usd(88.45) },
+	],
+}
+export const orchardSinkingFunds = [
+	{ id: 'sf-01', name: 'Car insurance', target: usd(780), by: 'Jan 2027', saved: usd(520), monthly: usd(130) },
+	{ id: 'sf-02', name: 'Holiday travel', target: usd(1200), by: 'Dec 2026', saved: usd(800) },
+]
+
+export const orchardGoals = [
+	{ id: 'gl-01', name: 'Emergency fund', saved: usd(8400), target: usd(15000), by: 'Jun 2027' },
+]
+
+/** What Orchard noticed, for Overview's Flags: each from a Chase account. */
+export const orchardFlags = [
+	{
+		id: 'fl-01',
+		kind: 'interest-charged' as const,
+		account: 'chase-sapphire',
+		title: 'Interest charged on Chase Sapphire',
+		amount: usd(18.42),
+	},
+	{
+		id: 'fl-02',
+		kind: 'price-rise' as const,
+		account: 'chase-sapphire',
+		title: 'Netflix went up',
+		from: usd(15.49),
+		amount: usd(17.99),
+	},
+]
+
+/** The read-and-confirm sheet's letter: masked on the device before anything leaves it (D-190). */
+export const orchardLetter = {
+	file: 'austin-energy-2026-09.pdf',
+	detail: 'PDF · 1 page',
+	text: [
+		'Austin Energy',
+		'Statement date: September 14, 2026',
+		'Account number: ••••7781',
+		'Service address: 4301 Duval St, Austin TX 78751',
+		'Meter: ••••2045',
+		'',
+		'Electric service 08/13 – 09/12: 1,104 kWh',
+		'Amount due: $142.37',
+		'Due by: October 5, 2026',
+	].join('\n'),
+	masked: 2,
+	garbled: [
+		'Aust1n Enerqy',
+		'Statemnt date: Sept 1A, 2O26',
+		'Acc0unt numbcr: ••••7781',
+		'Serv ce addr: 43O1 Duva| St',
+		'Meter: ••••2045',
+		'',
+		'E|ectric serv1ce O8/13 – O9/12: 1,1O4 kVVh',
+		'Amou t due: $l42.3?',
+		'Due bv: 0ctober 5, 2O26',
+	].join('\n'),
+	/** `MM-DD`: when this same file was read before (D-189's fingerprint). */
+	importedOn: '09-22',
+	madeBill: 'the Austin Energy bill for September',
+	provider: 'Claude Sonnet',
+	cost: 'about $0.01',
 }

@@ -4,7 +4,7 @@ status: draft
 summary: How the workspace is stored and encrypted, how tiers apply to storage, sync, export and sharing, the Vault and its three doors out, export and import formats, backup, end-to-end encrypted sync, purge and retention, and the one-user-per-workspace model.
 read-this-if: You are designing anything that stores, syncs, exports, shares or deletes the owner's data.
 depends-on: [privacy, primitives]
-updated: 2026-09-30
+updated: 2026-11-06
 ---
 
 ## Principles
@@ -45,6 +45,7 @@ updated: 2026-09-30
 - **Per-domain export**: the same layout for one domain, plus friendlier formats where they fit (CSV for stock and grocery lists, Markdown for recipes, ideas and notes).
 - Mirrors are excluded; overlays are included with their `source` + `externalId` so they reattach after import.
 - Export never includes secrets, device-capability grants, session grants, the egress ledger or diagnostics (D-70, D-71).
+- An optional passphrase seals the whole bundle; without one the export says the file is readable by anyone who has it (`engineering/data-layer.md`, "Sealed bundle").
 
 ## Import
 

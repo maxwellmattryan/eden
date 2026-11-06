@@ -8,14 +8,19 @@
 	// pressed or ringed until Tab is pressed.
 	import { Button } from '@eden/ui-kit'
 	import { t } from '../i18n/index.js'
+	import { phoneLock } from '../shell/lock/lock.svelte.js'
 	import { crashStore } from '../stores/index.js'
 	import type { CrashInfo } from '../types/index.js'
 
 	let { error }: { error: CrashInfo | null } = $props()
 
 	let copied = $state(false)
+	// The card stands over the phone lock, so while it is locked the report stays off the clipboard: an error's text
+	// can carry the owner's content. Restart brings the lock back up.
+	const locked = $derived(phoneLock.phase !== 'open')
 
 	async function copy() {
+		if (locked) return
 		const details = crashStore.formatErrorDetails({ hasCrashed: true, error })
 		try {
 			await navigator.clipboard.writeText(details)
@@ -56,7 +61,12 @@
 			<code>{error?.message || $t('crash.unknown')}</code>
 		</div>
 		<div class="crash-actions">
-			<Button label={copied ? $t('crash.copied') : $t('crash.copy')} icon={copied ? 'check' : 'copy'} onclick={copy} />
+			<Button
+				label={copied ? $t('crash.copied') : $t('crash.copy')}
+				icon={copied ? 'check' : 'copy'}
+				disabled={locked}
+				onclick={copy}
+			/>
 			<Button
 				variant="primary"
 				label={$t('crash.reset', { values: { name: $t('app.name') } })}
