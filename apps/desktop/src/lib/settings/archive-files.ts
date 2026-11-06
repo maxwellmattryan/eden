@@ -3,7 +3,8 @@
 import { open, save } from '@tauri-apps/plugin-dialog'
 import type { ArchiveFiles } from '@eden/shared/shell/settings'
 
-const ARCHIVE = [{ name: 'Eden', extensions: ['zip'] }]
+// `.eden` is a sealed archive (substrate/sealed.rs); the crate tells the two apart by their first bytes
+const ARCHIVE = [{ name: 'Eden', extensions: ['zip', 'eden'] }]
 
 export const archiveFiles: ArchiveFiles = {
 	target: (name) => save({ defaultPath: name, filters: ARCHIVE }),

@@ -1,8 +1,8 @@
 ---
 title: Data layer
 status: draft
-summary: The workspace database and everything over it: the SQLCipher file and its key on each platform, the schema and its conventions, the append-only migrations, stamps and ids, the registry, the grant store, the egress ledger, the profile, the home Place and addresses, the tables of the scheduler and of signals, the IPC boundary command by command, the frontend module and its browser fallback, how a store sits on rows, the Today store on the task rows, the export bundle, the import, and how it is tested.
-read-this-if: You are reading or writing the owner's data from Rust or from an app, adding a table, a migration, a command, an entity type or a fact type, moving a store onto rows, or touching export, import or the database key.
+summary: The workspace database and everything over it: the SQLCipher file and its key on each platform, the schema and its conventions, the append-only migrations, stamps and ids, the registry, the grant store, the egress ledger, the profile, the home Place and addresses, the tables of the scheduler and of signals, the IPC boundary command by command, the frontend module and its browser fallback, how a store sits on rows, the Today store on the task rows, the export bundle and its sealed form, the import, the redaction of logs and diagnostics, and how it is tested.
+read-this-if: You are reading or writing the owner's data from Rust or from an app, adding a table, a migration, a command, an entity type or a fact type, moving a store onto rows, touching export, import or the database key, or logging anything a domain holds.
 depends-on: [product/substrate/data, product/substrate/primitives, product/substrate/registry, engineering/app-scaffold]
 updated: 2026-11-06
 ---
@@ -11,13 +11,19 @@ updated: 2026-11-06
 
 | built | not yet |
 |---|---|
-| the encrypted database and its key providers; the schema; stamps, ids and URIs; entities, the four primitives, links, snapshots, batches; the commands and `@eden/shared/data`; Hearth and Toolbench on rows; Sky's mirrors on rows (D-85); export and import, full and per domain; Settings → Sync and data; the grant store and the egress ledger, and Settings → Privacy; the profile with its history, and "What Eden knows about me"; the scheduler, signals and the inbox (`engineering/signals.md`); the Tasks substrate on rows and the Today page (D-75) | audit and the Vault (their own issues); the substrate's own signals from the changes seam, the two task signals apart, which the frontend emits; "used by N requests" on the profile page, which waits on the audit log; the grants ledger UI with revoke and history (Phase 2); scheduled backups (the scheduler is there; the backup is not); sync (Phase 3); the mobile interface for export and import; a recovery screen for a database that will not open |
+| the encrypted database and its key providers; the schema; stamps, ids and URIs; entities, the four primitives, links, snapshots, batches; the commands and `@eden/shared/data`; Hearth and Toolbench on rows; Sky's mirrors on rows (D-85); export and import, full and per domain; Settings → Sync and data; the grant store and the egress ledger, and Settings → Privacy; the profile with its history, and "What Eden knows about me"; the scheduler, signals and the inbox (`engineering/signals.md`); the Tasks substrate on rows and the Today page (D-75); the macOS database key in the Keychain, sealed exports and backups, and the redaction of logs and diagnostics (#67, O3) | audit and the Vault (their own issues); the substrate's own signals from the changes seam, the two task signals apart, which the frontend emits; "used by N requests" on the profile page, which waits on the audit log; the grants ledger UI with revoke and history (Phase 2); scheduled backups (the scheduler is there; the backup is not); sync (Phase 3); the mobile interface for export and import; a recovery screen for a database that will not open |
 
 The Garden's feed stays in the document store (`engineering/app-scaffold.md`, "Persistence"): it is this device's, and out of every export. Sky's mirror left it for rows (D-85, "Sky's mirrors" below).
 
+Handoffs from the encryption Orchard needs (#67, O3):
+
+- **Scheduled backups**, when they are built, take the same `passphrase` field as `ExportRequest` and write `.eden` when it is set ("Sealed bundle" below).
+- **Windows and Linux** keep `db.key`; a Credential Manager or Secret Service provider would follow the macOS one (a `KeySlot` and `migrate_into_slot`).
+- **The move of `db.key` into the macOS Keychain** is proven by tests over a fake slot only. On a signed build it is verified by hand on staging before production: the workspace opens with its rows, `security find-generic-password -s eden.sqlcipher -a db_key-staging` finds the item, `db.key` is gone, and a second launch opens the same database.
+
 ## Storage and key
 
-One SQLCipher database per workspace (`product/substrate/data.md`), at `<app data dir>/eden.db`. The app data dir follows the identifier, so each channel has its own workspace. Beside the database: `db.key` (desktop), `attachments/<id>`, `exports/` and `backups/`.
+One SQLCipher database per workspace (`product/substrate/data.md`), at `<app data dir>/eden.db`. The app data dir follows the identifier, so each channel has its own workspace. Beside the database: `db.key` (Windows, Linux and macOS development builds), `attachments/<id>`, `exports/` and `backups/`.
 
 | file | holds |
 |---|---|
@@ -40,13 +46,24 @@ The provider follows the target system, not the cargo feature.
 
 | platform | store | notes |
 |---|---|---|
-| desktop | `db.key` beside the database, 64 hex characters, mode `0600` | the encryption is only as strong as the file's permissions until a keychain provider replaces it |
-
-The Gardener's key follows the same split in `db/secret_store.rs`, in the OS keychain where the DB key is (`engineering/gardener.md`, "The key").
+| macOS, signed builds (`EDEN_ENV` set) | the Keychain, service `eden.sqlcipher`, account `db_key-<channel>` (`db_key-production`, `db_key-staging`), readable after the first unlock, this device only | one account a channel, because staging and production share one Keychain; the account names the channel and not the identifier, so changing the identifier (D-69) does not orphan the key. A `db.key` left by an earlier build moves in on the first launch (below) |
+| Windows, Linux, macOS development | `db.key` beside the database, 64 hex characters, mode `0600` | the encryption is only as strong as the file's permissions; an unsigned macOS binary (`yarn dev`) loses its Keychain items on every rebuild, so it keeps the file |
 | iOS | the Keychain, service `eden.sqlcipher`, account `db_key`, readable after the first unlock, this device only | no entitlement needed; the service is not the identifier, so changing the identifier (D-52) does not orphan the key |
 | Android | a passphrase wrapped by an AES-256-GCM key the Keystore will not export, kept in app-private SharedPreferences | through `EdenDbKey`, called over JNI; see the checklist below |
 
-One rule holds on all three: a key that exists and cannot be read is an error, never a reason to generate another. A second key would not open the database the first one encrypted. The key never leaves the device, so a database file copied elsewhere is unreadable; moving a workspace is what the export bundle is for.
+The Gardener's key follows the same split in `db/secret_store.rs`, in the OS keychain where the DB key is (`engineering/gardener.md`, "The key").
+
+**The move into the macOS Keychain** (`migrate_into_slot`), on each launch of a signed build, in this order:
+
+1. only `db.key`: its key is written to the Keychain and read back; the file is removed only when the read-back matches. A failed write or read-back stops the launch with a `KeyStorage` error and leaves the file as it was;
+2. both, the same key: the leftover file is removed (a crash between the write and the removal leaves this);
+3. both, different keys: the launch stops with a `KeyStorage` error, and nothing is removed or overwritten;
+4. only the Keychain item: it is used, and no file is written;
+5. neither (a fresh install): a key is generated straight into the Keychain.
+
+No error and no log line names a key. **Rolling back** to a build from before the move finds no `db.key` and cannot open the workspace. To recover, write the key back beside the database in the app data dir: `security find-generic-password -s eden.sqlcipher -a db_key-<channel> -w > db.key`, then `chmod 600 db.key`.
+
+One rule holds on every platform: a key that exists and cannot be read is an error, never a reason to generate another. A second key would not open the database the first one encrypted. The key never leaves the device, so a database file copied elsewhere is unreadable; moving a workspace is what the export bundle is for.
 
 The phone lock (D-185, `engineering/app-scaffold.md`) is a gate on the UI only: neither the key nor the secret store is bound to biometry, so a new face, finger or passcode never locks the owner out of their data.
 
@@ -211,9 +228,9 @@ Every command is one read or one write of the workspace; a write is one transact
 | `unlink` | `owner`, `uri`, `relation` | nothing |
 | `query_links` | `filter`: `{ owner?, target?, relation? }` | the live links |
 | `apply_batch` | `ops`, `marker?` | `{ applied, rows }` |
-| `export_bundle` | `request`: `{ scope, path?, settings?, extras? }` | `{ path, counts, bytes }` |
-| `inspect_bundle` | `path` | the manifest, once every file is checked against its hash |
-| `import_bundle` | `path`, `mode` | the summary |
+| `export_bundle` | `request`: `{ scope, path?, settings?, extras?, passphrase? }`; a `passphrase` seals the bundle | `{ path, counts, bytes }` |
+| `inspect_bundle` | `path`, `passphrase?` | the manifest, once every file is checked against its hash; `bundle:locked` for a sealed bundle without its passphrase |
+| `import_bundle` | `path`, `mode`, `passphrase?`, `backupPassphrase?` (seals a replace's backup) | the summary |
 | `remove_domain_document` | `domain` | nothing; removes an old document after its import |
 | `grant` | `input`: `{ id?, subject, resource, resourceType, access, lifetime, narrowing?, origin }` | the grant; a standing or session grant already there is renewed |
 | `revoke` | `id` | the grant, ended |
@@ -382,9 +399,32 @@ A zip archive a person can open (`substrate/bundle.rs`; `product/substrate/data.
 - **The bytes are fixed by the rows.** Rows are written by id and links by target, so two workspaces that hold the same rows write the same files. This is what the round trip is checked by.
 - The `vault/` section waits for the Vault.
 
+### Sealed bundle
+
+With a passphrase the same zip is encrypted whole (`substrate/sealed.rs`) and named `.eden` instead of `.zip` (`eden-<scope>-<date>.eden`; the crate's default path takes the extension too). Without one the export is the plain zip, byte for byte as before. An archive is told sealed by its first bytes, never its extension.
+
+zip's own AES (WinZip AE-2) is not used: it derives its key with PBKDF2-SHA1 at 1000 rounds, too weak for a typed passphrase, and leaves the file names in clear.
+
+| bytes | holds |
+|---|---|
+| `0..8` | the magic `EDENLOCK` |
+| `8` | the format version, `1` |
+| `9` | the KDF, `1` (Argon2id, version 0x13) |
+| `10..14`, `14..18`, `18..22` | `m_kib`, `t`, `p`, u32 little-endian |
+| `22..38` | the salt, 16 bytes |
+| `38..57` | the STREAM nonce, 19 bytes |
+
+After the 57-byte header comes the zip, encrypted with XChaCha20-Poly1305 in the `aead::stream` BE32 construction: 64 KiB plaintext chunks, each followed by its 16-byte tag, the last sealed as last so a cut-off file does not open. The whole header is the associated data of every chunk.
+
+- **Cost**: Argon2id at 64 MiB, three passes, one lane. `open` refuses `m_kib` over 262144, `t` over 10, `p` over 4 or 0, another version or another KDF, as `bundle:unreadable`, before it derives anything.
+- **Secrets**: the salt and nonce come from the OS's random source; the derived key is wiped from memory when it is dropped; the passphrase is its exact UTF-8 bytes, neither trimmed nor normalised, at least 8 characters (`bundle:passphrase-short`).
+- **Memory**: a sealed export builds its zip in memory and seals it into the `.partial` file, so the plaintext never touches the disk; an import decrypts into memory. Memory is the bundle's size, which is acceptable while Orchard keeps no files; a workspace with large attachments would want a streaming reader.
+
 ## Import
 
 `import_bundle` reads and checks everything before it writes anything: the format and its version (a later one is refused), every file against its hash, every line of every file. Then the attachment files are written, and the rows in one transaction.
+
+A sealed bundle is opened first: without a passphrase it is `bundle:locked`, the interface's cue to ask for one; a passphrase that does not open it, or a header that was altered, is `bundle:passphrase`; a file cut short or changed after its first chunk is `bundle:unreadable`, like any broken archive.
 
 **Merge** compares `updatedAt` as text.
 
@@ -400,7 +440,7 @@ A row that arrives live may find its place taken: a second home, or a second ove
 
 A grant merges by the same rule, and a live grant whose key another live grant holds yields the same way: the later stamp stays, the other is ended. A bundle whose `grants.json` names a capability or a session grant is refused as `bundle:unreadable`. A fact merges by the same rule too, and a live `system-derived` fact of a type another live one holds yields the same way; a line of `facts.jsonl` that the rules refuse is `bundle:unreadable`, while a type this build does not know is kept and named in the summary.
 
-**Replace** first writes a bundle of the whole workspace to `backups/pre-replace-<time>.zip` and stops if that fails. Then it clears what the bundle's scope holds, mirrors apart (a full replace clears the grants too, the device's capability grants apart, and the facts with their history; the egress ledger is never touched), and inserts the bundle's rows as they are. It deletes rows outright, which is right while there is one device; with sync another device would bring them back, so Phase 3 revisits it.
+**Replace** first writes a bundle of the whole workspace to `backups/pre-replace-full-<time>.zip` and stops if that fails; given a backup passphrase, it is sealed as `backups/pre-replace-full-<time>.eden`, and a passphrase under 8 characters is refused before anything is cleared. Then it clears what the bundle's scope holds, mirrors apart (a full replace clears the grants too, the device's capability grants apart, and the facts with their history; the egress ledger is never touched), and inserts the bundle's rows as they are. It deletes rows outright, which is right while there is one device; with sync another device would bring them back, so Phase 3 revisits it.
 
 Settings are applied only by a replace from a full bundle; a merge leaves the ones here alone, because a setting has no stamp to compare.
 
@@ -408,9 +448,23 @@ Settings are applied only by a replace from a full bundle; a merge leaves the on
 
 `packages/shared/src/shell/settings/tabs/SyncTab.svelte`, the same tab in both apps: export everything, export one domain (the domains that declare `extras` in their manifest), and import. An archive is inspected before the owner chooses merge or replace; a replace asks through `ConfirmSheet` and names its backup afterwards. After an import every domain's store is read again (`reload` in the domain's logic), and the shell's grant, profile and Today stores with them. Outside the app the tab says that export and import work in the installed app.
 
+Either Export button opens `ExportSheet.svelte`: `BundleProtection.svelte`'s switch, off by default with a warning that anyone who has the file can read it, and on, a passphrase typed twice, at least 8 characters, before Export is enabled. The sheet's fields are remade on every close, so no passphrase outlives it. A sealed archive (`bundle:locked`) shows a passphrase field and Unlock where the manifest would be; a wrong passphrase keeps the field and says so under the block. In Replace the same switch protects the backup, and leaving Replace clears it. A passphrase lives in the tab's state only, until the import ends or another archive is chosen; it is never written to settings or storage.
+
 Where an archive goes and where one comes from is the app's, through the port `ArchiveFiles` (`shell/settings/archive-files.ts`) that each app passes the tab from its own `src/lib/settings/archive-files.ts`. Desktop's asks the system's save and open dialogs for a path the crate writes or reads. The phone's goes through Eden's own folder (D-161): an export is written to `<data dir>/exports/` and the system's save dialog copies it, the page saying where the file was kept when the dialog fails; an import is copied from the file input into `<data dir>/imports/` and read there, and removed once imported or replaced by another choice. The device's pinned tabs are never in `settings.json` (`deviceStorage`, D-160).
 
 Handoff: the phone's export and import have never been exercised. The browser build has no crate and shows the tab's notice, so the save dialog, the copy out of `exports/` and the staging into `imports/` wait on a device, iOS and Android both.
+
+## Logs and diagnostics
+
+**The rule for every domain's code, Orchard first: log ids, codes and counts, never a row's values.** No amount, merchant, payee, description, balance, token or account number goes into a `log::` line, a `logError` call or an error message that reaches either.
+
+The redaction (`services/redact.rs`) is a backstop, not a licence. Every record through the `log` facade (`RedactingLogger` wraps env_logger on desktop, os_log on iOS and logcat on Android), every diagnostics entry (`log_error` from the frontend and `DiagnosticsService::log` from the crate) and the panic hook's line in `eden-crash.log` pass through `redact`, which is deterministic and idempotent. It replaces:
+
+- **values under sensitive keys** (`amount`, `minor`, `balance`, `available`, `current`, `limit`, `merchant`, `merchant_name`, `merchantName`, `payee`, `counterparty`, `description`, `original_description`, `access_token`, `accessToken`, `public_token`, `secret`, `account_number`, `accountNumber`, `routing`, in any case), quoted or not, after `:` or `=`, as JSON, Rust `Debug` and `key=value` write them: the value becomes `"[redacted]"`;
+- **amounts**, a number beside `$ € £ ¥ ₹ ₩` or beside one of the currency codes listed in the module, before or after it: `[amount]`;
+- **account-like numbers**, a run of 8 or more digits: `[number]`, as D-26's scrub does.
+
+ISO dates and times, ULIDs, HLC stamps, version numbers and numbers under 8 digits with no currency beside them are left alone. `get_diagnostic_entries` and `get_diagnostics_report` run the redaction again over every entry before they answer, so an entry that reached the buffer some other way still leaves clean. The webview's `console.*` is not redacted: it is not persisted and not in the report.
 
 ## Testing
 
@@ -419,6 +473,6 @@ Handoff: the phone's export and import have never been exercised. The browser bu
 | `yarn test:rust` | the crate's tests with the desktop feature, as CI does |
 | `yarn workspace @eden/shared run test` | the shared package's, in Node |
 
-The Rust tests are inline modules over a workspace in memory with no key (`Workspace::in_memory()`), because they exercise the SQL and not the cipher; one test opens a real file to prove it is encrypted, reopens with its key and does not open without it. The key providers for iOS and Android cannot run on a desktop host and have no tests.
+The Rust tests are inline modules over a workspace in memory with no key (`Workspace::in_memory()`), because they exercise the SQL and not the cipher; one test opens a real file to prove it is encrypted, reopens with its key and does not open without it. The key providers for iOS and Android cannot run on a desktop host and have no tests; the move into the macOS Keychain is pinned case by case in `db/key_provider.rs` over a fake slot. The sealed bundle is pinned by `open_refuses_locked_wrong_truncated_tampered_and_oversized` in `substrate/sealed.rs`, and by `a_sealed_bundle_round_trips_and_holds_no_plaintext` and `a_replace_seals_its_backup_when_given_a_passphrase` in `substrate/bundle.rs`; test builds seal at a cheap Argon2 cost. The redaction is pinned by `redacts_finance_values_and_leaves_the_rest` and `the_redacting_logger_forwards_redacted_records` in `services/redact.rs`, and the diagnostics report by `the_report_carries_no_finance_values`.
 
 **The Phase 1 done criterion** is `an_export_round_trips_through_a_merge` in `substrate/bundle.rs`: a workspace with rows in every table, tombstones, links live and removed, an overlay, a mirror and an attachment is exported, imported into an empty workspace and exported again. The two bundles hold the same paths, every file but the manifest is the same bytes, and the manifests are equal once `createdAt`, `node` and `app` are taken out. `an_export_round_trips_through_a_replace` does the same into a workspace that had rows of its own. The mirror operations are pinned by `a_mirror_is_put_replaced_and_dropped`, `a_drop_is_refused_for_what_is_not_a_mirror` and `the_sweep_takes_the_mirrors_past_their_retention` in `substrate/batch.rs`, and by the same three cases in `data/engine.test.ts`. Sky's rows are pinned by `weather/rows.test.ts` over a real engine: the round trip, a refresh keeping its ids, an alert that ended, a home that moved, a provider that changed, the slots, the old document, and what the pack carries. The grant store's rules are pinned by `the_decision_table_holds` and the tests beside it in `substrate/grants.rs`, and in `grants/rules.test.ts` on the frontend; `the_vault_ai_row_cannot_be_written` in `substrate/egress.rs` proves the row that is always zero cannot be written, through the store or around it. The profile's rules are pinned by `confidence_and_source_follow_the_provenance`, `a_system_derived_fact_is_one_row_renewed_in_place` and the tests beside them in `substrate/facts.rs`, by `profile/rules.test.ts` and `profile/shapes.test.ts` on the frontend, and in the bundle by `two_derived_facts_of_one_type_keep_the_later` and `a_replace_clears_facts_and_their_history`. The tests of the scheduler, the signals and the inbox are listed in `engineering/signals.md`. The Tasks substrate is pinned in `@eden/shared`, in Node: `dates/days.test.ts` (wall times and days in `America/Chicago`, `Asia/Tokyo` and `UTC`, on the days the clocks change), `recurrence/rules.test.ts` (every frequency with its interval, `until` and `count`, the 31st and 29 February), `tasks/progress.test.ts` (skips, tallies, the streak with its grace), `tasks/today.test.ts` (the sections, their order, the overdue definition, the day where the owner is), `tasks/snooze.test.ts` (the targets across midnight and the week start), `tasks/parse.test.ts` (the grammar line by line, in English and Japanese) and `tasks/rules.test.ts` (the changes and their inverses, the two signals' names, payloads and keys, the clipped title).

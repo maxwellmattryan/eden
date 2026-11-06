@@ -18,6 +18,7 @@ pub mod primitives;
 pub mod registry;
 pub mod rows;
 pub mod scheduler;
+pub(crate) mod sealed;
 pub mod signals;
 pub mod text;
 pub mod threads;

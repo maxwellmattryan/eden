@@ -28,7 +28,7 @@ fn install_panic_hook() {
         let message = format!(
             "[{}] PANIC: {}\nLocation: {:?}\n\n",
             chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"),
-            info,
+            services::redact::redact(&info.to_string()),
             info.location(),
         );
         let _ = std::fs::OpenOptions::new()
@@ -42,23 +42,36 @@ fn install_panic_hook() {
 }
 
 /// Route `log` output where each platform can see it: os_log on iOS (the app's identifier as subsystem), logcat on
-/// Android, stderr with `RUST_LOG` on desktop.
+/// Android, stderr with `RUST_LOG` on desktop. Every record is redacted first (`services::redact`).
 fn init_logging(subsystem: &str) {
+    use services::redact::RedactingLogger;
+
     #[cfg(target_os = "ios")]
-    oslog::OsLogger::new(subsystem)
-        .level_filter(log::LevelFilter::Info)
-        .init()
-        .ok();
+    let (inner, max_level) = (
+        oslog::OsLogger::new(subsystem).level_filter(log::LevelFilter::Info),
+        log::LevelFilter::Info,
+    );
     #[cfg(target_os = "android")]
-    android_logger::init_once(
-        android_logger::Config::default()
-            .with_max_level(log::LevelFilter::Info)
-            .with_tag(subsystem),
+    let (inner, max_level) = (
+        android_logger::AndroidLogger::new(
+            android_logger::Config::default()
+                .with_max_level(log::LevelFilter::Info)
+                .with_tag(subsystem),
+        ),
+        log::LevelFilter::Info,
     );
     #[cfg(not(any(target_os = "ios", target_os = "android")))]
-    {
+    let (inner, max_level) = {
         let _ = subsystem;
-        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+        let inner =
+            env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
+                .build();
+        let max_level = inner.filter();
+        (inner, max_level)
+    };
+
+    if log::set_boxed_logger(Box::new(RedactingLogger(inner))).is_ok() {
+        log::set_max_level(max_level);
     }
 }
 

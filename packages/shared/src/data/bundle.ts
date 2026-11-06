@@ -50,6 +50,11 @@ export interface ExportRequest {
 	/** The settings to carry, which live in the frontend. Full scope only. */
 	settings?: Record<string, string>
 	extras?: BundleExtra[]
+	/**
+	 * Seals the whole archive under this passphrase, at least 8 characters (a `.eden` file). It goes to the crate with
+	 * this call and nowhere else: never stored, never logged.
+	 */
+	passphrase?: string
 }
 
 export interface ExportResult {
@@ -83,13 +88,30 @@ export function exportBundle(request: ExportRequest): Promise<ExportResult> {
 	return command('export_bundle', { request })
 }
 
-/** The manifest of a bundle, once every file in it has been checked against its hash. */
-export function inspectBundle(path: string): Promise<BundleManifest> {
-	return command('inspect_bundle', { path })
+/**
+ * The manifest of a bundle, once every file in it has been checked against its hash. A sealed bundle rejects with
+ * `bundle:locked` until its `passphrase` is given, and with `bundle:passphrase` when it is the wrong one. The
+ * passphrase never leaves this call.
+ */
+export function inspectBundle(path: string, passphrase?: string): Promise<BundleManifest> {
+	return command('inspect_bundle', { path, passphrase })
 }
 
-export function importBundle(path: string, mode: ImportMode): Promise<ImportSummary> {
-	return command('import_bundle', { path, mode })
+/**
+ * Brings a bundle in. `passphrase` opens a sealed one; `backupPassphrase` seals the backup a replace writes first.
+ * Neither leaves this call.
+ */
+export function importBundle(
+	path: string,
+	mode: ImportMode,
+	options: { passphrase?: string; backupPassphrase?: string } = {}
+): Promise<ImportSummary> {
+	return command('import_bundle', {
+		path,
+		mode,
+		passphrase: options.passphrase,
+		backupPassphrase: options.backupPassphrase,
+	})
 }
 
 /** The rows a bundle or an import counts, of every type together. */
