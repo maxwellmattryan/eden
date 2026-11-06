@@ -16,6 +16,7 @@ import { GRADES } from '../gardener/types.js'
 import { setLanguage as setI18nLanguage } from '../i18n/index.js'
 import { parseLayout, type StoredLayout } from '../manifest/garden.js'
 import { parsePinned } from '../manifest/pinned.js'
+import { parseLockAfter, type LockAfter } from '../shell/lock/relock.js'
 import {
 	clockFormats,
 	fontSettings,
@@ -114,6 +115,10 @@ export class Settings {
 	 * until they choose, and the bar shows the declared pair. Read through `pinnedPair`, which mends a stale choice.
 	 */
 	pinnedTabs = $state<string[] | undefined>(undefined)
+	/** How long the phone may be away before it locks again, on this device; a minute until the owner chooses. */
+	lockAfter = $state<LockAfter>('1m')
+	/** Whether money amounts show as dots on this device, while the owner shares their screen. */
+	hideAmounts = $state(false)
 	/** The theme on <html>: the choice, or what "system" resolves to right now. */
 	resolvedTheme = $state<Theme>('light')
 
@@ -147,6 +152,8 @@ export class Settings {
 		this.sidebarCollapsed = read(storage.sidebarCollapsed) === 'on'
 		this.gardenLayout = parseLayout(read(deviceStorage.gardenLayout))
 		this.pinnedTabs = parsePinned(read(deviceStorage.pinnedTabs))
+		this.lockAfter = parseLockAfter(read(deviceStorage.lockAfter))
+		this.hideAmounts = read(deviceStorage.hideAmounts) === 'on'
 		this.resolvedTheme = this.resolveTheme(this.theme)
 		this.apply()
 		if (typeof window !== 'undefined' && window.matchMedia && !this.#media) {
@@ -313,6 +320,16 @@ export class Settings {
 	setPinnedTabs(ids: readonly string[] | undefined) {
 		this.pinnedTabs = ids?.length ? [...ids] : undefined
 		write(deviceStorage.pinnedTabs, this.pinnedTabs ? this.pinnedTabs.join(',') : null)
+	}
+
+	setLockAfter(after: LockAfter) {
+		this.lockAfter = parseLockAfter(after)
+		write(deviceStorage.lockAfter, this.lockAfter === '1m' ? null : this.lockAfter)
+	}
+
+	setHideAmounts(hidden: boolean) {
+		this.hideAmounts = hidden
+		write(deviceStorage.hideAmounts, hidden ? 'on' : null)
 	}
 
 	/** The choices as they are stored, by name: what an export bundle carries. A choice left at its default is absent. */

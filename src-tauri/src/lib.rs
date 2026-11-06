@@ -107,9 +107,12 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_window_state::Builder::default().build());
 
-    // Mobile-only plugins: haptics (light impact feedback on tap).
+    // Mobile-only plugins: haptics (light impact feedback on tap) and biometric, which the phone lock calls from Rust
+    // (commands/lock.rs).
     #[cfg(feature = "mobile")]
-    let builder = builder.plugin(tauri_plugin_haptics::init());
+    let builder = builder
+        .plugin(tauri_plugin_haptics::init())
+        .plugin(tauri_plugin_biometric::init());
 
     // If the OS kills the WKWebView content process (iOS jetsam under memory pressure: the screen goes white), reload
     // the webview so the UI recovers instead of staying blank until a relaunch. iOS/macOS only.
@@ -129,6 +132,8 @@ pub fn run() {
             commands::diagnostics::get_diagnostics_report,
             commands::diagnostics::clear_diagnostic_entries,
             commands::diagnostics::log_error,
+            commands::lock::phone_lock_status,
+            commands::lock::phone_lock_unlock,
             commands::data::create_entity,
             commands::data::update_entity,
             commands::data::query_entities,
@@ -216,6 +221,9 @@ pub fn run() {
             domains::weather::weatherkit_forecast,
         ])
         .setup(|app| {
+            // The app switcher's snapshot is taken under an opaque cover, never of Eden's content.
+            #[cfg(target_os = "ios")]
+            services::privacy_cover::install();
             let app_data_dir = app
                 .path()
                 .app_data_dir()

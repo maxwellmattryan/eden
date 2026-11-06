@@ -69,7 +69,7 @@
 			{:else if settingsUi.tab === 'gardener'}
 				<GardenerTab />
 			{:else if settingsUi.tab === 'privacy'}
-				<PrivacyTab />
+				<PrivacyTab phoneLock />
 			{:else if settingsUi.tab === 'integrations'}
 				<IntegrationsTab />
 			{:else if settingsUi.tab === 'sync'}
