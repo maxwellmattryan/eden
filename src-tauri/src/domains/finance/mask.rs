@@ -8,10 +8,14 @@
 //!    `MIN_LABELLED` letters and digits. A value must hold a digit, so prose after a label (`card has been charged`)
 //!    is never taken for one, and it may open with a short capital prefix (`HX-4429-8812`).
 //! 2. **Unlabelled.** A run of digit groups joined by single spaces or hyphens, `MIN_UNLABELLED` digits or more, is
-//!    masked unless a digit, `.`, `,`, `/` or `:` touches it (an amount, a date, a time), it is phone-shaped, or it is
-//!    a ZIP+4.
+//!    masked unless it is part of an amount, a date or a time (a digit or `/` touches it, or a `.`, `,` or `:` with a
+//!    digit on its far side), it is phone-shaped, or it is a ZIP+4.
 //!
 //! An issuer's own mask (`XXXX1234`, `****1234`) is left as it is.
+//!
+//! The rules match on a normalised copy (`normalise`): any Unicode space becomes a space, any Unicode dash a hyphen,
+//! and a full-width character its ASCII twin, so a no-break space, a thin space, an en dash or full-width digits
+//! never split a number. The masks are then laid over the original text.
 
 use std::ops::Range;
 use std::sync::LazyLock;
@@ -32,7 +36,9 @@ const MIN_LABELLED: usize = 5;
 /// The digits an unlabelled run needs before it is masked.
 const MIN_UNLABELLED: usize = 9;
 /// The characters that, touching a digit run, make it an amount, a date or a time rather than a number to hide.
-const NEIGHBOURS: &[char] = &['.', ',', '/', ':'];
+const NEIGHBOURS: &[char] = &['/'];
+/// The characters that do so only with a digit on their far side: `1,234`, `9.00`, `10:30`, never a sentence's end.
+const JOINERS: &[char] = &['.', ',', ':'];
 /// How many letters or digits a mask keeps.
 const KEEP: usize = 4;
 
@@ -60,7 +66,9 @@ static ISSUER_MASKED: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[Xx]+[ -]?[0-9]{1,4}$").expect("the issuer pattern compiles"));
 
 /// The text with every number-like run masked, and how many runs were.
-pub fn mask(text: &str) -> (String, u32) {
+pub fn mask(original: &str) -> (String, u32) {
+    let (normalised, origin) = normalise(original);
+    let text = normalised.as_str();
     let mut runs: Vec<Range<usize>> = LABELLED
         .captures_iter(text)
         .filter_map(|captures| captures.name("value"))
@@ -90,16 +98,40 @@ pub fn mask(text: &str) -> (String, u32) {
     runs.extend(unlabelled);
     runs.sort_by_key(|run| run.start);
 
-    let mut out = String::with_capacity(text.len());
+    let mut out = String::with_capacity(original.len());
     let mut at = 0;
     for run in &runs {
-        out.push_str(&text[at..run.start]);
+        out.push_str(&original[at..origin[run.start]]);
         out.push_str(MASK);
         out.push_str(&last_four(&text[run.clone()]));
-        at = run.end;
+        at = origin[run.end];
     }
-    out.push_str(&text[at..]);
+    out.push_str(&original[at..]);
     (out, u32::try_from(runs.len()).unwrap_or(u32::MAX))
+}
+
+/// The text with every Unicode space as a space, every Unicode dash as a hyphen and every full-width character as its
+/// ASCII twin, one character for one; and, for each of its byte offsets and its end, the original's byte offset.
+fn normalise(text: &str) -> (String, Vec<usize>) {
+    let mut out = String::with_capacity(text.len());
+    let mut origin = Vec::with_capacity(text.len() + 1);
+    for (at, c) in text.char_indices() {
+        let plain = match c {
+            '\u{00A0}'
+            | '\u{1680}'
+            | '\u{2000}'..='\u{200A}'
+            | '\u{202F}'
+            | '\u{205F}'
+            | '\u{3000}' => ' ',
+            '\u{2010}'..='\u{2015}' | '\u{2212}' | '\u{FE58}' | '\u{FE63}' => '-',
+            '\u{FF01}'..='\u{FF5E}' => char::from_u32(u32::from(c) - 0xFEE0).unwrap_or(c),
+            _ => c,
+        };
+        origin.extend(std::iter::repeat_n(at, plain.len_utf8()));
+        out.push(plain);
+    }
+    origin.push(text.len());
+    (out, origin)
 }
 
 fn letters_and_digits(run: &str) -> usize {
@@ -111,11 +143,18 @@ fn last_four(run: &str) -> String {
     kept[kept.len().saturating_sub(KEEP)..].iter().collect()
 }
 
-/// Whether a digit, `.`, `,`, `/` or `:` sits right before or right after the run.
+/// Whether a digit or `/` sits right before or right after the run, or a `.`, `,` or `:` with a digit beyond it.
 fn touches(text: &str, run: Range<usize>) -> bool {
-    let close = |c: char| c.is_ascii_digit() || NEIGHBOURS.contains(&c);
-    text[..run.start].chars().next_back().is_some_and(close)
-        || text[run.end..].chars().next().is_some_and(close)
+    let joins = |next: Option<char>, beyond: Option<char>| {
+        next.is_some_and(|c| {
+            c.is_ascii_digit()
+                || NEIGHBOURS.contains(&c)
+                || (JOINERS.contains(&c) && beyond.is_some_and(|b| b.is_ascii_digit()))
+        })
+    };
+    let mut before = text[..run.start].chars().rev();
+    let mut after = text[run.end..].chars();
+    joins(before.next(), before.next()) || joins(after.next(), after.next())
 }
 
 #[cfg(test)]
@@ -147,7 +186,36 @@ mod tests {
                 "Account ••••5678 and member ••••7766",
                 2,
             ),
+            // Unicode spaces and dashes between groups, the rest of the text as it was.
+            (
+                "Account number: 1234\u{a0}5678\u{a0}7781",
+                "Account number: ••••7781",
+                1,
+            ),
+            (
+                "Account number:\u{a0}1234\u{2009}5678\u{202f}7781 due",
+                "Account number:\u{a0}••••7781 due",
+                1,
+            ),
+            (
+                "Policy #: HX\u{2013}4429\u{2013}8812",
+                "Policy #: ••••8812",
+                1,
+            ),
+            ("SSN 123\u{2013}45\u{2013}6789", "SSN ••••6789", 1),
+            // Full-width digits.
+            ("口座番号 １２３４５６７８９０", "口座番号 ••••7890", 1),
+            // A sentence's end or a label's colon is no amount or time.
+            ("Reference 1234567890.", "Reference ••••7890.", 1),
+            ("Reference 1234567890, then", "Reference ••••7890, then", 1),
+            ("SSN:123-45-6789", "SSN:••••6789", 1),
             // Left alone.
+            (
+                "Call 555\u{a0}010\u{a0}4477",
+                "Call 555\u{a0}010\u{a0}4477",
+                0,
+            ),
+            ("Total 1,234,567,890.", "Total 1,234,567,890.", 0),
             ("Call 555-010-4477", "Call 555-010-4477", 0),
             ("Call 555.010.4477", "Call 555.010.4477", 0),
             ("Call 555 010 4477", "Call 555 010 4477", 0),
