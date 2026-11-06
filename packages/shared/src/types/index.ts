@@ -109,3 +109,15 @@ export interface CrashInfo {
 	source?: string
 	timestamp: string
 }
+
+/** The biometry the phone's unlock prompt offers, which names its button; `none` is the passcode alone. */
+export type Biometry = 'face' | 'touch' | 'fingerprint' | 'none'
+
+/** Whether this device can lock Eden (a passcode is set), from `phone_lock_status`. */
+export interface LockStatus {
+	lockable: boolean
+	biometry: Biometry
+}
+
+/** How one unlock prompt ended, from `phone_lock_unlock`. */
+export type UnlockOutcome = 'unlocked' | 'cancelled' | 'failed' | 'no-passcode'

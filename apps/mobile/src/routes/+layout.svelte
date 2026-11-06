@@ -23,7 +23,7 @@
 		type BottomTab,
 		type GlyphId,
 	} from '@eden/ui-kit'
-	import { fileDropGuard, logError } from '@eden/shared/api'
+	import { fileDropGuard, isTauri, logError, phoneLockStatus, unlockPhone } from '@eden/shared/api'
 	import { formatTime } from '@eden/shared/dates'
 	import { home } from '@eden/shared/home'
 	import { initializeI18n, locale, t, uiKitStrings } from '@eden/shared/i18n'
@@ -45,6 +45,8 @@
 	import { homeUi } from '@eden/shared/shell/home'
 	import ChangeHomeSheet from '@eden/shared/shell/home/ChangeHomeSheet.svelte'
 	import { inbox } from '@eden/shared/shell/inbox'
+	import { phoneLock } from '@eden/shared/shell/lock'
+	import LockScreen from '@eden/shared/shell/lock/LockScreen.svelte'
 	import { profile } from '@eden/shared/shell/profile'
 	import { quickLogUi } from '@eden/shared/shell/quick-log'
 	import QuickLogHost from '@eden/shared/shell/quick-log/QuickLogHost.svelte'
@@ -190,6 +192,17 @@
 	onMount(() => {
 		const cleanupErrors = useGlobalErrorHandler(markSvelteKitReady)
 		settings.load()
+		// The phone lock (D-185): the gate is up from the first frame on a phone, and asks
+		// once on its own when the splash goes. A gate on the UI only: everything below runs under it as before.
+		const stopLock = isTauri()
+			? phoneLock.start({
+					status: phoneLockStatus,
+					unlock: unlockPhone,
+					reason: () => $t('lock.reason', { values: { name: $t('app.name') } }),
+				})
+			: () => {}
+		const devLock = import.meta.env.DEV ? (window as { __edenLock?: (mode?: 'fail') => void }) : undefined
+		if (devLock) devLock.__edenLock = (mode) => phoneLock.devRaise(mode === 'fail')
 		// what follows the home (D-141): the area a model may know, and the forecast when it has moved
 		home.bind({
 			changed: (place, moved) => {
@@ -204,6 +217,7 @@
 			.catch(() => null)
 			.then(() => {
 				void dismissSplash()
+				phoneLock.prompt()
 				void grants.load()
 				void gardenerSetup.load()
 				// every declared tool has a handler, or the log says which does not (engineering/gardener.md, "Tools")
@@ -225,6 +239,8 @@
 		// Android's back: what is on top closes first, then a pushed view, then the way back, then the app
 		const stopBack = startBackHandler(goBack)
 		return () => {
+			stopLock()
+			if (devLock) delete devLock.__edenLock
 			stopBack()
 			releaseSky()
 			stopSignals()
@@ -277,6 +293,8 @@
 		{/if}
 	{/each}
 	<CrashScreen />
+	<!-- after the crash screen in the document, and under it in the top layer: the crash card stands over the lock -->
+	<LockScreen />
 </UiKitProvider>
 
 <style>
