@@ -3,6 +3,9 @@
 
 use std::cell::Cell;
 use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::sync::mpsc;
+use std::thread;
+use std::time::Duration;
 
 use pdf_extract::{Document, PlainTextOutput};
 
@@ -28,12 +31,33 @@ pub fn reading() -> bool {
     READING.with(Cell::get)
 }
 
-/// The text layer of `bytes`, page by page. Never panics.
+/// How long the text layer may take before it counts as missing. A PDF whose streams inflate to gigabytes, or whose
+/// object graph is a maze, is given up on here; the library has no cap of its own on decoded size.
+const DEADLINE: Duration = Duration::from_secs(20);
+/// The stack of the thread the library runs on: deeper than a blocking pool thread's, so a deeply nested document
+/// is less likely to overflow it, and fixed, so the bound is known.
+const STACK_BYTES: usize = 16 * 1024 * 1024;
+
+/// The text layer of `bytes`, page by page, read on a thread of its own and given up after `DEADLINE`. Never panics.
+/// A read given up on keeps its thread until the library returns, and its answer is dropped.
 pub fn text_layer(bytes: &[u8]) -> TextLayer {
-    READING.with(|flag| flag.set(true));
-    let layer = catch_unwind(AssertUnwindSafe(|| pages(bytes))).unwrap_or(TextLayer::Missing);
-    READING.with(|flag| flag.set(false));
-    layer
+    let owned = bytes.to_vec();
+    let (send, receive) = mpsc::channel();
+    let spawned = thread::Builder::new()
+        .name("eden-pdf-text".into())
+        .stack_size(STACK_BYTES)
+        .spawn(move || {
+            READING.with(|flag| flag.set(true));
+            let layer =
+                catch_unwind(AssertUnwindSafe(|| pages(&owned))).unwrap_or(TextLayer::Missing);
+            READING.with(|flag| flag.set(false));
+            // The reader may have given up; nothing waits for this answer then.
+            let _ = send.send(layer);
+        });
+    if spawned.is_err() {
+        return TextLayer::Missing;
+    }
+    receive.recv_timeout(DEADLINE).unwrap_or(TextLayer::Missing)
 }
 
 fn pages(bytes: &[u8]) -> TextLayer {
