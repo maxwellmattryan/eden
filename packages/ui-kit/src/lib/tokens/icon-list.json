@@ -132,7 +132,21 @@
 		"ticket",
 		"calendar-plus",
 		"clipboard-paste",
-		"wine-off"
+		"wine-off",
+		"shopping-bag",
+		"arrow-left-right",
+		"credit-card",
+		"receipt",
+		"banknote",
+		"percent",
+		"coins",
+		"hand-coins",
+		"trending-up",
+		"trending-down",
+		"landmark",
+		"funnel",
+		"scan-text",
+		"piggy-bank"
 	],
 	"custom": {
 		"seed": [
