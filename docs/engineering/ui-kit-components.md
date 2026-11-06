@@ -4,7 +4,7 @@ status: draft
 summary: The contract for every component in `@eden/ui-kit`: purpose, props with the bindable ones marked, callbacks, snippets, platform behaviour and the stories each ships, grouped by the wave it is built in.
 read-this-if: You are building, changing or consuming a kit component.
 depends-on: [engineering/ui-kit, design/ux-patterns]
-updated: 2026-10-31
+updated: 2026-11-06
 ---
 
 ## How to read this
