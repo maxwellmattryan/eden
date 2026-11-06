@@ -162,7 +162,7 @@ Signals, each `finance.<id>`:
 
 | signal | when | emitted from |
 |---|---|---|
-| `link-broken` | a provider link needs reconnecting | #73 |
+| `link-broken` | a provider link needs reconnecting (`reason: 'needs-reauth'`), or its consent ends within seven days (`reason: 'expiring'`, `by` the day); payload `{ uris: [link uri], institution, reason, by?, byDay? }`, keyed `<link>:needs-reauth:<lastSyncedAt>` and `<link>:expiring:<consentExpiresAt>`; built | #73 |
 | `bill-due` | a bill enters Due soon | #78 |
 | `bill-overdue` | a bill's due date passes unpaid | #78 |
 | `flag` | a new fee, interest charged, a duplicate or an unusual amount | #90 |
@@ -173,7 +173,7 @@ Signals, each `finance.<id>`:
 
 | notification | channel | cadence | default |
 |---|---|---|---|
-| a link needs reconnecting | in-app | when found | on |
+| a link needs reconnecting (`link-needs-reconnecting`, built: "Chase needs you to sign in again", "Chase asks you to sign in again by Mon 2 Nov"; the warning glyph, Open goes to Accounts) | in-app | when found | on |
 | a bill due soon | in-app, and its Task in Today | when it enters Due soon | on |
 | a bill overdue | in-app | once, the day after | on |
 | a flag or a price rise | in-app | when found | on |
@@ -181,7 +181,7 @@ Signals, each `finance.<id>`:
 | a low balance ahead | in-app | when the forecast changes | on |
 | the weekly digest | in-app | weekly | off until the finance grant (#90) |
 
-Schedules: `sync` hourly while Eden runs and when it opens (D-183, #73), `value` daily for prices (#76), `digest` weekly (#90).
+Schedules: `sync` hourly while Eden runs and when it opens (D-183; built in #73, `every: 3600`, with the one-shots `finance.retry` and `finance.revoke`, D-192), `value` daily for prices (#76), `digest` weekly (#90).
 
 Intents handled and sent: none yet.
 
@@ -199,6 +199,18 @@ Intents handled and sent: none yet.
 | SimpleFIN | later, behind the provider seam | | |
 
 Every call is made from Rust and counted in the egress ledger; the webview only ever sees a short-lived Link token. The crate's provider seam is one trait (link, sync accounts, sync transactions by cursor, liabilities, holdings, revoke), so Orchard above never knows which provider a row came from.
+
+### Plaid on the desktop (#73, D-192)
+
+- **Where.** The desktop under Tauri binds Plaid (`bindPlaid`, `packages/shared/src/domains/finance/plaid.svelte.ts`); the phone binds nothing until #89, and `yarn dev:web` has no crate, so `plaidStatus()` answers nothing there. The crate is `src-tauri/src/domains/finance/` (`plaid.rs` the client over a `Transport`, `provider.rs` the shapes, `mod.rs` the commands `plaid_status`, `plaid_set_keys`, `plaid_clear_keys`, `plaid_link_start`, `plaid_link_poll`, `plaid_sync`, `plaid_revoke`, `plaid_sandbox_reset_login`).
+- **Environment per build.** `production` uses `https://production.plaid.com` and the production secret; `development` and `staging` use `https://sandbox.plaid.com` and the Sandbox secret. Nothing switches it. `plaid_sandbox_reset_login` (the Sandbox's "Ask to sign in again") is refused in a production build.
+- **Keys and tokens** (T3, per device, D-184), in the secret store: `plaid-client-id`, `plaid-secret-sandbox`, `plaid-secret-production`, `plaid-user-id` (the device's random `client_user_id`) and `plaid-item-<link id, lowercased>` for each access token. Keys are tried against `/institutions/get` and stored only if Plaid accepts them. The webview gets a link token, the hosted page's URL and whether keys exist; the public token never leaves the crate.
+- **Link.** Hosted Link in the system browser for every bank, Chase's OAuth included. `/link/token/create` asks for `products: ["transactions"]`, `additional_consented_products: ["liabilities", "investments"]`, `transactions.days_requested: 730` (D-187), `country_codes: ["US"]` and `hosted_link.completion_redirect_uri` set to `PLAID_REDIRECT_URI` (`https://eden.palekodama.studio/plaid/oauth`); `redirect_uri` is left out, since Hosted Link handles the OAuth return on Plaid's side (if the Sandbox OAuth bank refuses a hosted session without one, set it to the same constant and say so here). Update mode (Reconnect) sends the link's own `access_token` and no products, so the Item, the row and the accounts stay the same. The sheet polls `/link/token/get` through the crate every 3 s for up to 30 minutes; closing it does not end the session. A finished session is exchanged in the crate, which reads `/item/get`, `/institutions/get_by_id` with optional metadata (the colour and the logo) and `/accounts/get`; a failed read removes the new Item again.
+- **Sync** (D-183): on launch, hourly through `finance.sync`, and on retries, one link after another, one run at a time. Each run asks, per link, `/item/get` (status and consent), `/accounts/get` (cached balances) and `/transactions/sync` from the cursor, 500 a page while `has_more`, restarting from the run's first cursor on `TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION` at most three times. Never `/accounts/balance/get` or a paid refresh. Amounts cross as decimal strings and become Money through `parseMoney(text, currency, 'en')`; one with more decimals than its currency is skipped (`finance:bad-amount`), as is a balance with no ISO currency (`finance:unsupported-currency`).
+- **What a run writes** (`sync.ts`): a new account per unseen Plaid account (kind from `kindOf`, the mask as `last4` when it is four digits, share 100%), name and last four kept current, a moved balance or the day's first through `balanceOps`; a closed account is never reopened and one Plaid stops reporting is left alone. Transactions are ordinary `transaction` rows with `source: 'plaid'` and `externalId` the `transaction_id`, upserted (a replay changes nothing), their amount negated (money out is negative); a modify overwrites only Plaid's keys and keeps the rest; a removed one is tombstoned; a posted one takes the pending row's other keys. The link's `status: 'ok'`, `lastSyncedAt`, `failures: 0`, `consentExpiresAt` and the cursor go in the last batch, so a run cut short replays from the old cursor.
+- **Failures.** `needs-reauth` (`ITEM_LOGIN_REQUIRED`, `PENDING_DISCONNECT`, `PENDING_EXPIRATION`, `INVALID_ACCESS_TOKEN`, an ended consent) at once; any other failure keeps the data and adds to `failures`, `error` from the third in a row; retries at 1, 5, 15 and 30 minutes (`finance.retry`), then the hourly run. `lastErrorCode` holds the code. The codes: `needs-reauth`, `invalid-keys`, `rate-limited`, `institution-down`, `provider-down`, `network`, `other`, `no-keys`, `not-found`. With no keys a run does nothing.
+- **Remove link** sets `finance.revoke` two minutes out; it and the start of each run call `/item/remove` for every tombstoned Plaid link that still has a token here, then delete the token (`ITEM_NOT_FOUND` counts as done). A link Undo brought back is live and left alone.
+- **Egress and logs.** Every request is counted under `plaid`. Logs carry codes and Plaid's `request_id`, never a body, a name, an amount or a token; the redaction also scrubs `link_token`, `client_id` and bare Plaid token shapes.
 
 ### Freshness and history
 
@@ -221,7 +233,7 @@ Open: none.
 
 ## Registry rows
 
-Under Orchard, live since #71 added the manifest (`packages/shared/src/domains/finance/manifest.json`), built ahead of its phase like Meadow (D-130), except the kind `bill-due`, whose row carries Phase 2 and waits on Almanac (D-186). Its export carries `account`, `balance-snapshot` and `asset`, never `provider-link`, which is this device's (D-184, D-191). The rows: fact `monthly-income-band` T2; entities `provider-link` T2, `account` T2, `file-import` T2, `balance-snapshot` T2, `transaction` T2, `budget-category` T1, `category-rule` T2, `merchant` T2, `money-rollup` T2, `bill` T2, `recurring-charge` T2, `budget` T2, `liability` T2, `holding` T2, `security` T0, `asset` T2, `income-source` T2, `savings-goal` T2, `contribution-limit` T0, `spending-watch` T2; kind `bill-due` (event, T2). The stub's `savings-goal` fact is now an entity and its attachment kind is gone (D-189).
+Under Orchard, live since #71 added the manifest (`packages/shared/src/domains/finance/manifest.json`), built ahead of its phase like Meadow (D-130), except the kind `bill-due`, whose row carries Phase 2 and waits on Almanac (D-186). Its export carries `account`, `balance-snapshot`, `asset` and `transaction` (#73), never `provider-link`, which is this device's (D-184, D-191). The rows: fact `monthly-income-band` T2; entities `provider-link` T2, `account` T2, `file-import` T2, `balance-snapshot` T2, `transaction` T2, `budget-category` T1, `category-rule` T2, `merchant` T2, `money-rollup` T2, `bill` T2, `recurring-charge` T2, `budget` T2, `liability` T2, `holding` T2, `security` T0, `asset` T2, `income-source` T2, `savings-goal` T2, `contribution-limit` T0, `spending-watch` T2; kind `bill-due` (event, T2). The stub's `savings-goal` fact is now an entity and its attachment kind is gone (D-189).
 
 ## Handoffs
 
@@ -273,3 +285,11 @@ From #71:
 - #68 masks what `formatMoney` writes; every figure on the page goes through it.
 - #69 adds `extras` (the readable export) to `financeLogic` and the log check; the store already logs error codes only.
 - #89: the page is already mounted on the phone (More → Orchard), with manual accounts and assets.
+
+From #73:
+
+- #89 uses `PLAID_REDIRECT_URI` (`src-tauri/src/domains/finance/plaid.rs`) as the embedded iOS sheet's `redirect_uri`, and the `applinks:eden.palekodama.studio` entitlement now in `src-tauri/gen/apple/eden-app_iOS/eden-app_iOS.entitlements`; the phone calls `bindPlaid` once its own Link sheet exists. The ad-hoc provisioning profile must be regenerated with Associated Domains before the next iOS build signs.
+- #76 and #86 call Investments and Liabilities on the consented Items (`additional_consented_products`), with no relink; #76 handles investments-only institutions, which cannot be linked yet since every link asks for Transactions.
+- #75 owns the transaction keys that are not Plaid's (anything but `amount`, `day`, `authorizedDay`, `datetime`, `name`, `merchantName`, `pending`, `providerCategory`); a sync keeps them on modify and carries them from a pending row to its posted one.
+- #74 matches imported rows against `transaction` rows with `source: 'plaid'`, found by `queryEntities({ type, source, externalIds })`.
+- Money stays in TypeScript: the crate passes decimal strings, so no Rust Money port was needed (the #71 handoff above is dropped).
