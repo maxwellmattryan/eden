@@ -386,7 +386,18 @@ impl<T: Transport> Plaid<T> {
         let Some(access_token) = text(&exchanged["access_token"]) else {
             return Err(refused("other", "no access token in the answer"));
         };
-        secrets.set(&item_secret(link_id), &access_token)?;
+        if let Err(e) = secrets.set(&item_secret(link_id), &access_token) {
+            // no token stored means no later revoke could find it: remove the Item with the token in hand
+            let removed = self
+                .raw("/item/remove", json!({ "access_token": access_token }))
+                .await;
+            if !matches!(removed, Ok(Ok(_))) {
+                log::warn!(
+                    "Plaid: a new Item whose token could not be stored could not be removed"
+                );
+            }
+            return Err(e);
+        }
         match self.read_link(&access_token, link_id).await {
             Ok(link) => Ok(link),
             Err(e) => {
@@ -657,6 +668,21 @@ mod tests {
         }
         fn delete(&self, name: &str) -> Result<bool> {
             Ok(self.0.lock().unwrap().remove(name).is_some())
+        }
+    }
+
+    /// A store that refuses every write, as a locked keychain does.
+    struct Locked;
+
+    impl SecretStore for Locked {
+        fn get(&self, _: &str) -> Result<Option<String>> {
+            Ok(None)
+        }
+        fn set(&self, _: &str, _: &str) -> Result<()> {
+            Err(EdenError::Refused("locked".into()))
+        }
+        fn delete(&self, _: &str) -> Result<bool> {
+            Ok(false)
         }
     }
 
@@ -988,6 +1014,24 @@ mod tests {
             sent[2].1["options"]["include_optional_metadata"],
             json!(true)
         );
+
+        // A token that can't be stored: the Item is removed at once with it, and nothing is read.
+        let script = Script::new(vec![
+            (
+                "/item/public_token/exchange",
+                200,
+                json!({ "access_token": "access-sandbox-7", "item_id": "item-2", "request_id": "r" }),
+            ),
+            ("/item/remove", 200, json!({ "request_id": "r" })),
+        ]);
+        assert!(plaid(Env::Sandbox, &script)
+            .exchange_and_read(&Locked, "public-sandbox-5c23", "01JC8Z4Q5W6E7R8T9Y0A1B2C3E")
+            .await
+            .is_err());
+        let sent = script.sent();
+        assert_eq!(sent.len(), 2);
+        assert_eq!(sent[1].0, "/item/remove");
+        assert_eq!(sent[1].1["access_token"], "access-sandbox-7");
     }
 
     #[tokio::test]

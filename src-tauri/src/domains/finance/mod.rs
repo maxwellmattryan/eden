@@ -81,7 +81,8 @@ impl Transport for Http<'_> {
 }
 
 /// The finished Link sessions of this run, by link token, so a poll after the answer gets the same answer and a
-/// public token is never exchanged twice. Held across a poll, so polls run one at a time.
+/// public token is never exchanged twice. Held across a poll, so polls run one at a time. It only grows, one small
+/// entry per finished session, and is cleared on restart; a few links a year never make that worth pruning.
 #[derive(Default)]
 pub struct Sessions(tokio::sync::Mutex<HashMap<String, LinkPoll>>);
 
