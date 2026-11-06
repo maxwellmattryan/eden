@@ -4,7 +4,7 @@ status: draft
 summary: Every domain with its id, themed name in English and Japanese, subtitle, depth, phase and parent; what the statuses mean; how to add a domain.
 read-this-if: You are orienting on which domains exist or adding one.
 depends-on: [glossary, substrate/domain-manifest]
-updated: 2026-10-01
+updated: 2026-11-06
 ---
 
 ## The table
@@ -18,7 +18,7 @@ updated: 2026-10-01
 | `fitness` | Vigor | 活力 | Workouts, gyms, body metrics | full | 2 | (health, later) |
 | `spirit` | Sanctuary | 聖域 | Reflection, readings, values | full | 2 | |
 | `places` | Meadow | 野原 | Places and events near you | full | 3, built ahead of it | |
-| `finance` | Orchard | 果樹園 | Money, budgets, assets | stub | after 2 | |
+| `finance` | Orchard | 果樹園 | Money, budgets, assets | full | after 2, built ahead of it (D-182) | |
 | `health` | Wellspring | 泉 | Medical, meds, care | stub | after 2 | |
 | `people` | Companions | 仲間 | Relationships | candidate | 3+ | |
 | `journal` | Rings | 年輪 | Daily reflection and mood | candidate | 3+ | |
