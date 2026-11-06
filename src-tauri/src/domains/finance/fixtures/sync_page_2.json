@@ -1,0 +1,24 @@
+{
+	"added": [
+		{
+			"account_id": "acc-checking",
+			"amount": 4.5,
+			"iso_currency_code": "USD",
+			"unofficial_currency_code": null,
+			"date": "2026-11-05",
+			"authorized_date": "2026-11-03",
+			"datetime": null,
+			"name": "Blue Bottle Coffee",
+			"merchant_name": "Blue Bottle",
+			"pending": false,
+			"pending_transaction_id": "t1",
+			"personal_finance_category": { "primary": "FOOD_AND_DRINK", "detailed": "FOOD_AND_DRINK_COFFEE" },
+			"transaction_id": "t3"
+		}
+	],
+	"modified": [],
+	"removed": [{ "account_id": "acc-checking", "transaction_id": "t-old" }],
+	"next_cursor": "c2",
+	"has_more": false,
+	"request_id": "Wvhy9"
+}
