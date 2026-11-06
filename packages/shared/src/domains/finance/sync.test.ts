@@ -11,7 +11,9 @@ import {
 	linkAfterFailure,
 	linkAfterSync,
 	linkSignal,
+	linksToRevoke,
 	PLAID_SOURCE,
+	REVOKE_AFTER,
 	retryDelay,
 	syncOps,
 } from './sync.js'
@@ -377,6 +379,25 @@ describe('finance sync', () => {
 		]
 		for (const [link, expected] of cases)
 			expect(linkSignal(link, now), `${link.status} ${link.consentExpiresAt}`).toEqual(expected)
+	})
+
+	it('revokes a removed link only once its undo has passed', () => {
+		const now = Date.parse(NOW)
+		const ago = (ms: number) => new Date(now - ms).toISOString()
+		const row = (id: string, deletedAt: string | null, provider = 'plaid') => ({
+			id,
+			deletedAt,
+			payload: { provider },
+		})
+		const rows = [
+			row('live', null),
+			row('just-removed', ago(30 * 1000)),
+			row('almost', ago(REVOKE_AFTER - 1)),
+			row('due', ago(REVOKE_AFTER)),
+			row('long-gone', ago(3 * HOUR)),
+			row('manual', ago(3 * HOUR), 'manual'),
+		]
+		expect(linksToRevoke(rows, now)).toEqual(['due', 'long-gone'])
 	})
 })
 

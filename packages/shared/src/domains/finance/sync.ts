@@ -288,6 +288,24 @@ export function retryDelay(failures: number): number | undefined {
 	return failures >= 1 ? RETRIES[failures - 1] : undefined
 }
 
+/** How long after a removal its Item is revoked: past the page's undo toast. */
+export const REVOKE_AFTER = 2 * MINUTE
+
+/**
+ * The removed Plaid links whose undo has passed, to revoke. A link removed less than `REVOKE_AFTER` ago is left for a
+ * later run, so its Undo still brings back a link with a token; a link Undo brought back is live and never named.
+ */
+export function linksToRevoke(
+	rows: readonly Pick<Entity<{ provider: string }>, 'id' | 'deletedAt' | 'payload'>[],
+	now: number
+): string[] {
+	return rows
+		.filter(
+			(row) => row.deletedAt && row.payload.provider === 'plaid' && now - Date.parse(row.deletedAt) >= REVOKE_AFTER
+		)
+		.map((row) => row.id)
+}
+
 export interface LinkSignal {
 	reason: 'needs-reauth' | 'expiring'
 	dedupeKey: string
@@ -344,7 +362,8 @@ export function syncOps(input: SyncInput): {
 	const accounts = accountOps(link, input.accounts, result.accounts, nowIso, day, newId)
 	const transactions = transactionOps(accounts.byProviderId, input.existing, result, newId)
 	const next = linkAfterSync(link, result, nowIso)
-	// a run that moved nothing, the link included, writes nothing
+	// the link is written whenever it moved; `lastSyncedAt` moves on every live run (freshness is stored), so only a
+	// replay at the same instant writes nothing
 	const write: BatchOp | undefined = same(payloadOf(next), payloadOf(link))
 		? undefined
 		: { op: 'updateEntity', id: next.id, payload: payloadOf(next) }

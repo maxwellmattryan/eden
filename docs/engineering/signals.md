@@ -196,7 +196,7 @@ Here the key alone is not enough, since what must happen once a week is the requ
 |---|---|---|
 | `finance.sync`, every hour, and once when the shell starts | syncs every live Plaid link, one after another; a run asked for while one is going joins it | – |
 | `finance.retry`, a one-shot 1, 5, 15 or 30 minutes after a failed run | the same run | – |
-| `finance.revoke`, a one-shot two minutes after a link is removed | removes each tombstoned Plaid link's Item at Plaid and its token here | – |
+| `finance.revoke`, a one-shot two minutes after a link is removed | for each Plaid link tombstoned at least two minutes ago, removes its Item at Plaid and its token here | – |
 | after each run of a link | emits `finance.link-broken` when it turned `needs-reauth` (keyed `<link>:needs-reauth:<lastSyncedAt>`) or its consent ends within seven days (keyed `<link>:expiring:<consentExpiresAt>`) | `link-needs-reconnecting`, in-app; its card carries the warning glyph |
 
 **Tasks** (`packages/shared/src/tasks/signals.ts`, with the pure part, `taskSignal`, in `rules.ts`). The data layer emits nothing for a task (D-75): the crate cannot see a routine's or a habit's completion, which lives in `progress`, and cannot evaluate the rules. So the frontend emits, once the write has landed, one signal per owner action:

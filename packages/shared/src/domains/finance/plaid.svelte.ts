@@ -39,7 +39,9 @@ import {
 	idsToRead,
 	linkAfterFailure,
 	linkSignal,
+	linksToRevoke,
 	PLAID_SOURCE,
+	REVOKE_AFTER,
 	retryDelay,
 	syncOps,
 	type Skipped,
@@ -60,8 +62,6 @@ const MINUTE = 60 * SECOND
 const POLL_MS = 3 * SECOND
 /** How long a session waits for the owner before its page has expired. */
 const SESSION_MS = 30 * MINUTE
-/** How long after a removal the Item is revoked: past the undo toast. */
-const REVOKE_AFTER_MS = 2 * MINUTE
 
 export type SessionState = 'starting' | 'waiting' | 'reading' | 'linked' | 'cancelled' | 'expired' | 'error'
 
@@ -307,7 +307,10 @@ async function run() {
 		const next = finance.links.find((link) => link.provider === 'plaid' && !done.has(link.id))
 		if (!next) break
 		done.add(next.id)
-		await syncLink($state.snapshot(next) as ProviderLink)
+		// a link whose failure could not be written is logged, and the run goes on to the next
+		await syncLink($state.snapshot(next) as ProviderLink).catch((error: unknown) =>
+			report('A bank sync could not be recorded', plaidErrorCode(error))
+		)
 	}
 }
 
@@ -381,13 +384,12 @@ async function signal(link: ProviderLink) {
 	)
 }
 
-/** Revokes every tombstoned Plaid link that still has a token here; a link Undo brought back is live and left alone. */
+/** Revokes every Plaid link removed longer ago than its undo; a younger one waits, so its Undo stays true. */
 async function revokeRemoved() {
 	const rows = await queryEntities<ProviderLinkPayload>({ type: FINANCE.link, includeDeleted: true }).catch(() => [])
-	for (const row of rows) {
-		if (!row.deletedAt || row.payload.provider !== 'plaid') continue
+	for (const id of linksToRevoke(rows, Date.now())) {
 		try {
-			await plaidRevoke(row.id)
+			await plaidRevoke(id)
 		} catch (error) {
 			report('A bank link could not be revoked', plaidErrorCode(error))
 		}
@@ -417,7 +419,7 @@ export const plaidProvider: FinanceProvider = {
 		void startSession('reconnect', linkId)
 	},
 	async revoke() {
-		await setSchedule(REVOKE_SCHEDULE, Date.now() + REVOKE_AFTER_MS)
+		await setSchedule(REVOKE_SCHEDULE, Date.now() + REVOKE_AFTER)
 	},
 	credentials() {
 		plaid.thenLink = false
