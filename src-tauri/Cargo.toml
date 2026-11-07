@@ -79,6 +79,9 @@ argon2 = "0.5"
 zeroize = "1"
 # The redaction every log line and diagnostics entry passes through (services/redact.rs); already in the tree.
 regex = "1"
+# The document reader's text layer (domains/finance/pdf_text.rs, D-190): pure Rust over lopdf, so every target reads a
+# PDF's text the same way and nothing is linked from the system.
+pdf-extract = "0.12"
 # The Gardener's one provider call (docs/engineering/gardener.md, D-76): the same reqwest and rustls the desktop
 # updater brings, with the same features, so mobile has them too and no second TLS stack is built. The crate installs
 # the ring provider once at setup; `rustls-no-provider` leaves that to it.

@@ -154,6 +154,17 @@ Expected (an EOB or an estimate) → Upcoming (a letter, rent, a card statement)
 
 **Quick actions and palette**: none specced yet; #83 and #87 decide them. **Capture sources**: a dropped or photographed document into the read-and-confirm sheet (#72); a CSV, OFX or PDF statement into the import (#74).
 
+### The document reader (#72)
+
+Built once for bills (#78) and statement import (#74), which only mount it. It follows D-190: a document is read on the device, its numbers are masked there, and only the text the owner confirms, or the picture they choose to send, leaves the sheet. It stores the file's fingerprint nowhere itself (D-189).
+
+- **What reads where.** The crate command `read_document` (`src-tauri/src/domains/finance/`) takes one file's bytes, with its type in the header `x-eden-mime`. It makes no network call, writes no file and logs none of the text: a failure is logged by its code only. A PDF's text layer is read on every platform (`pdf-extract`). A scan, or a text layer averaging under 20 letters a page, is rendered and recognised, up to 20 pages. So is a photo (JPEG, PNG, WebP; EXIF orientation applied). On macOS and iOS that is Vision through `swift/EdenTextReader`, and on Android ML Kit's bundled Latin model through the staged `android/EdenTextReader.kt`. Windows, Linux and the browser build have no recogniser, so a photo or a scan there is `unavailable`. A panic in the PDF library counts as no text layer, and the crash hook names no detail of it.
+- **Masking**, in the crate, before the webview sees anything. A run becomes `••••` and its last four letters or digits, and the read counts the runs. The labelled rule takes a value after account, acct, a/c, policy, member, subscriber, customer, card, group or meter (with number, no., #, id). The value needs a digit and 5 or more letters and digits. The unlabelled rule takes any digit run of 9 or more, except an amount, a date or a time, a phone number or a ZIP+4; a `.`, `,` or `:` makes a run an amount or a time only with a digit beyond it, so a sentence's full stop or `SSN:` does not. The rules match on a copy where every Unicode space is a space, every Unicode dash a hyphen and every full-width character its ASCII twin, so a no-break space, a thin space, an en dash or full-width digits never split a number. An issuer's own `XXXX1234` is left as it is. The rules and their table test are in `mask.rs`.
+- **Quality and failures.** A read is `poor` with fewer than 40 letters, a recognised confidence under 0.6, or a text layer more than 2 % unreadable glyphs. The failures are data: `unsupported` (HEIC too), `too-large` (the caps of `gardener/attachment-limits.ts`), `locked`, `no-text`, `unavailable`.
+- **The sheet** is the kit's `DocumentSheet` (`engineering/ui-kit-components.md`). Its states are Collect (one document at a time), Reading, Read, Read badly (the picture becomes the primary button), Could not read (`no-text` and `unavailable` offer the picture, the others only Cancel) and Already imported (Close only). The `Domains/Orchard/ReadConfirm` mock renders through it.
+- **The session** is `documentRead` in `@eden/shared/domains/finance`. A caller awaits `documentRead.read({ confirmLabel, next, known?, preview? })`. The result is `{ kind: 'text', text, fingerprint, name, mime }` on confirm, with the text as edited, or `{ kind: 'picture', bytes, fingerprint, name, mime }`, or `undefined` for Cancel, Close or a dismissed sheet. The fingerprint is the SHA-256 hex of the bytes, worked out first. `known(fingerprint)` answering `{ day, detail }` goes straight to Already imported. The bytes are held in memory and let go when the session settles, and a read that answers after Cancel is dropped.
+- **Mounting it** (#78, #74). The view binds `DocumentSheet` to the session field for field: `bind:open={documentRead.open}`, then `phase`, `quality`, `failure`, `file`, `bind:text={documentRead.text}`, `masked`, `pages` and `imported`. `confirmLabel` and `next` come from `documentRead.options`, and the provider line is worked out from `options.preview` as `domains/kitchen/words.ts` `readerOf` does. The callbacks map as `onfiles` to `take`, `onconfirm` to `confirm`, `onsendpicture` to `sendPicture`, and `oncancel` and `onclose` to `cancel`.
+
 ## 7. Kinds, signals, notifications, intents
 
 Kinds: `bill-due` (event, T2), once Almanac exists (D-186). Orchard registers no attachment kind (D-189).
@@ -285,6 +296,12 @@ From #71:
 - #68 masks what `formatMoney` writes; every figure on the page goes through it.
 - #69 adds `extras` (the readable export) to `financeLogic` and the log check; the store already logs error codes only.
 - #89: the page is already mounted on the phone (More → Orchard), with manual accounts and assets.
+
+From #72:
+
+- Bills (#78) mount `DocumentSheet` over `documentRead` (§6, "The document reader"). A `picture` choice becomes in-memory `ToolFiles` for the tool run, as `domains/kitchen/staging.svelte.ts` `files()` builds them from bytes, and the fingerprint is stored as a `file-import` so the next read of the same file is Already imported. On desktop that request runs as a page's tool run, which carries `--no-session-persistence` (D-190).
+- Statement import (#74) does the same for a PDF statement, with its own `confirmLabel` and `next`, and the same `file-import` fingerprint.
+- Left open by #72: Japanese recognition on Android (ML Kit's Japanese model), recognition on Windows (`Windows.Media.Ocr`), HEIC input, a rotated PDF page, which Vision reads as drawn, and Japanese labels for the labelled masking rule (口座番号, 証券番号, 会員番号): a Japanese number of 9 digits or more is masked by the unlabelled rule, a shorter one is not. A labelled value on the line after its label is not taken by the labelled rule either. The Android reader has been compiled but never run, and the data layer's Android checklist installs it.
 
 From #73:
 

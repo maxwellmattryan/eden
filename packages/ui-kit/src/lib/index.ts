@@ -171,6 +171,14 @@ export {
 	type CapturePhase,
 	type CaptureRow,
 } from './components/CaptureSheet/CaptureSheet.svelte'
+export { default as DocumentSheet } from './components/DocumentSheet/DocumentSheet.svelte'
+export {
+	DOCUMENT_ACCEPT,
+	type DocumentFailure,
+	type DocumentFile,
+	type DocumentPhase,
+	type DocumentQuality,
+} from './components/DocumentSheet/DocumentSheet.svelte'
 
 // Navigation
 export { default as SidebarItem } from './components/SidebarItem/SidebarItem.svelte'

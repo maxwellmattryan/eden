@@ -66,7 +66,7 @@
 	play={async ({ canvasElement, args }) => {
 		if (!hasCanvas(canvasElement)) return
 		const pane = await sheet(canvasElement)
-		const text = pane.getByRole('textbox', { name: 'Text read from the letter' })
+		const text = pane.getByRole('textbox', { name: 'Text read from the document' })
 		await waitFor(() => expect(text).toBeVisible())
 		await expect((text as HTMLTextAreaElement).value).toContain('Account number: ••••7781')
 		await expect(pane.getByText('2 numbers masked to their last four digits')).toBeVisible()
@@ -87,7 +87,7 @@
 	play={async ({ canvasElement }) => {
 		if (!hasCanvas(canvasElement)) return
 		const pane = await sheet(canvasElement)
-		await waitFor(() => expect(pane.getByText(/^Parts of this letter read badly/)).toBeVisible())
+		await waitFor(() => expect(pane.getByText(/^Parts of this document read badly/)).toBeVisible())
 		await expect(pane.getByRole('button', { name: 'Send the picture instead' })).toHaveClass('ed-btn-primary')
 		await expect(pane.getByRole('button', { name: 'Draft the bill' })).toHaveClass('ed-btn-secondary')
 	}}
@@ -101,7 +101,7 @@
 	play={async ({ canvasElement, args }) => {
 		if (!hasCanvas(canvasElement)) return
 		const pane = await sheet(canvasElement)
-		await waitFor(() => expect(pane.getByText('You read this letter on Tue 22 Sep')).toBeVisible())
+		await waitFor(() => expect(pane.getByText('You read this document on Tue 22 Sep')).toBeVisible())
 		await expect(pane.getByText('It made the Austin Energy bill for September.')).toBeVisible()
 		await expect(pane.queryByRole('button', { name: 'Draft the bill' })).toBeNull()
 		await userEvent.click(pane.getByRole('button', { name: 'Close' }))
