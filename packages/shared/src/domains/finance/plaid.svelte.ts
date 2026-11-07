@@ -303,15 +303,20 @@ async function run() {
 	// one at a time, and a link made while the run is going is synced in it too; the run's own note, never shown
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity
 	const done = new Set<string>()
+	let wrote = false
 	for (;;) {
 		const next = finance.links.find((link) => link.provider === 'plaid' && !done.has(link.id))
 		if (!next) break
 		done.add(next.id)
 		// a link whose failure could not be written is logged, and the run goes on to the next
-		await syncLink($state.snapshot(next) as ProviderLink).catch((error: unknown) =>
+		const changed = await syncLink($state.snapshot(next) as ProviderLink).catch((error: unknown) => {
 			report('A bank sync could not be recorded', plaidErrorCode(error))
-		)
+			return false
+		})
+		wrote ||= changed
 	}
+	// once every link is done, the rows that came get their kind, merchant and category (#75)
+	if (wrote) await finance.classify()
 }
 
 /** The live provider rows the result names, by provider id, read in lookups of `CHUNK`. */
@@ -334,28 +339,40 @@ function logSkipped(skipped: readonly Skipped[]) {
 	for (const code of new Set(skipped)) report('A row Plaid sent was skipped', code)
 }
 
-async function syncLink(link: ProviderLink) {
+/** One link's run. Answers whether it wrote transactions, so the run classifies them once every link is done. */
+async function syncLink(link: ProviderLink): Promise<boolean> {
 	try {
 		const result = await plaidSync(link.id, link.cursor)
-		if (result.status === 'needs-reauth') return await failed(link, 'needs-reauth')
-		const existing = await existingRows(idsToRead(result))
-		const out = syncOps({
-			link,
-			accounts: finance.data().accounts,
-			existing,
-			result,
-			nowIso: nowIso(),
-			day: todayIso(),
-			newId,
+		if (result.status === 'needs-reauth') {
+			await failed(link, 'needs-reauth')
+			return false
+		}
+		const made: { out?: ReturnType<typeof syncOps> } = {}
+		// the read and the write in one queue job, so an owner's fix cannot land between them and be overwritten
+		const written = await finance.applySync(async () => {
+			const existing = await existingRows(idsToRead(result))
+			const out = (made.out = syncOps({
+				link,
+				accounts: finance.data().accounts,
+				existing,
+				result,
+				nowIso: nowIso(),
+				day: todayIso(),
+				newId,
+			}))
+			return { chunks: out.chunks, links: [out.link], accounts: out.accounts }
 		})
-		logSkipped(out.skipped)
-		await finance.applySync(out.chunks, { links: [out.link], accounts: out.accounts })
-		await signal(out.link)
+		if (made.out) {
+			logSkipped(made.out.skipped)
+			await signal(made.out.link)
+		}
+		return written && result.added.length + result.modified.length + result.removed.length > 0
 	} catch (error) {
 		const code = plaidErrorCode(error)
 		// the keys went while the run was going: nothing to write
-		if (code === 'no-keys') return
+		if (code === 'no-keys') return false
 		await failed(link, code)
+		return false
 	}
 }
 

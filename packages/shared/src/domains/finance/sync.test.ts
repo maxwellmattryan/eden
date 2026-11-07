@@ -4,6 +4,8 @@ import { createEngine, type EngineStorage } from '../../data/engine.js'
 import type { Entity } from '../../data/index.js'
 import { createIdGenerator } from '../../data/ulid.js'
 import { payloadOf } from './accounts.js'
+import { classifyPass } from './classify.js'
+import { recategoriseOps, reimbursableOps, repaymentOps, splitOps } from './edits.js'
 import {
 	CHUNK,
 	idsToRead,
@@ -22,7 +24,10 @@ import {
 	WHOLE,
 	type Account,
 	type AccountPayload,
+	type CategoryPayload,
+	type MerchantPayload,
 	type ProviderLink,
+	type RulePayload,
 	type SnapshotPayload,
 	type TransactionPayload,
 } from './types.js'
@@ -293,6 +298,80 @@ describe('finance sync', () => {
 		).toBe(before)
 	})
 
+	it('a posted row replaces its pending one with the owner keys and pointers', () => {
+		const { engine, newId } = setup()
+		const accounts = [
+			account({ providerAccountId: 'acc-checking' }),
+			account({ providerAccountId: 'acc-savings', subtype: 'savings' }),
+		]
+		run(
+			engine,
+			newId,
+			result({
+				accounts,
+				added: [
+					tx({ id: 'p1', amount: '100', pending: true, name: 'REI #12' }),
+					tx({ id: 'p2', amount: '500', pending: true, category: 'TRANSFER_OUT_SAVINGS' }),
+					tx({ id: 's1', amount: '-500', providerAccountId: 'acc-savings', category: 'TRANSFER_IN_SAVINGS' }),
+					tx({ id: 'v1', amount: '-30', name: 'VENMO PAYMENT ANA LEE', date: '2026-11-05' }),
+				],
+			})
+		)
+		classify(engine, newId)
+		const byExternal = (id: string) => transactionsOf(engine).find((row) => row.externalId === id)!
+		const category = (key: string) =>
+			engine.queryEntities<CategoryPayload>({ type: FINANCE.category }).find((row) => row.payload.key === key)!.id
+		expect(byExternal('p2').payload.transferId).toBe(byExternal('s1').id)
+
+		// the owner's keys on the pending row: a category, a split, a reimbursable part, and a repayment for it
+		const usd = (minor: number) => ({ minor, currency: 'USD' })
+		const ctx = { rows: [], merchants: [], rules: [], newId, nowIso: NOW }
+		engine.applyBatch(recategoriseOps(byExternal('p1'), category('shopping'), false, ctx).ops)
+		const parts = [
+			{ amount: usd(-6000), categoryId: category('groceries') },
+			{ amount: usd(-4000), categoryId: category('home') },
+		]
+		for (const edit of [
+			() => splitOps(byExternal('p1'), parts),
+			() => reimbursableOps(byExternal('p1'), usd(9500)),
+			() => repaymentOps(byExternal('p1'), byExternal('v1')),
+		]) {
+			const made = edit()
+			if ('error' in made) throw new Error(made.error)
+			engine.applyBatch(made.ops)
+		}
+		const pending = { p1: byExternal('p1').id, p2: byExternal('p2').id }
+		expect(byExternal('v1').payload.repays).toBe(pending.p1)
+
+		// posted, the purchase for less, the transfer for the same
+		run(
+			engine,
+			newId,
+			result({
+				accounts,
+				added: [
+					tx({ id: 'q1', amount: '90', pendingTransactionId: 'p1', name: 'REI #12', date: '2026-11-05' }),
+					tx({ id: 'q2', amount: '500', pendingTransactionId: 'p2', category: 'TRANSFER_OUT_SAVINGS' }),
+				],
+				removed: ['p1', 'p2'],
+				cursor: 'c2',
+			})
+		)
+		classify(engine, newId)
+		const q1 = byExternal('q1')
+		expect(q1.payload).toMatchObject({
+			replaced: pending.p1,
+			categoryId: category('shopping'),
+			categoryBy: 'owner',
+			parts: [{ amount: usd(-5000) }, { amount: usd(-4000) }],
+			reimbursable: usd(9000),
+		})
+		expect(byExternal('q2').payload).toMatchObject({ replaced: pending.p2, transferId: byExternal('s1').id })
+		expect(byExternal('s1').payload.transferId).toBe(byExternal('q2').id)
+		expect(byExternal('v1').payload).toMatchObject({ repays: q1.id, kind: 'refund' })
+		expect(classify(engine, newId).ops).toEqual([])
+	})
+
 	it('applies a sync in batches of 500, the link last', () => {
 		const { engine, newId } = setup()
 		const added = Array.from({ length: CHUNK + 100 }, (_, index) => tx({ id: `t${index}`, amount: '1' }))
@@ -400,6 +479,21 @@ describe('finance sync', () => {
 		expect(linksToRevoke(rows, now)).toEqual(['due', 'long-gone'])
 	})
 })
+
+/** The classification pass over the engine, as the store's `classify()` runs it after a sync. */
+function classify(engine: Engine, newId: () => string) {
+	const out = classifyPass({
+		transactions: transactionsOf(engine),
+		categories: engine.queryEntities<CategoryPayload>({ type: FINANCE.category, includeDeleted: true }),
+		rules: engine.queryEntities<RulePayload>({ type: FINANCE.rule }),
+		merchants: engine.queryEntities<MerchantPayload>({ type: FINANCE.merchant }),
+		accounts: accountsOf(engine) as Account[],
+		name: (key) => key,
+		newId,
+	})
+	if (out.ops.length) engine.applyBatch(out.ops)
+	return out
+}
 
 function byProviderAfter(engine: Engine, id: string) {
 	return accountsOf(engine).find((entry) => entry.providerAccountId === id)!

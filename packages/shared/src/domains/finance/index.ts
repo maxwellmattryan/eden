@@ -3,13 +3,17 @@
 // same ones. The document reader (D-190) is here as well: its rules, the call into the crate and the session behind the
 // kit's `DocumentSheet`.
 export * from './accounts.js'
+export * from './categories.js'
+export * from './classify.js'
+export * from './edits.js'
+export * from './merchants.js'
 export * from './rows.js'
 export * from './sync.js'
 export * from './tabs.js'
 export * from './types.js'
 export * from './words.js'
 export { bindProvider, provider, type FinanceProvider } from './provider.svelte.js'
-export { finance, type AssetDraft } from './store.svelte.js'
+export { finance, type AssetDraft, type EditAnswer, type SyncChange } from './store.svelte.js'
 export {
 	READ_ACCEPT,
 	canSendPicture,
