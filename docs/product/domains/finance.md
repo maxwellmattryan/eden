@@ -63,6 +63,7 @@ D-188 is the model. What Orchard adds:
 - Plaid reports a currency per account, and a row takes its account's; a manual row asks for one, defaulting to the home currency.
 - A holding's or an asset's value is its quantity × the security's price, in the home currency once the price is.
 - Hide amounts (#68) masks every figure on both apps without changing what is stored.
+- Built in #71 (D-191): `@eden/shared/money` holds the type and its arithmetic, proven by `money.vectors.json`. A balance is kept as the bank states it and the kind (credit card, loan) says it is owed; a share is in basis points; a `balance-snapshot` is upserted per account per local day through the account's `lastSnapshot`, and the store never reads snapshots. The home currency is a setting a bundle carries; an account or asset in another stays out of totals and the page says so.
 
 ### Encryption (#69)
 
@@ -216,7 +217,7 @@ Freshness is D-183: a purchase shows within an hour of Plaid having it. History 
 
 ## 9. Settings
 
-- Home currency (D-188).
+- Home currency (D-188), built in #71 under Settings → General, default USD, carried by a bundle (D-191).
 - Plaid keys on this device (D-184).
 - Linked providers, each with reconnect and remove.
 - Hide amounts (#68).
@@ -231,7 +232,7 @@ Open: none.
 
 ## Registry rows
 
-Under Orchard, planned until #71 adds the manifest: fact `monthly-income-band` T2; entities `provider-link` T2, `account` T2, `file-import` T2, `balance-snapshot` T2, `transaction` T2, `budget-category` T1, `category-rule` T2, `merchant` T2, `money-rollup` T2, `bill` T2, `recurring-charge` T2, `budget` T2, `liability` T2, `holding` T2, `security` T0, `asset` T2, `income-source` T2, `savings-goal` T2, `contribution-limit` T0, `spending-watch` T2; kind `bill-due` (event, T2). The stub's `savings-goal` fact is now an entity and its attachment kind is gone (D-189).
+Under Orchard, live since #71 added the manifest (`packages/shared/src/domains/finance/manifest.json`), built ahead of its phase like Meadow (D-130), except the kind `bill-due`, whose row carries Phase 2 and waits on Almanac (D-186). Its export carries `account`, `balance-snapshot` and `asset`, never `provider-link`, which is this device's (D-184, D-191). The rows: fact `monthly-income-band` T2; entities `provider-link` T2, `account` T2, `file-import` T2, `balance-snapshot` T2, `transaction` T2, `budget-category` T1, `category-rule` T2, `merchant` T2, `money-rollup` T2, `bill` T2, `recurring-charge` T2, `budget` T2, `liability` T2, `holding` T2, `security` T0, `asset` T2, `income-source` T2, `savings-goal` T2, `contribution-limit` T0, `spending-watch` T2; kind `bill-due` (event, T2). The stub's `savings-goal` fact is now an entity and its attachment kind is gone (D-189).
 
 ## Handoffs
 
@@ -272,8 +273,20 @@ Critical path: #67, #69, #70, #71, #72, #73, #75, #77, #78, #79, #83. The Garden
 - The transaction detail (#83): Activity's rows in the mock open nothing.
 - The header motif for Orchard's pages (D-123).
 - The tab list grows from five to eight when Debt (#86), Investments (#76) and Goals (#88) are mocked.
-- The manifest replaces the `finance` block of `packages/shared/src/registry/planned.json` (#71).
+- The manifest replaces the `finance` block of `packages/shared/src/registry/planned.json` (#71, done).
 - The integrations catalog's per-row phases are revisited when #73 lands.
+
+From #71:
+
+- #73 binds `bindProvider` in `packages/shared/src/domains/finance/provider.svelte.ts` (the page then shows "Link a bank" and "Reconnect", and Reconnect updates the same `provider-link` row, never a new one); adds the `landmark` icon for Link a bank; ports Money to Rust against `packages/shared/src/money/money.vectors.json`; maps Plaid's type and subtype onto `ACCOUNT_KINDS`; fills `status`, `lastSyncedAt` and `consentExpiresAt`, which `linkState` reads; emits `link-broken` and the consent-expiry reminder.
+- #87 needs snapshots for assets too: only accounts write a `balance-snapshot` today.
+- #40 must keep `provider-link` rows on the device that made them.
+- #68 masks what `formatMoney` writes; every figure on the page goes through it.
+- #69 adds `extras` (the readable export) to `financeLogic` and the log check; the store already logs error codes only.
+- #89: the page is already mounted on the phone (More → Orchard), with manual accounts and assets.
+
+From #72:
+
 - Bills (#78) mount `DocumentSheet` over `documentRead` (§6, "The document reader"). A `picture` choice becomes in-memory `ToolFiles` for the tool run, as `domains/kitchen/staging.svelte.ts` `files()` builds them from bytes, and the fingerprint is stored as a `file-import` so the next read of the same file is Already imported. On desktop that request runs as a page's tool run, which carries `--no-session-persistence` (D-190).
 - Statement import (#74) does the same for a PDF statement, with its own `confirmLabel` and `next`, and the same `file-import` fingerprint.
 - Left open by #72: Japanese recognition on Android (ML Kit's Japanese model), recognition on Windows (`Windows.Media.Ocr`), HEIC input, a rotated PDF page, which Vision reads as drawn, and Japanese labels for the labelled masking rule (口座番号, 証券番号, 会員番号): a Japanese number of 9 digits or more is masked by the unlabelled rule, a shorter one is not. A labelled value on the line after its label is not taken by the labelled rule either. The Android reader has been compiled but never run, and the data layer's Android checklist installs it.

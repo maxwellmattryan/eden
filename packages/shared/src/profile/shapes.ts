@@ -110,6 +110,8 @@ export const FACT_SHAPES: Record<LiveFactId, FactShape> = {
 	'training-limitation': { shape: string(200), multi: true },
 	// derived from the latest weight once Vigor writes it, so a model never proposes it
 	'current-weight': { shape: string(40), multi: false, derived: true },
+	// Orchard's: a band, never a figure, derived from the owner's income once #80 writes it, so a model never proposes it
+	'monthly-income-band': { shape: string(40), multi: false, derived: true },
 }
 
 export function isLiveFact(id: string): id is LiveFactId {

@@ -4,13 +4,21 @@
 import { declarations, type DomainManifest, type WidgetDeclaration } from '@eden/shared/domains'
 import { pinnedPair, shell, tabBar, type TabBar } from '@eden/shared/manifest'
 import { settings } from '@eden/shared/settings'
+import { financeManifest } from './finance/manifest.js'
 import { fitnessManifest } from './fitness/manifest.js'
 import { kitchenManifest } from './kitchen/manifest.js'
 import { placesManifest } from './places/manifest.js'
 import { toolbenchManifest } from './toolbench/manifest.js'
 import { weatherManifest } from './weather/manifest.js'
 
-const bound: DomainManifest[] = [kitchenManifest, toolbenchManifest, weatherManifest, placesManifest, fitnessManifest]
+const bound: DomainManifest[] = [
+	kitchenManifest,
+	toolbenchManifest,
+	weatherManifest,
+	placesManifest,
+	fitnessManifest,
+	financeManifest,
+]
 
 export const manifests: DomainManifest[] = shell.domains.flatMap((id) => bound.filter((manifest) => manifest.id === id))
 

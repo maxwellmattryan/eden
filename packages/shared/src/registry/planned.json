@@ -49,33 +49,6 @@
 				{ "id": "insurance-card", "primitive": "attachment", "tier": "T3" }
 			]
 		},
-		"finance": {
-			"phase": "later",
-			"facts": [{ "id": "monthly-income-band", "tier": "T2" }],
-			"entities": [
-				{ "id": "provider-link", "tier": "T2" },
-				{ "id": "account", "tier": "T2" },
-				{ "id": "file-import", "tier": "T2" },
-				{ "id": "balance-snapshot", "tier": "T2" },
-				{ "id": "transaction", "tier": "T2" },
-				{ "id": "budget-category", "tier": "T1" },
-				{ "id": "category-rule", "tier": "T2" },
-				{ "id": "merchant", "tier": "T2" },
-				{ "id": "money-rollup", "tier": "T2" },
-				{ "id": "bill", "tier": "T2" },
-				{ "id": "recurring-charge", "tier": "T2" },
-				{ "id": "budget", "tier": "T2" },
-				{ "id": "liability", "tier": "T2" },
-				{ "id": "holding", "tier": "T2" },
-				{ "id": "security", "tier": "T0" },
-				{ "id": "asset", "tier": "T2" },
-				{ "id": "income-source", "tier": "T2" },
-				{ "id": "savings-goal", "tier": "T2" },
-				{ "id": "contribution-limit", "tier": "T0" },
-				{ "id": "spending-watch", "tier": "T2" }
-			],
-			"kinds": [{ "id": "bill-due", "primitive": "event", "tier": "T2" }]
-		},
 		"people": {
 			"phase": "later",
 			"facts": [],

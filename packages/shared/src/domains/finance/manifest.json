@@ -1,0 +1,43 @@
+{
+	"id": "finance",
+	"phase": "later",
+	"sidebar": { "group": "domains", "order": 50, "visible": true },
+	"tabs": ["accounts"],
+	"resources": {
+		"facts": [{ "id": "monthly-income-band", "tier": "T2" }],
+		"entities": [
+			{ "id": "provider-link", "tier": "T2" },
+			{ "id": "account", "tier": "T2" },
+			{ "id": "file-import", "tier": "T2" },
+			{ "id": "balance-snapshot", "tier": "T2" },
+			{ "id": "transaction", "tier": "T2" },
+			{ "id": "budget-category", "tier": "T1" },
+			{ "id": "category-rule", "tier": "T2" },
+			{ "id": "merchant", "tier": "T2" },
+			{ "id": "money-rollup", "tier": "T2" },
+			{ "id": "bill", "tier": "T2" },
+			{ "id": "recurring-charge", "tier": "T2" },
+			{ "id": "budget", "tier": "T2" },
+			{ "id": "liability", "tier": "T2" },
+			{ "id": "holding", "tier": "T2" },
+			{ "id": "security", "tier": "T0" },
+			{ "id": "asset", "tier": "T2" },
+			{ "id": "income-source", "tier": "T2" },
+			{ "id": "savings-goal", "tier": "T2" },
+			{ "id": "contribution-limit", "tier": "T0" },
+			{ "id": "spending-watch", "tier": "T2" }
+		],
+		"kinds": [{ "id": "bill-due", "primitive": "event", "tier": "T2", "phase": 2 }]
+	},
+	"reads": [],
+	"widgets": [],
+	"quickActions": [],
+	"captureSources": [],
+	"tools": [],
+	"signals": [],
+	"notificationKinds": [],
+	"intents": [],
+	"deviceCapabilities": [],
+	"palette": { "entries": [], "search": ["account"] },
+	"export": ["account", "balance-snapshot", "asset"]
+}
