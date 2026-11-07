@@ -1,0 +1,18 @@
+{
+	"item": {
+		"item_id": "item-1",
+		"institution_id": "ins_56",
+		"institution_name": "Chase",
+		"available_products": ["balance"],
+		"billed_products": ["transactions"],
+		"consented_products": ["transactions", "liabilities", "investments"],
+		"consent_expiration_time": "2027-05-01T00:00:00Z",
+		"error": null,
+		"update_type": "background",
+		"webhook": ""
+	},
+	"status": {
+		"transactions": { "last_successful_update": "2026-11-06T11:30:00Z", "last_failed_update": null }
+	},
+	"request_id": "m8MDnv9okwxFNBV"
+}

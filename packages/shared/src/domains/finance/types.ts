@@ -9,6 +9,7 @@ export const FINANCE = {
 	account: 'account',
 	snapshot: 'balance-snapshot',
 	asset: 'asset',
+	transaction: 'transaction',
 } as const
 
 export const ACCOUNT_KINDS = [
@@ -38,19 +39,27 @@ export type LinkState = 'ok' | 'stale' | 'expiring'
 export interface ProviderLinkPayload {
 	provider: 'plaid'
 	institution: {
+		/** The provider's institution id (`ins_56`). */
+		id?: string
 		name: string
 		/** `#RRGGBB`, the swatch beside the group's name. */
 		colour?: string
-		/** A data URL; #73's. */
+		/** A `data:image/png;base64,…` URL, drawn in the swatch's place. */
 		logo?: string
 	}
+	/** The provider's Item id. */
+	itemId?: string
 	status: LinkStatus
 	/** ISO instant the consent ends. */
 	consentExpiresAt?: string
 	/** ISO instant of the last good sync. */
 	lastSyncedAt?: string
-	/** #73's. */
+	/** Where the next `/transactions/sync` starts. */
 	cursor?: string
+	/** Consecutive failed runs; 0 or absent after a good one. */
+	failures?: number
+	/** The code of the last failure, never a message. */
+	lastErrorCode?: string
 }
 
 export interface AccountPayload {
@@ -99,6 +108,30 @@ export interface AssetPayload {
 	unit?: string
 	/** Basis points, 1 to 10000. */
 	share: number
+}
+
+/**
+ * A bank's transaction, read from the provider: an ordinary row with `source: 'plaid'` and the provider's id as its
+ * `externalId`, so it is unique among the live rows, exported, and never swept. The keys below are the provider's
+ * (a sync overwrites them, `accountId` aside); any other key is another feature's (#75) and a sync keeps it.
+ */
+export interface TransactionPayload {
+	/** The Eden account's id. */
+	accountId: string
+	/** Negative is money out of the account. */
+	amount: Money
+	/** `YYYY-MM-DD`, the provider's `date`. */
+	day: string
+	authorizedDay?: string
+	/** ISO instant, when the provider gives one. */
+	datetime?: string
+	/** The provider's `name`, raw. */
+	name: string
+	/** The provider's `merchant_name`, as given; cleaning it is #75's. */
+	merchantName?: string
+	pending: boolean
+	/** `personal_finance_category.detailed`, a hint for #75. */
+	providerCategory?: string
 }
 
 export type ProviderLink = ProviderLinkPayload & { id: string }

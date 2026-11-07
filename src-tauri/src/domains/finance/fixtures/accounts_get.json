@@ -1,0 +1,36 @@
+{
+	"accounts": [
+		{
+			"account_id": "acc-checking",
+			"balances": {
+				"available": 1100,
+				"current": 1204.5,
+				"iso_currency_code": "USD",
+				"limit": null,
+				"unofficial_currency_code": null
+			},
+			"mask": "0000",
+			"name": "Plaid Checking",
+			"official_name": "Plaid Gold Standard 0% Interest Checking",
+			"subtype": "checking",
+			"type": "depository"
+		},
+		{
+			"account_id": "acc-credit",
+			"balances": {
+				"available": null,
+				"current": 410.12,
+				"iso_currency_code": "USD",
+				"limit": 2000,
+				"unofficial_currency_code": null
+			},
+			"mask": "4417",
+			"name": "Plaid Credit Card",
+			"official_name": "Plaid Diamond 12.5% APR Interest Credit Card",
+			"subtype": "credit card",
+			"type": "credit"
+		}
+	],
+	"item": { "item_id": "item-1", "institution_id": "ins_56" },
+	"request_id": "bkVE1BHWMAZ9Rnr"
+}

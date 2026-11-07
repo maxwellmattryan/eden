@@ -1,0 +1,55 @@
+{
+	"added": [
+		{
+			"account_id": "acc-checking",
+			"amount": 4.5,
+			"iso_currency_code": "USD",
+			"unofficial_currency_code": null,
+			"date": "2026-11-04",
+			"authorized_date": "2026-11-03",
+			"datetime": null,
+			"name": "Blue Bottle Coffee",
+			"merchant_name": "Blue Bottle",
+			"pending": true,
+			"pending_transaction_id": null,
+			"personal_finance_category": { "primary": "FOOD_AND_DRINK", "detailed": "FOOD_AND_DRINK_COFFEE" },
+			"transaction_id": "t1"
+		},
+		{
+			"account_id": "acc-checking",
+			"amount": -2500,
+			"iso_currency_code": "USD",
+			"unofficial_currency_code": null,
+			"date": "2026-11-01",
+			"authorized_date": null,
+			"datetime": "2026-11-01T09:00:00Z",
+			"name": "PAYROLL",
+			"merchant_name": null,
+			"pending": false,
+			"pending_transaction_id": null,
+			"personal_finance_category": { "primary": "INCOME", "detailed": "INCOME_WAGES" },
+			"transaction_id": "t2"
+		}
+	],
+	"modified": [
+		{
+			"account_id": "acc-credit",
+			"amount": 12.3,
+			"iso_currency_code": "USD",
+			"unofficial_currency_code": null,
+			"date": "2026-10-30",
+			"authorized_date": null,
+			"datetime": null,
+			"name": "Uber 063015 SF**POOL**",
+			"merchant_name": "Uber",
+			"pending": false,
+			"pending_transaction_id": null,
+			"personal_finance_category": null,
+			"transaction_id": "t0"
+		}
+	],
+	"removed": [],
+	"next_cursor": "c1",
+	"has_more": true,
+	"request_id": "45QSn"
+}

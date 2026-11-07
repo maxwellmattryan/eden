@@ -34,6 +34,7 @@
 	import { rememberPlace, rememberScroll, scrollOf, tabOf } from '@eden/shared/navigation'
 	import { coordinator } from '@eden/shared/refresh'
 	import { startSignals } from '@eden/shared/signals'
+	import { bindPlaid } from '@eden/shared/domains/finance'
 	import { declarations, manifestFor, manifests } from '$lib/domains'
 	import { grants } from '@eden/shared/shell'
 	import { inbox, inboxItems } from '@eden/shared/shell/inbox'
@@ -354,11 +355,15 @@
 			declarations,
 			bind: manifests.flatMap((manifest) => (manifest.subscribe ? [manifest.subscribe] : [])),
 		})
+		// Orchard's bank links (finance.md §8): Plaid binds where the crate is, and syncs every link once now; the
+		// hourly run and the retries come through the scheduler. A plain browser binds nothing.
+		const unbindPlaid = bindPlaid()
 		// The sidebar's glyph and the offline banner read the forecast for as long as the shell is up, which is what
 		// keeps it fresh while the window is seen (the refresh coordinator; D-73).
 		const releaseSky = coordinator.watch(FORECAST_RESOURCE)
 		return () => {
 			releaseSky()
+			unbindPlaid()
 			stopSignals()
 			cleanupErrors()
 			settings.dispose()

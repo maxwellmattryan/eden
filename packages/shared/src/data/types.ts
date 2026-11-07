@@ -76,6 +76,10 @@ export interface EntityQuery {
 	ids?: string[]
 	/** Only rows with a live link to this URI. */
 	linkedTo?: string
+	/** Only rows from this source (`plaid`), with `externalIds`: the pair a live overlay row is unique by. */
+	source?: string
+	/** Only rows with one of these external ids; an empty list matches nothing. */
+	externalIds?: string[]
 	includeDeleted?: boolean
 }
 

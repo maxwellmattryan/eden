@@ -3,6 +3,7 @@
 //! domain's code goes"). `documents` keeps what stays on this device, one
 //! JSON document per domain; the owner's data is in the workspace database (`crate::substrate`).
 pub mod documents;
+pub mod finance;
 pub mod weather;
 
 #[cfg(test)]

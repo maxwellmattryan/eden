@@ -2,14 +2,24 @@
 	// Orchard's page (product/domains/finance.md, "Surfaces"): the header with its actions, the page's error with Retry
 	// when a write failed or the rows could not be read, and the Accounts tab, the one tab so far, so there is no
 	// Segmented. The sheets are the page's, so a header action and a row's menu open the same one. While a provider is
-	// bound, "Link a bank" leads the header and a stale link raises a notice beside it; until #73 binds one, neither
-	// shows. Both apps mount this page; the phone reaches it from More, its sheets rising from the foot.
-	import { ConfirmSheet, InlineError, Notice, PageHeader, domainGlyph, type PageHeaderAction } from '@eden/ui-kit'
+	// bound (the desktop's Plaid), "Link a bank" leads the header, a stale link raises a notice beside it, a quiet key
+	// opens the provider's keys, and its keys and Link sheets are mounted; on the phone and in a plain browser none of
+	// them shows. Both apps mount this page; the phone reaches it from More, its sheets rising from the foot.
+	import {
+		ConfirmSheet,
+		IconButton,
+		InlineError,
+		Notice,
+		PageHeader,
+		domainGlyph,
+		type PageHeaderAction,
+	} from '@eden/ui-kit'
 	import { onMount } from 'svelte'
 	import { t } from '../../../i18n/index.js'
 	import { settings } from '../../../settings/index.js'
 	import { undoToast } from '../../../shell/index.js'
 	import { staleDay } from '../accounts.js'
+	import { plaid } from '../plaid.svelte.js'
 	import { provider } from '../provider.svelte.js'
 	import { finance } from '../store.svelte.js'
 	import type { Account, Asset, ProviderLink } from '../types.js'
@@ -18,6 +28,8 @@
 	import Accounts from './Accounts.svelte'
 	import AssetSheet from './AssetSheet.svelte'
 	import BalanceSheet from './BalanceSheet.svelte'
+	import LinkSheet from './LinkSheet.svelte'
+	import PlaidKeysSheet from './PlaidKeysSheet.svelte'
 	import ReplaceSheet from './ReplaceSheet.svelte'
 
 	type Props = {
@@ -70,10 +82,10 @@
 			onclick: () => show({ sheet: 'asset' }),
 		}
 		if (!bound) return [addAccount, addAsset]
-		// the bank's own glyph arrives with the binding (#73)
 		const link: PageHeaderAction = {
 			id: 'link-bank',
 			label: $t('domains.finance.actions.linkBank'),
+			icon: 'landmark',
 			variant: 'primary',
 			onclick: () => bound.link(),
 		}
@@ -106,6 +118,17 @@
 					action={{ label: $t('domains.finance.actions.reconnect'), onclick: () => bound.reconnect(stale.link.id) }}
 				/>
 			{/if}
+			{#if bound}
+				<span class="keys">
+					<IconButton
+						icon="key-round"
+						size="xs"
+						label={$t('domains.finance.plaid.keysButton')}
+						tooltip
+						onclick={() => bound.credentials()}
+					/>
+				</span>
+			{/if}
 		{/snippet}
 	</PageHeader>
 
@@ -123,9 +146,30 @@
 		oneditasset={(asset) => show({ sheet: 'asset', asset })}
 		onremovelink={(link) => show({ sheet: 'remove', link })}
 		onreconnect={bound ? (link) => bound.reconnect(link.id) : undefined}
+		onresetlogin={bound?.sandbox ? (link) => void bound.resetLogin(link.id) : undefined}
 		onsample={seed}
 	/>
 </div>
+
+<!-- The provider's own sheets, while one is bound (the desktop's Plaid): its keys, and its Link session. -->
+{#if bound}
+	<PlaidKeysSheet
+		bind:open={
+			() => plaid.sheet === 'keys',
+			(open) => {
+				if (!open && plaid.sheet === 'keys') plaid.sheet = 'none'
+			}
+		}
+	/>
+	<LinkSheet
+		bind:open={
+			() => plaid.sheet === 'link',
+			(open) => {
+				if (!open && plaid.sheet === 'link') plaid.sheet = 'none'
+			}
+		}
+	/>
+{/if}
 
 {#key opened}
 	{#if current?.sheet === 'account'}
@@ -160,5 +204,9 @@
 	}
 	.notice {
 		padding: 0 var(--ed-gutter) var(--space-4);
+	}
+	.keys {
+		display: inline-flex;
+		align-self: flex-end;
 	}
 </style>

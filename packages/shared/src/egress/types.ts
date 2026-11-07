@@ -6,7 +6,8 @@
  * `src-tauri/tauri.conf.json`, and to `settings.privacy.destinations` in both locales. `web-page` is a page the owner
  * gave the address of (`fetchPage` in `@eden/shared/api`) and `web-image` a picture (`fetchImage`): the crate fetches
  * each and records it, so neither has a CSP entry. `openfreemap` is the map's tiles and label glyphs, counted in
- * batches; `photon` finds a place by name and `overpass` reads its hours (D-131). */
+ * batches; `photon` finds a place by name and `overpass` reads its hours (D-131). `plaid` is every call Orchard's bank
+ * links make; the crate makes them, so it has no CSP entry either. */
 export const DESTINATIONS = [
 	'open-meteo',
 	'open-meteo-air-quality',
@@ -20,6 +21,7 @@ export const DESTINATIONS = [
 	'openfreemap',
 	'photon',
 	'overpass',
+	'plaid',
 ] as const
 export type Destination = (typeof DESTINATIONS)[number]
 

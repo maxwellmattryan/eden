@@ -1343,6 +1343,59 @@
 				"assetAdded": "Asset added",
 				"assetSaved": "Asset saved",
 				"linkRemoved": "{name} removed"
+			},
+			"plaid": {
+				"keysButton": "Plaid keys",
+				"resetLogin": "Ask to sign in again (Sandbox)",
+				"keys": {
+					"title": "Plaid keys",
+					"clientId": "Client ID",
+					"sandboxSecret": "Sandbox secret",
+					"productionSecret": "Production secret",
+					"help": "Kept in this device's secure store. Each device has its own.",
+					"save": "Save",
+					"refused": "Plaid didn't accept these keys.",
+					"unreachable": "Couldn't reach Plaid.",
+					"saved": "Plaid keys saved",
+					"held": "Keys saved on this device.",
+					"replace": "Replace keys",
+					"remove": "Remove keys",
+					"removeTitle": "Remove Plaid keys from this device?",
+					"removeText": "Linked banks stop updating until you enter keys again.",
+					"removeSubject": "You",
+					"removeResource": "Plaid keys"
+				},
+				"link": {
+					"title": "Link a bank",
+					"reconnectTitle": "Reconnect {name}",
+					"starting": "Opening Plaid in your browser…",
+					"waitingTitle": "Finish in your browser",
+					"waiting": "Sign in to your bank on the Plaid page that opened. Eden picks it up when you're done.",
+					"sandbox": "Sandbox: sign in with user_good and pass_good.",
+					"openAgain": "Open the page again",
+					"stop": "Stop waiting",
+					"readingTitle": "Linking",
+					"reading": "Reading your accounts…",
+					"linked": "{name} linked",
+					"reconnected": "{name} reconnected",
+					"aBank": "Your bank",
+					"accounts": "Linked accounts",
+					"arriving": "Older transactions keep arriving for a few minutes.",
+					"done": "Done",
+					"cancelled": "Linking was cancelled.",
+					"tryAgain": "Try again",
+					"expired": "That Plaid page expired.",
+					"startAgain": "Start again",
+					"invalidKeys": "Plaid didn't accept this device's keys.",
+					"network": "Couldn't reach Plaid.",
+					"failed": "Plaid couldn't link this bank.",
+					"changeKeys": "Change keys"
+				}
+			},
+			"notifications": {
+				"linkNeedsReconnecting": {
+					"line": "{reason, select, expiring {{institution} asks you to sign in again by {byDay}} other {{institution} needs you to sign in again}}"
+				}
 			}
 		},
 		"places": {
@@ -2117,7 +2170,8 @@
 				"web-image": "Pictures you link",
 				"openfreemap": "OpenFreeMap (map tiles)",
 				"photon": "Photon (finding a place by name)",
-				"overpass": "Overpass (opening hours)"
+				"overpass": "Overpass (opening hours)",
+				"plaid": "Plaid"
 			},
 			"never": {
 				"label": "Never automated",
