@@ -223,6 +223,14 @@ pub fn run() {
             domains::documents::load_domain_document,
             domains::documents::save_domain_document,
             domains::documents::remove_domain_document,
+            domains::finance::plaid_status,
+            domains::finance::plaid_set_keys,
+            domains::finance::plaid_clear_keys,
+            domains::finance::plaid_link_start,
+            domains::finance::plaid_link_poll,
+            domains::finance::plaid_sync,
+            domains::finance::plaid_revoke,
+            domains::finance::plaid_sandbox_reset_login,
             domains::weather::weatherkit_status,
             domains::weather::weatherkit_forecast,
             domains::finance::read_document,
@@ -250,6 +258,8 @@ pub fn run() {
             // The updater installs the same one if it gets there first, so a second install is nothing.
             let _ = rustls::crypto::ring::default_provider().install_default();
             app.manage(gardener::Inflight::default());
+            // Orchard's Plaid Link sessions that have finished in this run (domains/finance).
+            app.manage(domains::finance::Sessions::default());
             // The desktop Gardener's tools reach Claude Code through a loopback MCP server (D-179). Without it a
             // conversation still runs, with no Eden tools.
             #[cfg(feature = "desktop")]

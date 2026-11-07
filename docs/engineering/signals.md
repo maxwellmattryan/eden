@@ -4,7 +4,7 @@ status: draft
 summary: The scheduler, signals, rules and the inbox as code: the alarm in the crate and the take in the webview, the store and its commands, the rules a manifest declares and the frontend evaluates, the runtime both apps start, the refresh coordinator, the inbox with its OS notifications on desktop and on the phone, the first consumers, and how it is tested.
 read-this-if: You are adding a schedule, a signal, a rule or a mirror that refreshes itself, touching the inbox or an OS notification, or changing when Sky fetches.
 depends-on: [product/substrate/signals-notifications, engineering/data-layer, engineering/domain-module, engineering/app-scaffold]
-updated: 2026-10-02
+updated: 2026-11-06
 ---
 
 ## Where it stands
@@ -189,6 +189,15 @@ Each active alert is emitted as `weather.alert` with its id as the key, so it is
 | `places.weekly`, daily at 09:00 | on a Sunday, or on the Monday after when Sunday's did not run, runs the listings search once; when it found something, emits `listing.matched` with the count and the first title, keyed by the Sunday | `matching-listings`, in-app |
 
 Here the key alone is not enough, since what must happen once a week is the request and not only the card: `weeklyMorning` keeps the Sunday it last ran for on the device (`eden:places:weekly`) and `weeklyDue` reads it. A run the Gardener answered `busy` leaves the week open for the next morning; any other outcome settles it. The search and the owner's off switch are the app's, given to `bindPlacesSignals(search, on)` in the domain's `subscribe` binding, because the Gardener's runtime is not in `@eden/shared`. The phone binds no `subscribe` for Meadow, so the schedule is taken there and nothing hears it. What the search may and may not do is in `engineering/meadow.md`, "Listings and outings". `outing-reminder` is declared with no signal and answers nothing (#28).
+
+**Orchard** (`packages/shared/src/domains/finance/plaid.svelte.ts`, with the pure parts in `sync.ts`), desktop only: `bindPlaid()` is called from the desktop layout beside `startSignals` and binds where the crate is (D-192).
+
+| schedule | on fire | rule |
+|---|---|---|
+| `finance.sync`, every hour, and once when the shell starts | syncs every live Plaid link, one after another; a run asked for while one is going joins it | – |
+| `finance.retry`, a one-shot 1, 5, 15 or 30 minutes after a failed run | the same run | – |
+| `finance.revoke`, a one-shot two minutes after a link is removed | for each Plaid link tombstoned at least two minutes ago, removes its Item at Plaid and its token here | – |
+| after each run of a link | emits `finance.link-broken` when it turned `needs-reauth` (keyed `<link>:needs-reauth:<lastSyncedAt>`) or its consent ends within seven days (keyed `<link>:expiring:<consentExpiresAt>`) | `link-needs-reconnecting`, in-app; its card carries the warning glyph |
 
 **Tasks** (`packages/shared/src/tasks/signals.ts`, with the pure part, `taskSignal`, in `rules.ts`). The data layer emits nothing for a task (D-75): the crate cannot see a routine's or a habit's completion, which lives in `progress`, and cannot evaluate the rules. So the frontend emits, once the write has landed, one signal per owner action:
 

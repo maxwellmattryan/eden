@@ -27,6 +27,9 @@ export interface InboxItemsOptions {
 	onopen?: () => void
 }
 
+/** The rules whose card warns: its tone is the warning glyph in the domain glyph's place, never a colour alone. */
+const WARNING_RULES = new Set(['finance.link-needs-reconnecting'])
+
 /** When a card arrived: the time today, "yesterday", else the weekday. */
 export function arrivedWords(at: number, tr: Translate, format: DateFormat): string {
 	const iso = new Date(at).toISOString()
@@ -44,7 +47,7 @@ export function inboxItems(cards: readonly InboxEntry[], options: InboxItemsOpti
 		return {
 			id: card.id,
 			// the registry builder checked each domain id against the kit's glyphs
-			icon: domain ? domainGlyph(domain.id as GlyphId) : undefined,
+			icon: WARNING_RULES.has(card.rule) ? 'triangle-alert' : domain ? domainGlyph(domain.id as GlyphId) : undefined,
 			line: tr(keys.line, { values: messageValues(card.payload) }),
 			when: arrivedWords(card.at, tr, format),
 			domain: domain ? tr(domain.name) : undefined,

@@ -1343,6 +1343,59 @@
 				"assetAdded": "資産を追加しました",
 				"assetSaved": "資産を保存しました",
 				"linkRemoved": "{name}を削除しました"
+			},
+			"plaid": {
+				"keysButton": "Plaidのキー",
+				"resetLogin": "再ログインを求める(サンドボックス)",
+				"keys": {
+					"title": "Plaidのキー",
+					"clientId": "クライアントID",
+					"sandboxSecret": "サンドボックスのシークレット",
+					"productionSecret": "本番のシークレット",
+					"help": "このデバイスの安全な保管場所に保存されます。デバイスごとに別です。",
+					"save": "保存",
+					"refused": "Plaidがこのキーを受け付けませんでした。",
+					"unreachable": "Plaidに接続できませんでした。",
+					"saved": "Plaidのキーを保存しました",
+					"held": "キーはこのデバイスに保存されています。",
+					"replace": "キーを入れ替える",
+					"remove": "キーを削除",
+					"removeTitle": "このデバイスからPlaidのキーを削除しますか？",
+					"removeText": "キーを入力し直すまで、連携した銀行は更新されません。",
+					"removeSubject": "あなた",
+					"removeResource": "Plaidのキー"
+				},
+				"link": {
+					"title": "銀行を連携",
+					"reconnectTitle": "{name}に再接続",
+					"starting": "ブラウザでPlaidを開いています…",
+					"waitingTitle": "ブラウザで続けてください",
+					"waiting": "開いたPlaidのページで銀行にログインしてください。終わるとEdenが受け取ります。",
+					"sandbox": "サンドボックス:user_good と pass_good でログインしてください。",
+					"openAgain": "ページをもう一度開く",
+					"stop": "待つのをやめる",
+					"readingTitle": "連携中",
+					"reading": "口座を読み込んでいます…",
+					"linked": "{name}を連携しました",
+					"reconnected": "{name}に再接続しました",
+					"aBank": "銀行",
+					"accounts": "連携した口座",
+					"arriving": "過去の取引は数分かけて届きます。",
+					"done": "完了",
+					"cancelled": "連携はキャンセルされました。",
+					"tryAgain": "もう一度試す",
+					"expired": "Plaidのページの有効期限が切れました。",
+					"startAgain": "最初からやり直す",
+					"invalidKeys": "Plaidがこのデバイスのキーを受け付けませんでした。",
+					"network": "Plaidに接続できませんでした。",
+					"failed": "Plaidはこの銀行を連携できませんでした。",
+					"changeKeys": "キーを変更"
+				}
+			},
+			"notifications": {
+				"linkNeedsReconnecting": {
+					"line": "{reason, select, expiring {{institution}は{byDay}までに再ログインが必要です} other {{institution}に再ログインが必要です}}"
+				}
 			}
 		},
 		"places": {
@@ -2117,7 +2170,8 @@
 				"web-image": "リンクした写真",
 				"openfreemap": "OpenFreeMap(地図タイル)",
 				"photon": "Photon(名前で場所を探す)",
-				"overpass": "Overpass(営業時間)"
+				"overpass": "Overpass(営業時間)",
+				"plaid": "Plaid"
 			},
 			"never": {
 				"label": "自動化しないこと",

@@ -1,12 +1,20 @@
-// The seam a bank provider plugs into (#73 binds Plaid here). Nothing binds it yet, so the page offers neither "Link a
-// bank" nor "Reconnect". `link()` opens the provider's own flow and writes the `provider-link` row it makes;
-// `reconnect()` signs a stale link in again and updates that same row, never a new one; `revoke()` tells the provider
-// a link is gone, after the page has tombstoned it. Held in a rune so the page follows a bind.
+// The seam a bank provider plugs into: the desktop binds Plaid here (`plaid.svelte.ts`); the phone and a plain browser
+// bind nothing, so their page offers neither "Link a bank" nor "Reconnect". `link()` opens the provider's own flow
+// and writes the `provider-link` row it makes; `reconnect()` signs a stale link in again and updates that same row,
+// never a new one; `revoke()` tells the provider a link is gone, after the page has tombstoned it; `credentials()`
+// opens the provider's keys. Held in a rune so the page follows a bind.
 
 export interface FinanceProvider {
+	/** The provider's name, for its keys button: "Plaid". */
+	readonly name: string
+	/** A test environment: the page offers `resetLogin` on each link. */
+	readonly sandbox: boolean
 	link(): void
 	reconnect(linkId: string): void
 	revoke(linkId: string): Promise<void>
+	credentials(): void
+	/** Sandbox only: the link asks for a sign-in again, which proves the reconnect path. */
+	resetLogin(linkId: string): Promise<void>
 }
 
 class ProviderSeam {

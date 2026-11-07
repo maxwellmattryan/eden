@@ -109,7 +109,8 @@
 		if (!hasCanvas(canvasElement)) return
 		const page = within(canvasElement.ownerDocument.body)
 		const sheet = within(await page.findByRole('dialog', { name: 'Edit template' }))
-		await waitFor(() => expect(sheet.getByRole('textbox', { name: 'Title' })).toBeVisible())
+		// The sheet's open transition can outlast waitFor's 1s default under full-suite load.
+		await waitFor(() => expect(sheet.getByRole('textbox', { name: 'Title' })).toBeVisible(), { timeout: 5000 })
 		await expect(sheet.getByRole('textbox', { name: 'Title' })).toHaveValue(pushA.title)
 		const exercises = within(sheet.getByRole('list', { name: 'Exercises' }))
 		await expect(exercises.getAllByRole('listitem')).toHaveLength(pushA.exercises.length)

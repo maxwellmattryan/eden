@@ -4,6 +4,7 @@
 // kit's `DocumentSheet`.
 export * from './accounts.js'
 export * from './rows.js'
+export * from './sync.js'
 export * from './tabs.js'
 export * from './types.js'
 export * from './words.js'
@@ -24,3 +25,4 @@ export {
 } from './reader.js'
 export { fingerprint, readDocument } from './read.js'
 export { DocumentRead, documentRead } from './reader.svelte.js'
+export { bindPlaid, plaid, syncAll } from './plaid.svelte.js'

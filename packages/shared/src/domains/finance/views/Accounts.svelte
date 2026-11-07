@@ -36,9 +36,21 @@
 		onremovelink: (link: ProviderLink) => void
 		/** Signs a stale or expiring link in again; absent while no provider is bound. */
 		onreconnect?: (link: ProviderLink) => void
+		/** A Sandbox provider's "Ask to sign in again", which proves the reconnect path; absent elsewhere. */
+		onresetlogin?: (link: ProviderLink) => void
 		onsample: () => void
 	}
-	let { onaddaccount, onedit, onbalance, onreplace, oneditasset, onremovelink, onreconnect, onsample }: Props = $props()
+	let {
+		onaddaccount,
+		onedit,
+		onbalance,
+		onreplace,
+		oneditasset,
+		onremovelink,
+		onreconnect,
+		onresetlogin,
+		onsample,
+	}: Props = $props()
 
 	const uid = $props.id()
 	const lang = $derived(settings.language)
@@ -120,6 +132,8 @@
 		icon?: IconName
 		/** The bank's colour, `#RRGGBB`, for the swatch. */
 		colour?: string
+		/** The bank's logo, a `data:image/png` URL, drawn in the swatch's place. */
+		logo?: string
 		freshness?: string
 		link?: ProviderLink
 		expiring?: string
@@ -128,18 +142,22 @@
 		rows: ListRowData[]
 	}
 	const COLOUR = /^#[0-9a-fA-F]{6}$/
+	const LOGO = /^data:image\/png;base64,[A-Za-z0-9+/=]+$/
+	/** The groups whose logo would not draw: they show the swatch. */
+	const broken: Record<string, boolean> = $state({})
 
 	function section(group: AccountGroup): Section {
 		const base = { reconnect: false, quiet: false }
 		switch (group.kind) {
 			case 'link': {
 				const { link, state } = group
-				const colour = link.institution.colour
+				const { colour, logo } = link.institution
 				return {
 					...base,
 					id: group.id,
 					title: link.institution.name,
 					colour: colour && COLOUR.test(colour) ? colour : undefined,
+					logo: logo && LOGO.test(logo) ? logo : undefined,
 					freshness: freshnessLine(link, state, finance.clock, $t, format),
 					link,
 					expiring:
@@ -195,7 +213,11 @@
 	let menuFor = $state<string>()
 	let menuOpen = $state(false)
 	const anchors: Record<string, HTMLElement | undefined> = $state({})
+	// the Sandbox's reset sits above Remove link, which stays last
 	const linkItems = $derived<MenuItem[]>([
+		...(onresetlogin
+			? [{ id: 'reset-login', label: $t('domains.finance.plaid.resetLogin'), icon: 'rotate-ccw' as const }]
+			: []),
 		{ id: 'remove', label: $t('domains.finance.groups.removeLink'), icon: 'trash', destructive: true },
 	])
 
@@ -269,10 +291,14 @@
 			<section class="group" aria-labelledby="{uid}-{group.id}">
 				<div class="heading">
 					<h2 class={['title', { quiet: group.quiet }]} id="{uid}-{group.id}">
-						{#if group.colour}
-							<span class="swatch" style:--bank={group.colour} aria-hidden="true"></span>
+						{#if group.logo && !broken[group.id]}
+							<span class="mark" aria-hidden="true">
+								<img class="logo" src={group.logo} alt="" onerror={() => (broken[group.id] = true)} />
+							</span>
+						{:else if group.colour}
+							<span class="mark" aria-hidden="true"><span class="swatch" style:--bank={group.colour}></span></span>
 						{:else if group.icon}
-							<Icon name={group.icon} size="sm" class="glyph" />
+							<span class="mark"><Icon name={group.icon} size="sm" class="glyph" /></span>
 						{/if}
 						<span class="name">{group.title}</span>
 					</h2>
@@ -327,6 +353,7 @@
 		onselect={(item) => {
 			const link = finance.linkById(menuFor)
 			if (item.id === 'remove' && link) onremovelink(link)
+			else if (item.id === 'reset-login' && link) onresetlogin?.(link)
 		}}
 	/>
 {/if}
@@ -404,6 +431,21 @@
 	}
 	.name {
 		overflow-wrap: anywhere;
+	}
+	/* one 16px slot for every group's mark, so a logo, a swatch and a glyph line up */
+	.mark {
+		flex: none;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: var(--space-4);
+		height: var(--space-4);
+	}
+	.logo {
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+		border-radius: var(--ed-radius-sm);
 	}
 	.swatch {
 		flex: none;

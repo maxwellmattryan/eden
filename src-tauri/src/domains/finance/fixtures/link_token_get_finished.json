@@ -1,0 +1,24 @@
+{
+	"created_at": "2026-11-06T11:40:00Z",
+	"expiration": "2026-11-06T15:40:00Z",
+	"link_token": "link-sandbox-af1a0311-da53-4636-b754-dd15cc058176",
+	"metadata": { "country_codes": ["US"], "initial_products": ["transactions"] },
+	"link_sessions": [
+		{
+			"link_session_id": "356dbb28-7f98-44d1-8e6d-0cec580f3171",
+			"started_at": "2026-11-06T11:41:00Z",
+			"finished_at": "2026-11-06T11:44:00Z",
+			"exit": null,
+			"results": {
+				"item_add_results": [
+					{
+						"public_token": "public-sandbox-5c224a01-8314-4491-a06f-39e193d5cddc",
+						"accounts": [{ "id": "acc-checking", "name": "Plaid Checking", "mask": "0000" }],
+						"institution": { "institution_id": "ins_56", "name": "Chase" }
+					}
+				]
+			}
+		}
+	],
+	"request_id": "u0ydFs493XjyTYn"
+}

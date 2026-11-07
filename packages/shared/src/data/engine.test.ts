@@ -43,6 +43,28 @@ describe('engine', () => {
 		expect(engine.queryEntities({ type: 'idea' })).toEqual([])
 	})
 
+	it('finds rows by source and external id', () => {
+		const { engine } = setup()
+		const row = (externalId: string, more: { type?: string; source?: string } = {}) =>
+			engine.createEntity({
+				type: more.type ?? 'transaction',
+				source: more.source ?? 'plaid',
+				externalId,
+				payload: { name: externalId },
+			})
+		const a = row('tx-a')
+		const b = row('tx-b')
+		const gone = row('tx-c')
+		row('tx-a', { source: 'csv' })
+		row('tx-a', { type: 'account' })
+		engine.deleteRows([gone.uri])
+		const found = (externalIds: string[]) =>
+			engine.queryEntities({ type: 'transaction', source: 'plaid', externalIds }).map((entry) => entry.id)
+		expect(found(['tx-a', 'tx-c', 'tx-z'])).toEqual([a.id])
+		expect(found(['tx-b', 'tx-a'])).toEqual([a.id, b.id])
+		expect(found([])).toEqual([])
+	})
+
 	it('keeps what it is given apart from what it holds', () => {
 		const { engine } = setup()
 		const payload = { tags: ['quick'] }

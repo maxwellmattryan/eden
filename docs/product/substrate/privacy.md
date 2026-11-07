@@ -61,6 +61,7 @@ Tiers attach to resources in `substrate/registry.md`:
 | the geocoder (Photon) | a name and a rounded point to look near (D-131); for the home, when the owner presses Find, its street, city, region, postal code and country (D-140); counted under `photon` | anything else from the workspace; a house number; precise coordinates |
 | the hours source (Overpass) | a public OpenStreetMap id (D-131); counted under `overpass` | anything from the workspace |
 | a place's own page and the picture it names | one request for each when the owner opens the place, made by the crate under the same checks, only at an address that is whole one the search returned, the place's OpenStreetMap `website` or one the owner typed (D-135); counted under `web-page` and `web-image` | anything from the workspace; an address a model composed is never fetched |
+| Plaid, from the desktop (D-192) | this device's keys and a random device id, the link and access tokens, the cursor; every call made by the crate and counted under `plaid` | anything else from the workspace; the webview never sees a key, an access token or a public token |
 | a plugin (later) | exactly what its manifest declares under the same grants | anything undeclared |
 | crash reporting | nothing; logs stay local and are exported by hand (OQ-10) | |
 

@@ -6,8 +6,9 @@
 //!
 //! 1. the value under a sensitive key (`amount`, `merchant`, `access_token`, …), quoted or not, after `:` or `=`, as in
 //!    JSON, Rust `Debug` and `key=value`: the value becomes `"[redacted]"`;
-//! 2. an amount, a number beside a currency symbol or one of the listed currency codes: `[amount]`;
-//! 3. an account-like number, a run of 8 or more digits: `[number]`.
+//! 2. a bare Plaid token (`access-sandbox-…`, `public-production-…`, `link-sandbox-…`): `[token]`;
+//! 3. an amount, a number beside a currency symbol or one of the listed currency codes: `[amount]`;
+//! 4. an account-like number, a run of 8 or more digits: `[number]`.
 //!
 //! ISO dates and times, ULIDs, HLC stamps and version numbers are left alone: `regex` has no lookaround, so each
 //! amount or number match is checked against the spans of those shapes before it is replaced. The output holds no
@@ -20,7 +21,7 @@ use regex::{Captures, Regex};
 
 const KEYS: &str = "amount|minor|balance|available|current|limit|merchant|merchant_name|merchantName|payee|\
                     counterparty|description|original_description|access_token|accessToken|public_token|secret|\
-                    account_number|accountNumber|routing";
+                    account_number|accountNumber|routing|link_token|linkToken|client_id|clientId";
 const SYMBOLS: &str = "[$€£¥₹₩]";
 const CODES: &str =
     "USD|EUR|GBP|JPY|CAD|AUD|CHF|CNY|INR|MXN|BRL|KRW|SEK|NOK|DKK|NZD|SGD|HKD|BTC|ETH|USDC";
@@ -43,6 +44,12 @@ static AMOUNT: LazyLock<Regex> = LazyLock::new(|| {
     .expect("the amount pattern compiles")
 });
 
+/// A bare Plaid token, under no key: `access-sandbox-…`, `public-production-…`, `link-sandbox-…`.
+static TOKEN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\b(?:access|public|link)-(?:sandbox|production)-[0-9a-f-]{8,}")
+        .expect("the token pattern compiles")
+});
+
 static DIGITS: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\b[0-9]{8,}\b").expect("the digits pattern compiles"));
 
@@ -63,7 +70,8 @@ static PROTECTED: LazyLock<Vec<Regex>> = LazyLock::new(|| {
 /// `text` with the values of sensitive keys, amounts and account-like numbers replaced. Deterministic and idempotent.
 pub fn redact(text: &str) -> Cow<'_, str> {
     let keyed = KEYED.replace_all(text, "${key}\"[redacted]\"");
-    let amounts = replace_unprotected(&keyed, &AMOUNT, "[amount]");
+    let tokens = TOKEN.replace_all(&keyed, "[token]");
+    let amounts = replace_unprotected(&tokens, &AMOUNT, "[amount]");
     let numbers = replace_unprotected(&amounts, &DIGITS, "[number]");
     if numbers == text {
         Cow::Borrowed(text)
@@ -177,6 +185,20 @@ mod tests {
             (
                 r#"{"Amount": "$4.00", "Description": "rent", "ROUTING": 11000000}"#,
                 r#"{"Amount": "[redacted]", "Description": "[redacted]", "ROUTING": "[redacted]"}"#,
+            ),
+            // Plaid's keys and tokens: under a key, and bare.
+            (
+                r#"{"link_token":"link-sandbox-af1a0311-da53-4636-b754-dd15cc058176","client_id":"60f0c0ffee","linkToken":"x"}"#,
+                r#"{"link_token":"[redacted]","client_id":"[redacted]","linkToken":"[redacted]"}"#,
+            ),
+            ("keys clientId=60f0c0ffee saved", r#"keys clientId="[redacted]" saved"#),
+            (
+                "item access-sandbox-de3ce8ef-33f8-452c-a685-8671031fc0f6 synced",
+                "item [token] synced",
+            ),
+            (
+                "got public-production-6e0a8a3c-1b2d-4e5f-9a8b-7c6d5e4f3a2b and link-sandbox-0123abcd-ef",
+                "got [token] and [token]",
             ),
             // Account-like numbers.
             ("account 123456789012 linked", "account [number] linked"),

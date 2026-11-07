@@ -33,17 +33,34 @@
 				max-width: 28rem;
 				text-align: center;
 			}
+			h1 {
+				margin: 0 0 8px;
+				font:
+					600 28px/1.2 ui-serif,
+					Georgia,
+					serif;
+			}
+			p {
+				margin: 0;
+				color: #3d4a41;
+			}
+			@media (prefers-color-scheme: dark) {
+				p {
+					color: #c3ccc2;
+				}
+			}
 		</style>
 	</head>
 	<body>
 		<!--
-			Plaid Link's OAuth return address (Orchard, #73). On iOS the Universal Link in
-			/.well-known/apple-app-site-association opens Eden before this page loads. The desktop
-			hand-back to the app is #73's to write here; until then this page only explains itself.
+			Where Plaid's hosted Link sends the browser when the owner is done (Orchard, #73), at the registered
+			redirect address. On the desktop it is the hand-back: Eden learns the result by polling Plaid from the app,
+			never from this page, so the page has no script, makes no request and reads nothing from its address. On
+			iOS the Universal Link in /.well-known/apple-app-site-association opens Eden instead (#89).
 		-->
 		<main>
-			<h1>Back to Eden</h1>
-			<p>Your bank sign-in is done. Return to Eden to finish linking the account.</p>
+			<h1>You're done here</h1>
+			<p>Go back to Eden to see your accounts. You can close this tab.</p>
 		</main>
 	</body>
 </html>

@@ -54,6 +54,10 @@ pub struct EntityQuery {
     pub ids: Option<Vec<String>>,
     /// Only rows with a live link to this URI.
     pub linked_to: Option<String>,
+    /// Only rows from this source (`plaid`), with `external_ids`: the pair `entities_overlay_key` serves.
+    pub source: Option<String>,
+    /// Only rows with one of these external ids; an empty list matches nothing.
+    pub external_ids: Option<Vec<String>>,
     #[serde(default)]
     pub include_deleted: bool,
 }
@@ -273,6 +277,22 @@ pub fn get(conn: &Connection, id: &str) -> Result<Option<Entity>> {
     })
 }
 
+/// `column IN (…)` over the values, each a parameter. An empty list matches nothing, which `IN ()` cannot say.
+fn within(column: &str, values: &[String], params: &mut Vec<String>) -> String {
+    let marks: Vec<String> = values
+        .iter()
+        .map(|value| {
+            params.push(value.clone());
+            format!("?{}", params.len())
+        })
+        .collect();
+    if marks.is_empty() {
+        "0".to_string()
+    } else {
+        format!("{column} IN ({})", marks.join(", "))
+    }
+}
+
 /// The rows of one type, in the order they were created.
 pub fn query(conn: &Connection, filter: &EntityQuery) -> Result<Vec<Entity>> {
     let mut clauses = vec!["type = ?1".to_string()];
@@ -281,19 +301,14 @@ pub fn query(conn: &Connection, filter: &EntityQuery) -> Result<Vec<Entity>> {
         clauses.push("deleted_at IS NULL".to_string());
     }
     if let Some(ids) = &filter.ids {
-        let marks: Vec<String> = ids
-            .iter()
-            .map(|id| {
-                params.push(id.clone());
-                format!("?{}", params.len())
-            })
-            .collect();
-        // An empty list matches nothing, which `IN ()` cannot say.
-        clauses.push(if marks.is_empty() {
-            "0".to_string()
-        } else {
-            format!("id IN ({})", marks.join(", "))
-        });
+        clauses.push(within("id", ids, &mut params));
+    }
+    if let Some(source) = &filter.source {
+        params.push(source.clone());
+        clauses.push(format!("source = ?{}", params.len()));
+    }
+    if let Some(external_ids) = &filter.external_ids {
+        clauses.push(within("external_id", external_ids, &mut params));
     }
     if let Some(target) = &filter.linked_to {
         params.push(target.clone());
@@ -344,4 +359,72 @@ pub(crate) fn put(conn: &Connection, entity: &Entity) -> Result<()> {
         ],
     )?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+    use crate::substrate::{rows, Workspace};
+
+    fn plaid(external_id: &str, type_id: &str) -> EntityInput {
+        EntityInput {
+            id: None,
+            type_id: type_id.to_string(),
+            payload: json!({ "name": external_id }),
+            mirror: false,
+            source: Some("plaid".to_string()),
+            external_id: Some(external_id.to_string()),
+            snapshot: None,
+        }
+    }
+
+    #[test]
+    fn a_query_finds_rows_by_source_and_external_id() {
+        let workspace = Workspace::in_memory();
+        let (a, _b, gone) = workspace
+            .write(|ctx| {
+                let a = create(ctx, plaid("tx-a", "transaction"))?;
+                let b = create(ctx, plaid("tx-b", "transaction"))?;
+                let gone = create(ctx, plaid("tx-c", "transaction"))?;
+                // Same external id, another source or another type: never found.
+                create(
+                    ctx,
+                    EntityInput {
+                        source: Some("csv".to_string()),
+                        ..plaid("tx-a", "transaction")
+                    },
+                )?;
+                create(ctx, plaid("tx-a", "account"))?;
+                rows::delete(ctx, &gone.uri)?;
+                Ok((a, b, gone))
+            })
+            .unwrap();
+        let found = |external_ids: Vec<&str>| {
+            workspace
+                .read(|conn| {
+                    query(
+                        conn,
+                        &EntityQuery {
+                            type_id: "transaction".to_string(),
+                            source: Some("plaid".to_string()),
+                            external_ids: Some(
+                                external_ids.iter().map(|id| id.to_string()).collect(),
+                            ),
+                            ..Default::default()
+                        },
+                    )
+                })
+                .unwrap()
+                .into_iter()
+                .map(|entity| entity.id)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(found(vec!["tx-a", "tx-c", "tx-z"]), vec![a.id.clone()]);
+        assert!(found(vec!["tx-c"]).is_empty(), "a tombstone is not live");
+        assert!(found(vec![]).is_empty(), "an empty list matches nothing");
+        assert_eq!(found(vec!["tx-b", "tx-a"]).len(), 2);
+        assert!(gone.deleted_at.is_none(), "read before its tombstone");
+    }
 }
