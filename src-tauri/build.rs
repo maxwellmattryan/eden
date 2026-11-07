@@ -3,6 +3,7 @@ fn main() {
     // change of EDEN_ENV between `yarn dev` and `yarn build:staging` must rebuild the crate.
     println!("cargo:rerun-if-env-changed=EDEN_ENV");
     link_weatherkit();
+    link_text_reader();
     link_privacy_cover();
     tauri_build::build()
 }
@@ -63,3 +64,35 @@ fn link_weatherkit() {
 
 #[cfg(not(target_vendor = "apple"))]
 fn link_weatherkit() {}
+
+/// Builds and links the document reader's Swift bridge (`swift/EdenTextReader`, D-190) when the target is macOS or iOS:
+/// Vision recognises the text and PDFKit renders a scanned PDF's pages, both shipped with the system. Every other
+/// target compiles its own recogniser or the stub in `domains/finance` and links nothing here.
+#[cfg(target_vendor = "apple")]
+fn link_text_reader() {
+    println!("cargo:rerun-if-changed=swift/EdenTextReader/Package.swift");
+    println!("cargo:rerun-if-changed=swift/EdenTextReader/Sources");
+    let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+    if target_os != "macos" && target_os != "ios" {
+        return;
+    }
+    // The same SDKROOT handling as `link_weatherkit`: SwiftPM compiles Package.swift for the host.
+    let sdk_root = std::env::var_os("SDKROOT");
+    std::env::remove_var("SDKROOT");
+    swift_rs::SwiftLinker::new("13.0")
+        .with_ios("16.0")
+        .with_package("EdenTextReader", "./swift/EdenTextReader/")
+        .link();
+    if let Some(root) = sdk_root {
+        std::env::set_var("SDKROOT", root);
+    }
+    for framework in ["Vision", "PDFKit", "CoreGraphics", "ImageIO"] {
+        println!("cargo:rustc-link-lib=framework={framework}");
+    }
+    if target_os == "macos" {
+        println!("cargo:rustc-link-arg=-Wl,-rpath,/usr/lib/swift");
+    }
+}
+
+#[cfg(not(target_vendor = "apple"))]
+fn link_text_reader() {}

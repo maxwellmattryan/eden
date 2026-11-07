@@ -240,6 +240,41 @@ export interface UiStrings {
 			footer: (created: number, updated: number) => string
 		}
 	}
+	/** The document reader's sheet (`DocumentSheet`, D-190): a letter, statement or pay stub read on this device. */
+	document: {
+		title: string
+		/** The invitation in the drop area, and the line under it. */
+		invite: string
+		inviteHint: string
+		/** The file button's name. */
+		choose: string
+		/** Under the file button: where the reading happens. */
+		onDevice: string
+		/** The status beside the file while it is read. */
+		reading: string
+		/** The label of the field that holds the masked text. */
+		textLabel: string
+		/** Under the field: how many runs were masked; never shown for none. */
+		masked: (n: number) => string
+		/** Under the field when a long scan was read only in part. */
+		cutShort: (read: number, total: number) => string
+		/** The heading over the caller's sentence about what follows a confirm. */
+		nextTitle: string
+		/** The warning over a read that went badly. */
+		readBadly: string
+		sendPicture: string
+		/** The notice for a file read before; `day` is already formatted. */
+		importedOn: (day: string) => string
+		/** Why there is nothing to check: several files dropped, or the reader's failure. */
+		failures: {
+			several: string
+			unsupported: string
+			tooLarge: string
+			locked: string
+			noText: string
+			unavailable: string
+		}
+	}
 	confirmSheet: { subject: string; resource: string; destination: string; payload: string }
 	quickLog: {
 		title: string
@@ -551,6 +586,30 @@ export const defaultStrings: UiStrings = {
 			inviteHintTouch: 'Choose files. What is in them becomes your stock.',
 			mergeWith: (name) => `Update ${name}`,
 			footer: (created, updated) => (updated ? `${created} to create, ${updated} to update` : `${created} to create`),
+		},
+	},
+	document: {
+		title: 'Read a document',
+		invite: 'Drop a letter, statement or pay stub',
+		inviteHint: 'PDF or a picture',
+		choose: 'Choose a file',
+		onDevice: 'It is read on this device. Nothing leaves it until you confirm.',
+		reading: 'Reading on this device',
+		textLabel: 'Text read from the document',
+		masked: (n) =>
+			n === 1 ? '1 number masked to its last four digits' : `${n} numbers masked to their last four digits`,
+		cutShort: (read, total) => `Read the first ${read} of ${total} pages`,
+		nextTitle: 'What happens next',
+		readBadly: 'Parts of this document read badly. Check the text, or send the picture instead.',
+		sendPicture: 'Send the picture instead',
+		importedOn: (day) => `You read this document on ${day}`,
+		failures: {
+			several: 'One document at a time.',
+			unsupported: 'This file cannot be read. Choose a PDF, or a JPEG, PNG or WebP picture.',
+			tooLarge: 'This file is too large to read. A PDF may be up to 10 MB, a picture up to 20 MB.',
+			locked: 'This PDF is protected by a password. Save a copy without one and try again.',
+			noText: 'No text was found in this document.',
+			unavailable: 'This device cannot read text from a picture.',
 		},
 	},
 	confirmSheet: { subject: 'Subject', resource: 'Resource', destination: 'Destination', payload: 'Payload' },
