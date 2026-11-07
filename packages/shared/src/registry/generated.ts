@@ -2473,7 +2473,10 @@ export const DECLARATIONS = {
 			"account",
 			"balance-snapshot",
 			"asset",
-			"transaction"
+			"transaction",
+			"budget-category",
+			"category-rule",
+			"merchant"
 		]
 	}
 } as const

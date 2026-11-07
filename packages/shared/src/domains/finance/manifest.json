@@ -42,5 +42,5 @@
 	"intents": [],
 	"deviceCapabilities": [],
 	"palette": { "entries": [], "search": ["account"] },
-	"export": ["account", "balance-snapshot", "asset", "transaction"]
+	"export": ["account", "balance-snapshot", "asset", "transaction", "budget-category", "category-rule", "merchant"]
 }

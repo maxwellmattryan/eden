@@ -4,6 +4,11 @@
 // (`WriteQueue`), as one batch with the batch that takes it back; every write hands back an undo for the toast (D-12).
 // No write lands in the Garden feed and no log carries more than an error's code, so no figure, name or number
 // leaves the page.
+//
+// The categories, merchants and rules (#75) are small sets the store holds; the transactions stay in the data layer
+// and are read whole by the classification pass after a sync and by an owner's fix, inside the queue, so a pass and
+// an edit never interleave (#77's index replaces the full read).
+import { get } from 'svelte/store'
 import { logError } from '../../api/index.js'
 import {
 	applyBatch,
@@ -13,9 +18,11 @@ import {
 	toUri,
 	WriteQueue,
 	type BatchOp,
+	type Entity,
 	type Write,
 } from '../../data/index.js'
 import { nowIso, todayIso } from '../../dates/index.js'
+import { t } from '../../i18n/index.js'
 import type { Money } from '../../money/index.js'
 import { settings } from '../../settings/index.js'
 import {
@@ -30,18 +37,46 @@ import {
 	replaceOps,
 	type AccountDraft,
 } from './accounts.js'
+import { classifyPass } from './classify.js'
+import {
+	mergeMerchantOps,
+	oneOffOps,
+	recategoriseOps,
+	reimbursableOps,
+	renameMerchantOps,
+	repaymentOps,
+	saveCategoryOps,
+	splitOps,
+	unlinkRepaymentOps,
+	unsplitOps,
+	type CategoryDraft,
+	type Edit,
+	type Refused,
+	type ReimbursableError,
+	type RepaymentError,
+	type SplitError,
+} from './edits.js'
 import { provider } from './provider.svelte.js'
 import { financeFromRows, financeRows, financeUris } from './rows.js'
 import { seedData } from './seed.js'
+import { chunked } from './sync.js'
 import {
 	FINANCE,
 	type Account,
 	type AccountPayload,
 	type Asset,
 	type AssetPayload,
+	type Category,
+	type CategoryPayload,
 	type FinanceData,
+	type Merchant,
+	type MerchantPayload,
 	type ProviderLink,
 	type ProviderLinkPayload,
+	type Rule,
+	type RulePayload,
+	type TransactionPayload,
+	type TxPart,
 } from './types.js'
 
 export type Undo = () => void
@@ -62,6 +97,20 @@ interface Change {
 export type AssetDraft = AssetPayload & { id?: string }
 
 const code = (error: unknown) => dataErrorCode(error) ?? 'unknown'
+const withId = <T>(row: Entity<T>): T & { id: string } => ({ ...row.payload, id: row.id })
+const ruleOf = (row: Entity<RulePayload>): Rule => ({ ...row.payload, id: row.id, updatedAt: row.updatedAt })
+
+/** What an owner's fix answers: its undo, a refusal's code, or nothing when the row is gone or nothing changed. */
+export type EditAnswer<C extends string = never> = Undo | Refused<C> | undefined
+
+/** What a provider's write changes in the store once it lands. */
+export interface SyncChange {
+	links?: ProviderLink[]
+	accounts?: Account[]
+}
+
+/** A fix as the store makes it: the ops, and what the store's sets show of it and of its undo. */
+type StoreEdit = Edit & { apply?: () => void; revert?: () => void }
 
 export class FinanceStore {
 	ready = $state(false)
@@ -70,10 +119,15 @@ export class FinanceStore {
 	links = $state<ProviderLink[]>([])
 	accounts = $state<Account[]>([])
 	assets = $state<Asset[]>([])
+	/** The live budget categories, merchants and category rules (#75). */
+	categories = $state<Category[]>([])
+	merchants = $state<Merchant[]>([])
+	rules = $state<Rule[]>([])
 	/** The minute, while a page is watching: a link goes stale as it moves. */
 	clock = $state(Date.now())
 
 	#loading: Promise<void> | undefined
+	#classifying: Promise<void> | undefined
 	#watchers = 0
 	#ticker: ReturnType<typeof setInterval> | undefined
 	readonly #queue = new WriteQueue(
@@ -114,12 +168,18 @@ export class FinanceStore {
 
 	async #read() {
 		try {
-			const [links, accounts, assets] = await Promise.all([
+			const [links, accounts, assets, categories, merchants, rules] = await Promise.all([
 				queryEntities<ProviderLinkPayload>({ type: FINANCE.link }),
 				queryEntities<AccountPayload>({ type: FINANCE.account }),
 				queryEntities<AssetPayload>({ type: FINANCE.asset }),
+				queryEntities<CategoryPayload>({ type: FINANCE.category }),
+				queryEntities<MerchantPayload>({ type: FINANCE.merchant }),
+				queryEntities<RulePayload>({ type: FINANCE.rule }),
 			])
 			this.#show(financeFromRows({ links, accounts, assets }))
+			this.categories = categories.map(withId)
+			this.merchants = merchants.map(withId)
+			this.rules = rules.map(ruleOf)
 			this.saveFailed = this.#queue.failed
 		} catch (error) {
 			// nothing was read: say so, and let the retry read again
@@ -380,9 +440,31 @@ export class FinanceStore {
 	 * shows the links and accounts once the batches have landed. Answers whether they did; a batch that failed waits
 	 * in the queue for the page's Retry, like any other write, and shows its rows when it lands.
 	 */
-	applySync(chunks: BatchOp[][], change: { links?: ProviderLink[]; accounts?: Account[] }): Promise<boolean> {
-		return new Promise((resolve) => {
+	applySync(chunks: BatchOp[][], change: SyncChange): Promise<boolean>
+	/**
+	 * The same, with the reads and the ops made inside the queue's turn (#75), so no owner's fix lands between a sync's
+	 * read and its write. A read that fails rejects and writes nothing; the queue goes on.
+	 */
+	applySync(build: () => Promise<SyncChange & { chunks: BatchOp[][] }>): Promise<boolean>
+	applySync(
+		given: BatchOp[][] | (() => Promise<SyncChange & { chunks: BatchOp[][] }>),
+		known: SyncChange = {}
+	): Promise<boolean> {
+		return new Promise((resolve, reject) => {
 			this.#queue.enqueue(async () => {
+				let chunks: BatchOp[][]
+				let change: SyncChange
+				if (typeof given === 'function') {
+					try {
+						;({ chunks, ...change } = await given())
+					} catch (error) {
+						reject(error)
+						return
+					}
+				} else {
+					chunks = given
+					change = known
+				}
 				try {
 					for (const ops of chunks) if (ops.length) await applyBatch(ops)
 				} catch (error) {
@@ -399,6 +481,238 @@ export class FinanceStore {
 				resolve(true)
 			})
 		})
+	}
+
+	// ---- Classification (#75) ------------------------------------------------------------------------------------
+
+	/**
+	 * The classification pass over every live transaction, after a sync that wrote some (and after an import, #74):
+	 * the default categories the first time, then each row's merchant, kind, category, transfer pair and refund. One
+	 * job in the queue reads, works out and writes, so no fix lands in between. A failure is logged by its code and
+	 * leaves the rows; the next sync runs the pass again. A second ask while one runs joins it.
+	 */
+	classify(): Promise<void> {
+		return (this.#classifying ??= this.#classify().finally(() => (this.#classifying = undefined)))
+	}
+
+	async #classify() {
+		await this.load()
+		// a queue stopped on a failed write would hold the pass behind it: the next sync runs it instead
+		if (this.#queue.failed) return
+		await this.#exclusive(async () => {
+			try {
+				const translate = get(t)
+				const [transactions, categories, rules, merchants] = await Promise.all([
+					this.#transactions(),
+					queryEntities<CategoryPayload>({ type: FINANCE.category, includeDeleted: true }),
+					queryEntities<RulePayload>({ type: FINANCE.rule }),
+					queryEntities<MerchantPayload>({ type: FINANCE.merchant }),
+				])
+				const out = classifyPass({
+					transactions,
+					categories,
+					rules,
+					merchants,
+					accounts: this.data().accounts,
+					name: (key) => translate(`domains.finance.categories.${key}`),
+					newId,
+				})
+				for (const ops of chunked(out.ops)) await applyBatch(ops)
+				this.categories = out.categories
+				this.rules = out.rules
+				this.merchants = out.merchants
+			} catch (error) {
+				await logError('data', 'The Orchard classification pass failed', code(error)).catch(() => null)
+			}
+		})
+	}
+
+	/**
+	 * Runs a job in the queue's turn, so it reads, works out and writes with nothing else between. A job that throws
+	 * stops the queue as a failed write does (`saveFailed`), and the retry runs it again.
+	 */
+	#exclusive<T>(job: () => Promise<T>): Promise<T> {
+		return new Promise((resolve, reject) => {
+			this.#queue.enqueue(async () => {
+				try {
+					resolve(await job())
+				} catch (error) {
+					reject(error)
+					throw error
+				}
+			})
+		})
+	}
+
+	#transactions(): Promise<Entity<TransactionPayload>[]> {
+		return queryEntities<TransactionPayload>({ type: FINANCE.transaction })
+	}
+
+	async #transaction(id: string): Promise<Entity<TransactionPayload> | undefined> {
+		return (await queryEntities<TransactionPayload>({ type: FINANCE.transaction, ids: [id] }))[0]
+	}
+
+	async #merchants(ids?: string[]): Promise<Merchant[]> {
+		return (await queryEntities<MerchantPayload>({ type: FINANCE.merchant, ...(ids ? { ids } : {}) })).map(withId)
+	}
+
+	async #rules(): Promise<Rule[]> {
+		return (await queryEntities<RulePayload>({ type: FINANCE.rule })).map(ruleOf)
+	}
+
+	/**
+	 * An owner's fix: read and written in one queue job, with one undo that sends the way back (D-12). A refusal or a
+	 * row that is gone writes nothing; a failed write sets `saveFailed`, and the retry makes the fix again.
+	 */
+	async #edit<C extends string>(build: () => Promise<StoreEdit | Refused<C> | undefined>): Promise<EditAnswer<C>> {
+		try {
+			return await this.#exclusive(async (): Promise<EditAnswer<C>> => {
+				const made = await build()
+				if (!made || 'error' in made) return made
+				await applyBatch(made.ops)
+				made.apply?.()
+				return () => {
+					made.revert?.()
+					this.#queue.enqueue(() => applyBatch(made.inverse))
+				}
+			})
+		} catch {
+			// the queue logged the code and holds the job for the retry
+			return undefined
+		}
+	}
+
+	/**
+	 * The owner's category on a row; none clears it, for the next pass to derive. Remembered, it becomes a rule that
+	 * recategorises the merchant's other rows at once (not the owner's); the undo takes all of it back.
+	 */
+	setCategory(
+		id: string,
+		categoryId: string | undefined,
+		options: { remember?: boolean } = {}
+	): Promise<Undo | undefined> {
+		const remember = options.remember === true
+		return this.#edit(async () => {
+			const row = await this.#transaction(id)
+			if (!row) return undefined
+			const [rows, merchants, rules] = remember
+				? await Promise.all([this.#transactions(), this.#merchants(), this.#rules()])
+				: [[], [], []]
+			const made = recategoriseOps(row, categoryId, remember, { rows, merchants, rules, newId, nowIso: nowIso() })
+			const before = this.rules
+			const rule = made.rule
+			return {
+				...made,
+				apply: rule ? () => (this.rules = [...this.rules.filter((entry) => entry.id !== rule.id), rule]) : undefined,
+				revert: () => (this.rules = before),
+			}
+		}) as Promise<Undo | undefined>
+	}
+
+	split(id: string, parts: TxPart[]): Promise<EditAnswer<SplitError>> {
+		return this.#edit(async () => {
+			const row = await this.#transaction(id)
+			return row ? splitOps(row, parts) : undefined
+		})
+	}
+
+	unsplit(id: string): Promise<Undo | undefined> {
+		return this.#rowEdit(id, unsplitOps)
+	}
+
+	/** The part of a money-out row someone owes back; none clears it. */
+	setReimbursable(id: string, amount: Money | undefined): Promise<EditAnswer<ReimbursableError>> {
+		return this.#edit(async () => {
+			const row = await this.#transaction(id)
+			return row ? reimbursableOps(row, amount) : undefined
+		})
+	}
+
+	/** Says a money-in row pays back a reimbursable one: it becomes a refund in the original's category. */
+	linkRepayment(originalId: string, repaymentId: string): Promise<EditAnswer<RepaymentError>> {
+		return this.#edit(async () => {
+			const [original, repayment] = await Promise.all([this.#transaction(originalId), this.#transaction(repaymentId)])
+			return original && repayment ? repaymentOps(original, repayment) : undefined
+		})
+	}
+
+	unlinkRepayment(repaymentId: string): Promise<Undo | undefined> {
+		return this.#rowEdit(repaymentId, unlinkRepaymentOps)
+	}
+
+	/** A one-off still counts in totals; `spendingOf` marks it so averages can leave it out. */
+	setOneOff(id: string, oneOff: boolean): Promise<Undo | undefined> {
+		return this.#rowEdit(id, (row) => oneOffOps(row, oneOff))
+	}
+
+	#rowEdit(id: string, make: (row: Entity<TransactionPayload>) => Edit | undefined): Promise<Undo | undefined> {
+		return this.#edit(async () => {
+			const row = await this.#transaction(id)
+			return row ? make(row) : undefined
+		}) as Promise<Undo | undefined>
+	}
+
+	renameMerchant(id: string, name: string): Promise<Undo | undefined> {
+		return this.#edit(async () => {
+			const [merchant] = await this.#merchants([id])
+			const made = merchant ? renameMerchantOps(merchant, name) : undefined
+			if (!made) return undefined
+			const before = this.merchants
+			return {
+				...made,
+				apply: () => (this.merchants = this.merchants.map((entry) => (entry.id === id ? made.merchant : entry))),
+				revert: () => (this.merchants = before),
+			}
+		}) as Promise<Undo | undefined>
+	}
+
+	/** Moves the merchants' raw names, rows and rules to `intoId` and tombstones them; the undo brings them back. */
+	mergeMerchants(intoId: string, fromIds: string[]): Promise<Undo | undefined> {
+		return this.#edit(async () => {
+			const [merchants, rows, rules] = await Promise.all([this.#merchants(), this.#transactions(), this.#rules()])
+			const into = merchants.find((entry) => entry.id === intoId)
+			const from = merchants.filter((entry) => fromIds.includes(entry.id))
+			const made = into ? mergeMerchantOps(into, from, rows, rules) : undefined
+			if (!made) return undefined
+			const before = { merchants: this.merchants, rules: this.rules }
+			const gone = fromIds.filter((id) => id !== intoId)
+			const movedOf = (id: string) => made.rules.find((entry) => entry.id === id)
+			return {
+				...made,
+				apply: () => {
+					this.merchants = this.merchants
+						.filter((entry) => !gone.includes(entry.id))
+						.map((entry) => (entry.id === intoId ? made.merchant : entry))
+					this.rules = this.rules.map((entry) => movedOf(entry.id) ?? entry)
+				},
+				revert: () => {
+					this.merchants = before.merchants
+					this.rules = before.rules
+				},
+			}
+		}) as Promise<Undo | undefined>
+	}
+
+	/** Creates a category or renames one; a default keeps its key, so the provider mapping still finds it. */
+	async saveCategory(draft: CategoryDraft): Promise<{ category: Category; undo: Undo } | undefined> {
+		let category: Category | undefined
+		const undo = (await this.#edit(async () => {
+			const [was] = draft.id ? await queryEntities<CategoryPayload>({ type: FINANCE.category, ids: [draft.id] }) : []
+			if (draft.id && !was) return undefined
+			const made = saveCategoryOps(draft, was ? withId(was) : undefined, newId)
+			if (!made) return undefined
+			category = made.category
+			const before = this.categories
+			return {
+				...made,
+				apply: () =>
+					(this.categories = was
+						? this.categories.map((entry) => (entry.id === made.category.id ? made.category : entry))
+						: [...this.categories, made.category]),
+				revert: () => (this.categories = before),
+			}
+		})) as Undo | undefined
+		return undo && category ? { category, undo } : undefined
 	}
 
 	// ---- Sample data ---------------------------------------------------------------------------------------------
