@@ -66,7 +66,7 @@ export type Skipped = 'finance:unsupported-currency' | 'finance:bad-amount'
 
 const sameMoney = (a?: Money, b?: Money) => a?.minor === b?.minor && a?.currency === b?.currency
 /** A value with its keys in order at every level, so two payloads compare by what they hold. */
-const canonical = (value: unknown): unknown =>
+export const canonical = (value: unknown): unknown =>
 	Array.isArray(value)
 		? value.map(canonical)
 		: value && typeof value === 'object'
@@ -77,7 +77,8 @@ const canonical = (value: unknown): unknown =>
 						.map(([key, entry]) => [key, canonical(entry)])
 				)
 			: value
-const same = (a: unknown, b: unknown) => JSON.stringify(canonical(a)) === JSON.stringify(canonical(b))
+/** Whether two payloads hold the same, whatever the order of their keys. */
+export const same = (a: unknown, b: unknown) => JSON.stringify(canonical(a)) === JSON.stringify(canonical(b))
 
 /**
  * The provider's accounts on the link: one it has no row for is created (with its balance, when it has one), one
@@ -202,7 +203,11 @@ export function transactionOps(
 			return
 		}
 		const pending = found.pendingTransactionId ? existing.get(found.pendingTransactionId) : undefined
-		const payload = { ...(pending ? ownKeys(pending.payload) : {}), ...theirs } as TransactionPayload
+		// the pass (#75) moves the pointers to the pending row over by `replaced`, and fits the owner's split to the amount
+		const payload = {
+			...(pending ? { ...ownKeys(pending.payload), replaced: pending.id } : {}),
+			...theirs,
+		} as TransactionPayload
 		const id = newId()
 		ops.push({
 			op: 'createEntity',

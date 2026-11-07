@@ -10,7 +10,40 @@ export const FINANCE = {
 	snapshot: 'balance-snapshot',
 	asset: 'asset',
 	transaction: 'transaction',
+	category: 'budget-category',
+	rule: 'category-rule',
+	merchant: 'merchant',
 } as const
+
+/**
+ * What a transaction is (finance.md §6). #75 derives all but `bill-payment` (#78) and the investment kinds (#76).
+ */
+export const TX_KINDS = [
+	'purchase',
+	'refund',
+	'transfer',
+	'card-payment',
+	'bill-payment',
+	'income',
+	'interest-earned',
+	'dividend',
+	'interest-charged',
+	'fee',
+	'investment-buy',
+	'investment-sell',
+] as const
+export type TxKind = (typeof TX_KINDS)[number]
+
+/** One part of a split row: the row's currency and sign, never zero. */
+export interface TxPart {
+	amount: Money
+	categoryId?: string
+	/** At most 200 characters. */
+	note?: string
+}
+
+/** Who chose a row's category: the owner, the purchase a refund returns, a rule, or the provider's category. */
+export type CategoryBy = 'owner' | 'refund' | 'rule' | 'provider'
 
 export const ACCOUNT_KINDS = [
 	'checking',
@@ -132,7 +165,67 @@ export interface TransactionPayload {
 	pending: boolean
 	/** `personal_finance_category.detailed`, a hint for #75. */
 	providerCategory?: string
+
+	// ---- #75's own keys: the classification pass (`classify.ts`) derives them, the owner's edits (`edits.ts`) set them
+
+	/** The pass's, from the provider's category, the sign and the transfer pair; a repayment's is `refund`. */
+	kind?: TxKind
+	/** The pass's: a `merchant` row, found by cleaned name or created. */
+	merchantId?: string
+	/** The pass's: the person on the other side of a vague merchant (Zelle, Venmo…), normalised, for rules. */
+	counterparty?: string
+	/** The owner's, a refund's purchase's, a rule's or the provider's, as `categoryBy` says. */
+	categoryId?: string
+	categoryBy?: CategoryBy
+	/** The pass's: the other side of a move between two of the owner's accounts. */
+	transferId?: string
+	/** The pass's: the purchase this refund returns. */
+	refundOf?: string
+	/** The owner's: the reimbursable row this money-in row pays back. */
+	repays?: string
+	/** The owner's: the part of a money-out row someone owes back, positive, at most its size. */
+	reimbursable?: Money
+	/** The owner's split, summing exactly to `amount`. */
+	parts?: TxPart[]
+	/** The owner's: counts in totals, left out of averages. */
+	oneOff?: true
+	/** The pass's: a vague merchant with no category from the owner or a rule; #90 asks about it. */
+	review?: 'vague'
+	/** The sync's: the pending row this posted row took over. */
+	replaced?: string
 }
+
+/** A `budget-category`. A default one keeps its `key`, so the provider mapping finds it after a rename. */
+export interface CategoryPayload {
+	key?: string
+	name: string
+	group: 'fixed' | 'variable' | 'income'
+	essential: boolean
+}
+
+/** A `category-rule`: at least one of `merchantId` or `counterparty`. */
+export interface RulePayload {
+	categoryId: string
+	merchantId?: string
+	counterparty?: string
+	/** The row whose fix made it. */
+	learnedFrom?: string
+}
+
+/** A `merchant`. A vague one (Zelle, PayPal…) is one per brand and names it in `vague`. */
+export interface MerchantPayload {
+	name: string
+	/** `merchantKey` of the name it was made from. */
+	key: string
+	/** The brand of a vague merchant. */
+	vague?: string
+	/** The cleaned names that lead here, distinct, at most 50; a merge moves them. */
+	rawNames: string[]
+}
+
+export type Category = CategoryPayload & { id: string }
+export type Rule = RulePayload & { id: string; updatedAt: string }
+export type Merchant = MerchantPayload & { id: string }
 
 export type ProviderLink = ProviderLinkPayload & { id: string }
 export type Account = AccountPayload & { id: string }
