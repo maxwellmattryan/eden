@@ -1,5 +1,6 @@
-// Orchard's tabs, in the order its manifest declares them: Accounts, Bills (#78) and Investments (#76) until Overview,
-// Activity and Budget arrive with their issues. The tab lives in the address; anything that is not a tab is Accounts.
+// Orchard's tabs, in the order its manifest declares them: Activity (#83), Accounts, Bills (#78) and Investments (#76)
+// until Overview and Budget arrive with their issues. The tab lives in the address; anything that is not a tab is
+// Accounts, until #87 makes Overview the default.
 import { declarationOf } from '../../manifest/index.js'
 import type { TabId } from '../../manifest/types.js'
 

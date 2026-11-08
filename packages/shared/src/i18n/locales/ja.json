@@ -1204,11 +1204,148 @@
 			"name": "果樹園",
 			"subtitle": "お金、予算、資産",
 			"tabs": {
+				"activity": "取引",
 				"accounts": "口座",
 				"bills": "請求",
 				"investments": "投資"
 			},
 			"tabsLabel": "果樹園のセクション",
+			"txKinds": {
+				"purchase": "購入",
+				"refund": "返金",
+				"transfer": "振替",
+				"card-payment": "カードの支払い",
+				"bill-payment": "請求の支払い",
+				"income": "給与・収入",
+				"interest-earned": "受取利息",
+				"dividend": "配当",
+				"interest-charged": "支払利息",
+				"fee": "手数料",
+				"investment-buy": "投資の買付",
+				"investment-sell": "投資の売却"
+			},
+			"activity": {
+				"search": "取引を検索",
+				"searchPlaceholder": "店名、メモ、または >100",
+				"filters": "絞り込み",
+				"sections": {
+					"when": "期間",
+					"where": "口座",
+					"what": "内容",
+					"amount": "金額",
+					"state": "状態"
+				},
+				"presets": {
+					"this-month": "今月",
+					"last-month": "先月",
+					"90-days": "過去90日",
+					"this-year": "今年"
+				},
+				"from": "開始日",
+				"to": "終了日",
+				"over": "以上",
+				"under": "以下",
+				"states": {
+					"pending": "保留中",
+					"posted": "確定済み",
+					"recurring": "定期",
+					"bill": "請求の一部",
+					"one-off": "一時的",
+					"reimbursable": "立替",
+					"uncategorised": "未分類"
+				},
+				"chips": {
+					"over": "{amount}以上",
+					"under": "{amount}以下",
+					"remove": "絞り込みを外す：{label}",
+					"clear": "クリア",
+					"label": "適用中の絞り込み"
+				},
+				"range": "{from} – {to}",
+				"accountName": "{name} ••{last4}",
+				"totals": "{count}件の取引",
+				"out": "出金 {amount}",
+				"in": "入金 {amount}",
+				"leftOut": "{currencies}の金額は合計に含まれません",
+				"showMore": "さらに表示",
+				"cap": "新しい1,000件を表示しています。残りを見るには絞り込んでください。",
+				"today": "今日",
+				"yesterday": "昨日",
+				"feed": "取引",
+				"split": "分割",
+				"paidBack": "{amount}の返済待ち",
+				"pillTo": "から",
+				"pill": "{name}（末尾{last4}）、この口座で絞り込む",
+				"pillNoLast4": "{name}、この口座で絞り込む",
+				"readFailed": "果樹園は取引を読み込めませんでした。",
+				"empty": {
+					"title": "まだ何も連携していません",
+					"text": "銀行を連携すると、果樹園はこの端末ですべての口座を最新に保ちます。手入力もできます。",
+					"noneTitle": "まだ取引がありません",
+					"noneText": "次の同期か、取り込んだ明細から届きます。"
+				},
+				"noMatch": {
+					"title": "この絞り込みに一致する取引はありません",
+					"text": "絞り込みを一つ外すか、すべてクリアしてください。",
+					"action": "絞り込みをクリア"
+				},
+				"menu": {
+					"label": "{title}（{day}）の操作",
+					"changeCategory": "カテゴリを変更",
+					"markOneOff": "一時的にする",
+					"notOneOff": "一時的でなくする",
+					"markReimbursable": "立替にする",
+					"notReimbursable": "立替でなくする"
+				},
+				"categorySheet": {
+					"title": "カテゴリを変更",
+					"category": "カテゴリ",
+					"none": "カテゴリなし",
+					"remember": "{title}のすべてに使う"
+				},
+				"reimbursableSheet": {
+					"title": "立替にする",
+					"amount": "返済される金額"
+				},
+				"refusals": {
+					"money-in": "立替にできるのは出金だけです",
+					"zero": "ゼロより大きい金額を入力してください",
+					"currency": "取引と同じ通貨を使ってください",
+					"too-much": "取引の金額を超えています"
+				},
+				"toasts": {
+					"categorised": "カテゴリを変更しました",
+					"remembered": "{title}のすべてのカテゴリを変更しました",
+					"oneOff": "一時的にしました",
+					"notOneOff": "一時的でなくしました",
+					"reimbursable": "立替にしました",
+					"notReimbursable": "立替でなくしました"
+				},
+				"insights": {
+					"label": "分析",
+					"spending": "支出の推移",
+					"spendingWeeks": "週ごとの支出（{series}で積み上げ）",
+					"spendingMonths": "月ごとの支出（{series}で積み上げ）",
+					"else": "その他すべて",
+					"merchants": "よく使う店",
+					"typical": "いつもとの比較",
+					"inOut": "月ごとの入出金"
+				},
+				"columns": {
+					"merchant": "店",
+					"count": "件数",
+					"average": "平均",
+					"total": "合計",
+					"category": "カテゴリ",
+					"typical": "いつも",
+					"change": "差",
+					"month": "月",
+					"in": "入金",
+					"out": "出金",
+					"net": "差引"
+				},
+				"typicalHint": "そのカテゴリのいつもの月の金額：直前の最大6か月（丸ひと月）の平均です。"
+			},
 			"bills": {
 				"groups": {
 					"overdue": "期限切れ",

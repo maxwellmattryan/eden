@@ -1204,11 +1204,148 @@
 			"name": "Orchard",
 			"subtitle": "Money, budgets, assets",
 			"tabs": {
+				"activity": "Activity",
 				"accounts": "Accounts",
 				"bills": "Bills",
 				"investments": "Investments"
 			},
 			"tabsLabel": "Orchard sections",
+			"txKinds": {
+				"purchase": "Purchase",
+				"refund": "Refund",
+				"transfer": "Transfer",
+				"card-payment": "Card payment",
+				"bill-payment": "Bill payment",
+				"income": "Paycheck or income",
+				"interest-earned": "Interest earned",
+				"dividend": "Dividend",
+				"interest-charged": "Interest charged",
+				"fee": "Fee",
+				"investment-buy": "Investment buy",
+				"investment-sell": "Investment sell"
+			},
+			"activity": {
+				"search": "Search activity",
+				"searchPlaceholder": "Merchant, note or >100",
+				"filters": "Filters",
+				"sections": {
+					"when": "When",
+					"where": "Where",
+					"what": "What",
+					"amount": "How much",
+					"state": "State"
+				},
+				"presets": {
+					"this-month": "This month",
+					"last-month": "Last month",
+					"90-days": "Last 90 days",
+					"this-year": "This year"
+				},
+				"from": "From",
+				"to": "To",
+				"over": "Over",
+				"under": "Under",
+				"states": {
+					"pending": "Pending",
+					"posted": "Posted",
+					"recurring": "Recurring",
+					"bill": "Part of a bill",
+					"one-off": "One-off",
+					"reimbursable": "Reimbursable",
+					"uncategorised": "Uncategorised"
+				},
+				"chips": {
+					"over": "Over {amount}",
+					"under": "Under {amount}",
+					"remove": "Remove filter: {label}",
+					"clear": "Clear",
+					"label": "Filters on"
+				},
+				"range": "{from} – {to}",
+				"accountName": "{name} ••{last4}",
+				"totals": "{count, plural, one {# transaction} other {# transactions}}",
+				"out": "Out {amount}",
+				"in": "In {amount}",
+				"leftOut": "Amounts in {currencies} are left out of totals",
+				"showMore": "Show more",
+				"cap": "Showing the newest 1,000. Narrow the filters to see the rest.",
+				"today": "Today",
+				"yesterday": "Yesterday",
+				"feed": "Transactions",
+				"split": "Split",
+				"paidBack": "{amount} to be paid back",
+				"pillTo": "to",
+				"pill": "{name} ending {last4}, filter by this account",
+				"pillNoLast4": "{name}, filter by this account",
+				"readFailed": "Orchard couldn't read your transactions.",
+				"empty": {
+					"title": "Nothing linked yet",
+					"text": "Link a bank and Orchard keeps every account current on this device, or enter one by hand.",
+					"noneTitle": "No transactions yet",
+					"noneText": "They arrive with the next sync, or from a statement you import."
+				},
+				"noMatch": {
+					"title": "Nothing matches these filters",
+					"text": "Take a filter off, or clear them all.",
+					"action": "Clear filters"
+				},
+				"menu": {
+					"label": "Actions for {title}, {day}",
+					"changeCategory": "Change category",
+					"markOneOff": "Mark one-off",
+					"notOneOff": "Not one-off",
+					"markReimbursable": "Mark reimbursable",
+					"notReimbursable": "Not reimbursable"
+				},
+				"categorySheet": {
+					"title": "Change category",
+					"category": "Category",
+					"none": "No category",
+					"remember": "Use for every {title}"
+				},
+				"reimbursableSheet": {
+					"title": "Mark reimbursable",
+					"amount": "To be paid back"
+				},
+				"refusals": {
+					"money-in": "Only money out can be paid back",
+					"zero": "Enter more than zero",
+					"currency": "Use the transaction's currency",
+					"too-much": "More than the transaction"
+				},
+				"toasts": {
+					"categorised": "Category changed",
+					"remembered": "Category changed for every {title}",
+					"oneOff": "Marked one-off",
+					"notOneOff": "No longer one-off",
+					"reimbursable": "Marked reimbursable",
+					"notReimbursable": "No longer reimbursable"
+				},
+				"insights": {
+					"label": "Insights",
+					"spending": "Spending over time",
+					"spendingWeeks": "Spending by week, stacked by {series}",
+					"spendingMonths": "Spending by month, stacked by {series}",
+					"else": "Everything else",
+					"merchants": "Top merchants",
+					"typical": "Against typical",
+					"inOut": "In and out by month"
+				},
+				"columns": {
+					"merchant": "Merchant",
+					"count": "Count",
+					"average": "Average",
+					"total": "Total",
+					"category": "Category",
+					"typical": "Typical",
+					"change": "Change",
+					"month": "Month",
+					"in": "In",
+					"out": "Out",
+					"net": "Net"
+				},
+				"typicalHint": "What the category comes to in a usual month: the average of up to six full months before."
+			},
 			"bills": {
 				"groups": {
 					"overdue": "Overdue",
