@@ -128,6 +128,7 @@ import {
 	withUpdates,
 	type RecurringEdit,
 } from './recurring.js'
+import { payStubOps } from './paystub.js'
 import { financeFromRows, financeRows, financeUris } from './rows.js'
 import { seedData } from './seed.js'
 import { FILE_SOURCE, importOps, matchRows, type ParsedStatement, type StatementRow } from './statement.js'
@@ -152,7 +153,8 @@ import {
 	type IncomeSourcePayload,
 	type Holding,
 	type HoldingPayload,
-	type LetterImportPayload,
+	type DocumentImportPayload,
+	type PayStub,
 	type Merchant,
 	type MerchantPayload,
 	type ProviderLink,
@@ -1051,6 +1053,28 @@ export class FinanceStore {
 	}
 
 	/**
+	 * Keeps a pay stub's deductions on their income source (#85), in one write with one undo: with `read`, the stub's
+	 * `file-import` row too. A stub with no deductions clears the stored ones and lets their file be read again.
+	 * Nothing when the source is gone.
+	 */
+	savePayStub(sourceId: string, stub: PayStub | undefined, read?: { fingerprint: string }): Undo | undefined {
+		const plain = $state.snapshot(this.incomeSources) as IncomeSource[]
+		const was = plain.find((source) => source.id === sourceId)
+		if (!was) return undefined
+		const file =
+			read && stub?.deductions.length ? { id: newId(), fingerprint: read.fingerprint, day: todayIso() } : undefined
+		const made = payStubOps(was, stub, file)
+		const before = this.incomeSources
+		return this.#commit({
+			apply: () =>
+				(this.incomeSources = this.incomeSources.map((source) => (source.id === sourceId ? made.source : source))),
+			revert: () => (this.incomeSources = before),
+			ops: made.ops,
+			inverse: made.inverse,
+		})
+	}
+
+	/**
 	 * The owner's answer on one or more sources: shown at once, written in one batch with one undo (D-12), and the
 	 * questions it answers withdrawn from the inbox once it lands. Nothing when no source changes.
 	 */
@@ -1564,12 +1588,13 @@ export class FinanceStore {
 		return this.#billJob(async (state) => {
 			const bill = state.live.find((entry) => entry.id === id)
 			if (!bill) return undefined
-			const files = await queryEntities<LetterImportPayload>({ type: FINANCE.fileImport, source: FILE_IMPORT_SOURCE })
+			const files = await queryEntities<DocumentImportPayload>({ type: FINANCE.fileImport, source: FILE_IMPORT_SOURCE })
 			const own = bill.task ? state.tasks.find((task) => task.id === bill.task!.id) : undefined
 			const taskIds = own && own.kind === 'todo' && !own.done ? [own.id] : []
 			const made = deleteBillOps(
 				bill,
-				files.filter((row) => row.payload.billId === id).map((row) => row.id),
+				// a pay stub's row has no bill (#85)
+				files.filter((row) => row.payload.kind === 'letter' && row.payload.billId === id).map((row) => row.id),
 				taskIds
 			)
 			const rows = state.rows

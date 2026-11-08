@@ -32,6 +32,7 @@
 	import { staleDay } from '../accounts.js'
 	import { linesOf } from '../budget.js'
 	import { billCapture } from '../capture.svelte.js'
+	import { payStubRead } from '../paystub.svelte.js'
 	import { plaid } from '../plaid.svelte.js'
 	import { provider } from '../provider.svelte.js'
 	import { documentRead } from '../reader.svelte.js'
@@ -61,6 +62,7 @@
 	import LinkSheet from './LinkSheet.svelte'
 	import PaycheckSheet from './PaycheckSheet.svelte'
 	import PaySheet from './PaySheet.svelte'
+	import PayStubSheet from './PayStubSheet.svelte'
 	import PlaidKeysSheet from './PlaidKeysSheet.svelte'
 	import ReimbursableSheet from './ReimbursableSheet.svelte'
 	import ReplaceSheet from './ReplaceSheet.svelte'
@@ -83,7 +85,11 @@
 		readerOf(
 			$t,
 			documentRead.options?.preview,
-			statementImport.open ? 'domains.finance.import.failures' : 'domains.finance.bills.failure'
+			statementImport.open
+				? 'domains.finance.import.failures'
+				: payStubRead.asking
+					? 'domains.finance.payStub.failure'
+					: 'domains.finance.bills.failure'
 		)
 	)
 
@@ -440,6 +446,13 @@
 {#key billCapture.opened}
 	{#if billCapture.open}
 		<BillSheet bind:open={billCapture.open} capture />
+	{/if}
+{/key}
+
+<!-- The pay stub sheet a read or Edit deductions opens (#85): made afresh as its deductions arrive. -->
+{#key payStubRead.opened}
+	{#if payStubRead.open}
+		<PayStubSheet bind:open={payStubRead.open} />
 	{/if}
 {/key}
 

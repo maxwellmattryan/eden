@@ -3,12 +3,15 @@
 	// and the trailing average, then a row per source the income pass found that is not hidden, the paychecks first,
 	// the ended ones next and the tax refund or payment last. A late row says so in words and is never coloured: the
 	// header's notice carries the urgency, and the danger colour means money owed. Rows do not act (D-118); their menus
-	// do, each with an Undo. Absent until the ledger is ready and while there is no source to show, with no empty state.
+	// do, each with an Undo; a paycheck's menu reads its pay stub or edits the deductions kept from one, and its line
+	// ends with what the insurance premiums come to a paycheck (#85). Absent until the ledger is ready and while there is no source to show, with no empty state.
 	import { Icon, List, type ListRowData, type MenuItem } from '@eden/ui-kit'
 	import { t } from '../../../i18n/index.js'
 	import { formatMoney } from '../../../money/index.js'
-	import { settings } from '../../../settings/index.js'
+	import { amountText, settings } from '../../../settings/index.js'
 	import { undoToast } from '../../../shell/index.js'
+	import { premiumsOf } from '../paystub.js'
+	import { payStubRead } from '../paystub.svelte.js'
 	import { finance, type Undo } from '../store.svelte.js'
 	import type { IncomeSource } from '../types.js'
 	import { incomeLine, incomeMeta } from '../words.js'
@@ -23,6 +26,11 @@
 
 	function actionsOf(source: IncomeSource): MenuItem[] {
 		const items: MenuItem[] = []
+		// a paycheck's deductions (#85): read from its stub, or the stored ones edited
+		if (source.kind === 'income' && !source.endedOn)
+			items.push({ id: 'pay-stub', label: $t('domains.finance.income.menu.payStub'), icon: 'file-text' })
+		if (source.payStub)
+			items.push({ id: 'deductions', label: $t('domains.finance.income.menu.editDeductions'), icon: 'pencil' })
 		if (source.kind === 'income' && !source.endedOn)
 			items.push({ id: 'ended', label: $t('domains.finance.income.menu.ended'), icon: 'lock' })
 		else if (source.kind === 'income') {
@@ -35,6 +43,12 @@
 		return items
 	}
 
+	/** What the stored stub's insurance premiums come to a paycheck, as the page writes amounts. */
+	function premiums(source: IncomeSource): string | undefined {
+		const amount = premiumsOf(source.payStub, source.expected.currency)
+		return amount ? amountText(formatMoney(amount, lang), settings.hideAmounts) : undefined
+	}
+
 	const rows = $derived.by<ListRowData[]>(() => {
 		if (!income) return []
 		return [...income.rows]
@@ -43,7 +57,14 @@
 				id: source.id,
 				primary: source.name,
 				secondary: incomeLine(
-					{ source, account: finance.accountById(source.accountId), missed, thirdChecks, home },
+					{
+						source,
+						account: finance.accountById(source.accountId),
+						missed,
+						thirdChecks,
+						home,
+						premiums: premiums(source),
+					},
 					$t,
 					lang
 				),
@@ -70,7 +91,9 @@
 		const source = finance.incomeById(sourceId)
 		if (!source) return
 		const employer = source.name
-		if (id === 'ended') said(finance.endIncome(source.id), 'incomeEnded', employer)
+		if (id === 'pay-stub') void payStubRead.start(source.id)
+		else if (id === 'deductions') payStubRead.edit(source.id)
+		else if (id === 'ended') said(finance.endIncome(source.id), 'incomeEnded', employer)
 		else if (id === 'still-paid') said(finance.restoreIncome(source.id), 'stillPaid', employer)
 		else if (id === 'start-lean') said(finance.startLean(source.id), 'leanOn', employer)
 		else if (id === 'ignore')

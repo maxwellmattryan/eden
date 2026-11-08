@@ -1381,7 +1381,15 @@
 					"paidFromBank": "{day}に{bank}から支払い",
 					"paidOn": "{day}に支払い",
 					"markedPaid": "{day}に支払済みにしました",
-					"minimumPaid": "最低額を支払い済み · {amount}は次回の明細へ"
+					"minimumPaid": "最低額を支払い済み · {amount}は次回の明細へ",
+					"notYet": "まだ請求ではありません",
+					"fromEob": "{insurer}の医療費明細(EOB)から",
+					"fromAnEob": "医療費明細(EOB)から",
+					"setAside": "毎月{amount}を積み立て"
+				},
+				"insurance": {
+					"premium": "保険料",
+					"medical": "医療"
 				},
 				"menu": {
 					"markPaid": "支払済みにする",
@@ -1408,6 +1416,12 @@
 					"titleEdit": "請求を編集",
 					"titleDraft": "請求を確認",
 					"updates": "{month}の{payee}の請求を更新します",
+					"replaces": "{insurer}の医療費明細(EOB)による{payee}の見積もりを置き換えます",
+					"replacesEob": "医療費明細(EOB)による{payee}の見積もりを置き換えます",
+					"billed": "この医療費明細(EOB)は、すでにある{payee}の請求のものです。保存しても請求はそのままです。",
+					"insurance": "保険",
+					"noInsurance": "なし",
+					"serviceDay": "受診日",
 					"payee": "支払先",
 					"amount": "金額",
 					"currency": "通貨",
@@ -1465,6 +1479,59 @@
 					"cancelled": "下書きを中止しました。",
 					"unreadable": "庭師はこれを読めませんでした。",
 					"empty": "これは請求には見えません。",
+					"no-files": "送るものがありませんでした。",
+					"nothing-owed": "この医療費明細(EOB)では支払う額がないため、請求はありません。"
+				}
+			},
+			"payStub": {
+				"title": "控除を確認",
+				"titleEdit": "控除を編集",
+				"confirm": "控除を読み取る",
+				"next": "庭師が控除を一覧にします。保存する前に確認できます。",
+				"reading": "控除を読み取り中",
+				"replaces": "{day}の給与明細の控除を置き換えます",
+				"payDay": "支給日",
+				"list": "控除",
+				"rowLabel": "控除{n}",
+				"name": "名前",
+				"kind": "種類",
+				"amount": "金額",
+				"kinds": {
+					"medical": "医療",
+					"dental": "歯科",
+					"vision": "眼科",
+					"life": "生命",
+					"disability": "就業不能",
+					"hsa": "HSA",
+					"fsa": "FSA",
+					"retirement": "退職金",
+					"tax": "税金",
+					"other": "その他"
+				},
+				"remove": "{name}を削除",
+				"removeEmpty": "この控除を削除",
+				"add": "控除を追加",
+				"premiums": "保険料は給与1回あたり{amount}",
+				"byHand": "手で入力する",
+				"known": "{employer}の控除を記録しました",
+				"knownGone": "その収入源はもうありません",
+				"errors": {
+					"name": "名前を入力してください",
+					"positive": "0より大きい金額を入力してください",
+					"none": "控除を1つ以上追加してください"
+				},
+				"failure": {
+					"busy": "庭師は別の依頼を処理中です。少し待ってからもう一度お試しください。",
+					"no-key": "給与明細を読み取るには、設定でAnthropicのキーを追加してください。",
+					"unavailable": "ここでは庭師を使えません。",
+					"budget": "今月の庭師の予算を使い切りました。",
+					"limit": "サブスクリプションの利用上限に達しています。リセットまでお待ちください。",
+					"network": "庭師に接続できませんでした。",
+					"refusal": "庭師はこの給与明細を読み取りませんでした。",
+					"max-tokens": "回答が長すぎました。",
+					"cancelled": "読み取りを中止しました。",
+					"unreadable": "庭師はこれを読めませんでした。",
+					"empty": "この給与明細から控除を読み取れませんでした。",
 					"no-files": "送るものがありませんでした。"
 				}
 			},
@@ -1747,7 +1814,10 @@
 				},
 				"perMonth": "月におよそ{amount}",
 				"about": "およそ{amount}",
+				"premiums": "保険料は給与1回あたり{amount}",
 				"menu": {
+					"payStub": "給与明細を読み取る",
+					"editDeductions": "控除を編集",
 					"ended": "この仕事は終わった",
 					"stillPaid": "まだ支給されている",
 					"startLean": "節約モードを始める",
@@ -1886,7 +1956,9 @@
 				"nothingNew": "{name}に新しい取引はありません",
 				"costBasisSet": "{name}の取得原価を設定しました",
 				"costBasisCleared": "{name}の取得原価を消去しました",
-				"valueSet": "{name}の評価額を設定しました"
+				"valueSet": "{name}の評価額を設定しました",
+				"payStubSaved": "{employer}の控除を保存しました",
+				"payStubCleared": "{employer}の控除を消去しました"
 			},
 			"plaid": {
 				"keysButton": "Plaidのキー",
