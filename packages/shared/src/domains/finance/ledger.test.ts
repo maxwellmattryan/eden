@@ -297,6 +297,49 @@ describe('the ledger', () => {
 		expect(groc.rows.find((entry) => entry.id === 'sp')!.amount).toEqual(usd(-3000))
 		expect(groc.spending).toEqual(usd(-1000))
 		expect(groc.left).toEqual([jpy(-1200)])
+
+		// a bill and a recurring charge; a charge is kept only while it is listed and not dismissed
+		const tagged = [
+			...ROWS,
+			row({ id: 'bl', minor: -4000, day: '2026-10-07', kind: 'bill-payment', billId: 'b1' }),
+			row({ id: 'rc', minor: -1500, day: '2026-10-08', recurringId: 'r-live' }),
+			row({ id: 'rd', minor: -1500, day: '2026-10-09', recurringId: 'r-dismissed' }),
+			row({ id: 'rg', minor: -1500, day: '2026-10-10', recurringId: 'r-gone' }),
+			row({ id: 'q-out', minor: -900, day: '2026-10-11', kind: 'transfer', transferId: 'q-in' }),
+			row({
+				id: 'q-in',
+				minor: 900,
+				accountId: 'sav',
+				day: '2026-10-11',
+				kind: 'transfer',
+				transferId: 'q-out',
+				billId: 'b2',
+				recurringId: 'r-live',
+			}),
+		]
+		const charges = [
+			{ id: 'r-live', state: 'kept' as const },
+			{ id: 'r-dismissed', state: 'dismissed' as const },
+		]
+		const listed = buildLedger({
+			transactions: tagged,
+			accounts: ACCOUNTS,
+			categories: CATEGORIES,
+			merchants: MERCHANTS,
+			home: 'USD',
+			recurring: charges,
+		})
+		const unlisted = ledgerOf(tagged)
+		expect(listed.entry('bl')).toMatchObject({ billId: 'b1' })
+		// a pair takes the out side's, else the in side's
+		expect(listed.entry('q-in')).toMatchObject({ id: 'q-out', billId: 'b2', recurringId: 'r-live' })
+		expect(listed.entry('rd')!.recurringId).toBeUndefined()
+		expect(listed.entry('rg')!.recurringId).toBeUndefined()
+		expect(unlisted.entry('rd')!.recurringId).toBe('r-dismissed')
+		expect(ids({ filter: { bill: true } }, listed)).toEqual(['q-out', 'bl'])
+		expect(ids({ filter: { recurring: true } }, listed)).toEqual(['q-out', 'rc'])
+		expect(ids({ filter: { recurring: true } }, unlisted)).toEqual(['q-out', 'rg', 'rd', 'rc'])
+		expect(ids({ filter: { bill: true, recurring: true } }, listed)).toEqual(['q-out'])
 	})
 
 	it('parseSearch', () => {
@@ -383,6 +426,8 @@ describe('the ledger', () => {
 				reimbursable: jpy(1),
 				repays: 'y',
 				review: 'vague',
+				recurringId: 'r',
+				billId: 'b',
 			}),
 		])
 		everything.entries[0]!.lines.forEach((line) => expect(line.amount.currency).toBe('JPY'))
@@ -392,6 +437,8 @@ describe('the ledger', () => {
 			'one-off',
 			'reimbursable',
 			'refund',
+			'recurring',
+			'bill',
 			'review',
 			'other-currency',
 		])
@@ -617,6 +664,26 @@ describe('the ledger', () => {
 			['m-zelle', -1250],
 			['m-amz', -250],
 		])
+
+		// under a filter only the kept lines are measured, whatever its period
+		const filtered = ledgerOf([
+			row({ id: 'j', minor: -1000, day: '2026-01-15', categoryId: 'groc' }),
+			row({ id: 'j2', minor: -4000, day: '2026-01-16', categoryId: 'groc', accountId: 'card' }),
+			row({ id: 'f', minor: -2000, day: '2026-02-15', categoryId: 'dining' }),
+			row({ id: 'f1', minor: -9999, day: '2026-02-16', categoryId: 'dining', oneOff: true }),
+			row({ id: 'a', minor: -5000, day: '2026-03-02', categoryId: 'groc' }),
+		])
+		const under = (filter: TxFilter) =>
+			typicalOf(filtered, { month: '2026-03', filter }).map((entry) => [entry.key, entry.spending.minor])
+		expect(under({ accountIds: ['chk'] })).toEqual([
+			['dining', -1000],
+			['groc', -500],
+		])
+		expect(under({ categoryIds: ['groc'], from: '2026-03-01', to: '2026-03-31' })).toEqual([['groc', -2500]])
+		expect(under({ merchantIds: ['nobody'] })).toEqual([])
+		expect(under({})).toEqual(
+			typicalOf(filtered, { month: '2026-03' }).map((entry) => [entry.key, entry.spending.minor])
+		)
 	})
 
 	it('builds and queries 20,000 rows within budget', () => {
