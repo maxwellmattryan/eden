@@ -24,6 +24,7 @@ import {
 	WHOLE,
 	type Account,
 	type AccountPayload,
+	type BillPayload,
 	type CategoryPayload,
 	type MerchantPayload,
 	type ProviderLink,
@@ -116,6 +117,7 @@ function run(engine: Engine, newId: () => string, given: SyncResult, nowIso = NO
 	const out = syncOps({
 		link: linkOf(engine),
 		accounts: accountsOf(engine) as Account[],
+		bills: engine.queryEntities<BillPayload>({ type: FINANCE.bill, includeDeleted: true }),
 		existing,
 		result: given,
 		nowIso,
@@ -127,6 +129,62 @@ function run(engine: Engine, newId: () => string, given: SyncResult, nowIso = NO
 }
 
 describe('finance sync', () => {
+	it('makes one statement bill per card and statement day, never twice and never again once deleted', () => {
+		const { engine, newId } = setup()
+		const card = account({ providerAccountId: 'acc-credit', name: 'Sapphire', kind: 'credit', subtype: 'credit card' })
+		const statement = {
+			providerAccountId: 'acc-credit',
+			statementBalance: '1204.18',
+			minimum: '35',
+			dueDate: '2026-10-12',
+			statementDate: '2026-09-14',
+			currency: 'USD',
+		}
+		const billsOf = (deleted = false) =>
+			engine.queryEntities<BillPayload>({ type: FINANCE.bill, includeDeleted: deleted }).map(withId)
+		run(engine, newId, result({ accounts: [card], statements: [statement] }))
+		const cardId = accountsOf(engine).find((entry) => entry.providerAccountId === 'acc-credit')!.id
+		expect(billsOf()).toEqual([
+			{
+				id: expect.any(String),
+				payee: 'Sapphire',
+				period: '2026-09',
+				source: 'statement',
+				accountId: cardId,
+				statementDay: '2026-09-14',
+				amount: { minor: 120418, currency: 'USD' },
+				minimum: { minor: 3500, currency: 'USD' },
+				due: '2026-10-12',
+			},
+		])
+
+		// a replay writes no bill
+		const again = run(engine, newId, result({ accounts: [card], statements: [statement] }), NOW)
+		expect(again.chunks.flat().filter((op) => op.op !== 'updateEntity' || op.id !== linkOf(engine).id)).toEqual([])
+
+		// a zero or negative balance, a card that is not one, or no statement day makes none
+		run(
+			engine,
+			newId,
+			result({
+				accounts: [card, account({ providerAccountId: 'acc-checking' })],
+				statements: [
+					{ ...statement, statementDate: '2026-10-14', statementBalance: '0' },
+					{ ...statement, statementDate: '2026-11-14', statementBalance: '-20.00' },
+					{ ...statement, providerAccountId: 'acc-checking', statementDate: '2026-10-14' },
+					{ ...statement, statementDate: null },
+				],
+			})
+		)
+		expect(billsOf()).toHaveLength(1)
+
+		// the owner deleted it: the next run leaves it so
+		engine.applyBatch([{ op: 'delete', uri: `eden://bill/${billsOf()[0]!.id}` }])
+		run(engine, newId, result({ accounts: [card], statements: [statement] }))
+		expect(billsOf()).toEqual([])
+		expect(billsOf(true)).toHaveLength(1)
+	})
+
 	it('maps provider types to account kinds', () => {
 		const cases: [string, string | null, string][] = [
 			['depository', 'checking', 'checking'],

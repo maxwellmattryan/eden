@@ -87,6 +87,23 @@ pub struct SyncResult {
     pub modified: Vec<ProviderTransaction>,
     pub removed: Vec<String>,
     pub cursor: String,
+    /// Each credit card's latest statement (#78), read when the item has a credit account; empty when it has none
+    /// or the provider would not answer.
+    pub statements: Vec<CardStatement>,
+}
+
+/// A credit card's latest statement, as the provider's liabilities state it (#78): decimal strings, and days as
+/// `YYYY-MM-DD`. #86 reads the rest of a liability.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CardStatement {
+    pub provider_account_id: String,
+    pub statement_balance: Option<String>,
+    pub minimum: Option<String>,
+    pub due_date: Option<String>,
+    pub statement_date: Option<String>,
+    /// The account's ISO 4217 code.
+    pub currency: Option<String>,
 }
 
 /// What a new Link session hands the webview: the token it polls with and the page to open.

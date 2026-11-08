@@ -46,7 +46,14 @@ import {
 	syncOps,
 	type Skipped,
 } from './sync.js'
-import { FINANCE, type Account, type ProviderLink, type ProviderLinkPayload, type TransactionPayload } from './types.js'
+import {
+	FINANCE,
+	type Account,
+	type BillPayload,
+	type ProviderLink,
+	type ProviderLinkPayload,
+	type TransactionPayload,
+} from './types.js'
 import { dayLine } from './words.js'
 
 /** The repeating run the manifest declares. */
@@ -315,8 +322,10 @@ async function run() {
 		})
 		wrote ||= changed
 	}
-	// once every link is done, the rows that came get their kind, merchant and category (#75)
+	// once every link is done, the rows that came get their kind, merchant and category (#75), and then the bills
+	// their payments, their tasks and the card statements the run read (#78)
 	if (wrote) await finance.classify()
+	if (done.size) await finance.billPass()
 }
 
 /** The live provider rows the result names, by provider id, read in lookups of `CHUNK`. */
@@ -350,10 +359,17 @@ async function syncLink(link: ProviderLink): Promise<boolean> {
 		const made: { out?: ReturnType<typeof syncOps> } = {}
 		// the read and the write in one queue job, so an owner's fix cannot land between them and be overwritten
 		const written = await finance.applySync(async () => {
-			const existing = await existingRows(idsToRead(result))
+			// the bills in the same job, so a card's statement bill is made once, and never again once deleted (#78)
+			const [existing, bills] = await Promise.all([
+				existingRows(idsToRead(result)),
+				result.statements?.length
+					? queryEntities<BillPayload>({ type: FINANCE.bill, includeDeleted: true })
+					: Promise.resolve([]),
+			])
 			const out = (made.out = syncOps({
 				link,
 				accounts: finance.data().accounts,
+				bills,
 				existing,
 				result,
 				nowIso: nowIso(),
