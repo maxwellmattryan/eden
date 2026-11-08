@@ -2473,6 +2473,17 @@ export const DECLARATIONS = {
 					"vision"
 				],
 				"minContext": null
+			},
+			{
+				"id": "read-pay-stub",
+				"access": "write-draft",
+				"confirm": false,
+				"reads": [],
+				"grade": "light",
+				"needs": [
+					"vision"
+				],
+				"minContext": null
 			}
 		],
 		"signals": [

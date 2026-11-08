@@ -35,7 +35,8 @@
 	"captureSources": [],
 	"tools": [
 		{ "id": "draft", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] },
-		{ "id": "read-statement", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] }
+		{ "id": "read-statement", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] },
+		{ "id": "read-pay-stub", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] }
 	],
 	"signals": [
 		"finance.link-broken",

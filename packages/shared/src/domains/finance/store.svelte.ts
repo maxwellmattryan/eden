@@ -116,6 +116,7 @@ import {
 	withUpdates,
 	type RecurringEdit,
 } from './recurring.js'
+import { payStubOps } from './paystub.js'
 import { financeFromRows, financeRows, financeUris } from './rows.js'
 import { seedData } from './seed.js'
 import { FILE_SOURCE, importOps, matchRows, type ParsedStatement, type StatementRow } from './statement.js'
@@ -139,6 +140,7 @@ import {
 	type Holding,
 	type HoldingPayload,
 	type DocumentImportPayload,
+	type PayStub,
 	type Merchant,
 	type MerchantPayload,
 	type ProviderLink,
@@ -1012,6 +1014,28 @@ export class FinanceStore {
 
 	incomeById(id: string): IncomeSource | undefined {
 		return this.income?.sources.find((source) => source.id === id)
+	}
+
+	/**
+	 * Keeps a pay stub's deductions on their income source (#85), in one write with one undo: with `read`, the stub's
+	 * `file-import` row too. A stub with no deductions clears the stored ones and lets their file be read again.
+	 * Nothing when the source is gone.
+	 */
+	savePayStub(sourceId: string, stub: PayStub | undefined, read?: { fingerprint: string }): Undo | undefined {
+		const plain = $state.snapshot(this.incomeSources) as IncomeSource[]
+		const was = plain.find((source) => source.id === sourceId)
+		if (!was) return undefined
+		const file =
+			read && stub?.deductions.length ? { id: newId(), fingerprint: read.fingerprint, day: todayIso() } : undefined
+		const made = payStubOps(was, stub, file)
+		const before = this.incomeSources
+		return this.#commit({
+			apply: () =>
+				(this.incomeSources = this.incomeSources.map((source) => (source.id === sourceId ? made.source : source))),
+			revert: () => (this.incomeSources = before),
+			ops: made.ops,
+			inverse: made.inverse,
+		})
 	}
 
 	/**
