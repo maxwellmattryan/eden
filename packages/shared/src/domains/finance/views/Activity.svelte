@@ -220,12 +220,10 @@
 	const whatOptions = $derived.by(() => {
 		const kinds = new Set(finance.ledger.entries.map((entry) => entry.kind))
 		return [
-			...[...finance.categories]
-				.sort(byName)
-				.map((category) => ({
-					chip: { group: 'what', categoryId: category.id } as ActivityChip,
-					label: category.name,
-				})),
+			...[...finance.categories].sort(byName).map((category) => ({
+				chip: { group: 'what', categoryId: category.id } as ActivityChip,
+				label: category.name,
+			})),
 			...topMerchantOptions(finance.ledger, 12).map((merchant) => ({
 				chip: { group: 'what', merchantId: merchant.merchantId } as ActivityChip,
 				label: merchantName(merchant.merchantId) ?? merchant.name,
