@@ -32,7 +32,7 @@ Everything is T2 unless marked. T3 is stored only on the device, and no tool eve
 
 | entity | key fields | tier | links out |
 |---|---|---|---|
-| `provider-link` | one provider login on this device (a Plaid Item): institution with logo and colour, status, consent expiry, sync cursor, last updated; the token sits in the secret store, T3 (D-184) | T2 | |
+| `provider-link` | one provider login on this device (a Plaid Item, or the device's one Coinbase key, D-201): institution with logo and colour, status, consent expiry, sync cursor, last updated; the token sits in the secret store, T3 (D-184) | T2 | |
 | `account` | type and subtype, currency, last four digits, institution, the owner's share, open or closed, the account it replaced; the full number is T3 | T2 | `provider-link` |
 | `file-import` | one per file read: its fingerprint, what it was (statement, letter, CSV), the account and period, how many rows it made, when; the file is not kept (D-189) | T2 | `account` |
 | `balance-snapshot` | one per account per day, the history behind net worth | T2 | `account` |
@@ -47,7 +47,7 @@ Everything is T2 unless marked. T3 is stored only on the device, and no tool eve
 | `liability` | APRs with promo end dates, statement balance, minimum due, due date, credit limit, loan terms | T2 | `account` |
 | `holding` | quantity, cost basis, value | T2 | `account`, `security` |
 | `security` | a ticker or coin and its daily price history, in its own currency | T0 | |
-| `asset` | anything not linked: cold-storage crypto by quantity or watched address, a car, a home; entered once, valued where possible; an xpub is T3 | T2 | |
+| `asset` | anything not linked: cold-storage crypto by quantity (priced daily) or watching a Bitcoin or Ethereum address or a Bitcoin xpub, ypub or zpub (D-201), a car, a home; entered once, valued where possible; an extended key is T3, kept in the secret store under the asset's id and never in the row | T2 | |
 | `income-source` | a detected paycheck, other repeating income, or the yearly tax refund or payment: employer, cadence, expected net amount, next day; the owner's answers on it | T2 | `account`, `merchant` |
 | `savings-goal` | a savings rate, or a target with an amount and a date, earmarked within an account | T2 | `account` |
 | `contribution-limit` | the yearly limits for 401(k), IRA and HSA | T0 | |
@@ -71,6 +71,7 @@ D-188 is the model. What Orchard adds:
 - Built in #79 (D-198): the recurring pass runs in the same queue job right after the classification pass, over the rows as that pass left them (`withUpdates`), and keeps one `recurring-charge` row per series that holds a cadence. Each charge carries `recurringId`, the pass's key. A row holds `merchantId`, `counterparty`, `currency`, `cadence`, `variable`, `expected`, `firstDay`, `lastDay`, `lastAmount`, `nextDay`, `accountId`, `categoryId`, `count` and `priceChanges`, all derived, and the owner's `state` (`kept`, `cancelled`, `dismissed`) with `stateOn`, `billOffer: 'declined'` and `billId`, which the pass keeps. Nothing stored depends on today: `statusOf` computes active, lapsed, cancelled or dismissed. The module is `recurring.ts` (`recurringOps`, `statusOf`, `chargedAfterCancel`, `monthlyCostOf`, `recurringTotals`, `overlapsOf`, `offersBill`, `billDraftOf` and the owner's ops). The store holds `finance.recurring` and answers `setRecurringState`, `declineBillOffer`, `linkBill` and `recurringById`. Activity reads a row's `recurringId` (#83); no page shows the charges themselves yet ("From #83", #78).
 - Built in #83 (D-199): a ledger entry carries `billId` and `recurringId` (a pair takes its out side's, else its in side's); `LedgerInput.recurring` keeps `recurringId` only when it names a listed charge that is not `dismissed`, and the store passes `finance.recurring`. `TxFilter` gains `bill` and `recurring`, and `RowFlag` gains `recurring` and `bill`, in the order `pending, split, one-off, reimbursable, refund, recurring, bill, review, other-currency`. `typicalOf` takes a `filter` and measures only the lines it keeps, ignoring its period. `formatMoney` takes `sign: 'exceptZero'` for signed amounts ("+$2,430.00").
 - Built in #80 (D-200): the income pass, `income.ts`, and lean mode, `lean.ts`, both pure. `detectIncome` groups the live `income` rows of the last 400 days by merchant and counterparty (or the folded name), finds each group's cadence, expected amount and next day, and keeps the tax refunds and payments of the last 800 days as `yearly` sources; `incomeOps` writes one `income-source` per group, identified by `kind` with `merchantId` and `counterparty`, or `nameKey`. The pass's keys are `kind`, `merchantId`, `counterparty`, `nameKey`, `name`, `accountId`, `cadence`, `anchors`, `expected`, `firstDay`, `lastDay` and `nextDay`; the owner's are `endedOn`, `leanSince`, `lateOk`, `ignored`, `seenNew` and `handled` (the bonus rows answered, the newest 20), and the pass never writes them. A source with no rows left is deleted unless it carries an owner key. The store runs the pass (`finance.detectIncome()`) after every classification pass, after a sync run that wrote nothing and when the page mounts; `finance.income` is what the page reads. `income-source` stays out of the export: the sources are rebuilt from transactions and the answers stay on the device (D-184).
+- Built in #81 (D-201): a Coinbase `provider-link` (`provider: 'coinbase'`, institution "Coinbase", colour `#0052FF`) has one `investment` account in the home currency; its holdings are `holding` rows with `source: 'coinbase'` and the wallet's id as `externalId`, one per wallet with a non-zero balance, and a coin's `security` has `source: 'coinbase'`, the code as `externalId` and ticker, type `cryptocurrency` (`cash` for a fiat wallet, whose holding carries its `value`), and the day's spot price in `prices` with `currency` the home one. The account's balance is the sum of its holdings' home-currency values through `balanceOps`. An `asset` gains `valuedBy: 'price'` (its value is quantity × the coin's latest price, `valuedOn` the price's day), `watch` (`{ chain, address }` or `{ chain: 'bitcoin', xpub: true, script }`) and `readOn`, the day of the last good read; a watch starts at 0 in the home currency with no `valuedOn`. The pure rules are `crypto.ts` (`coinbaseLinkOps`, `coinbaseOps`, `coinbaseBalanceOps`, `pricesDue`, `priceOps`, `assetValueOps`, `watchesDue`, `watchOps`, `watchedAsset`, `secretsToClear`, `priceAged`, `isPrivateKey`, `shortAddress`, `assetLine`); `investments.ts` exports `priced` and ages a holding priced from a `cryptocurrency` close more than 7 days old.
 - Built in #71 (D-191): `@eden/shared/money` holds the type and its arithmetic, proven by `money.vectors.json`. A balance is kept as the bank states it and the kind (credit card, loan) says it is owed; a share is in basis points; a `balance-snapshot` is upserted per account per local day through the account's `lastSnapshot`, and the store never reads snapshots. The home currency is a setting a bundle carries; an account or asset in another stays out of totals and the page says so.
 
 ### Encryption (#69)
@@ -152,9 +153,10 @@ The page's second tab, `/finance/investments`, after Accounts; a `Segmented` in 
 - **Summary**: Value, Cost basis and a signed Gain in primary ink, in the home currency at each account's share; Cost basis and Gain only when a holding has a basis. Captions beneath when they apply: the holdings without a cost basis, the holdings left out for another currency, the unpriced holdings.
 - **Allocation**: a `DataTable` of class, value and share, highest first, shares adding to exactly 100%; unpriced holdings and other currencies left out. Share is a percentage and stays under hide-amounts.
 - **Holdings**: a group per open investment or retirement account, in the Accounts tab's order, headed by its name and "institution · ••last4". A row is the security's name with its ticker as a mono chip, the value as meta, and a second line of the quantity, "Cost … · ±gain" when there is a basis, then "as of {day}" for Plaid's value or "Valued {day}" for the owner's, "· out of date" past 90 days (meta raised with `metaWarn`), and "Not in totals" for another currency. A carried basis shows a neutral "Carried" chip. An unpriced holding's meta is "Unpriced". Rows do not act (D-118); the menu offers, in order and only when they apply, Add value or Update value (no Plaid price), Add or Edit cost basis, and Clear my cost basis (the owner's). An account with no holdings read yet says they arrive with the next sync.
-- **Header**: "Link a brokerage" while a provider is bound, nothing otherwise; the key and the stale-link notice stay. Empty: "No investments yet", with "Link a brokerage" when bound and no action and no sample when not.
+- **Header**: "Link a brokerage" while a provider is bound, nothing otherwise, then "Connect Coinbase" (`coins`, secondary) while crypto is bound and no Coinbase link is live (#81); the key and the stale-link notice stay. Empty: "No investments yet", with "Link a brokerage" when bound and no action and no sample when not.
 - **Sheets**: `HoldingSheet.svelte`, cost basis (a total in the holding's currency, undo toast "Cost basis set for …"; clearing toasts "Cleared your cost basis for …") or value (amount and a day no later than today). Errors sit under their field.
-- **Accounts**: an asset valued more than 90 days ago reads "Valued {day} · out of date" (after its quantity, for one counted), raises its meta, and its menu leads with Update value, which opens the asset sheet.
+- **Accounts**: an asset valued more than 90 days ago reads "Valued {day} · out of date" (after its quantity, for one counted), raises its meta, and its menu leads with Update value, which opens the asset sheet. A crypto asset reads through `assetLine` (#81): "0.0412 BTC · Priced {day}" with "≈ {value}", a watch's short address or "Extended key" after the quantity, "Not read yet" before its first read, and "out of date" past 7 days for a price or a read ("Read {day}" before it for a stale read); a crypto asset with no price keeps "12 FOO · Valued {day}". A priced or watched asset's menu is Edit and Delete only.
+- **Coinbase** (#81): a "Coinbase" link group on Accounts with its freshness line, and a "Coinbase" group on Investments, one holding per wallet. The group menu is Replace key, then Remove link; Reconnect, in the stale notice and the group, opens the Coinbase key sheet (`CoinbaseKeySheet.svelte`). The asset sheet's Counted by `Segmented` (Quantity, Address, Extended key) shows under Kind for a crypto asset while crypto is bound; a watched asset shows "Watching …" in its place and only its name and share can change.
 
 ### Activity
 
@@ -265,7 +267,7 @@ Signals, each `finance.<id>`:
 | a low balance ahead | in-app | when the forecast changes | on |
 | the weekly digest | in-app | weekly | off until the finance grant (#90) |
 
-Schedules: `sync` hourly while Eden runs and when it opens (D-183; built in #73, `every: 3600`, with the one-shots `finance.retry` and `finance.revoke`, D-192), `bills` daily at 08:00 for the bill pass on both apps (built in #78), `digest` weekly (#90). There is no `value` schedule: holdings and prices come with the first sync run of each day (D-197, built in #76); #81 may add one for its crypto feed.
+Schedules: `sync` hourly while Eden runs and when it opens (D-183; built in #73, `every: 3600`, with the one-shots `finance.retry` and `finance.revoke`, D-192), `bills` daily at 08:00 for the bill pass on both apps (built in #78), `digest` weekly (#90). There is no `value` schedule: holdings and prices come with the first sync run of each day (D-197, built in #76). `crypto` runs hourly while Eden runs and when it opens on the desktop (built in #81, `every: 3600`, `finance.crypto`, D-201): the Coinbase wallets every run, the prices and the watched assets once a local day. Neither an ageing price nor an ageing read raises a signal or a notification, and a Coinbase link raises no `link-broken`.
 
 Intents handled and sent: none yet.
 
@@ -275,9 +277,9 @@ Intents handled and sent: none yet.
 |---|---|---|---|
 | Plaid: Link, Transactions, Liabilities, Investments | read only, no Auth or Transfer (D-8); token T3 per device (D-184) | the Link token request, the cursor | accounts, transactions, liabilities, holdings |
 | Chase, Ally, M1, a 401(k) | through Plaid; Chase by OAuth | | as Plaid |
-| Coinbase | read-only API key, T3 per device | the key's requests | balances, trades |
-| price feeds: Plaid securities, a crypto price API | read | tickers and coins | daily prices |
-| blockchain explorers | none, read | public watched addresses | public balances |
+| Coinbase | a View-only CDP key, T3 per device; refused if it can trade or transfer (D-201) | signed requests for the key's permissions and the wallets | wallet balances (trades are not read) |
+| price feeds: Plaid securities, Coinbase's public spot price | read, no key for the spot price | the coin and the home currency | daily prices |
+| blockchain explorers: Blockstream's Esplora, Blockscout | none, read | the watched addresses, and every address an extended key makes | confirmed balances |
 | Claude, the Gardener | the finance grant (#90) | tool results and confirmed text only | answers, drafts |
 | on-device text recognition (Vision, ML Kit) | none, no egress | | text (D-190) |
 | SimpleFIN | later, behind the provider seam | | |
@@ -304,6 +306,17 @@ Every call is made from Rust and counted in the egress ledger; the webview only 
 - **No removed list.** `/investments/transactions/get` has no removed list, so an investment transaction Plaid stops returning stays.
 - **Never** `/investments/refresh`, a paid call (D-183).
 
+### Crypto (#81, D-201)
+
+- **Where.** The desktop under Tauri binds crypto (`bindCrypto`, `packages/shared/src/domains/finance/crypto.svelte.ts`) beside Plaid; the phone and `yarn dev:web` bind nothing (`coinbaseStatus()` answers nothing), so the asset form keeps only "by quantity" there and Investments shows no Connect Coinbase. The crate is `src-tauri/src/domains/finance/`: `fetch.rs` (the `Fetch` trait and `HttpGet`, reqwest with a 30 s timeout, HTTPS only, rustls), `coinbase.rs`, `xpub.rs` and `chain.rs`, and the commands in `mod.rs`: `coinbase_status`, `coinbase_set_key(name, privateKey)`, `coinbase_clear_key`, `coinbase_balances`, `crypto_prices(codes, quote)`, `watch_address_check(chain, address)`, `watch_xpub_set(assetId, key, script?)`, `watch_xpub_clear(assetId)` and `watch_read(assetId, chain, address?, script?)`. Every id is checked as a ULID.
+- **The key.** A Coinbase CDP key: the name `organizations/<uuid>/apiKeys/<uuid>` and a P-256 private key as SEC1 or PKCS#8 PEM (line breaks, none, or literal `\n`). `coinbase_set_key` calls `GET /api/v3/brokerage/key_permissions` and stores `coinbase-key-name` and `coinbase-key-secret` only when `can_view` is true and `can_trade` and `can_transfer` are false. Each request carries a fresh ES256 JWT: header `{ alg: 'ES256', kid, nonce (32 hex), typ: 'JWT' }`, claims `{ sub, iss: 'cdp', nbf, exp: nbf + 120, uri: 'GET api.coinbase.com/<path>' }`.
+- **The wallets.** `GET /v2/accounts?limit=100`, following `pagination.next_starting_after` for at most 10 pages; each wallet's id, code, name, kind (`crypto` or `fiat`) and exact amount. Read on every `finance.crypto` run through `coinbaseOps`; failures follow D-192 through `linkAfterFailure` (a 401 is `needs-reauth` at once, the third failure in a row `error`), and saving a good key in the sheet sets the link back to `ok` and reads at once. Remove link tombstones the link and closes the account, with Undo; the first run that finds no live Coinbase link and one tombstoned at least 2 minutes ago (`REVOKE_AFTER`) deletes the key. Eden cannot revoke it at Coinbase, so the toast says to.
+- **Prices.** `GET /v2/prices/{CODE}-{QUOTE}/spot`, no key, once per coin a local day: the units of the crypto assets with a quantity and the codes of the Coinbase account's coins, left out once their security has the day's price in the home currency, 50 codes a call at most. A 404 or 400 leaves the coin unpriced. Then the value pass (`assetValueOps`, `coinbaseBalanceOps`) runs, and again right after an owner saves a crypto asset.
+- **Watches.** Bitcoin: `GET https://blockstream.info/api/address/{address}`, `chain_stats.funded_txo_sum − spent_txo_sum` sats as BTC to 8 places. Ether: `GET https://eth.blockscout.com/api/v2/addresses/{address}`, `coin_balance` wei as ETH to 18 places (`0` for a 404 or none). An extended key (`xpub` with its chosen script, `ypub` nested SegWit, `zpub` native SegWit; mainnet, depth 3) derives `m/0/i` and `m/1/i` by CKDpub and scans each chain from 0 until 20 unused addresses in a row ("used" is any chain or mempool transaction), at most 1000 a chain. Requests run one after another; a 429 stops the read. Quantities are integer string arithmetic, never floats. A good read sets `quantity` and `readOn`; a failed one is logged by its code and writes nothing. An asset whose key is not on this device fails `not-found` and keeps its last quantity. Undoing or deleting a watched asset with an extended key tombstones it, and the first run 2 minutes later deletes its key.
+- **Secrets** (T3, per device): `coinbase-key-name`, `coinbase-key-secret` and `crypto-xpub-<asset id, lowercased>`. A private extended key (`xprv`, `yprv`, `zprv`, `tprv`, `uprv`, `vprv`) is refused in the sheet and by the crate (`chain:private-key`) and never stored.
+- **Codes.** `coinbase:{invalid-key|refused|not-read-only|needs-reauth|rate-limited|provider-down|network|no-key|other}` and `chain:{invalid-address|private-key|unsupported|not-found|too-many|rate-limited|provider-down|network|other}`; `cryptoErrorCode` reads them.
+- **Egress and logs.** Every request is counted under `coinbase`, `blockstream` or `blockscout` (Settings → Privacy), with no CSP entry since the crate makes them; the bearer is a header and never counted (D-71). Logs carry codes only, never a body; the redaction scrubs PEM private-key blocks, JWTs, CDP key names and extended keys, public or private.
+
 ### Freshness and history
 
 Freshness is D-183: a purchase shows within an hour of Plaid having it. History is D-187: the window is set when a link is made, so it is asked for every time, and a new account with a week of history works like any other.
@@ -312,6 +325,7 @@ Freshness is D-183: a purchase shows within an hour of Plaid having it. History 
 
 - Home currency (D-188), built in #71 under Settings → General, default USD, carried by a bundle (D-191).
 - Plaid keys on this device (D-184).
+- The Coinbase key on this device (D-201), set from Investments → Connect Coinbase and replaced from the Coinbase group's menu; it leaves the device two minutes after Remove link.
 - Linked providers, each with reconnect and remove.
 - Hide amounts (#68).
 - The phone lock (#68, D-185).
@@ -441,11 +455,11 @@ From #78:
 
 From #76:
 
-- #81 adds its crypto price feed and may add a `value` schedule; until then a Ledger in a drawer stays an `asset` by quantity.
+- Done in #81: the crypto price feed and the `crypto` schedule; a Ledger in a drawer is an `asset` by quantity, priced daily, or a watched address or extended key (D-201).
 - #87 reads `security.prices` (one close a day) and `allocationOf` for net worth over time and allocation charts; assets still write no snapshot.
 - #90's `finance_wealth` reads `investmentSummary` (`finance.investments`).
 - The Storybook mock `Domains/Orchard/Investments` and the kit `OrchardPage` tab list: the real view is proven by screenshots only.
-- The owner's M1 check: on the first production M1 link, see whether M1's crypto account and its holdings arrive through Plaid; if not, enter it as an `asset` of kind `crypto` by quantity until #81.
+- The owner's M1 check: on the first production M1 link, see whether M1's crypto account and its holdings arrive through Plaid; if not, enter it as an `asset` of kind `crypto` by quantity, which #81 prices daily.
 - Sandbox proof of the brokerage mode in a dev build: "Link a brokerage" against a Sandbox investments institution, the first read's 730 days, and an investments-only Item's hourly sync staying `ok`.
 - The Accounts tab does not mask its figures under hide-amounts yet (`amountText` is used on Investments only); the #68 handoff above still stands for it.
 
@@ -466,3 +480,13 @@ From #80:
 - #78 may make a `tax-payment` source a yearly bill.
 - The domain's export still leaves `income-source` out (D-184); if sync (#40) ever carries the owner's answers, they move with it.
 - The stale-link notice keeps the kit's `alert` role; the income question uses `role="note"` so it is not announced. Whether the stale one should follow is the owner's call.
+
+From #81:
+
+- Trades and transfers on Coinbase as investment transactions, and a cost basis read from them, are not built: the owner types the basis once on the holding, and it survives every read (needs an issue; the owner files it).
+- Tokens (ERC-20 and others), NFTs, staking rewards, Taproot (`bc1p`) extended keys, Lightning and chains other than Bitcoin and Ethereum are not read (D-201).
+- Crypto assets stay out of the Investments allocation, which is D-197's holdings only; #87 decides whether net worth's charts show them.
+- #89 binds crypto on the phone: `bindCrypto` and the Coinbase key sheet, with the key entered on the phone, which is its own device (D-184).
+- #90's `finance_wealth` reads an asset's `valuedBy` and `readOn` (a priced coin and its day, a watch's last read) and the Coinbase account's holdings as any brokerage's; `priceAged` says when either is out of date.
+- An asset that came in a bundle with `watch.xpub` has no key on the new device: its reads fail `chain:not-found` and it keeps its last quantity until the owner deletes it and adds the key again.
+- Never run live: the owner proves Connect, read and remove with a real View-only CDP key, and a watched address and the BIP-84 `zpub` in `yarn dev` (AC16, AC17 of #81's spec).

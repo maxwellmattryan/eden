@@ -4,7 +4,7 @@ status: draft
 summary: The connector lifecycle, the catalog of every external service Eden will talk to with its phase and default access, per-device connections and their visible states, secrets, status surfaces, and failure handling.
 read-this-if: You are adding or designing anything that talks to a service outside the device.
 depends-on: [grants, privacy]
-updated: 2026-11-06
+updated: 2026-11-08
 ---
 
 ## Lifecycle
@@ -41,9 +41,9 @@ updated: 2026-11-06
 | grocery export (HEB, Instacart) | Hearth | file or deep link | export only; ordering would be `act-external` | later |
 | Gmail, label-scoped | Trails, Hearth | OAuth | read on chosen labels only | later |
 | Plaid: Link, Transactions, Liabilities, Investments; Chase and the others through it (D-183, D-187) | Orchard | token, T3, per device (D-184) | read | after (built ahead, D-182) |
-| Coinbase | Orchard | read-only API key, T3, per device | read | after (built ahead, D-182) |
-| a price feed: Plaid securities, a crypto price API | Orchard | per the feed | read | after (built ahead, D-182) |
-| blockchain explorers, public balances for watched addresses | Orchard | none | read | after (built ahead, D-182) |
+| Coinbase: the wallets, through a View-only CDP key refused if it can trade or transfer (D-201) | Orchard | read-only API key, T3, per device | read | after (built ahead in #81, D-182, D-201) |
+| a price feed: Plaid securities (#76), Coinbase's public spot price for each coin held, once a day (D-201) | Orchard | none for the spot price | read | after (built ahead in #76 and #81, D-182, D-201) |
+| blockchain explorers, public balances for watched addresses: Blockstream's Esplora (Bitcoin, extended keys scanned to a gap of 20) and Blockscout (Ether), once a day (D-201) | Orchard | none; an extended key is T3, per device | read | after (built ahead in #81, D-182, D-201) |
 | SimpleFIN | Orchard | token | read | later |
 | Oura | Wellspring | OAuth | read | later |
 | sync backend (Crate's vendor-agnostic trait, Firebase first) | substrate | Google or Apple sign-in | n/a | 3 |
