@@ -1,4 +1,4 @@
-// The recurring pass (product/domains/finance.md §3, D-195): after the classification pass, the charges at one
+// The recurring pass (product/domains/finance.md §3, D-196): after the classification pass, the charges at one
 // merchant (and person, for a vague one) in one currency are split into series by size and gap, a series that keeps a
 // cadence becomes a `recurring-charge` row, and its charges point at it by `recurringId`. A row keeps its id across
 // passes through the ids its charges name, and keeps the owner's answers; a fixed row that got dearer is a price rise

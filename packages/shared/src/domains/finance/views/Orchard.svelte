@@ -7,6 +7,7 @@
 	// them shows. Both apps mount this page; the phone reaches it from More, its sheets rising from the foot.
 	import {
 		ConfirmSheet,
+		DocumentSheet,
 		IconButton,
 		InlineError,
 		Notice,
@@ -15,12 +16,15 @@
 		type PageHeaderAction,
 	} from '@eden/ui-kit'
 	import { onMount } from 'svelte'
+	import { formatCost, modelLabel } from '../../../gardener/index.js'
 	import { t } from '../../../i18n/index.js'
 	import { settings } from '../../../settings/index.js'
 	import { undoToast } from '../../../shell/index.js'
 	import { staleDay } from '../accounts.js'
 	import { plaid } from '../plaid.svelte.js'
 	import { provider } from '../provider.svelte.js'
+	import { documentRead } from '../reader.svelte.js'
+	import { statementImport } from '../statement.svelte.js'
 	import { finance } from '../store.svelte.js'
 	import type { Account, Asset, ProviderLink } from '../types.js'
 	import { dayLine } from '../words.js'
@@ -28,6 +32,7 @@
 	import Accounts from './Accounts.svelte'
 	import AssetSheet from './AssetSheet.svelte'
 	import BalanceSheet from './BalanceSheet.svelte'
+	import ImportSheet from './ImportSheet.svelte'
 	import LinkSheet from './LinkSheet.svelte'
 	import PlaidKeysSheet from './PlaidKeysSheet.svelte'
 	import ReplaceSheet from './ReplaceSheet.svelte'
@@ -81,7 +86,19 @@
 			variant: 'secondary',
 			onclick: () => show({ sheet: 'asset' }),
 		}
-		if (!bound) return [addAccount, addAsset]
+		// a statement goes into an account the owner has: with none yet, there is nothing to import into (#74)
+		const importing: PageHeaderAction[] = finance.accounts.length
+			? [
+					{
+						id: 'import',
+						label: $t('domains.finance.actions.import'),
+						icon: 'file-up',
+						variant: 'secondary',
+						onclick: () => statementImport.begin(),
+					},
+				]
+			: []
+		if (!bound) return [addAccount, addAsset, ...importing]
 		const link: PageHeaderAction = {
 			id: 'link-bank',
 			label: $t('domains.finance.actions.linkBank'),
@@ -89,7 +106,21 @@
 			variant: 'primary',
 			onclick: () => bound.link(),
 		}
-		return [link, addAccount, addAsset]
+		return [link, addAccount, addAsset, ...importing]
+	})
+
+	// The document reader's provider line, for a statement's PDF or picture: who reads it, on what, at about what cost
+	const reader = $derived.by(() => {
+		const preview = documentRead.options?.preview
+		if (!preview) return {}
+		if ('unavailable' in preview) return { provider: $t(`domains.finance.import.failures.${preview.unavailable}`) }
+		const key = `settings.privacy.destinations.${preview.provider}`
+		const name = $t(key)
+		return {
+			provider: name === key ? preview.provider : name,
+			model: modelLabel(preview.model),
+			cost: $t('domains.finance.import.cost', { values: { cost: formatCost(preview.estimateUsd) } }),
+		}
 	})
 
 	/** The first stale link, while a provider can sign it in again. */
@@ -143,6 +174,7 @@
 		onedit={(account) => show({ sheet: 'account', account })}
 		onbalance={(account) => show({ sheet: 'balance', account })}
 		onreplace={(account) => show({ sheet: 'replace', account })}
+		onimport={(account) => statementImport.begin(account.id)}
 		oneditasset={(asset) => show({ sheet: 'asset', asset })}
 		onremovelink={(link) => show({ sheet: 'remove', link })}
 		onreconnect={bound ? (link) => bound.reconnect(link.id) : undefined}
@@ -170,6 +202,30 @@
 		}
 	/>
 {/if}
+
+<!-- A statement's import (#74), and the document reader its PDF or picture is read in first (D-190): one each. -->
+<ImportSheet bind:open={statementImport.open} />
+<DocumentSheet
+	bind:open={documentRead.open}
+	phase={documentRead.phase}
+	quality={documentRead.quality}
+	failure={documentRead.failure}
+	file={documentRead.file}
+	bind:text={documentRead.text}
+	masked={documentRead.masked}
+	pages={documentRead.pages}
+	imported={documentRead.imported}
+	confirmLabel={documentRead.options?.confirmLabel ?? ''}
+	next={documentRead.options?.next}
+	provider={reader.provider}
+	model={reader.model}
+	cost={reader.cost}
+	onfiles={(files) => void documentRead.take(files)}
+	onconfirm={(text) => documentRead.confirm(text)}
+	onsendpicture={() => documentRead.sendPicture()}
+	oncancel={() => documentRead.cancel()}
+	onclose={() => documentRead.cancel()}
+/>
 
 {#key opened}
 	{#if current?.sheet === 'account'}

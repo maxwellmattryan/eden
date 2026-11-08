@@ -2439,7 +2439,19 @@ export const DECLARATIONS = {
 		"widgets": [],
 		"quickActions": [],
 		"captureSources": [],
-		"tools": [],
+		"tools": [
+			{
+				"id": "read-statement",
+				"access": "write-draft",
+				"confirm": false,
+				"reads": [],
+				"grade": "light",
+				"needs": [
+					"vision"
+				],
+				"minContext": null
+			}
+		],
 		"signals": [
 			"finance.link-broken",
 			"finance.price-rise"

@@ -59,7 +59,7 @@ Every doc in one table per layer: path, status, one-liner, size (S under 120 lin
 | product/domains/fitness.md | draft | Vigor: workouts, gyms, body metrics, supplements, weight trend; what is built on both apps (D-177) and its handoffs | M | fitness work |
 | product/domains/spirit.md | draft | Sanctuary: traditions, readings, values, the daily line, optional astrology | S | reflection features |
 | product/domains/places.md | draft | Meadow: places and listings on a map, vibes, favorites, outings | M | places or events near you |
-| product/domains/finance.md | draft | Orchard: accounts by Plaid per device (desktop Hosted Link and hourly cursor sync built; categories, rules, transfers built; recurring charges and the price-rise card built), Activity, bills, budgets, debt, investments, goals, the Gardener for money | L | finance work |
+| product/domains/finance.md | draft | Orchard: accounts by Plaid per device (desktop Hosted Link and hourly cursor sync built; categories, rules, transfers and the index built; CSV, OFX and PDF statement import built; recurring charges and the price-rise card built), Activity, bills, budgets, debt, investments, goals, the Gardener for money | L | finance work |
 | product/domains/health.md | stub | Wellspring stub: medical notes, meds, care, insurance | S | health scope |
 | product/domains/people.md | candidate | Companions candidate: relationships, birthdays, gift ideas | S | considering a People domain |
 | product/domains/journal.md | candidate | Rings candidate: daily reflection and mood | S | considering a Journal domain |

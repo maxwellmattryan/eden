@@ -33,7 +33,7 @@
 	"widgets": [],
 	"quickActions": [],
 	"captureSources": [],
-	"tools": [],
+	"tools": [{ "id": "read-statement", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] }],
 	"signals": ["finance.link-broken", "finance.price-rise"],
 	"notificationKinds": [
 		{ "id": "link-needs-reconnecting", "channel": "in-app", "cadence": "when-found", "signal": "finance.link-broken" },
