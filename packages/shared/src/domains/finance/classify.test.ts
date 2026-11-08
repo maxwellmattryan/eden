@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { createEngine, type EngineStorage } from '../../data/engine.js'
 import type { BatchOp, Entity } from '../../data/index.js'
 import { createIdGenerator } from '../../data/ulid.js'
-import { DEFAULT_CATEGORIES, providerCategoryOf } from './categories.js'
-import { classifyOps, classifyPass, fitParts, ruleFor, spendingOf } from './classify.js'
+import { DEFAULT_CATEGORIES, investmentMeaningOf, providerCategoryOf } from './categories.js'
+import { classifyOps, classifyPass, fitParts, insideAccount, ruleFor, spendingOf } from './classify.js'
 import {
 	FINANCE,
 	WHOLE,
@@ -33,6 +33,7 @@ const ACCOUNTS = [
 	account('sav2', 'savings'),
 	account('card', 'credit-card'),
 	account('yen', 'savings', 'JPY'),
+	account('brk', 'investment'),
 ]
 const CATEGORIES: Category[] = DEFAULT_CATEGORIES.map((entry) => ({
 	...entry,
@@ -203,6 +204,39 @@ describe('finance classification', () => {
 		}
 		for (const id of ['off-a', 'off-b', 'late-a', 'late-b', 'same-a', 'same-b', 'usd', 'jpy', 'gap-2', 'gap-3'])
 			expect(of(id).transferId, id).toBeUndefined()
+	})
+
+	it('a row that paid a bill is a bill payment, and still spending', () => {
+		const card = 'LOAN_PAYMENTS_CREDIT_CARD_PAYMENT'
+		const { of } = pass([
+			row({
+				id: 'gas',
+				minor: -3810,
+				name: 'TXGAS SVC',
+				billId: 'bill-gas',
+				providerCategory: 'RENT_AND_UTILITIES_GAS_AND_ELECTRICITY',
+			}),
+			// a card charge that paid a utility bill is one too
+			row({ id: 'on-card', minor: -6400, accountId: 'card', name: 'CITY OF AUSTIN', billId: 'bill-water' }),
+			// a pair keeps its own kind, a bill or not
+			row({ id: 'pay-card', minor: -118000, day: '2026-10-05', billId: 'bill-card', providerCategory: card }),
+			row({ id: 'card-paid', minor: 118000, day: '2026-10-06', accountId: 'card', providerCategory: card }),
+			row({ id: 'to-savings', minor: -50000, billId: 'bill-x', providerCategory: 'TRANSFER_OUT_SAVINGS' }),
+			row({ id: 'at-savings', minor: 50000, accountId: 'sav', providerCategory: 'TRANSFER_IN_SAVINGS' }),
+			// money in is never a bill payment
+			row({ id: 'back', minor: 1200, billId: 'bill-gas' }),
+			// no bill: the provider's kind
+			row({ id: 'plain', minor: -3810, name: 'TXGAS SVC', providerCategory: 'RENT_AND_UTILITIES_GAS_AND_ELECTRICITY' }),
+		])
+		expect(of('gas')).toMatchObject({ kind: 'bill-payment', categoryId: 'cat-utilities' })
+		expect(spendingOf(of('gas'))).toEqual([
+			{ categoryId: 'cat-utilities', amount: usd(-3810), oneOff: false, pending: false },
+		])
+		expect(of('on-card').kind).toBe('bill-payment')
+		expect(of('pay-card')).toMatchObject({ kind: 'card-payment', transferId: 'card-paid' })
+		expect(of('to-savings')).toMatchObject({ kind: 'transfer', transferId: 'at-savings' })
+		expect(of('back').kind).toBe('refund')
+		expect(of('plain').kind).toBe('purchase')
 	})
 
 	it('vague merchants and unpaired transfers', () => {
@@ -439,6 +473,107 @@ describe('finance classification', () => {
 		})
 		expect(seeded.ops).toEqual([])
 		expect(seeded.categories).toEqual([])
+	})
+})
+
+describe('investments', () => {
+	type Investment = NonNullable<TransactionPayload['investment']>
+	const inv = (id: string, minor: number, investment: Investment, fields: Partial<TransactionPayload> = {}) =>
+		row({ id, minor, accountId: 'brk', name: `${investment.type} VTI`, investment, ...fields })
+
+	it('maps investment types and subtypes', () => {
+		const cases: [string, string | undefined, ReturnType<typeof investmentMeaningOf>][] = [
+			['buy', 'buy', { kind: 'investment-buy', transferLike: false }],
+			['buy', 'dividend reinvestment', { kind: 'investment-buy', transferLike: false }],
+			['sell', 'sell', { kind: 'investment-sell', transferLike: false }],
+			['cash', 'dividend', { kind: 'dividend', key: 'income', transferLike: false }],
+			['cash', 'qualified dividend', { kind: 'dividend', key: 'income', transferLike: false }],
+			['cash', 'long-term capital gain', { kind: 'dividend', key: 'income', transferLike: false }],
+			['cash', 'interest', { kind: 'interest-earned', key: 'income', transferLike: false }],
+			['fee', 'management fee', { kind: 'fee', key: 'fees', transferLike: false }],
+			['transfer', 'transfer', { kind: 'transfer', transferLike: true }],
+			['cash', 'deposit', { kind: 'transfer', transferLike: true }],
+			['cash', 'withdrawal', { kind: 'transfer', transferLike: true }],
+			['cash', 'contribution', { kind: 'transfer', transferLike: true }],
+			['cash', 'distribution', { kind: 'transfer', transferLike: true }],
+			['cash', 'tax', { kind: 'transfer', transferLike: false }],
+			['cancel', undefined, { kind: 'transfer', transferLike: false }],
+		]
+		for (const [type, subtype, meaning] of cases)
+			expect(investmentMeaningOf(type, subtype), `${type} ${subtype}`).toEqual(meaning)
+	})
+
+	it('gives investment rows their kinds, no merchant, and categories only to dividends, interest and fees', () => {
+		const rows = [
+			inv('buy', -57200, { type: 'buy', subtype: 'buy', securityId: 'vti' }),
+			inv('sell', 30000, { type: 'sell', subtype: 'sell', securityId: 'vti' }),
+			inv('div', 1842, { type: 'cash', subtype: 'dividend', securityId: 'vti' }),
+			inv('int', 312, { type: 'cash', subtype: 'interest' }),
+			inv('fee', -500, { type: 'fee', subtype: 'account fee' }),
+			inv('odd', -100, { type: 'cancel' }),
+		]
+		const { of, merchants } = pass(rows)
+		expect(merchants).toEqual([])
+		const kinds = Object.fromEntries(rows.map((entry) => [entry.id, [of(entry.id).kind, of(entry.id).categoryId]]))
+		expect(kinds).toEqual({
+			buy: ['investment-buy', undefined],
+			sell: ['investment-sell', undefined],
+			div: ['dividend', 'cat-income'],
+			int: ['interest-earned', 'cat-income'],
+			fee: ['fee', 'cat-fees'],
+			odd: ['transfer', undefined],
+		})
+		for (const entry of rows) expect(of(entry.id).merchantId).toBeUndefined()
+		expect(spendingOf(of('buy'))).toEqual([])
+		expect(spendingOf(of('sell'))).toEqual([])
+		expect(insideAccount(of('buy'))).toBe(true)
+		expect(insideAccount(of('div'))).toBe(false)
+	})
+
+	it("pairs a brokerage deposit with checking's transfer out, never a buy", () => {
+		const rows = [
+			row({ id: 'out', minor: -100000, day: '2026-10-01', providerCategory: 'TRANSFER_OUT_ACCOUNT_TRANSFER' }),
+			inv('dep', 100000, { type: 'cash', subtype: 'deposit' }, { day: '2026-10-02' }),
+			// a buy of the same size on the same day stays a buy
+			row({ id: 'in', minor: 57200, day: '2026-10-05', providerCategory: 'TRANSFER_IN_ACCOUNT_TRANSFER' }),
+			inv('buy', -57200, { type: 'buy', subtype: 'buy', securityId: 'vti' }, { day: '2026-10-05' }),
+		]
+		const { of } = pass(rows)
+		expect(of('out').transferId).toBe('dep')
+		expect(of('dep').transferId).toBe('out')
+		expect(of('dep').kind).toBe('transfer')
+		expect(of('buy').transferId).toBeUndefined()
+		expect(of('buy').kind).toBe('investment-buy')
+	})
+
+	it('marks a dividend reinvested by the matching reinvestment buy, smallest gap first, one buy each', () => {
+		const vti = (subtype: string) => ({ type: 'buy', subtype, securityId: 'vti' })
+		const rows = [
+			inv('div1', 1842, { type: 'cash', subtype: 'dividend', securityId: 'vti' }, { day: '2026-10-01' }),
+			inv('div2', 1842, { type: 'cash', subtype: 'dividend', securityId: 'vti' }, { day: '2026-10-03' }),
+			inv('re1', -1842, vti('dividend reinvestment'), { day: '2026-10-03' }),
+			// another security, an ordinary buy, a gap of four days: none reinvests
+			inv('div3', 500, { type: 'cash', subtype: 'dividend', securityId: 'schd' }, { day: '2026-10-01' }),
+			inv('re-other', -500, vti('dividend reinvestment'), { day: '2026-10-01' }),
+			inv('div4', 700, { type: 'cash', subtype: 'dividend', securityId: 'vti' }, { day: '2026-10-01' }),
+			inv('plain', -700, vti('buy'), { day: '2026-10-01' }),
+			inv('div5', 900, { type: 'cash', subtype: 'interest', securityId: 'vti' }, { day: '2026-10-01' }),
+			inv('late', -900, vti('interest reinvestment'), { day: '2026-10-05' }),
+		]
+		const first = pass(rows)
+		expect(first.of('div2').reinvested).toBe('re1')
+		expect(first.of('div1').reinvested).toBeUndefined()
+		for (const id of ['div3', 'div4', 'div5']) expect(first.of(id).reinvested, id).toBeUndefined()
+		expect(insideAccount(first.of('div2'))).toBe(true)
+		expect(insideAccount(first.of('div1'))).toBe(false)
+
+		// idempotent: a second pass over the first one's result writes nothing
+		const again = rows.map((entry) => ({ ...entry, payload: first.of(entry.id) }))
+		expect(pass(again).ops).toEqual([])
+
+		// the buy gone, the mark goes with it
+		const without = again.filter((entry) => entry.id !== 're1')
+		expect(pass(without).of('div2').reinvested).toBeUndefined()
 	})
 })
 

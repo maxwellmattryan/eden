@@ -1,5 +1,5 @@
-// Orchard's shapes (product/domains/finance.md): a bank's link, the accounts, a balance per account per day and what
-// the owner owns besides. Every one is an `entities` row of its type, so no migration is needed (D-67). A balance is
+// Orchard's shapes (product/domains/finance.md): a bank's link, the accounts, a balance per account per day, what
+// the owner owns besides, the transactions, and the bills with the letters they were read from (#78). Every one is an `entities` row of its type, so no migration is needed (D-67). A balance is
 // kept as the bank states it and the kind says whether it is owed; a share is in basis points; a link is the device's
 // that made it and is never in the domain's export (D-191).
 import type { Money } from '../../money/index.js'
@@ -13,12 +13,89 @@ export const FINANCE = {
 	category: 'budget-category',
 	rule: 'category-rule',
 	merchant: 'merchant',
+	recurring: 'recurring-charge',
+	bill: 'bill',
 	fileImport: 'file-import',
+	holding: 'holding',
+	security: 'security',
 	income: 'income-source',
 } as const
 
+/** Where a bill came from (#78): a letter read on the device, a card's statement, a series, or the owner's hand. */
+export const BILL_SOURCES = ['letter', 'statement', 'repeating', 'manual'] as const
+export type BillSource = (typeof BILL_SOURCES)[number]
+
+/** How many months a repeating bill moves on by. */
+export const BILL_REPEATS = [1, 2, 3, 6, 12] as const
+export type BillRepeat = (typeof BILL_REPEATS)[number]
+
+/** One payment towards a bill: a matched transaction's, or one the owner recorded with none ("Paid another way"). */
+export interface BillPayment {
+	transactionId?: string
+	/** Positive, in the bill's currency. */
+	amount: Money
+	/** `YYYY-MM-DD`. */
+	day: string
+	/** The account the payment left. */
+	accountId?: string
+}
+
 /**
- * What a transaction is (finance.md §6). #75 derives all but `bill-payment` (#78) and the investment kinds (#76).
+ * A `bill` (#78, D-196): what the owner owes a payee for a period. Its state (`billState`) is derived on read and
+ * never stored. A bill with `accountId` is a card statement: its amount is the statement balance and it is settled
+ * once its payments reach the minimum.
+ */
+export interface BillPayload {
+	payee: string
+	/** `YYYY-MM`: the month the bill is for (a statement's month for a card). */
+	period: string
+	/** `YYYY-MM-DD`; absent, the bill is Expected ("not a bill yet"). */
+	due?: string
+	/** Positive. */
+	amount: Money
+	estimate?: true
+	source: BillSource
+	repeat?: { months: BillRepeat }
+	/** A repeating bill whose amount does not change. */
+	fixed?: true
+	/** The first bill's id, on every occurrence of a series. */
+	seriesId?: string
+	/** A card statement's card. */
+	accountId?: string
+	minimum?: Money
+	/** `YYYY-MM-DD`, a card statement's. */
+	statementDay?: string
+	/** Interest charged on the card since the previous statement. */
+	interest?: Money
+	/** `https://` only. */
+	url?: string
+	/** Learned from confirmed matches, distinct, at most 10. */
+	merchantIds?: string[]
+	payments?: BillPayment[]
+	/** Candidate transaction ids awaiting the owner. */
+	ask?: string[]
+	dismissed?: string[]
+	/** The Orchard task made for this due day. */
+	task?: { id: string; due: string }
+	/** Set on an occurrence the bill pass made that an owner's undo took back: its tombstone ends no series. */
+	undone?: true
+}
+
+/** A `file-import` with `source: 'document'` (#78; #74's statement files have `source: 'file'`): a document read on this device, by its fingerprint (`externalId`), and what it made (D-189). */
+export interface LetterImportPayload {
+	kind: 'letter'
+	/** `YYYY-MM-DD`. */
+	day: string
+	billId: string
+	rows: 1
+}
+
+/** The source a `file-import` row is stored with; its `externalId` is the fingerprint. */
+export const FILE_IMPORT_SOURCE = 'document'
+
+/**
+ * What a transaction is (finance.md §6). #75 derives all but the investment kinds (#76, D-197); `bill-payment` is an unpaired
+ * money-out row with a `billId` (#78).
  */
 export const TX_KINDS = [
 	'purchase',
@@ -95,6 +172,8 @@ export interface ProviderLinkPayload {
 	failures?: number
 	/** The code of the last failure, never a message. */
 	lastErrorCode?: string
+	/** The local day of the last good investments read (D-197); one read a day. */
+	investmentsReadOn?: string
 }
 
 export interface AccountPayload {
@@ -198,10 +277,27 @@ export interface TransactionPayload {
 	/** The owner's (#83's detail); searched by the ledger. */
 	notes?: string
 
+	// ---- #76's: an investment transaction's own detail, a provider key, and the pass's reinvestment pointer
+
+	/** The provider's: set only on a `plaid-investments` row. */
+	investment?: { type: string; subtype?: string; securityId?: string; quantity?: string; price?: string }
+	/** The pass's: the reinvestment buy that put this dividend or interest straight back in. */
+	reinvested?: string
+
+	// ---- #78's own key: the bill pass and the owner's Mark paid set it, and a sync keeps it
+
+	/** The bill this row paid; an unpaired money-out row with one is a `bill-payment`. */
+	billId?: string
+
 	// ---- #74's key: a row read from a statement file has no `source`, and names the import that made it
 
 	/** The `file-import` that made this row, so its undo and later audits find it. */
 	importId?: string
+
+	// ---- #79's key: the recurring pass (`recurring.ts`) derives it
+
+	/** The recurring pass's: the `recurring-charge` row whose series this charge is in. */
+	recurringId?: string
 }
 
 /**
@@ -224,6 +320,114 @@ export interface FileImportPayload {
 	/** ISO instant of the import. */
 	at: string
 }
+
+/** How often a recurring charge comes (finance.md §3). */
+export const CADENCES = ['weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'] as const
+export type Cadence = (typeof CADENCES)[number]
+
+/** Two consecutive charges of a fixed series whose amounts differ; `day` is the later charge's. */
+export interface PriceChange {
+	day: string
+	from: Money
+	to: Money
+}
+
+/** What the owner said about a recurring charge. */
+export type RecurringState = 'kept' | 'cancelled' | 'dismissed'
+
+/**
+ * A `recurring-charge` (#79): one series of charges at one merchant (and person, for a vague one) in one currency.
+ * The recurring pass derives every field but the owner's four, which it keeps; none depends on today, so the pass is
+ * idempotent and the status is computed (`statusOf`). Amounts keep the charges' sign, so they are negative.
+ */
+export interface RecurringPayload {
+	merchantId: string
+	counterparty?: string
+	currency: string
+	cadence: Cadence
+	/** More than half of the recent intervals join two charges of different amounts. */
+	variable?: true
+	/** The last amount (fixed), or the median by size of the last three (variable). */
+	expected: Money
+	firstDay: string
+	lastDay: string
+	lastAmount: Money
+	/** The day the next charge is expected. */
+	nextDay: string
+	/** The last charge's account. */
+	accountId: string
+	/** The last charge's category (`categoryOfRow`). */
+	categoryId?: string
+	/** The charges in the series. */
+	count: number
+	/** A fixed series' changes, the newest 12, oldest first; a variable series has none. */
+	priceChanges: PriceChange[]
+
+	// ---- the owner's: the pass keeps them
+
+	state?: RecurringState
+	/** `YYYY-MM-DD`, the day the owner set `state`. */
+	stateOn?: string
+	/** The owner turned down tracking it as a bill. */
+	billOffer?: 'declined'
+	/** The `bill` row that tracks it (#78). */
+	billId?: string
+}
+
+/** A security's type, from Plaid's (`fixed income` → `fixed-income`; `loan` and anything unknown → `other`). */
+export const SECURITY_TYPES = [
+	'equity',
+	'etf',
+	'mutual-fund',
+	'fixed-income',
+	'cash',
+	'cryptocurrency',
+	'derivative',
+	'other',
+] as const
+export type SecurityType = (typeof SECURITY_TYPES)[number]
+
+/** The allocation's classes, in the order the owner reads them (D-197). */
+export const ALLOCATION_CLASSES = ['stocks', 'funds', 'bonds', 'cash', 'crypto', 'other'] as const
+export type AllocationClass = (typeof ALLOCATION_CLASSES)[number]
+
+/** A `security`, upserted by the provider's `security_id`; one closing price per day, the newest last. */
+export interface SecurityPayload {
+	name: string
+	ticker?: string
+	type: SecurityType
+	currency?: string
+	prices: { day: string; price: string }[]
+}
+
+/** Who set a holding's cost basis: the provider, the owner, or a move from a replaced account. */
+export type CostBasisBy = 'provider' | 'owner' | 'carried'
+
+/** A `holding`: what one account holds of one security, upserted by `${providerAccountId}:${securityId}`. */
+export interface HoldingPayload {
+	/** The Eden account's id. */
+	accountId: string
+	/** The Eden security's id. */
+	securityId: string
+	/** A decimal string, exact. */
+	quantity: string
+	/** ISO 4217. */
+	currency: string
+	/** The provider's `institution_value`. */
+	value?: Money
+	/** The provider's `institution_price`, a decimal string. */
+	price?: string
+	/** `YYYY-MM-DD` the price is as of. */
+	pricedOn?: string
+	/** The total paid, not per share. */
+	costBasis?: Money
+	costBasisBy?: CostBasisBy
+	/** The owner's value for a holding the provider gives no price for, with the day it was set. */
+	typedValue?: { value: Money; on: string }
+}
+
+export type Security = SecurityPayload & { id: string }
+export type Holding = HoldingPayload & { id: string }
 
 /** A `budget-category`. A default one keeps its `key`, so the provider mapping finds it after a rename. */
 export interface CategoryPayload {
@@ -253,12 +457,12 @@ export interface MerchantPayload {
 	rawNames: string[]
 }
 
-/** How often an income source pays (#80, D-198): `yearly` is a tax refund's or payment's. */
+/** How often an income source pays (#80, D-200): `yearly` is a tax refund's or payment's. */
 export const INCOME_CADENCES = ['weekly', 'biweekly', 'semimonthly', 'monthly', 'irregular', 'yearly'] as const
 export type IncomeCadence = (typeof INCOME_CADENCES)[number]
 
 /**
- * An `income-source` (#80, D-198): a paycheck, other repeating income, or the yearly tax refund or payment, found by
+ * An `income-source` (#80, D-200): a paycheck, other repeating income, or the yearly tax refund or payment, found by
  * the income pass (`income.ts`) from the live transactions. Its identity across passes is `kind` with `merchantId`
  * and `counterparty`, or `nameKey`. The pass writes the detected keys; the owner's keys are only ever the owner's.
  */
@@ -303,11 +507,13 @@ export type IncomeSource = IncomeSourcePayload & { id: string }
 export type Category = CategoryPayload & { id: string }
 export type Rule = RulePayload & { id: string; updatedAt: string }
 export type Merchant = MerchantPayload & { id: string }
+export type RecurringCharge = RecurringPayload & { id: string }
 
 export type ProviderLink = ProviderLinkPayload & { id: string }
 export type Account = AccountPayload & { id: string }
 export type Snapshot = SnapshotPayload & { id: string }
 export type Asset = AssetPayload & { id: string }
+export type Bill = BillPayload & { id: string }
 
 /** What the store holds; the snapshots only travel in the sample data, the store never reads them. */
 export interface FinanceData {
@@ -315,4 +521,6 @@ export interface FinanceData {
 	accounts: Account[]
 	assets: Asset[]
 	snapshots?: Snapshot[]
+	holdings?: Holding[]
+	securities?: Security[]
 }

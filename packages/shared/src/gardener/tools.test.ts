@@ -33,8 +33,15 @@ const index = toolIndex(declarations)
 describe('the tool index', () => {
 	it('validates, and holds the thirty-eight tools', () => {
 		expect(validateTools(index)).toEqual([])
-		expect(index).toHaveLength(38)
-		expect(Object.keys(SCHEMAS)).toHaveLength(38)
+		expect(index).toHaveLength(39)
+		expect(Object.keys(SCHEMAS)).toHaveLength(39)
+	})
+
+	it('declares Orchard’s bill draft as a light vision draft that reads nothing, read loosely (#78)', () => {
+		const tool = parseWireName('finance_draft', index)!
+		expect(tool.declaration).toMatchObject({ access: 'write-draft', grade: 'light', needs: ['vision'], reads: [] })
+		expect(isStrict(tool)).toBe(false)
+		expect(tool.schema.required).toEqual([])
 	})
 
 	it('declares Orchard’s read-statement as a light vision draft, strict with no optional parameter (#74)', () => {

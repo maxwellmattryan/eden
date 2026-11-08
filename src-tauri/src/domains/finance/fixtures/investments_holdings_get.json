@@ -1,0 +1,94 @@
+{
+	"accounts": [
+		{
+			"account_id": "acc-brokerage",
+			"balances": {
+				"available": null,
+				"current": 9640.55,
+				"iso_currency_code": "USD",
+				"limit": null,
+				"unofficial_currency_code": null
+			},
+			"mask": "5521",
+			"name": "Individual Brokerage",
+			"official_name": null,
+			"subtype": "brokerage",
+			"type": "investment"
+		}
+	],
+	"holdings": [
+		{
+			"account_id": "acc-brokerage",
+			"cost_basis": 5210,
+			"institution_price": 286.0,
+			"institution_price_as_of": "2026-11-05",
+			"institution_price_datetime": null,
+			"institution_value": 6120.35,
+			"iso_currency_code": "USD",
+			"quantity": 21.4,
+			"security_id": "sec-vti",
+			"unofficial_currency_code": null,
+			"vested_quantity": null,
+			"vested_value": null
+		},
+		{
+			"account_id": "acc-brokerage",
+			"cost_basis": null,
+			"institution_price": 27.31,
+			"institution_price_as_of": null,
+			"institution_price_datetime": null,
+			"institution_value": 2410.11,
+			"iso_currency_code": "USD",
+			"quantity": 88.25,
+			"security_id": "sec-schd",
+			"unofficial_currency_code": null
+		},
+		{
+			"account_id": "acc-brokerage",
+			"cost_basis": 1110.09,
+			"institution_price": 1,
+			"institution_price_as_of": null,
+			"institution_value": 1110.09,
+			"iso_currency_code": "USD",
+			"quantity": 1110.09,
+			"security_id": "sec-cash",
+			"unofficial_currency_code": null
+		}
+	],
+	"item": { "item_id": "item-m1", "institution_id": "ins_116530" },
+	"securities": [
+		{
+			"close_price": 286.0,
+			"close_price_as_of": "2026-11-05",
+			"cusip": null,
+			"institution_id": null,
+			"is_cash_equivalent": false,
+			"iso_currency_code": "USD",
+			"name": "Vanguard Total Stock Market ETF",
+			"security_id": "sec-vti",
+			"ticker_symbol": "VTI",
+			"type": "etf",
+			"unofficial_currency_code": null
+		},
+		{
+			"close_price": 27.31,
+			"close_price_as_of": "2026-11-05",
+			"iso_currency_code": "USD",
+			"name": "Schwab U.S. Dividend Equity ETF",
+			"security_id": "sec-schd",
+			"ticker_symbol": "SCHD",
+			"type": "etf"
+		},
+		{
+			"close_price": 1,
+			"close_price_as_of": null,
+			"iso_currency_code": "USD",
+			"is_cash_equivalent": true,
+			"name": "U S Dollar",
+			"security_id": "sec-cash",
+			"ticker_symbol": "CUR:USD",
+			"type": "cash"
+		}
+	],
+	"request_id": "inv-holdings-1"
+}

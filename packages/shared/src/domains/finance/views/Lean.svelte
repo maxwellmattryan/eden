@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Lean mode's card (product/domains/finance.md §6, #80, D-198), above the accounts while a source carries
+	// Lean mode's card (product/domains/finance.md §6, #80, D-200), above the accounts while a source carries
 	// `leanSince`: how many months the liquid money lasts on the essentials and at the usual spending, the essential
 	// categories and what repeats outside them, the things to pause. With no complete month of spending only the
 	// heading and a line show. Rows do not act (D-118). Every figure goes through `formatMoney`, so Hide amounts masks
@@ -10,7 +10,7 @@
 	import { settings } from '../../../settings/index.js'
 	import { undoToast } from '../../../shell/index.js'
 	import { finance } from '../store.svelte.js'
-	import { dayLine, monthLine } from '../words.js'
+	import { dayLine, monthYearLine } from '../words.js'
 
 	const uid = $props.id()
 	const lang = $derived(settings.language)
@@ -79,7 +79,7 @@
 									<Stat value={monthsOf(runway.months ?? 0)} size="md" />
 									{#if runway.until}
 										<span class="caption">
-											{$t('domains.finance.lean.until', { values: { month: monthLine(runway.until, lang, true) } })}
+											{$t('domains.finance.lean.until', { values: { month: monthYearLine(runway.until, lang, true) } })}
 										</span>
 									{/if}
 								</dd>

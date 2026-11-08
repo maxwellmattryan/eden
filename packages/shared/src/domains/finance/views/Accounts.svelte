@@ -4,7 +4,8 @@
 	// bank link on this device, the banks with no link here, the accounts entered by hand, the assets and the closed
 	// accounts. A bank's heading carries its colour, how fresh it is and its menu. Rows do not act (D-118); their menus
 	// do, offering only what applies: a linked account is read from its bank, so it cannot be edited, given a balance or
-	// deleted here. Every figure is the account's own currency, through `formatMoney` in the app's language.
+	// deleted here. Every figure is the account's own currency, through `formatMoney` in the app's language. An asset
+	// valued more than 90 days ago says it is out of date and its menu leads with Update value (D-197).
 	import {
 		Button,
 		EmptyState,
@@ -18,11 +19,13 @@
 		type ListRowData,
 		type MenuItem,
 	} from '@eden/ui-kit'
+	import { dateIn } from '../../../dates/index.js'
 	import { t } from '../../../i18n/index.js'
 	import { formatMoney, type Money } from '../../../money/index.js'
 	import { settings } from '../../../settings/index.js'
 	import { undoToast } from '../../../shell/index.js'
-	import { dayOfInstant, type AccountGroup } from '../accounts.js'
+	import { INSTITUTION_COLOUR, INSTITUTION_LOGO, dayOfInstant, type AccountGroup } from '../accounts.js'
+	import { aged } from '../investments.js'
 	import { finance } from '../store.svelte.js'
 	import { isDebt, type Account, type Asset, type ProviderLink } from '../types.js'
 	import { accountDetail, dayLine, freshnessLine, leftOutLine } from '../words.js'
@@ -95,10 +98,17 @@
 		if (manual) items.push({ id: 'delete', label: $t('domains.finance.menu.delete'), icon: 'trash', destructive: true })
 		return items
 	}
-	const assetActions = $derived<MenuItem[]>([
-		{ id: 'edit', label: $t('domains.finance.menu.edit'), icon: 'pencil' },
-		{ id: 'delete', label: $t('domains.finance.menu.delete'), icon: 'trash', destructive: true },
-	])
+	const today = $derived(dateIn(undefined, finance.clock))
+	/** An asset's menu: an out-of-date one leads with Update value, which opens the same sheet as Edit (D-197). */
+	function assetActions(asset: Asset): MenuItem[] {
+		return [
+			...(aged(asset.valuedOn, today)
+				? [{ id: 'update-value', label: $t('domains.finance.menu.updateValue'), icon: 'refresh-cw' as const }]
+				: []),
+			{ id: 'edit', label: $t('domains.finance.menu.edit'), icon: 'pencil' },
+			{ id: 'delete', label: $t('domains.finance.menu.delete'), icon: 'trash', destructive: true },
+		]
+	}
 
 	function accountRow(account: Account): ListRowData {
 		const detail = [accountDetail(account, finance.accounts, $t)]
@@ -122,15 +132,17 @@
 	function assetRow(asset: Asset): ListRowData {
 		const amount = money(asset.value)
 		const quantity = asset.quantity ? `${asset.quantity} ${asset.unit ?? ''}`.trim() : undefined
+		const valued = $t('domains.finance.row.valued', { values: { day: day(asset.valuedOn) } })
+		// out of date: the words say so, and the meta rises to primary ink
+		const old = aged(asset.valuedOn, today)
+		const when = old ? [valued, $t('domains.finance.investments.outOfDate')] : quantity ? [] : [valued]
 		return {
 			id: asset.id,
 			primary: asset.name,
-			secondary: [
-				quantity ?? $t('domains.finance.row.valued', { values: { day: day(asset.valuedOn) } }),
-				...away(asset.value.currency),
-			].join(' · '),
+			secondary: [...(quantity ? [quantity] : []), ...when, ...away(asset.value.currency)].join(' · '),
 			meta: quantity ? $t('domains.finance.row.approx', { values: { amount } }) : amount,
-			actions: assetActions,
+			metaWarn: old,
+			actions: assetActions(asset),
 		}
 	}
 
@@ -149,8 +161,6 @@
 		quiet: boolean
 		rows: ListRowData[]
 	}
-	const COLOUR = /^#[0-9a-fA-F]{6}$/
-	const LOGO = /^data:image\/png;base64,[A-Za-z0-9+/=]+$/
 	/** The groups whose logo would not draw: they show the swatch. */
 	const broken: Record<string, boolean> = $state({})
 
@@ -164,8 +174,8 @@
 					...base,
 					id: group.id,
 					title: link.institution.name,
-					colour: colour && COLOUR.test(colour) ? colour : undefined,
-					logo: logo && LOGO.test(logo) ? logo : undefined,
+					colour: colour && INSTITUTION_COLOUR.test(colour) ? colour : undefined,
+					logo: logo && INSTITUTION_LOGO.test(logo) ? logo : undefined,
 					freshness: freshnessLine(link, state, finance.clock, $t, format),
 					link,
 					expiring:
@@ -251,7 +261,7 @@
 		}
 		const asset = finance.assetById(rowId)
 		if (!asset) return
-		if (id === 'edit') oneditasset(asset)
+		if (id === 'edit' || id === 'update-value') oneditasset(asset)
 		else if (id === 'delete') {
 			const undo = finance.deleteAsset(asset.id)
 			if (undo) undoToast($t('domains.finance.toasts.deleted', { values: { name: asset.name } }), undo)

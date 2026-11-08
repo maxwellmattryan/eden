@@ -120,9 +120,14 @@ const formats = new Map<string, Intl.NumberFormat>()
 
 /**
  * The amount in the locale, with the currency's own decimals: "¥84,000", "-$1,204.18". With `sign: 'never'` a
- * negative is written as its size, for a line that says which way it goes in words ("owed").
+ * negative is written as its size, for a line that says which way it goes in words ("owed"). With
+ * `sign: 'exceptZero'` money in carries a plus ("+$2,430.00"), money out its minus, and zero neither.
  */
-export function formatMoney(m: Money, locale: string, options: { sign?: 'auto' | 'never' } = {}): string {
+export function formatMoney(
+	m: Money,
+	locale: string,
+	options: { sign?: 'auto' | 'never' | 'exceptZero' } = {}
+): string {
 	const decimal = toDecimal(m)
 	const d = decimalsOf(m.currency)
 	const sign = options.sign ?? 'auto'

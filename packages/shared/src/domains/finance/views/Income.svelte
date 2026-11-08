@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Orchard's Income section (product/domains/finance.md §6, #80, D-198), after the accounts: what comes in a month
+	// Orchard's Income section (product/domains/finance.md §6, #80, D-200), after the accounts: what comes in a month
 	// and the trailing average, then a row per source the income pass found that is not hidden, the paychecks first,
 	// the ended ones next and the tax refund or payment last. A late row says so in words and is never coloured: the
 	// header's notice carries the urgency, and the danger colour means money owed. Rows do not act (D-118); their menus

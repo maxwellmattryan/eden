@@ -1,5 +1,5 @@
 <script lang="ts">
-	// The late paycheck's question (product/domains/finance.md §6, #80, D-198): did the job end? "No, it's just late"
+	// The late paycheck's question (product/domains/finance.md §6, #80, D-200): did the job end? "No, it's just late"
 	// keeps the source and stops asking about that day; "Yes, it ended" ends it today and turns lean mode on. Each
 	// answer has an Undo. Dismissing the sheet answers nothing, so the header's notice stays.
 	import { Button, Sheet } from '@eden/ui-kit'

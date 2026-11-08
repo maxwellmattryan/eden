@@ -1,0 +1,29 @@
+{
+	"accounts": [],
+	"item": { "item_id": "item-1", "institution_id": "ins_56" },
+	"liabilities": {
+		"credit": [
+			{
+				"account_id": "acc-credit",
+				"aprs": [
+					{
+						"apr_percentage": 15.24,
+						"apr_type": "balance_transfer_apr",
+						"balance_subject_to_apr": 1562.32,
+						"interest_charge_amount": 130.22
+					}
+				],
+				"is_overdue": false,
+				"last_payment_amount": 168.25,
+				"last_payment_date": "2026-09-22",
+				"last_statement_issue_date": "2026-09-14",
+				"last_statement_balance": 1204.18,
+				"minimum_payment_amount": 35,
+				"next_payment_due_date": "2026-10-12"
+			}
+		],
+		"mortgage": null,
+		"student": null
+	},
+	"request_id": "dTnnm60WgKGLnKL"
+}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	// The bonus question (product/domains/finance.md §6, #80, D-198): an employer paid extra, so where should it go?
+	// The bonus question (product/domains/finance.md §6, #80, D-200): an employer paid extra, so where should it go?
 	// Leaving it where it came in is the default; a savings, investment or retirement account, or a debt to pay down,
 	// adds a todo due today to move it, since Eden never moves the money (D-8). A bonus on its own can be left out of
 	// the monthly average; one paid in the paycheck's deposit cannot. Save answers the question with one Undo for all

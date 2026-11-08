@@ -1204,8 +1204,270 @@
 			"name": "果樹園",
 			"subtitle": "お金、予算、資産",
 			"tabs": {
-				"accounts": "口座"
+				"activity": "取引",
+				"accounts": "口座",
+				"bills": "請求",
+				"investments": "投資"
 			},
+			"tabsLabel": "果樹園のセクション",
+			"txKinds": {
+				"purchase": "購入",
+				"refund": "返金",
+				"transfer": "振替",
+				"card-payment": "カードの支払い",
+				"bill-payment": "請求の支払い",
+				"income": "給与・収入",
+				"interest-earned": "受取利息",
+				"dividend": "配当",
+				"interest-charged": "支払利息",
+				"fee": "手数料",
+				"investment-buy": "投資の買付",
+				"investment-sell": "投資の売却"
+			},
+			"activity": {
+				"search": "取引を検索",
+				"searchPlaceholder": "店名、メモ、または >100",
+				"filters": "絞り込み",
+				"sections": {
+					"when": "期間",
+					"where": "口座",
+					"what": "内容",
+					"amount": "金額",
+					"state": "状態"
+				},
+				"presets": {
+					"this-month": "今月",
+					"last-month": "先月",
+					"90-days": "過去90日",
+					"this-year": "今年"
+				},
+				"from": "開始日",
+				"to": "終了日",
+				"over": "以上",
+				"under": "以下",
+				"states": {
+					"pending": "保留中",
+					"posted": "確定済み",
+					"recurring": "定期",
+					"bill": "請求の一部",
+					"one-off": "一時的",
+					"reimbursable": "立替",
+					"uncategorised": "未分類"
+				},
+				"chips": {
+					"over": "{amount}以上",
+					"under": "{amount}以下",
+					"remove": "絞り込みを外す：{label}",
+					"clear": "クリア",
+					"label": "適用中の絞り込み"
+				},
+				"range": "{from} – {to}",
+				"accountName": "{name} ••{last4}",
+				"totals": "{count}件の取引",
+				"out": "出金 {amount}",
+				"in": "入金 {amount}",
+				"leftOut": "{currencies}の金額は合計に含まれません",
+				"showMore": "さらに表示",
+				"cap": "新しい1,000件を表示しています。残りを見るには絞り込んでください。",
+				"today": "今日",
+				"yesterday": "昨日",
+				"feed": "取引",
+				"split": "分割",
+				"paidBack": "{amount}の返済待ち",
+				"pillTo": "から",
+				"pill": "{name}（末尾{last4}）、この口座で絞り込む",
+				"pillNoLast4": "{name}、この口座で絞り込む",
+				"readFailed": "果樹園は取引を読み込めませんでした。",
+				"empty": {
+					"title": "まだ何も連携していません",
+					"text": "銀行を連携すると、果樹園はこの端末ですべての口座を最新に保ちます。手入力もできます。",
+					"noneTitle": "まだ取引がありません",
+					"noneText": "次の同期か、取り込んだ明細から届きます。"
+				},
+				"noMatch": {
+					"title": "この絞り込みに一致する取引はありません",
+					"text": "絞り込みを一つ外すか、すべてクリアしてください。",
+					"action": "絞り込みをクリア"
+				},
+				"menu": {
+					"label": "{title}（{day}）の操作",
+					"changeCategory": "カテゴリを変更",
+					"markOneOff": "一時的にする",
+					"notOneOff": "一時的でなくする",
+					"markReimbursable": "立替にする",
+					"notReimbursable": "立替でなくする"
+				},
+				"categorySheet": {
+					"title": "カテゴリを変更",
+					"category": "カテゴリ",
+					"none": "カテゴリなし",
+					"remember": "{title}のすべてに使う"
+				},
+				"reimbursableSheet": {
+					"title": "立替にする",
+					"amount": "返済される金額"
+				},
+				"refusals": {
+					"money-in": "立替にできるのは出金だけです",
+					"zero": "ゼロより大きい金額を入力してください",
+					"currency": "取引と同じ通貨を使ってください",
+					"too-much": "取引の金額を超えています"
+				},
+				"toasts": {
+					"categorised": "カテゴリを変更しました",
+					"remembered": "{title}のすべてのカテゴリを変更しました",
+					"oneOff": "一時的にしました",
+					"notOneOff": "一時的でなくしました",
+					"reimbursable": "立替にしました",
+					"notReimbursable": "立替でなくしました"
+				},
+				"insights": {
+					"label": "分析",
+					"spending": "支出の推移",
+					"spendingWeeks": "週ごとの支出（{series}で積み上げ）",
+					"spendingMonths": "月ごとの支出（{series}で積み上げ）",
+					"else": "その他すべて",
+					"merchants": "よく使う店",
+					"typical": "いつもとの比較",
+					"inOut": "月ごとの入出金"
+				},
+				"columns": {
+					"merchant": "店",
+					"count": "件数",
+					"average": "平均",
+					"total": "合計",
+					"category": "カテゴリ",
+					"typical": "いつも",
+					"change": "差",
+					"month": "月",
+					"in": "入金",
+					"out": "出金",
+					"net": "差引"
+				},
+				"typicalHint": "そのカテゴリのいつもの月の金額：直前の最大6か月（丸ひと月）の平均です。"
+			},
+			"bills": {
+				"groups": {
+					"overdue": "期限切れ",
+					"due-soon": "まもなく期日",
+					"upcoming": "今後",
+					"expected": "見込み",
+					"paid": "支払済み"
+				},
+				"cadence": {
+					"once": "一回のみ",
+					"m1": "毎月",
+					"m2": "2か月ごと",
+					"m3": "3か月ごと",
+					"m6": "6か月ごと",
+					"m12": "毎年"
+				},
+				"source": {
+					"letter": "郵便物から",
+					"statement": "カードの明細",
+					"repeating": "繰り返し",
+					"manual": "手入力"
+				},
+				"line": {
+					"estimate": "見積もり",
+					"actual": "確定",
+					"minimum": "最低{amount}",
+					"interest": "利息{amount}",
+					"stillDue": "残り{amount}",
+					"over": "請求より{amount}多い",
+					"about": "約{amount}",
+					"paidFrom": "{day}に{bank} ••{last4}から支払い",
+					"paidFromBank": "{day}に{bank}から支払い",
+					"paidOn": "{day}に支払い",
+					"markedPaid": "{day}に支払済みにしました",
+					"minimumPaid": "最低額を支払い済み · {amount}は次回の明細へ"
+				},
+				"menu": {
+					"markPaid": "支払済みにする",
+					"edit": "編集",
+					"notThis": "この支払いではない",
+					"stopRepeating": "繰り返しをやめる",
+					"openSite": "支払先のサイトを開く",
+					"delete": "削除"
+				},
+				"empty": {
+					"title": "請求はまだありません",
+					"text": "郵便物を撮影するかドロップすると、この端末で読み取られ、庭師が請求の下書きを作ります。確認してから保存します。"
+				},
+				"ambiguous": {
+					"title": "どちらの支払いか分かりません",
+					"detail": "{payee}、{amount}、期日{day}。どちらで支払いましたか？",
+					"group": "{payee}を支払った可能性のある支払い",
+					"candidate": "{day} · {name} · {amount}",
+					"neither": "どちらでもない"
+				},
+				"taskTitle": "{payee}を支払う",
+				"form": {
+					"titleNew": "請求を追加",
+					"titleEdit": "請求を編集",
+					"titleDraft": "請求を確認",
+					"updates": "{month}の{payee}の請求を更新します",
+					"payee": "支払先",
+					"amount": "金額",
+					"currency": "通貨",
+					"due": "期日",
+					"dueHelp": "期日がまだない場合は空のままにします。",
+					"estimate": "見積もりです",
+					"repeats": "繰り返し",
+					"never": "しない",
+					"fixed": "金額は毎回同じ",
+					"card": "カード",
+					"noCard": "なし",
+					"minimum": "最低支払額",
+					"url": "支払先のサイト",
+					"drafting": "請求の下書きを作成中…",
+					"byHand": "手で入力する"
+				},
+				"errors": {
+					"payee": "支払先を入力してください",
+					"positive": "0より大きい金額を入力してください",
+					"url": "https://で始まるアドレスを入力してください"
+				},
+				"pay": {
+					"title": "{payee}を支払済みにする",
+					"text": "支払った取引を選んでください。一部の場合は残りが期日のまま残ります。",
+					"choose": "期日前後の支払い",
+					"none": "期日の前後に支払いはありません。",
+					"another": "別の方法で支払った",
+					"anotherText": "取引なしで、今日{amount}を支払ったと記録します。"
+				},
+				"toasts": {
+					"added": "請求を追加しました",
+					"saved": "請求を保存しました",
+					"deleted": "{payee}を削除しました",
+					"paid": "{payee}を支払済みにしました",
+					"stopped": "{payee}は繰り返さなくなりました",
+					"unmatched": "{payee}から支払いを外しました",
+					"matched": "{payee}を支払いました",
+					"dismissed": "どちらの支払いも{payee}ではありません"
+				},
+				"capture": {
+					"confirm": "請求の下書きを作る",
+					"next": "このテキストから庭師が請求の下書きを作ります。保存する前に確認できます。",
+					"madeBill": "{month}の{payee}の請求",
+					"deletedBill": "削除された請求"
+				},
+				"failure": {
+					"busy": "庭師は別の依頼を処理中です。少し待ってからもう一度お試しください。",
+					"no-key": "請求の下書きには、設定でAnthropicのキーを追加してください。",
+					"unavailable": "ここでは庭師を使えません。",
+					"budget": "今月の庭師の予算を使い切りました。",
+					"limit": "サブスクリプションの利用上限に達しています。リセットまでお待ちください。",
+					"network": "庭師に接続できませんでした。",
+					"refusal": "庭師はこの請求の下書きを作りませんでした。",
+					"max-tokens": "回答が長すぎました。",
+					"cancelled": "下書きを中止しました。",
+					"unreadable": "庭師はこれを読めませんでした。",
+					"empty": "これは請求には見えません。",
+					"no-files": "送るものがありませんでした。"
+				}
+			},
+			"tabsLabel": "果樹園のセクション",
 			"categories": {
 				"rent": "家賃",
 				"utilities": "光熱費",
@@ -1237,7 +1499,52 @@
 				"addAsset": "資産を追加",
 				"linkBank": "銀行を連携",
 				"import": "取り込む",
+				"reconnect": "再接続",
+				"captureBill": "請求書を読み取る",
+				"addBill": "請求を追加",
+				"linkBrokerage": "証券口座を連携",
 				"reconnect": "再接続"
+			},
+			"investments": {
+				"label": "投資の合計",
+				"value": "評価額",
+				"costBasis": "取得原価",
+				"gain": "損益",
+				"withoutBasis": "取得原価のない保有銘柄 {count} 件",
+				"leftOut": "{currencies} の保有銘柄 {count} 件は合計に含まれていません",
+				"unpricedCount": "価格のない保有銘柄 {count} 件は含まれていません",
+				"allocation": "資産配分",
+				"columns": {
+					"class": "区分",
+					"value": "評価額",
+					"share": "割合"
+				},
+				"classes": {
+					"stocks": "株式",
+					"funds": "ファンド",
+					"bonds": "債券",
+					"cash": "現金",
+					"crypto": "暗号資産",
+					"other": "その他"
+				},
+				"empty": {
+					"title": "まだ投資はありません",
+					"bound": "証券口座を連携すると保有銘柄が表示されます。",
+					"unbound": "保有銘柄はデスクトップで連携した証券口座から届きます。"
+				},
+				"noHoldings": "保有銘柄は次の同期で届きます。",
+				"unpriced": "価格なし",
+				"asOf": "{day}時点",
+				"outOfDate": "古い評価",
+				"carried": "引き継ぎ",
+				"cost": "原価 {amount}",
+				"costBasisTitleNew": "取得原価を追加",
+				"costBasisTitle": "取得原価",
+				"costBasisLede": "{name}に支払った合計額です。1株あたりではありません。",
+				"valueTitleNew": "評価額を追加",
+				"valueTitle": "評価額を更新",
+				"valueLede": "{name}の評価額と、確認した日。",
+				"valuedOn": "評価日"
 			},
 			"totals": {
 				"label": "合計",
@@ -1298,7 +1605,12 @@
 				"import": "明細を取り込む",
 				"close": "口座を解約",
 				"reopen": "再開",
-				"delete": "削除"
+				"delete": "削除",
+				"updateValue": "評価額を更新",
+				"addValue": "評価額を追加",
+				"addCostBasis": "取得原価を追加",
+				"editCostBasis": "取得原価を編集",
+				"clearCostBasis": "入力した取得原価を消去"
 			},
 			"empty": {
 				"title": "まだ何もありません",
@@ -1409,7 +1721,8 @@
 				"share": "0.01〜100で入力してください",
 				"day": "日付を入力してください",
 				"quantity": "数値を入力してください",
-				"unit": "単位を入力してください"
+				"unit": "単位を入力してください",
+				"futureDay": "今日以前の日を選んでください"
 			},
 			"income": {
 				"title": "収入",
@@ -1507,7 +1820,10 @@
 				"assetSaved": "資産を保存しました",
 				"linkRemoved": "{name}を削除しました",
 				"imported": "{account}に{count}件を取り込みました",
-				"nothingNew": "{name}に新しい取引はありません"
+				"nothingNew": "{name}に新しい取引はありません",
+				"costBasisSet": "{name}の取得原価を設定しました",
+				"costBasisCleared": "{name}の取得原価を消去しました",
+				"valueSet": "{name}の評価額を設定しました"
 			},
 			"plaid": {
 				"keysButton": "Plaidのキー",
@@ -1560,6 +1876,15 @@
 			"notifications": {
 				"linkNeedsReconnecting": {
 					"line": "{reason, select, expiring {{institution}は{byDay}までに再ログインが必要です} other {{institution}に再ログインが必要です}}"
+				},
+				"priceRise": {
+					"line": "{merchant}の料金が前回より上がりました"
+				},
+				"billDueSoon": {
+					"line": "{payee}の支払期日は{dueDay}です"
+				},
+				"billOverdue": {
+					"line": "{payee}の支払期日は{dueDay}でした"
 				},
 				"paycheckLate": {
 					"line": "{employer}の{day}の給与がまだ届いていません"
@@ -2939,7 +3264,11 @@
 			"discarded": "破棄しました",
 			"recipe": "レシピ: {name}",
 			"recipeText": "レシピで開いて確認し、保存してください。",
-			"openRecipe": "レシピで開く"
+			"openRecipe": "レシピで開く",
+			"bill": "確認する請求",
+			"billText": "請求で開いて確認し、保存してください。",
+			"openBill": "請求で開く",
+			"about": "{label}のため"
 		},
 		"resize": "庭師の幅を変える",
 		"allowed": "{id} を庭師と共有しました。",

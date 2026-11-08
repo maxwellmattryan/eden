@@ -2407,8 +2407,20 @@ export const DECLARATIONS = {
 		},
 		"tabs": [
 			{
+				"id": "activity",
+				"label": "domains.finance.tabs.activity"
+			},
+			{
 				"id": "accounts",
 				"label": "domains.finance.tabs.accounts"
+			},
+			{
+				"id": "bills",
+				"label": "domains.finance.tabs.bills"
+			},
+			{
+				"id": "investments",
+				"label": "domains.finance.tabs.investments"
 			}
 		],
 		"resources": [
@@ -2441,6 +2453,17 @@ export const DECLARATIONS = {
 		"captureSources": [],
 		"tools": [
 			{
+				"id": "draft",
+				"access": "write-draft",
+				"confirm": false,
+				"reads": [],
+				"grade": "light",
+				"needs": [
+					"vision"
+				],
+				"minContext": null
+			},
+			{
 				"id": "read-statement",
 				"access": "write-draft",
 				"confirm": false,
@@ -2456,7 +2479,10 @@ export const DECLARATIONS = {
 			"finance.link-broken",
 			"finance.paycheck-late",
 			"finance.bonus",
-			"finance.income-new"
+			"finance.income-new",
+			"finance.bill-due",
+			"finance.bill-overdue",
+			"finance.price-rise"
 		],
 		"notificationKinds": [
 			{
@@ -2490,6 +2516,30 @@ export const DECLARATIONS = {
 				"default": true,
 				"signal": "finance.income-new",
 				"when": null
+			},
+			{
+				"id": "bill-due-soon",
+				"channel": "in-app",
+				"cadence": "when-found",
+				"default": true,
+				"signal": "finance.bill-due",
+				"when": null
+			},
+			{
+				"id": "bill-overdue",
+				"channel": "in-app",
+				"cadence": "when-found",
+				"default": true,
+				"signal": "finance.bill-overdue",
+				"when": null
+			},
+			{
+				"id": "price-rise",
+				"channel": "in-app",
+				"cadence": "when-found",
+				"default": true,
+				"signal": "finance.price-rise",
+				"when": null
 			}
 		],
 		"schedules": [
@@ -2498,6 +2548,12 @@ export const DECLARATIONS = {
 				"name": "finance.sync",
 				"daily": null,
 				"every": 3600
+			},
+			{
+				"id": "bills",
+				"name": "finance.bills",
+				"daily": "08:00",
+				"every": null
 			}
 		],
 		"intents": [],
@@ -2515,7 +2571,12 @@ export const DECLARATIONS = {
 			"transaction",
 			"budget-category",
 			"category-rule",
-			"merchant"
+			"merchant",
+			"bill",
+			"file-import",
+			"recurring-charge",
+			"holding",
+			"security"
 		]
 	}
 } as const

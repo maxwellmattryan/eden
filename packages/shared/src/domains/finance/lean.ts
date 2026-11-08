@@ -1,4 +1,4 @@
-// Lean mode (product/domains/finance.md §6, D-198): after a job ends, how long the owner's liquid money lasts on the
+// Lean mode (product/domains/finance.md §6, D-200): after a job ends, how long the owner's liquid money lasts on the
 // essentials and at their usual spending, the essential categories it is spent on, and the merchants that repeat
 // outside them, the things to pause. Read from the ledger (D-194) in the home currency only (D-188). Pure: no rune
 // module, no I/O. "What to pause" stands in for #79's recurring charges until they land.

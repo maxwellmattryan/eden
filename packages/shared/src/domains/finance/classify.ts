@@ -6,7 +6,7 @@
 import type { BatchOp, Entity } from '../../data/index.js'
 import { addDays } from '../../dates/index.js'
 import { addMoney, money, negate, type Money } from '../../money/index.js'
-import { ensureCategoryOps, providerCategoryOf } from './categories.js'
+import { ensureCategoryOps, investmentMeaningOf, providerCategoryOf } from './categories.js'
 import { cleanMerchant, merchantKey, vagueOf } from './merchants.js'
 import { same } from './sync.js'
 import {
@@ -31,8 +31,34 @@ export const REFUND_DAYS = 120
 export const RAW_NAMES = 50
 
 /** Kinds that never take a derived category and add nothing to spending. */
-const MOVES: readonly TxKind[] = ['transfer', 'card-payment']
-const NO_SPENDING: readonly TxKind[] = ['transfer', 'card-payment', 'income', 'interest-earned', 'dividend']
+const MOVES: readonly TxKind[] = ['transfer', 'card-payment', 'investment-buy', 'investment-sell']
+const NO_SPENDING: readonly TxKind[] = [
+	'transfer',
+	'card-payment',
+	'income',
+	'interest-earned',
+	'dividend',
+	'investment-buy',
+	'investment-sell',
+]
+/** The buy subtypes that put a dividend, interest or capital gain straight back in. */
+const REINVESTMENTS = new Set([
+	'dividend reinvestment',
+	'interest reinvestment',
+	'long-term capital gain reinvestment',
+	'short-term capital gain reinvestment',
+])
+/** Kinds a reinvestment buy can take back in. */
+const REINVESTABLE: readonly TxKind[] = ['dividend', 'interest-earned']
+
+/**
+ * Whether a row moves money inside one investment account and so adds nothing to in, out or spending (D-197): a buy,
+ * a sell, or a dividend or interest a reinvestment buy took straight back.
+ */
+export function insideAccount(row: TransactionPayload): boolean {
+	if (row.kind === 'investment-buy' || row.kind === 'investment-sell') return true
+	return Boolean(row.reinvested) && row.kind !== undefined && REINVESTABLE.includes(row.kind)
+}
 /** Kinds a money-in row turns into a refund. */
 const SPENDING: readonly TxKind[] = ['purchase', 'fee', 'interest-charged']
 
@@ -41,7 +67,7 @@ const signOf = (amount: Money) => Math.sign(amount.minor)
 const size = (amount: Money) => Math.abs(amount.minor)
 const DAY_MS = 24 * 60 * 60 * 1000
 /** Whole days between two `YYYY-MM-DD`. */
-const daysApart = (a: string, b: string) =>
+export const daysApart = (a: string, b: string) =>
 	Math.round(Math.abs(Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / DAY_MS)
 const byText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
 
@@ -188,8 +214,10 @@ export function classifyOps(input: ClassifyInput): { ops: BatchOp[]; merchants: 
 	for (const row of input.rows) {
 		const was = row.payload
 		const next: TransactionPayload = { ...was }
-		const vague = vagueOf(was.name) ?? vagueOf(was.merchantName)
-		const clean = cleanMerchant(was.name, was.merchantName)
+		// an investment row has no merchant: its name is the security's (D-197)
+		const investment = was.investment
+		const vague = investment ? undefined : (vagueOf(was.name) ?? vagueOf(was.merchantName))
+		const clean = investment ? '' : cleanMerchant(was.name, was.merchantName)
 		const key = merchantKey(clean)
 		let merchant = key ? index.get(key) : undefined
 		if (!merchant && key) {
@@ -206,7 +234,9 @@ export function classifyOps(input: ClassifyInput): { ops: BatchOp[]; merchants: 
 		const isVague = Boolean(vague) && Boolean(merchant?.vague)
 		if (isVague && vague?.counterparty) next.counterparty = vague.counterparty
 		else delete next.counterparty
-		const provider = providerCategoryOf(was.providerCategory)
+		const provider = investment
+			? investmentMeaningOf(investment.type, investment.subtype)
+			: providerCategoryOf(was.providerCategory)
 		work.set(row.id, {
 			id: row.id,
 			was,
@@ -245,7 +275,10 @@ export function classifyOps(input: ClassifyInput): { ops: BatchOp[]; merchants: 
 			!x.repays &&
 			!y.repays &&
 			daysApart(x.day, y.day) <= PAIR_DAYS &&
-			(a.transferLike || b.transferLike)
+			(a.transferLike || b.transferLike) &&
+			// a buy, a sell, a dividend or a fee never pairs: only an investment row's own move of cash does
+			(!x.investment || a.transferLike) &&
+			(!y.investment || b.transferLike)
 		)
 	}
 	for (const item of work.values()) {
@@ -265,6 +298,9 @@ export function classifyOps(input: ClassifyInput): { ops: BatchOp[]; merchants: 
 	// kind
 	for (const item of work.values())
 		item.next.kind = kindOf(item, item.next.transferId ? work.get(item.next.transferId) : undefined, accounts)
+
+	// reinvestment: a dividend or interest a reinvestment buy took straight back
+	pairReinvestments([...work.values()])
 
 	// refund link
 	const purchases = new Map<string, Work[]>()
@@ -368,6 +404,52 @@ function pairTransfers(open: Work[], pairable: (a: Work, b: Work) => boolean) {
 	}
 }
 
+/**
+ * Each dividend or interest row's reinvestment buy: same account and security, the exact opposite amount, at most
+ * `PAIR_DAYS` apart; the smallest gap first, then the earlier day, then the ids, and one buy per dividend. Worked out
+ * again from nothing on every pass, so it stays idempotent.
+ */
+function pairReinvestments(items: readonly Work[]) {
+	// bucketed by account, security, currency and size, so the cost stays near linear
+	const keyOf = (next: TransactionPayload) =>
+		`${next.accountId}|${next.investment?.securityId ?? ''}|${next.amount.currency}|${size(next.amount)}`
+	const earned: Work[] = []
+	const buys = new Map<string, Work[]>()
+	for (const item of items) {
+		const next = item.next
+		delete next.reinvested
+		const security = next.investment?.securityId
+		if (!security || next.transferId) continue
+		if (next.kind && REINVESTABLE.includes(next.kind) && next.amount.minor > 0) earned.push(item)
+		else if (
+			next.kind === 'investment-buy' &&
+			next.amount.minor < 0 &&
+			REINVESTMENTS.has((next.investment?.subtype ?? '').toLowerCase())
+		)
+			buys.set(keyOf(next), [...(buys.get(keyOf(next)) ?? []), item])
+	}
+	if (!earned.length || !buys.size) return
+	const edges: { earned: Work; buy: Work; gap: number; day: string }[] = []
+	for (const item of earned) {
+		const x = item.next
+		for (const buy of buys.get(keyOf(x)) ?? []) {
+			const y = buy.next
+			const gap = daysApart(x.day, y.day)
+			if (gap > PAIR_DAYS) continue
+			edges.push({ earned: item, buy, gap, day: x.day < y.day ? x.day : y.day })
+		}
+	}
+	edges.sort(
+		(a, b) => a.gap - b.gap || byText(a.day, b.day) || byText(a.earned.id, b.earned.id) || byText(a.buy.id, b.buy.id)
+	)
+	const used = new Set<string>()
+	for (const edge of edges) {
+		if (edge.earned.next.reinvested || used.has(edge.buy.id)) continue
+		edge.earned.next.reinvested = edge.buy.id
+		used.add(edge.buy.id)
+	}
+}
+
 function lowerBound(sorted: readonly Work[], day: string): number {
 	let low = 0
 	let high = sorted.length
@@ -386,7 +468,7 @@ const looksLikePay = (row: TransactionPayload) =>
 
 /**
  * A row's kind: a pair's is `card-payment` when the side the money goes into is a credit card, else `transfer`; a
- * repayment is a refund; a vague merchant with no partner is a purchase or a refund by sign; an unpaired move stays
+ * repayment is a refund; an unpaired money-out row that paid a bill is a `bill-payment`; a vague merchant with no partner is a purchase or a refund by sign; an unpaired move stays
  * the provider's; a money-in row of a spending kind is a refund; nothing known is a purchase or a refund by sign, or
  * income when a money-in row's words name a paycheck.
  */
@@ -398,6 +480,8 @@ function kindOf(item: Work, partner: Work | undefined, accounts: ReadonlyMap<str
 		return accounts.get(into.accountId)?.kind === 'credit-card' ? 'card-payment' : 'transfer'
 	}
 	if (next.repays) return 'refund'
+	// a payment the bill pass or the owner matched to a bill (#78)
+	if (next.billId && signOf(next.amount) < 0) return 'bill-payment'
 	if (item.vague) return bySign
 	const kind = item.provider.kind
 	// a statement's payroll line has no provider category: its words say it is income (#80)
