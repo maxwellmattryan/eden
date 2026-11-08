@@ -4,7 +4,7 @@ status: draft
 summary: Everything the owner owns and owes, kept current from their real accounts by Plaid on each device, with Activity, bills, budgets, debt, investments and goals, and the Gardener reading it to find where money leaks. Id `finance`, after Phase 2, built ahead of it.
 read-this-if: You are working on accounts, transactions, bills, budgets, debt, investments, goals, or the Gardener for money.
 depends-on: [substrate/privacy, substrate/registry, substrate/integrations, substrate/grants, substrate/tasks, substrate/ai, domains/_template]
-updated: 2026-11-06
+updated: 2026-11-07
 ---
 
 ## 1. Purpose
@@ -40,7 +40,7 @@ Everything is T2 unless marked. T3 is stored only on the device, and no tool eve
 | `budget-category` | name, fixed or variable (D-16), essential or not, sinking fund | T1 | |
 | `category-rule` | a pattern and the category it maps to, learned from the owner's fixes | T2 | `budget-category` |
 | `merchant` | the cleaned name and the raw names merged into it | T2 | |
-| `money-rollup` | sums by month × category, merchant and account, daily totals; rebuilt from transactions, never edited, never exported | T2 | |
+| `money-rollup` | sums by month × category, merchant and account, daily totals; rebuilt from transactions in memory, never stored as rows, never edited, never exported (D-194) | T2 | |
 | `bill` | payee, period, one-off or repeating, estimate and actual, due date, state, source, the payment it matched and the account that paid it; a policy number is T3 | T2 | `transaction`, `account`, Task (`about`, #78) |
 | `recurring-charge` | cadence, expected amount, last seen, price changes, kept or cancelled | T2 | `merchant` |
 | `budget` | per month and category: amount, rollover, sinking-fund target | T2 | `budget-category` |
@@ -64,6 +64,7 @@ D-188 is the model. What Orchard adds:
 - A holding's or an asset's value is its quantity × the security's price, in the home currency once the price is.
 - Hide amounts (#68) masks every figure on both apps without changing what is stored.
 - Built in #75 (D-193): a pass after every sync that wrote transactions (`finance.classify()`) gives each live `transaction` its own keys: `kind`, `merchantId`, `counterparty`, `categoryId` with `categoryBy`, `transferId`, `refundOf` and `review`; the owner's fixes add `repays`, `reimbursable`, `parts`, `oneOff`, and the sync adds `replaced` on a posted row that took over a pending one. `budget-category`, `category-rule` and `merchant` are live rows, the defaults seeded once. The modules: `merchants.ts` (cleaning and vague brands), `categories.ts` (defaults and the provider mapping), `classify.ts` (the pass, `spendingOf`, `fitParts`, `ruleFor`), `edits.ts` (the owner's fixes) and the store's methods over them. No page shows them yet (#83).
+- Built in #77 (D-194): the index and query engine, `ledger.ts` in `packages/shared/src/domains/finance`, pure TypeScript. `buildLedger` turns the live transactions, the accounts, the merchants and the home currency into a `Ledger` of one entry per money event: a row, or a transfer or card-payment pair as one entry whose id is the money-out side's (`pairId` the money-in side's, `accountId` from, `toAccountId` to; `ledger.entry(id)` finds it by either side). Every figure is a sum of lines, a row's split parts or the row, a pair's two sides. The account filter is the scope: a pair with both sides in it adds nothing to `in`, `out` and `net` and shows its out side; one side in it adds and shows that side. `spending` is `spendingOf` over the matched lines; `average` leaves one-off lines out; only home-currency lines enter a total, the rest go in `left` per currency and their rows carry `other-currency`. `queryLedger(ledger, query)` answers the measures over everything matched, a page of `rows` (`newest`, `oldest`, `largest`; 50 by default, at most 1000) with `flags`, `groups` by one or two of `category`, `merchant`, `account`, `kind`, `month`, `week`, `weekday`, `day`, and a `versus` period by one non-time key; an invalid query throws `LedgerQueryError`. `TxFilter` holds every Activity filter, full text folded and matched by substring per word; `parseSearch` reads `>N`/`<=N` words as amount bounds and `periodOf` the four presets. `rollupOf` is the `money-rollup` resource (month × category, merchant or account, and daily), memoised per ledger and never stored; `typicalOf` is the mean month over the complete months before. The store holds the live rows in memory, read once by the first `query()`, pass or fix, and re-reads exactly the transactions each batch it sends names (`touchedTransactions`); `finance.ledger` is derived from them, `finance.ledgerReady` says when it holds them all, and the pass and the fixes read from that map.
 - Built in #71 (D-191): `@eden/shared/money` holds the type and its arithmetic, proven by `money.vectors.json`. A balance is kept as the bank states it and the kind (credit card, loan) says it is owed; a share is in basis points; a `balance-snapshot` is upserted per account per local day through the account's `lastSnapshot`, and the store never reads snapshots. The home currency is a setting a bundle carries; an account or asset in another stays out of totals and the page says so.
 
 ### Encryption (#69)
@@ -97,6 +98,8 @@ Orchard's reads are `never` until the owner grants them (D-182). The finance gra
 | `wealth` (`finance_wealth`): net worth over time, holdings and allocation, debts and APRs, contributions against limits | `account`, `balance-snapshot`, `holding`, `security`, `asset`, `liability`, `contribution-limit` | read | none | plain |
 | `flags` (`finance_flags`): precomputed oddities: fees, interest charged, duplicates, new merchants, unusual amounts; price rises are `recurring`'s | `transaction`, `money-rollup`, `merchant`, `account` | read | none | plain |
 | `draft` (`finance_draft`): a batch of drafts: a budget from history, a goal, a bill from confirmed text, rules from the owner's fixes, a merchant merge, a watch | `budget`, `budget-category`, `category-rule`, `merchant`, `savings-goal`, `bill`, `spending-watch`, `money-rollup` | write-draft | one batch card (D-108) | `light` |
+
+`finance_query` calls `queryLedger` (D-194), the engine Activity and Overview read, so the Gardener quotes the same sums the pages show.
 
 Three substrate tools are reused, not added: `draft-tasks` for reminders such as "cancel Hulu before the 14th", which gains an optional `about` naming the row a task is for, so a bill's Task closes when the bill is paid (#78); `read-rows` for rows by id, where `finance_query` is for filters; and `agenda`, unchanged, where a bill's Task shows like any other. There is no compare, plan, remind or watch tool: those are `versus`, `changes`, `draft-tasks` and a row in `finance_draft`. The six read tools answer from numbers Eden has, so they declare no grade (D-74); `finance_draft` declares `light` because bill capture runs it as a tool run from a page, with the confirmed text (`engineering/gardener.md`).
 
@@ -315,10 +318,18 @@ From #73:
 From #75:
 
 - #83 builds the transaction detail over the store's methods: `setCategory(id, categoryId, { remember })`, `split`/`unsplit`, `setReimbursable`, `linkRepayment`/`unlinkRepayment`, `setOneOff`, `renameMerchant`, `mergeMerchants`, `saveCategory`; each answers an undo, a refusal's code (`split:*`, `reimbursable:*`, `repayment:*`) or nothing. Unpairing a wrong transfer is #83's too: no owner-made pair or unpair exists yet.
-- #77 reads `spendingOf(row)` (with `oneOff` on every entry) and replaces `classify()`'s full read of the transactions with its index.
+- Done in #77: the ledger reads `spendingOf(row)` for every spending figure, and `classify()` and the fixes read the store's row map instead of every transaction.
 - #74 calls `finance.classify()` after an import.
 - #90 asks about rows with `review: 'vague'` and drafts rules as `RulePayload` (`merchantId`, `counterparty` or both, and the `categoryId`).
 - #78 sets `bill-payment`; #76 sets the investment kinds. The pass sets `kind` on every row it sees, so each teaches `kindOf` in `classify.ts` its own rather than writing the key beside it.
 - #84 manages categories (the default set is seeded once; budget fields beyond name, group and essential are its own).
 - A non-card `LOAN_PAYMENTS_*` row with no partner stays a `transfer`, so the `debt` default is only reached by a rule or the owner; #86 decides whether an unlinked loan's payment counts as spending.
 - The Hearth receipt split ("a Hearth haul with a receipt can split it for you") needs a cross-domain path, since no domain hears another's signals yet, and a currency on Hearth's prices, which are cents with none. The owner files it as its own issue.
+
+From #77:
+
+- #83 binds Activity to `finance.ledger` (shown once `finance.ledgerReady`) and `finance.query(query)`, holds the session's filters as one `TxFilter`, reads the search box through `parseSearch(text, settings.homeCurrency, locale)` and the period chips through `periodOf(preset, todayIso())`. Setting `notes` on a row is its detail's: `TransactionPayload.notes` exists and the ledger searches it.
+- #87 reads `rollupOf(finance.ledger, 'category' | 'merchant' | 'account' | 'day')` for its charts and `typicalOf(finance.ledger, { month })` for "spending vs typical"; account `share` stays net worth's and is never applied to transaction sums.
+- #90 registers `finance_query` over `finance.query`, formats a `LedgerAnswer` as the D-151 table with the count and total header (`rows · 2 of 14 matching · total …`), caps `limit` at 50, and answers a `LedgerQueryError` by its `code` (`versus-group`, `period`, `amount`).
+- #78 and #79 add the `bill` and `recurring` filters to `TxFilter` and their flags to `RowFlag`, in `ledger.ts`.
+- The store re-reads only the transactions its own batches name, so any writer outside the store (#74's import) calls `finance.reload()` after, which reads every transaction again when something has read them.
