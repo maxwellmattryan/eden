@@ -19,6 +19,7 @@ export const FINANCE = {
 	holding: 'holding',
 	security: 'security',
 	income: 'income-source',
+	budget: 'budget',
 } as const
 
 /** Where a bill came from (#78): a letter read on the device, a card's statement, a series, or the owner's hand. */
@@ -503,6 +504,26 @@ export interface IncomeSourcePayload {
 }
 
 export type IncomeSource = IncomeSourcePayload & { id: string }
+
+/**
+ * A `budget` row (#84, D-201): one category's line from a month on. There is one live row per month and category; a
+ * month reads each category's latest row at or before it.
+ */
+export interface BudgetPayload {
+	/** `YYYY-MM`: the first month the line holds; it holds until a later row of its category. */
+	month: string
+	categoryId: string
+	/** Positive, home currency. */
+	amount: Money
+	rollover?: true
+	/** A sinking fund: always rolls over. `by` is `YYYY-MM`; `every` is in months, from a repeating bill. */
+	sinking?: { target: Money; by: string; every?: number }
+	/** No line from this month on. */
+	off?: true
+	by: 'draft' | 'owner'
+}
+
+export type Budget = BudgetPayload & { id: string }
 
 export type Category = CategoryPayload & { id: string }
 export type Rule = RulePayload & { id: string; updatedAt: string }
