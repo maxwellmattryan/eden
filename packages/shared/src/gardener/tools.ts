@@ -793,6 +793,12 @@ export const SCHEMAS: Readonly<Record<string, { description: string; schema: Jso
 			},
 		}),
 	},
+	'finance.draft': {
+		description: `${SEPARATE} that drafts one bill from a letter, a statement or an estimate of benefits, as a card the owner checks on Orchard’s Bills tab before anything is saved: the payee, the amount, the due day, a card statement’s minimum, and whether it repeats. Pass the letter’s words as \`text\` when the owner pasted or typed them. In a conversation it never reads an attached file: the owner captures a letter on the Bills tab, where it is read on their device first. Returns whether a bill was drafted.`,
+		schema: object({
+			text: text('The letter’s words as the owner gave them in this conversation.'),
+		}),
+	},
 }
 
 /**
@@ -883,6 +889,7 @@ export const LOOSE: ReadonlySet<string> = new Set([
 	'kitchen.save-recipe',
 	'kitchen.change-recipe',
 	'places.update-places',
+	'finance.draft',
 ])
 
 /** Whether a tool's input is held to its schema by the API: the ones that write or draft, where a stray field or a

@@ -8,6 +8,12 @@
 // The categories, merchants and rules (#75) are small sets the store holds; the transactions stay in the data layer
 // and are read whole by the classification pass after a sync and by an owner's fix, inside the queue, so a pass and
 // an edit never interleave (#77's index replaces the full read).
+//
+// The bills (#78) are a set the store holds too. Every write to one, the owner's or the bill pass's, is one queue job
+// that reads the bills, the transactions and the bills' tasks, makes its change, runs the pass over what it leaves
+// (matching, the series, the Today tasks, the signals) and writes both, so its undo takes back what the pass made of
+// it. Orchard writes a bill's task itself rather than through Today's store, so no payee lands in the Garden feed; it
+// emits the task signals and asks Today to reload, as `substrate/tasks.md` says a domain does.
 import { get } from 'svelte/store'
 import { logError } from '../../api/index.js'
 import {
@@ -15,16 +21,36 @@ import {
 	dataErrorCode,
 	newId,
 	queryEntities,
+	queryLinks,
+	queryTasks,
 	toUri,
 	WriteQueue,
 	type BatchOp,
 	type Entity,
+	type Link,
+	type PrimitiveRow,
+	type TaskRow,
 	type Write,
 } from '../../data/index.js'
 import { nowIso, todayIso } from '../../dates/index.js'
 import { t } from '../../i18n/index.js'
 import type { Money } from '../../money/index.js'
 import { settings } from '../../settings/index.js'
+import { tasks } from '../../shell/today/store.svelte.js'
+import { emit } from '../../signals/runtime.js'
+import { emitTaskCompleted, emitTaskCreated, toTask } from '../../tasks/index.js'
+import { billPassOps, type BillPassOut } from './bill-pass.js'
+import {
+	billFromDraft,
+	billGroups,
+	billOps,
+	billUpdateOps,
+	deleteBillOps,
+	remainingOf,
+	type BillDraft,
+} from './bills.js'
+import { paidWith, paymentChoices as choicesFor } from './match.js'
+import { dayLine } from './words.js'
 import {
 	accountGroups,
 	accountTotals,
@@ -66,8 +92,11 @@ import {
 	type AccountPayload,
 	type Asset,
 	type AssetPayload,
+	type Bill,
+	type BillPayload,
 	type Category,
 	type CategoryPayload,
+	type FileImportPayload,
 	type FinanceData,
 	type Merchant,
 	type MerchantPayload,
@@ -112,6 +141,65 @@ export interface SyncChange {
 /** A fix as the store makes it: the ops, and what the store's sets show of it and of its undo. */
 type StoreEdit = Edit & { apply?: () => void; revert?: () => void }
 
+/** What a bill job reads in the queue's turn. */
+interface BillsRead {
+	/** Every bill row, the tombstones too. */
+	bills: Entity<BillPayload>[]
+	/** The live bills. */
+	live: Bill[]
+	rows: Entity<TransactionPayload>[]
+	links: Link[]
+	tasks: TaskRow[]
+}
+
+/** An owner's change to the bills, before the pass: the bills it writes, the ones it deletes, the rows it changes. */
+interface BillEdit {
+	bills?: Bill[]
+	deleted?: string[]
+	deletedTasks?: string[]
+	rows?: Entity<TransactionPayload>[]
+	ops: BatchOp[]
+	inverse: BatchOp[]
+}
+
+/** What a bill job wrote, for what follows it. */
+interface BillsDone {
+	out: BillPassOut
+	rows: (Entity | PrimitiveRow)[]
+	rowsChanged: boolean
+	tasksChanged: boolean
+}
+
+/** A payment the ambiguous Notice offers. */
+export interface AskedPayment {
+	id: string
+	day: string
+	/** The bank's printed name. */
+	name: string
+	amount: Money
+}
+
+const distinct = (ids: readonly string[]) => ids.filter((id, at) => ids.indexOf(id) === at)
+const rowUpdate = (row: Entity<TransactionPayload>): BatchOp => ({
+	op: 'updateEntity',
+	id: row.id,
+	payload: row.payload,
+})
+const billEntity = (bill: Bill): Entity<BillPayload> => ({
+	id: bill.id,
+	uri: toUri(FINANCE.bill, bill.id),
+	type: FINANCE.bill,
+	payload: payloadOf(bill),
+	createdAt: '',
+	updatedAt: '',
+	deletedAt: null,
+	mirror: false,
+	source: null,
+	externalId: null,
+	snapshot: null,
+	links: [],
+})
+
 export class FinanceStore {
 	ready = $state(false)
 	/** A write failed, or the rows could not be read; the page shows it and offers a retry. */
@@ -123,11 +211,15 @@ export class FinanceStore {
 	categories = $state<Category[]>([])
 	merchants = $state<Merchant[]>([])
 	rules = $state<Rule[]>([])
+	/** The live bills (#78), and the payments an asking bill's Notice offers, by transaction id. */
+	bills = $state<Bill[]>([])
+	asked = $state<Record<string, AskedPayment>>({})
 	/** The minute, while a page is watching: a link goes stale as it moves. */
 	clock = $state(Date.now())
 
 	#loading: Promise<void> | undefined
 	#classifying: Promise<void> | undefined
+	#billing: Promise<void> | undefined
 	#watchers = 0
 	#ticker: ReturnType<typeof setInterval> | undefined
 	readonly #queue = new WriteQueue(
@@ -146,6 +238,11 @@ export class FinanceStore {
 	)
 	readonly groups = $derived(accountGroups(this.accounts, this.assets, this.links, this.clock))
 	readonly empty = $derived(!this.accounts.length && !this.assets.length && !this.links.length)
+	/** The Bills tab's groups, as of today: the minute's clock moves a bill from Upcoming to Due soon. */
+	readonly billsByState = $derived.by(() => {
+		void this.clock
+		return billGroups(this.bills, todayIso())
+	})
 
 	accountById(id?: string): Account | undefined {
 		return id ? this.accounts.find((account) => account.id === id) : undefined
@@ -168,18 +265,20 @@ export class FinanceStore {
 
 	async #read() {
 		try {
-			const [links, accounts, assets, categories, merchants, rules] = await Promise.all([
+			const [links, accounts, assets, categories, merchants, rules, bills] = await Promise.all([
 				queryEntities<ProviderLinkPayload>({ type: FINANCE.link }),
 				queryEntities<AccountPayload>({ type: FINANCE.account }),
 				queryEntities<AssetPayload>({ type: FINANCE.asset }),
 				queryEntities<CategoryPayload>({ type: FINANCE.category }),
 				queryEntities<MerchantPayload>({ type: FINANCE.merchant }),
 				queryEntities<RulePayload>({ type: FINANCE.rule }),
+				queryEntities<BillPayload>({ type: FINANCE.bill }),
 			])
 			this.#show(financeFromRows({ links, accounts, assets }))
 			this.categories = categories.map(withId)
 			this.merchants = merchants.map(withId)
 			this.rules = rules.map(ruleOf)
+			this.bills = bills.map(withId)
 			this.saveFailed = this.#queue.failed
 		} catch (error) {
 			// nothing was read: say so, and let the retry read again
@@ -713,6 +812,295 @@ export class FinanceStore {
 			}
 		})) as Undo | undefined
 		return undo && category ? { category, undo } : undefined
+	}
+
+	// ---- Bills (#78) ---------------------------------------------------------------------------------------------
+
+	billById(id?: string): Bill | undefined {
+		return id ? this.bills.find((bill) => bill.id === id) : undefined
+	}
+
+	/**
+	 * Saves a bill, new or changed, and with `read` the `file-import` row of the letter it came from, in one write
+	 * with one undo. Answers the bill, or nothing when the bill it changes is gone or the write failed.
+	 */
+	async saveBill(draft: BillDraft, read?: { fingerprint: string }): Promise<{ bill: Bill; undo: Undo } | undefined> {
+		let saved: Bill | undefined
+		const undo = await this.#billJob(async (state) => {
+			const was = draft.id ? state.live.find((bill) => bill.id === draft.id) : undefined
+			if (draft.id && !was) return undefined
+			const bill = billFromDraft(draft, was, todayIso(), newId)
+			saved = bill
+			const file = read ? { id: newId(), fingerprint: read.fingerprint, day: todayIso() } : undefined
+			return { bills: [bill], ...billOps(was, bill, file) }
+		})
+		return undo && saved ? { bill: saved, undo } : undefined
+	}
+
+	/**
+	 * Deletes a bill with the `file-import` rows that made it (so the letter can be read again) and its open Orchard
+	 * task; the rows it was paid by go back to their own kind. A repeating bill's open occurrence ends its series.
+	 */
+	deleteBill(id: string): Promise<Undo | undefined> {
+		return this.#billJob(async (state) => {
+			const bill = state.live.find((entry) => entry.id === id)
+			if (!bill) return undefined
+			const files = await queryEntities<FileImportPayload>({ type: FINANCE.fileImport })
+			const own = bill.task ? state.tasks.find((task) => task.id === bill.task!.id) : undefined
+			const taskIds = own && own.kind === 'todo' && !own.done ? [own.id] : []
+			const made = deleteBillOps(
+				bill,
+				files.filter((row) => row.payload.billId === id).map((row) => row.id),
+				taskIds
+			)
+			const rows = state.rows
+				.filter((row) => row.payload.billId === id)
+				.map((row) => {
+					const { billId: _billId, ...payload } = row.payload
+					return { ...row, payload: payload as TransactionPayload }
+				})
+			return {
+				deleted: [id],
+				deletedTasks: taskIds,
+				rows,
+				ops: [...made.ops, ...rows.map(rowUpdate)],
+				inverse: [...state.rows.filter((row) => row.payload.billId === id).map(rowUpdate), ...made.inverse],
+			}
+		})
+	}
+
+	/** Ends a bill's series: it no longer repeats, and makes no next occurrence. */
+	stopRepeating(id: string): Promise<Undo | undefined> {
+		return this.#billChange(id, (bill) => {
+			if (!bill.repeat) return undefined
+			const next = { ...bill }
+			delete next.repeat
+			delete next.fixed
+			return { bill: next }
+		})
+	}
+
+	/**
+	 * Pays a bill with one of `paymentChoices`, or with what is left to pay, today, by no transaction ("Paid another
+	 * way"). A part leaves the rest due; the pass then closes its tasks and rolls its series on, in the same undo.
+	 */
+	payBill(id: string, how: { transactionId: string } | { another: true }): Promise<Undo | undefined> {
+		return this.#billChange(id, (bill, state) => {
+			if ('another' in how) {
+				const amount = remainingOf(bill) ?? bill.amount
+				const next: Bill = { ...bill, payments: [...(bill.payments ?? []), { amount, day: todayIso() }] }
+				delete next.ask
+				return { bill: next }
+			}
+			const row = state.rows.find((entry) => entry.id === how.transactionId)
+			if (!row || (row.payload.billId && row.payload.billId !== id)) return undefined
+			return { bill: paidWith(bill, row), row: { ...row, payload: { ...row.payload, billId: id } } }
+		})
+	}
+
+	/** Not this payment: takes a matched payment off the bill, never offers it again, and gives the row its own kind. */
+	unmatchPayment(id: string, transactionId: string): Promise<Undo | undefined> {
+		return this.#billChange(id, (bill, state) => {
+			if (!bill.payments?.some((payment) => payment.transactionId === transactionId)) return undefined
+			const next: Bill = {
+				...bill,
+				payments: bill.payments.filter((payment) => payment.transactionId !== transactionId),
+				dismissed: distinct([...(bill.dismissed ?? []), transactionId]),
+			}
+			if (!next.payments!.length) delete next.payments
+			const row = state.rows.find((entry) => entry.id === transactionId)
+			if (!row || row.payload.billId !== id) return { bill: next }
+			const { billId: _billId, ...payload } = row.payload
+			return { bill: next, row: { ...row, payload: payload as TransactionPayload } }
+		})
+	}
+
+	/** Answers the ambiguous match: the payment that paid the bill, or none, which dismisses every candidate. */
+	chooseMatch(id: string, transactionId: string | null): Promise<Undo | undefined> {
+		return this.#billChange(id, (bill, state) => {
+			if (!bill.ask?.length) return undefined
+			if (transactionId === null) {
+				const next: Bill = { ...bill, dismissed: distinct([...(bill.dismissed ?? []), ...bill.ask]) }
+				delete next.ask
+				return { bill: next }
+			}
+			const row = state.rows.find((entry) => entry.id === transactionId)
+			if (!row || !bill.ask.includes(transactionId) || (row.payload.billId && row.payload.billId !== id))
+				return undefined
+			return { bill: paidWith(bill, row, { actual: true }), row: { ...row, payload: { ...row.payload, billId: id } } }
+		})
+	}
+
+	/** What Mark paid offers for a bill, read in the queue's turn. */
+	async paymentChoices(id: string): Promise<Entity<TransactionPayload>[]> {
+		await this.load()
+		try {
+			return await this.#exclusive(async () => {
+				const bill = this.billById(id)
+				if (!bill) return []
+				const rows = await this.#transactions()
+				return choicesFor($state.snapshot(bill) as Bill, rows, $state.snapshot(this.bills) as Bill[])
+			})
+		} catch {
+			return []
+		}
+	}
+
+	/**
+	 * The bill pass (`billPassOps`): when the shell starts, each morning, after a sync's classification and after an
+	 * owner's write to a bill. One job in the queue; a second ask while one runs joins it, and a queue stopped on a
+	 * failed write skips it. A failure is logged by its code only.
+	 */
+	billPass(): Promise<void> {
+		return (this.#billing ??= this.#billPass().finally(() => (this.#billing = undefined)))
+	}
+
+	async #billPass() {
+		await this.load()
+		if (this.#queue.failed) return
+		await this.#billJob(async () => ({ ops: [], inverse: [] }), { pass: true })
+	}
+
+	/** A change to one live bill, and to the row that paid it, as a bill job. */
+	#billChange(
+		id: string,
+		make: (bill: Bill, state: BillsRead) => { bill: Bill; row?: Entity<TransactionPayload> } | undefined
+	): Promise<Undo | undefined> {
+		return this.#billJob(async (state) => {
+			const bill = state.live.find((entry) => entry.id === id)
+			const made = bill ? make(bill, state) : undefined
+			if (!bill || !made) return undefined
+			const was = state.rows.find((row) => row.id === made.row?.id)
+			const ops = billUpdateOps([{ was: bill, bill: made.bill }])
+			return {
+				bills: [made.bill],
+				rows: made.row ? [made.row] : [],
+				ops: [...ops.ops, ...(made.row ? [rowUpdate(made.row)] : [])],
+				inverse: [...(was ? [rowUpdate(was)] : []), ...ops.inverse],
+			}
+		})
+	}
+
+	/** What a bill job reads: every bill (tombstones too), the live transactions, the `about` links and the todos. */
+	async #billsRead(): Promise<BillsRead> {
+		const [bills, rows, links, tasks] = await Promise.all([
+			queryEntities<BillPayload>({ type: FINANCE.bill, includeDeleted: true }),
+			this.#transactions(),
+			queryLinks({ relation: 'about' }),
+			queryTasks({ kinds: ['todo'] }),
+		])
+		return { bills, rows, links, tasks, live: bills.filter((row) => !row.deletedAt).map(withId) }
+	}
+
+	/**
+	 * A job over the bills in the queue's turn: the owner's change (none for the pass alone), then the pass over what
+	 * it leaves, written together; the undo takes both back, then the rows are classified and the pass runs again.
+	 * After the write the rows that took or lost a bill are classified, the task signals are emitted and Today reloads,
+	 * and the bill signals are said. An owner's write that fails stays in the queue for the Retry; the pass's is logged.
+	 */
+	async #billJob(build: (state: BillsRead) => Promise<BillEdit | undefined>, options: { pass?: boolean } = {}) {
+		let done: BillsDone | undefined
+		let undo: Undo | undefined
+		await this.load()
+		try {
+			undo = await this.#exclusive(async () => {
+				try {
+					const state = await this.#billsRead()
+					const edit = await build(state)
+					if (!edit) return undefined
+					const out = this.#passOver(state, edit)
+					const ops = [...edit.ops, ...out.ops]
+					const inverse = [...out.inverse, ...edit.inverse]
+					const rows: (Entity | PrimitiveRow)[] = []
+					for (const chunk of chunked(ops)) rows.push(...(await applyBatch(chunk)).rows)
+					const before = this.bills
+					this.bills = out.bills
+					this.#asked(state, edit, out)
+					done = {
+						out,
+						rows,
+						rowsChanged: out.rowsChanged || Boolean(edit.rows?.length),
+						tasksChanged: Boolean(edit.deletedTasks?.length),
+					}
+					if (options.pass) return undefined
+					return () => {
+						this.bills = before
+						this.#queue.enqueue(async () => {
+							for (const chunk of chunked(inverse)) await applyBatch(chunk)
+							void tasks.reload().catch(() => null)
+						})
+						void this.classify().then(() => this.billPass())
+					}
+				} catch (error) {
+					if (!options.pass) throw error
+					await logError('data', 'The Orchard bill pass failed', code(error)).catch(() => null)
+					return undefined
+				}
+			})
+		} catch {
+			// the queue logged the code and holds the job for the retry
+			return undefined
+		}
+		if (done) await this.#afterBills(done)
+		return undo
+	}
+
+	/** The pass over the state as the owner's change leaves it. */
+	#passOver(state: BillsRead, edit: BillEdit): BillPassOut {
+		const now = nowIso()
+		const changed = edit.bills ?? []
+		const gone = edit.deleted ?? []
+		const bills = state.bills.map((row) => {
+			const bill = changed.find((entry) => entry.id === row.id)
+			const next = bill ? { ...row, payload: payloadOf(bill), deletedAt: null } : row
+			return gone.includes(row.id) ? { ...next, deletedAt: now } : next
+		})
+		for (const bill of changed) if (!state.bills.some((row) => row.id === bill.id)) bills.push(billEntity(bill))
+		const translate = get(t)
+		const lang = settings.language
+		return billPassOps({
+			bills,
+			rows: state.rows.map((row) => edit.rows?.find((entry) => entry.id === row.id) ?? row),
+			aboutLinks: state.links,
+			tasks: state.tasks.filter((task) => !edit.deletedTasks?.includes(task.id)),
+			today: todayIso(),
+			nowIso: now,
+			newId,
+			title: (payee) => translate('domains.finance.bills.taskTitle', { values: { payee } }),
+			dayLabel: (day) => dayLine(day, lang),
+		})
+	}
+
+	/** The candidates each asking bill shows, as the page needs them: the day, the printed name and the amount. */
+	#asked(state: BillsRead, edit: BillEdit, out: BillPassOut) {
+		const rows = [...(edit.rows ?? []), ...state.rows]
+		const asked: Record<string, AskedPayment> = {}
+		for (const id of out.bills.flatMap((bill) => bill.ask ?? [])) {
+			const row = rows.find((entry) => entry.id === id)
+			if (row) asked[id] = { id, day: row.payload.day, name: row.payload.name, amount: row.payload.amount }
+		}
+		this.asked = asked
+	}
+
+	async #afterBills({ out, rows, rowsChanged, tasksChanged }: BillsDone) {
+		if (rowsChanged) await this.classify()
+		const today = todayIso()
+		const week = settings.weekStart
+		const written = (id: string) => rows.find((row): row is TaskRow => row.type === 'task' && row.id === id)
+		for (const id of out.created) {
+			const row = written(id)
+			if (row) await emitTaskCreated(toTask(row), today, week)
+		}
+		for (const id of out.completed) {
+			const row = written(id)
+			if (row) await emitTaskCompleted(toTask(row), today, week)
+		}
+		if (tasksChanged || out.created.length || out.completed.length || rows.some((row) => row.type === 'task'))
+			await tasks.reload().catch(() => null)
+		for (const said of out.signals)
+			await emit(said.name, said.payload, { dedupeKey: said.dedupeKey }).catch((error: unknown) =>
+				logError('signals', `Could not emit ${said.name}`, String(error)).catch(() => null)
+			)
 	}
 
 	// ---- Sample data ---------------------------------------------------------------------------------------------

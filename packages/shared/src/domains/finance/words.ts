@@ -1,10 +1,20 @@
 // How Orchard writes its lines: a day ("Sun 27 Sep"), how fresh a link is, what the totals leave out, an account's
-// detail line, a share and the field errors of an amount. Pure: the translator, the language and the clock arrive as
-// parameters.
+// detail line, a share, the field errors of an amount, and a bill row's cadence, secondary line and chip (#78). Pure:
+// the translator, the language and the clock arrive as parameters.
 import { formatDateOf, formatTime, formatWeekdayOf, type DateFormat } from '../../dates/index.js'
-import { currencyUnitName, decimalsOf, type MoneyParseError } from '../../money/index.js'
+import { currencyUnitName, decimalsOf, type Money, type MoneyParseError } from '../../money/index.js'
 import { dayOfInstant } from './accounts.js'
-import { WHOLE, type Account, type AccountKind, type AssetKind, type LinkState, type ProviderLink } from './types.js'
+import { isStatement, overpaidOf, remainingOf, type BillState } from './bills.js'
+import {
+	WHOLE,
+	type Account,
+	type AccountKind,
+	type AssetKind,
+	type Bill,
+	type BillSource,
+	type LinkState,
+	type ProviderLink,
+} from './types.js'
 
 export type Translate = (key: string, options?: { values?: Record<string, string | number> }) => string
 
@@ -69,6 +79,72 @@ export function accountDetail(account: Account, accounts: readonly Account[], tr
 		parts.push(tr('domains.finance.row.replaces', { values: { name } }))
 	}
 	return parts.join(' · ')
+}
+
+/** A bill's cadence: "One-off", "Monthly", "Every 2 months"…, "Yearly". */
+export const cadenceLabel = (repeat: Bill['repeat'], tr: Translate) =>
+	tr(`domains.finance.bills.cadence.${repeat ? `m${repeat.months}` : 'once'}`)
+
+export const billSourceLabel = (source: BillSource, tr: Translate) => tr(`domains.finance.bills.source.${source}`)
+
+export interface BillWords {
+	tr: Translate
+	/** A day as the row writes it. */
+	day: (iso: string) => string
+	/** An amount as the row writes it, masked while amounts are hidden. */
+	money: (amount: Money) => string
+	accounts: readonly Account[]
+	/** The day a stale card's link is as of, for a card statement. */
+	asOf?: string
+}
+
+/**
+ * A bill row's secondary line. Open: the cadence, Estimate or Actual, the source, a statement's minimum and interest,
+ * what is still due or was paid beyond it, and a stale card's "as of". Paid: the payment that paid it ("Paid Tue 22
+ * Sep from Chase ••4417" or "Marked paid Tue 22 Sep"), or a statement's minimum paid with the rest carried.
+ */
+export function billSecondary(bill: Bill, state: BillState, words: BillWords): string {
+	const { tr, day, money } = words
+	const parts: string[] = []
+	const over = overpaidOf(bill)
+	const left = remainingOf(bill)
+	if (state === 'paid') {
+		if (isStatement(bill) && left)
+			parts.push(tr('domains.finance.bills.line.minimumPaid', { values: { amount: money(left) } }))
+		else {
+			const last = [...(bill.payments ?? [])].sort((a, b) => (a.day < b.day ? 1 : a.day > b.day ? -1 : 0))[0]
+			const account = last?.accountId ? words.accounts.find((entry) => entry.id === last.accountId) : undefined
+			if (last?.transactionId && account) {
+				const bank = account.institution || account.name
+				parts.push(
+					account.last4
+						? tr('domains.finance.bills.line.paidFrom', { values: { day: day(last.day), bank, last4: account.last4 } })
+						: tr('domains.finance.bills.line.paidFromBank', { values: { day: day(last.day), bank } })
+				)
+			} else if (last?.transactionId)
+				parts.push(tr('domains.finance.bills.line.paidOn', { values: { day: day(last.day) } }))
+			else if (last) parts.push(tr('domains.finance.bills.line.markedPaid', { values: { day: day(last.day) } }))
+		}
+		if (over) parts.push(tr('domains.finance.bills.line.over', { values: { amount: money(over) } }))
+		return parts.join(' · ')
+	}
+	parts.push(cadenceLabel(bill.repeat, tr))
+	parts.push(tr(bill.estimate ? 'domains.finance.bills.line.estimate' : 'domains.finance.bills.line.actual'))
+	parts.push(billSourceLabel(bill.source, tr))
+	if (bill.minimum) parts.push(tr('domains.finance.bills.line.minimum', { values: { amount: money(bill.minimum) } }))
+	if (bill.interest && bill.interest.minor > 0)
+		parts.push(tr('domains.finance.bills.line.interest', { values: { amount: money(bill.interest) } }))
+	if (bill.payments?.length && left)
+		parts.push(tr('domains.finance.bills.line.stillDue', { values: { amount: money(left) } }))
+	if (over) parts.push(tr('domains.finance.bills.line.over', { values: { amount: money(over) } }))
+	if (words.asOf) parts.push(tr('domains.finance.groups.asOf', { values: { day: words.asOf } }))
+	return parts.join(' · ')
+}
+
+/** A bill row's chip: the amount, or "about $64.00" for an estimate. */
+export function billChip(bill: Bill, words: Pick<BillWords, 'tr' | 'money'>): string {
+	const amount = words.money(bill.amount)
+	return bill.estimate ? words.tr('domains.finance.bills.line.about', { values: { amount } }) : amount
 }
 
 /** What a field says of an amount it could not read in the currency. */

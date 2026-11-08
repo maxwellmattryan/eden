@@ -1204,7 +1204,129 @@
 			"name": "Orchard",
 			"subtitle": "Money, budgets, assets",
 			"tabs": {
-				"accounts": "Accounts"
+				"accounts": "Accounts",
+				"bills": "Bills"
+			},
+			"tabsLabel": "Orchard sections",
+			"bills": {
+				"groups": {
+					"overdue": "Overdue",
+					"due-soon": "Due soon",
+					"upcoming": "Upcoming",
+					"expected": "Expected",
+					"paid": "Paid"
+				},
+				"cadence": {
+					"once": "One-off",
+					"m1": "Monthly",
+					"m2": "Every 2 months",
+					"m3": "Every 3 months",
+					"m6": "Every 6 months",
+					"m12": "Yearly"
+				},
+				"source": {
+					"letter": "From a letter",
+					"statement": "Card statement",
+					"repeating": "Repeating",
+					"manual": "Added by hand"
+				},
+				"line": {
+					"estimate": "Estimate",
+					"actual": "Actual",
+					"minimum": "minimum {amount}",
+					"interest": "interest {amount}",
+					"stillDue": "{amount} still due",
+					"over": "{amount} more than the bill",
+					"about": "about {amount}",
+					"paidFrom": "Paid {day} from {bank} ••{last4}",
+					"paidFromBank": "Paid {day} from {bank}",
+					"paidOn": "Paid {day}",
+					"markedPaid": "Marked paid {day}",
+					"minimumPaid": "Minimum paid · {amount} carried to the next statement"
+				},
+				"menu": {
+					"markPaid": "Mark paid",
+					"edit": "Edit",
+					"notThis": "Not this payment",
+					"stopRepeating": "Stop repeating",
+					"openSite": "Open payee’s site",
+					"delete": "Delete"
+				},
+				"empty": {
+					"title": "No bills yet",
+					"text": "Photograph or drop a letter and it is read on this device; the Gardener drafts the bill for you to confirm."
+				},
+				"ambiguous": {
+					"title": "Two payments could have paid this",
+					"detail": "{payee}, {amount} due {day}. Which one paid it?",
+					"group": "Payments that could have paid {payee}",
+					"candidate": "{day} · {name} · {amount}",
+					"neither": "Neither"
+				},
+				"taskTitle": "Pay {payee}",
+				"form": {
+					"titleNew": "Add a bill",
+					"titleEdit": "Edit bill",
+					"titleDraft": "Check the bill",
+					"updates": "Updates the {payee} bill for {month}",
+					"payee": "Payee",
+					"amount": "Amount",
+					"currency": "Currency",
+					"due": "Due day",
+					"dueHelp": "Leave it empty when there is no due day yet.",
+					"estimate": "This is an estimate",
+					"repeats": "Repeats",
+					"never": "Never",
+					"fixed": "The amount stays the same",
+					"card": "Card",
+					"noCard": "None",
+					"minimum": "Minimum due",
+					"url": "Payee’s site",
+					"drafting": "Drafting the bill…",
+					"byHand": "Enter it by hand"
+				},
+				"errors": {
+					"payee": "Enter a payee",
+					"positive": "Enter an amount more than zero",
+					"url": "Enter an address that starts with https://"
+				},
+				"pay": {
+					"title": "Mark {payee} paid",
+					"text": "Choose the payment that paid it. A part leaves the rest due.",
+					"none": "No payments around the due day.",
+					"another": "Paid another way",
+					"anotherText": "Records {amount} paid today, with no transaction."
+				},
+				"toasts": {
+					"added": "Bill added",
+					"saved": "Bill saved",
+					"deleted": "{payee} deleted",
+					"paid": "{payee} marked paid",
+					"stopped": "{payee} no longer repeats",
+					"unmatched": "Payment taken off {payee}",
+					"matched": "{payee} paid",
+					"dismissed": "Neither payment paid {payee}"
+				},
+				"capture": {
+					"confirm": "Draft the bill",
+					"next": "The Gardener drafts the bill from this text. You check it before anything is saved.",
+					"madeBill": "the {payee} bill for {month}",
+					"deletedBill": "a bill since deleted"
+				},
+				"failure": {
+					"busy": "The Gardener is busy with another request. Try again in a moment.",
+					"no-key": "Add an Anthropic key in Settings to draft bills.",
+					"unavailable": "The Gardener isn’t available here.",
+					"budget": "This month’s Gardener budget is spent.",
+					"limit": "The subscription’s usage limit is reached until it resets.",
+					"network": "Couldn’t reach the Gardener.",
+					"refusal": "The Gardener wouldn’t draft this bill.",
+					"max-tokens": "The answer ran too long.",
+					"cancelled": "Drafting was cancelled.",
+					"unreadable": "The Gardener couldn’t read this.",
+					"empty": "This doesn’t read as a bill.",
+					"no-files": "There was nothing to send."
+				}
 			},
 			"categories": {
 				"rent": "Rent",
@@ -1236,7 +1358,9 @@
 				"addAccount": "Add an account",
 				"addAsset": "Add an asset",
 				"linkBank": "Link a bank",
-				"reconnect": "Reconnect"
+				"reconnect": "Reconnect",
+				"captureBill": "Capture a bill",
+				"addBill": "Add a bill"
 			},
 			"totals": {
 				"label": "Totals",
@@ -1418,6 +1542,12 @@
 			"notifications": {
 				"linkNeedsReconnecting": {
 					"line": "{reason, select, expiring {{institution} asks you to sign in again by {byDay}} other {{institution} needs you to sign in again}}"
+				},
+				"billDueSoon": {
+					"line": "{payee} is due {dueDay}"
+				},
+				"billOverdue": {
+					"line": "{payee} was due {dueDay}"
 				}
 			}
 		},
