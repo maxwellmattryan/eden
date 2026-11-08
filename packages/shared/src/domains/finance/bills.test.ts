@@ -8,6 +8,7 @@ import {
 	billOps,
 	billState,
 	deleteBillOps,
+	draftOfBill,
 	draftOver,
 	estimateOf,
 	nextOccurrence,
@@ -132,7 +133,8 @@ describe('bill states', () => {
 		const rent = bill({ payee: 'Rent', repeat: { months: 1 }, source: 'repeating' })
 		expect(billSecondary(rent, 'due-soon', words)).toBe('m1 · actual · repeating')
 		const water = bill({ estimate: true, repeat: { months: 3 } })
-		expect(billSecondary(water, 'upcoming', words)).toBe('m3 · estimate · manual')
+		// a quarterly bill sets aside a third of itself a month (#85)
+		expect(billSecondary(water, 'upcoming', words)).toBe('m3 · estimate · manual · setAside($3333)')
 		expect(billChip(water, words)).toBe('about($10000)')
 		expect(billChip(rent, words)).toBe('$10000')
 		const card = bill({
@@ -162,6 +164,76 @@ describe('bill states', () => {
 				words
 			)
 		).toBe('minimumPaid($115418)')
+		// an open EOB estimate is not a bill yet (#85)
+		const eob = bill({
+			payee: 'Seton Medical',
+			due: undefined,
+			amount: usd(24000),
+			estimate: true,
+			source: 'letter',
+			insurance: 'medical',
+			eob: true,
+			insurer: 'Aetna',
+		})
+		expect(billSecondary(eob, 'expected', words)).toBe('once · medical · notYet · fromEob(Aetna)')
+		expect(billSecondary({ ...eob, insurer: undefined }, 'expected', words)).toBe('once · medical · notYet · fromAnEob')
+		expect(billChip(eob, words)).toBe('about($24000)')
+		// a six-monthly premium sets aside its share each month
+		const premium = bill({
+			payee: 'GEICO',
+			amount: usd(78000),
+			estimate: true,
+			source: 'letter',
+			repeat: { months: 6 },
+			insurance: 'premium',
+		})
+		expect(billSecondary(premium, 'upcoming', words)).toBe('m6 · premium · estimate · letter · setAside($13000)')
+	})
+
+	it('writes the insurance row text in English', () => {
+		const en: Record<string, string> = {
+			'domains.finance.bills.cadence.once': 'One-off',
+			'domains.finance.bills.cadence.m6': 'Every 6 months',
+			'domains.finance.bills.insurance.medical': 'Medical',
+			'domains.finance.bills.insurance.premium': 'Premium',
+			'domains.finance.bills.line.notYet': 'Not a bill yet',
+			'domains.finance.bills.line.estimate': 'Estimate',
+			'domains.finance.bills.line.fromEob': 'From the {insurer} EOB',
+			'domains.finance.bills.line.fromAnEob': 'From an EOB',
+			'domains.finance.bills.source.letter': 'From a letter',
+			'domains.finance.bills.line.setAside': 'Set aside {amount} a month',
+		}
+		const tr = (key: string, options?: { values?: Record<string, string | number> }) =>
+			(en[key] ?? key).replace(/\{(\w+)\}/g, (_, name: string) => String(options?.values?.[name]))
+		const words = {
+			tr,
+			day: (iso: string) => iso,
+			money: (amount: Money) => `$${(amount.minor / 100).toFixed(2)}`,
+			accounts: ACCOUNTS,
+		}
+		const eob = bill({
+			due: undefined,
+			amount: usd(24000),
+			estimate: true,
+			source: 'letter',
+			insurance: 'medical',
+			eob: true,
+			insurer: 'Aetna',
+		})
+		expect(billSecondary(eob, 'expected', words)).toBe('One-off · Medical · Not a bill yet · From the Aetna EOB')
+		expect(billSecondary({ ...eob, insurer: undefined }, 'expected', words)).toBe(
+			'One-off · Medical · Not a bill yet · From an EOB'
+		)
+		const premium = bill({
+			amount: usd(78000),
+			estimate: true,
+			source: 'letter',
+			repeat: { months: 6 },
+			insurance: 'premium',
+		})
+		expect(billSecondary(premium, 'upcoming', words)).toBe(
+			'Every 6 months · Premium · Estimate · From a letter · Set aside $130.00 a month'
+		)
 	})
 })
 
@@ -262,6 +334,33 @@ describe('next occurrence', () => {
 		expect(nextOccurrence([first, second], '2026-10-10', newId)?.period).toBe('2026-10')
 		expect(nextOccurrence([bill({ payments: paid(usd(10000)) })], TODAY, newId)).toBeUndefined()
 	})
+
+	it('a premium stays a premium, and an EOB, its insurer and day of service stay with their occurrence', () => {
+		const premium = bill({
+			id: 'p1',
+			period: '2026-03',
+			due: '2026-04-01',
+			amount: usd(78000),
+			repeat: { months: 6 },
+			fixed: true,
+			insurance: 'premium',
+			payments: paid(usd(78000)),
+		})
+		expect(nextOccurrence([premium], TODAY, newId)).toMatchObject({ period: '2026-09', insurance: 'premium' })
+		const medical = {
+			...premium,
+			insurance: 'medical' as const,
+			eob: true as const,
+			insurer: 'Aetna',
+			serviceDay: '2026-03-02',
+		}
+		const next = nextOccurrence([medical], TODAY, newId)!
+		expect(next.insurance).toBe('medical')
+		expect(next).not.toHaveProperty('eob')
+		expect(next).not.toHaveProperty('insurer')
+		expect(next).not.toHaveProperty('serviceDay')
+		expect(nextOccurrence([{ ...premium, insurance: undefined }], TODAY, newId)).not.toHaveProperty('insurance')
+	})
 })
 
 describe("draft from the model's answer", () => {
@@ -327,6 +426,89 @@ describe("draft from the model's answer", () => {
 			null,
 		])
 			expect(billDraftOf(bad, ACCOUNTS, TODAY, 'USD'), JSON.stringify(bad)).toBeUndefined()
+	})
+
+	it('an EOB is the provider’s estimate, not a bill yet', () => {
+		const eob = {
+			...answer,
+			isBill: false,
+			payee: 'Seton Medical',
+			amount: '240.00',
+			due: '2026-10-20',
+			period: '2026-09',
+			estimate: false,
+			last4: '8823',
+			minimum: '35',
+			repeats: 'month',
+			url: '',
+			insurance: 'none',
+			eob: true,
+			insurer: ' Aetna ',
+			serviceDay: '2026-08-14',
+		}
+		expect(billDraftOf(eob, ACCOUNTS, TODAY, 'USD')).toEqual({
+			payee: 'Seton Medical',
+			amount: usd(24000),
+			period: '2026-08',
+			source: 'letter',
+			estimate: true,
+			insurance: 'medical',
+			eob: true,
+			insurer: 'Aetna',
+			serviceDay: '2026-08-14',
+		})
+		// no day of service: the answer's period, else this month; no insurer: none kept
+		expect(billDraftOf({ ...eob, serviceDay: '' }, ACCOUNTS, TODAY, 'USD')?.period).toBe('2026-09')
+		const bare = billDraftOf({ ...eob, serviceDay: 'soon', period: '', insurer: '' }, ACCOUNTS, TODAY, 'USD')!
+		expect(bare.period).toBe('2026-09')
+		expect(bare).not.toHaveProperty('insurer')
+		expect(bare).not.toHaveProperty('serviceDay')
+	})
+
+	it('a premium notice keeps its insurance and how often it comes', () => {
+		const draft = billDraftOf(
+			{ ...answer, repeats: 'half-year', insurance: 'premium', serviceDay: '2026-08-14' },
+			ACCOUNTS,
+			TODAY,
+			'USD'
+		)!
+		expect(draft).toMatchObject({ repeat: 6, insurance: 'premium' })
+		// a day of service is a medical bill's only
+		expect(draft).not.toHaveProperty('serviceDay')
+		expect(
+			billDraftOf({ ...answer, insurance: 'medical', serviceDay: '2026-08-14' }, ACCOUNTS, TODAY, 'USD')
+		).toMatchObject({
+			insurance: 'medical',
+			serviceDay: '2026-08-14',
+		})
+		expect(billDraftOf({ ...answer, insurance: 'car' }, ACCOUNTS, TODAY, 'USD')).not.toHaveProperty('insurance')
+	})
+
+	it('keeps the insurance keys', () => {
+		const draft = {
+			payee: 'Seton Medical',
+			amount: usd(24000),
+			period: '2026-08',
+			source: 'letter' as const,
+			estimate: true,
+			insurance: 'medical' as const,
+			eob: true,
+			insurer: 'Aetna',
+			serviceDay: '2026-08-14',
+		}
+		const made = billFromDraft(draft, undefined, TODAY, () => 'eob')
+		expect(made).toMatchObject({ insurance: 'medical', eob: true, insurer: 'Aetna', serviceDay: '2026-08-14' })
+		expect(draftOfBill(made)).toEqual({ ...draft, id: 'eob' })
+		// a draft without them clears them
+		const cleared = billFromDraft({ payee: 'Seton Medical', amount: usd(24000) }, made, TODAY, () => 'unused')
+		for (const key of ['insurance', 'eob', 'insurer', 'serviceDay']) expect(cleared).not.toHaveProperty(key)
+		// a premium keeps no EOB, insurer or day of service
+		const premium = billFromDraft({ ...draft, insurance: 'premium' }, made, TODAY, () => 'unused')
+		expect(premium.insurance).toBe('premium')
+		for (const key of ['eob', 'insurer', 'serviceDay']) expect(premium).not.toHaveProperty(key)
+		expect(billFromDraft({ ...draft, serviceDay: 'Aug 14' }, undefined, TODAY, () => 'x')).not.toHaveProperty(
+			'serviceDay'
+		)
 	})
 
 	it('the same payee and period updates the bill, keeping its payments', () => {

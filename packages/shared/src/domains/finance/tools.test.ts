@@ -85,4 +85,45 @@ describe('finance.draft', () => {
 		for (const text of [answer({ isBill: false }), answer({ amount: 'a lot' }), 'no JSON here'])
 			expect(await delegate.parse(text, {}, ctx('')), text).toMatchObject({ failure: 'empty' })
 	})
+
+	it('turns an EOB into the provider’s estimate, and one that leaves nothing to pay into no bill (#85)', async () => {
+		const eob = {
+			isBill: false,
+			eob: true,
+			payee: 'Seton Medical',
+			insurer: 'Aetna',
+			serviceDay: '2026-08-14',
+			due: '',
+		}
+		const result = await delegate.parse(answer({ ...eob, amount: '240.00', last4: '8823' }), {}, ctx(''))
+		expect(result.failure).toBeUndefined()
+		expect(result.card).toEqual({
+			kind: 'bill',
+			bill: {
+				payee: 'Seton Medical',
+				amount: { minor: 24000, currency: 'USD' },
+				period: '2026-08',
+				source: 'letter',
+				estimate: true,
+				insurance: 'medical',
+				eob: true,
+				insurer: 'Aetna',
+				serviceDay: '2026-08-14',
+			},
+		})
+		for (const amount of ['0', '$0.00']) {
+			const none = await delegate.parse(answer({ ...eob, amount }), {}, ctx(''))
+			expect(none.failure, amount).toBe('empty')
+			expect((none.output as { status?: string }).status, amount).toBe('nothing-owed')
+			expect(none.card).toBeUndefined()
+		}
+		// a bill of 0 is still no bill, not an EOB with nothing owed
+		expect((await delegate.parse(answer({ amount: '0' }), {}, ctx(''))).output).not.toHaveProperty('status')
+	})
+
+	it('tells the model an EOB is not a bill and names the provider as payee', async () => {
+		const prompt = await delegate.prompt({ text: 'EOB' }, ctx(''))
+		expect(prompt).toContain('explanation of benefits (EOB) from an insurer is not a bill')
+		expect(prompt).toContain('name the provider who will bill the owner as the payee')
+	})
 })
