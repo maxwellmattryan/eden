@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { repeatOf, taskFromDraft } from './draft.js'
+import { parseAbout, repeatOf, taskFromDraft } from './draft.js'
 
 const CHICAGO = 'America/Chicago'
 const TODAY = '2026-09-30'
@@ -89,5 +89,44 @@ describe('taskFromDraft', () => {
 				CHICAGO
 			)
 		).toEqual({ kind: 'habit', title: 'Run', target: { count: 3, per: 'week' } })
+	})
+
+	it('links a task to the row it is for, under the row’s name', () => {
+		const about = { uri: 'eden://bill/01J9ZX00000000000000000000', label: 'Texas Gas Service' }
+		expect(taskFromDraft({ title: 'Pay the gas bill', due: '2026-10-01', about }, TODAY, CHICAGO)).toEqual({
+			kind: 'todo',
+			title: 'Pay the gas bill',
+			due: '2026-10-01',
+			priority: 'none',
+			links: [{ uri: about.uri, relation: 'about', label: 'Texas Gas Service' }],
+		})
+		expect(
+			taskFromDraft(
+				{ title: 'Check the meter', about: { uri: about.uri }, target: { count: 1, per: 'week' } },
+				TODAY,
+				CHICAGO
+			)
+		).toMatchObject({ kind: 'habit', links: [{ uri: about.uri, relation: 'about' }] })
+	})
+})
+
+describe('parseAbout', () => {
+	const REACH = ['bill', 'stock-item', 'task']
+	const entity = (type: string) => ['bill', 'stock-item', 'recipe'].includes(type)
+	const id = '01J9ZX00000000000000000000'
+
+	it('accepts a row of an entity type in reach', () => {
+		expect(parseAbout({ type: 'bill', id }, REACH, entity)).toEqual({ type: 'bill', id })
+	})
+
+	it('refuses a type out of reach, a type that is not an entity and a malformed value, naming what is wrong', () => {
+		expect(parseAbout({ type: 'recipe', id }, REACH, entity)).toEqual({
+			error: '`about.type` "recipe" is not one this conversation may read.',
+		})
+		expect(parseAbout({ type: 'task', id }, REACH, entity)).toEqual({
+			error: '`about.type` "task" is not a type of row a task can be for.',
+		})
+		for (const bad of [null, 'bill', ['bill', id], { type: 'bill' }, { type: 'bill', id: 'nope' }, { id }])
+			expect(parseAbout(bad, REACH, entity), JSON.stringify(bad)).toHaveProperty('error')
 	})
 })

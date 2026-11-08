@@ -8,6 +8,7 @@ import { toUri, type BatchOp, type Entity } from '../../data/index.js'
 import { addDays } from '../../dates/index.js'
 import { money, sumMoney, type Money } from '../../money/index.js'
 import { payloadOf } from './accounts.js'
+import { addMonthsClamped } from './bills.js'
 import { categoryOfRow, daysApart } from './classify.js'
 import type { Edit } from './edits.js'
 import { same } from './sync.js'
@@ -62,17 +63,6 @@ const BILL_CADENCES: readonly Cadence[] = ['monthly', 'quarterly', 'yearly']
 
 const size = (amount: Money) => Math.abs(amount.minor)
 const byText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
-const pad = (value: number, width = 2) => String(value).padStart(width, '0')
-
-/** A calendar date some months on, the day of the month clamped to the target month's last (Jan 31 → Feb 28/29). */
-export function addMonthsClamped(day: string, months: number): string {
-	const [year, month, date] = day.split('-').map(Number) as [number, number, number]
-	const target = month - 1 + months
-	const y = year + Math.floor(target / 12)
-	const m = ((target % 12) + 12) % 12
-	const last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
-	return `${pad(y, 4)}-${pad(m + 1)}-${pad(Math.min(date, last))}`
-}
 
 const nextDayOf = (last: string, cadence: Cadence) => {
 	const step = CADENCE_RULES[cadence].step
@@ -380,7 +370,7 @@ export function offersBill(charge: RecurringPayload, categories: readonly Catego
 }
 
 /** The neutral shape #78 maps onto its `bill` payload. */
-export interface BillDraft {
+export interface RecurringBillDraft {
 	recurringId: string
 	merchantId: string
 	counterparty?: string
@@ -394,7 +384,7 @@ export interface BillDraft {
 	categoryId?: string
 }
 
-export function billDraftOf(charge: RecurringCharge, merchants: readonly Merchant[]): BillDraft {
+export function recurringBillDraft(charge: RecurringCharge, merchants: readonly Merchant[]): RecurringBillDraft {
 	const merchant = merchants.find((entry) => entry.id === charge.merchantId)
 	return {
 		recurringId: charge.id,

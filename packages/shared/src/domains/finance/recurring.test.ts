@@ -4,10 +4,10 @@ import { toUri, type BatchOp, type Entity } from '../../data/index.js'
 import { createIdGenerator } from '../../data/ulid.js'
 import { addDays } from '../../dates/index.js'
 import { DEFAULT_CATEGORIES } from './categories.js'
+import { addMonthsClamped } from './bills.js'
 import { classifyPass } from './classify.js'
 import {
-	addMonthsClamped,
-	billDraftOf,
+	recurringBillDraft,
 	billOfferOps,
 	chargedAfterCancel,
 	linkBillOps,
@@ -434,7 +434,7 @@ describe('recurring charges', () => {
 		for (const [fields, offered] of offers) expect(offersBill(at(fields), categories, TODAY)).toBe(offered)
 
 		const merchants: Merchant[] = [{ id: 'm-netflix', name: 'Netflix', key: 'netflix', rawNames: ['Netflix'] }]
-		expect(billDraftOf(at({}), merchants)).toEqual({
+		expect(recurringBillDraft(at({}), merchants)).toEqual({
 			recurringId: 'a',
 			merchantId: 'm-netflix',
 			payee: 'Netflix',
@@ -444,7 +444,7 @@ describe('recurring charges', () => {
 			accountId: 'card',
 			categoryId: 'cat-subscriptions',
 		})
-		expect(billDraftOf(at({ merchantId: 'm-venmo', counterparty: 'alice' }), merchants).payee).toBe('alice')
+		expect(recurringBillDraft(at({ merchantId: 'm-venmo', counterparty: 'alice' }), merchants).payee).toBe('alice')
 	})
 
 	it('owner answers', () => {

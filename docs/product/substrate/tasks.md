@@ -4,7 +4,7 @@ status: draft
 summary: The Task primitive in detail: kinds, recurrence, routines, habits, reminders, the Today view and its Garden widget, the relationship to the calendar, Gardener tools, and how domains use tasks.
 read-this-if: You are designing anything the owner has to do, do again, or be reminded of.
 depends-on: [primitives, signals-notifications]
-updated: 2026-10-02
+updated: 2026-11-08
 ---
 
 ## Purpose and boundary
@@ -66,6 +66,7 @@ The substrate's tools are declared in code, since no manifest holds them (`subst
 What the task tools do (D-124, D-125):
 
 - `draft-tasks` drafts every task in one call: a todo, a routine when it names how it repeats, a habit when it names a target. Nothing is stored until the owner keeps the card.
+- A drafted task may say which row it is for, `about: { type, id }` (#78). The handler refuses the whole call when the type is not in the conversation's reach or not an entity type, or the row is not live, and says which (`parseAbout` in `@eden/shared/tasks`). A kept draft creates the task with the link `{ uri, relation: 'about', label }`, the label the row's name from its domain's `labels`, else its `name`, `title`, `label` or `payee`; the card reads "For <label>". A domain that watches the row may close the task: a bill's todos are done once the bill is paid (`product/domains/finance.md`, D-196).
 - `update-tasks` changes tasks that exist, in one write with one undo: a title, a day, a time, a priority or notes; done (a todo finished, a routine's occurrence today, one more on a habit); open again; a routine skipped today; a delete.
 - `agenda` answers what a day or a run of days holds, any day, with no model request: the events, the tasks due and done, the routines and what became of each, and, when the days reach today, what is overdue and where the habits stand. A conversation's context carries only the tasks that are open and those done in the last week; `agenda` reaches the rest.
 
@@ -85,10 +86,11 @@ None of this is built with Today. Reminders can be stored but are never shown or
 | Toolbench | a project's next steps as todos linked to the project | 1 |
 | Vigor | the training schedule as a routine; supplement doses as a routine; workout sessions are Events, not tasks | 2 |
 | Sanctuary | the reading routine | 2 |
+| Orchard | "Pay <payee>" todo, linked `about` its bill, when the bill is due soon or overdue; done once the bill is paid (built, #78, D-196) | 1 |
 | Wellspring (later) | medication routines with a stricter nudge | later |
 | Trails (candidate) | packing lists as checklists from templates | later |
 
-The one rule (D-75): the data layer emits nothing for a task. Any code that creates or completes a task for the owner, a domain's included, calls `emitTaskCreated` or `emitTaskCompleted` from `@eden/shared/tasks` after its write, and asks the Today store to reload (`tasks.reload()` in `packages/shared/src/shell/today/store.svelte.ts`). Code that skips this still writes the task, but no signal is emitted and Today does not show it until the next launch. Beside the store, the Gardener's `draft-tasks` and `update-tasks` create and change tasks, and they do it through the store's own methods.
+The one rule (D-75): the data layer emits nothing for a task. Any code that creates or completes a task for the owner, a domain's included, calls `emitTaskCreated` or `emitTaskCompleted` from `@eden/shared/tasks` after its write, and asks the Today store to reload (`tasks.reload()` in `packages/shared/src/shell/today/store.svelte.ts`). Code that skips this still writes the task, but no signal is emitted and Today does not show it until the next launch. Beside the store, the Gardener's `draft-tasks` and `update-tasks` create and change tasks, and they do it through the store's own methods. Orchard writes its bills' todos in its own batches, so no payee lands in the Garden feed, and then emits and reloads as this rule says.
 
 ## Non-goals
 

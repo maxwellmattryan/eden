@@ -1,5 +1,5 @@
-// Orchard's shapes (product/domains/finance.md): a bank's link, the accounts, a balance per account per day and what
-// the owner owns besides. Every one is an `entities` row of its type, so no migration is needed (D-67). A balance is
+// Orchard's shapes (product/domains/finance.md): a bank's link, the accounts, a balance per account per day, what
+// the owner owns besides, the transactions, and the bills with the letters they were read from (#78). Every one is an `entities` row of its type, so no migration is needed (D-67). A balance is
 // kept as the bank states it and the kind says whether it is owed; a share is in basis points; a link is the device's
 // that made it and is never in the domain's export (D-191).
 import type { Money } from '../../money/index.js'
@@ -14,11 +14,85 @@ export const FINANCE = {
 	rule: 'category-rule',
 	merchant: 'merchant',
 	recurring: 'recurring-charge',
+	bill: 'bill',
 	fileImport: 'file-import',
 } as const
 
+/** Where a bill came from (#78): a letter read on the device, a card's statement, a series, or the owner's hand. */
+export const BILL_SOURCES = ['letter', 'statement', 'repeating', 'manual'] as const
+export type BillSource = (typeof BILL_SOURCES)[number]
+
+/** How many months a repeating bill moves on by. */
+export const BILL_REPEATS = [1, 2, 3, 6, 12] as const
+export type BillRepeat = (typeof BILL_REPEATS)[number]
+
+/** One payment towards a bill: a matched transaction's, or one the owner recorded with none ("Paid another way"). */
+export interface BillPayment {
+	transactionId?: string
+	/** Positive, in the bill's currency. */
+	amount: Money
+	/** `YYYY-MM-DD`. */
+	day: string
+	/** The account the payment left. */
+	accountId?: string
+}
+
 /**
- * What a transaction is (finance.md §6). #75 derives all but `bill-payment` (#78) and the investment kinds (#76).
+ * A `bill` (#78, D-196): what the owner owes a payee for a period. Its state (`billState`) is derived on read and
+ * never stored. A bill with `accountId` is a card statement: its amount is the statement balance and it is settled
+ * once its payments reach the minimum.
+ */
+export interface BillPayload {
+	payee: string
+	/** `YYYY-MM`: the month the bill is for (a statement's month for a card). */
+	period: string
+	/** `YYYY-MM-DD`; absent, the bill is Expected ("not a bill yet"). */
+	due?: string
+	/** Positive. */
+	amount: Money
+	estimate?: true
+	source: BillSource
+	repeat?: { months: BillRepeat }
+	/** A repeating bill whose amount does not change. */
+	fixed?: true
+	/** The first bill's id, on every occurrence of a series. */
+	seriesId?: string
+	/** A card statement's card. */
+	accountId?: string
+	minimum?: Money
+	/** `YYYY-MM-DD`, a card statement's. */
+	statementDay?: string
+	/** Interest charged on the card since the previous statement. */
+	interest?: Money
+	/** `https://` only. */
+	url?: string
+	/** Learned from confirmed matches, distinct, at most 10. */
+	merchantIds?: string[]
+	payments?: BillPayment[]
+	/** Candidate transaction ids awaiting the owner. */
+	ask?: string[]
+	dismissed?: string[]
+	/** The Orchard task made for this due day. */
+	task?: { id: string; due: string }
+	/** Set on an occurrence the bill pass made that an owner's undo took back: its tombstone ends no series. */
+	undone?: true
+}
+
+/** A `file-import` with `source: 'document'` (#78; #74's statement files have `source: 'file'`): a document read on this device, by its fingerprint (`externalId`), and what it made (D-189). */
+export interface LetterImportPayload {
+	kind: 'letter'
+	/** `YYYY-MM-DD`. */
+	day: string
+	billId: string
+	rows: 1
+}
+
+/** The source a `file-import` row is stored with; its `externalId` is the fingerprint. */
+export const FILE_IMPORT_SOURCE = 'document'
+
+/**
+ * What a transaction is (finance.md §6). #75 derives all but the investment kinds (#76); `bill-payment` is an unpaired
+ * money-out row with a `billId` (#78).
  */
 export const TX_KINDS = [
 	'purchase',
@@ -198,6 +272,11 @@ export interface TransactionPayload {
 	/** The owner's (#83's detail); searched by the ledger. */
 	notes?: string
 
+	// ---- #78's own key: the bill pass and the owner's Mark paid set it, and a sync keeps it
+
+	/** The bill this row paid; an unpaired money-out row with one is a `bill-payment`. */
+	billId?: string
+
 	// ---- #74's key: a row read from a statement file has no `source`, and names the import that made it
 
 	/** The `file-import` that made this row, so its undo and later audits find it. */
@@ -320,6 +399,7 @@ export type ProviderLink = ProviderLinkPayload & { id: string }
 export type Account = AccountPayload & { id: string }
 export type Snapshot = SnapshotPayload & { id: string }
 export type Asset = AssetPayload & { id: string }
+export type Bill = BillPayload & { id: string }
 
 /** What the store holds; the snapshots only travel in the sample data, the store never reads them. */
 export interface FinanceData {

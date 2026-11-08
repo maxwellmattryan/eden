@@ -381,7 +381,7 @@ function lowerBound(sorted: readonly Work[], day: string): number {
 
 /**
  * A row's kind: a pair's is `card-payment` when the side the money goes into is a credit card, else `transfer`; a
- * repayment is a refund; a vague merchant with no partner is a purchase or a refund by sign; an unpaired move stays
+ * repayment is a refund; an unpaired money-out row that paid a bill is a `bill-payment`; a vague merchant with no partner is a purchase or a refund by sign; an unpaired move stays
  * the provider's; a money-in row of a spending kind is a refund; nothing known is a purchase or a refund by sign.
  */
 function kindOf(item: Work, partner: Work | undefined, accounts: ReadonlyMap<string, Account>): TxKind {
@@ -392,6 +392,8 @@ function kindOf(item: Work, partner: Work | undefined, accounts: ReadonlyMap<str
 		return accounts.get(into.accountId)?.kind === 'credit-card' ? 'card-payment' : 'transfer'
 	}
 	if (next.repays) return 'refund'
+	// a payment the bill pass or the owner matched to a bill (#78)
+	if (next.billId && signOf(next.amount) < 0) return 'bill-payment'
 	if (item.vague) return bySign
 	const kind = item.provider.kind
 	if (!kind) return bySign
