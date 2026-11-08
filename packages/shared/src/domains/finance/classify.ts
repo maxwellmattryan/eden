@@ -379,10 +379,16 @@ function lowerBound(sorted: readonly Work[], day: string): number {
 	return low
 }
 
+/** Words that name a paycheck in a bank's description. */
+const PAYROLL = /\b(payroll|direct dep(osit)?|dir dep|salary|wages)\b/i
+const looksLikePay = (row: TransactionPayload) =>
+	PAYROLL.test(row.name) || (row.merchantName !== undefined && PAYROLL.test(row.merchantName))
+
 /**
  * A row's kind: a pair's is `card-payment` when the side the money goes into is a credit card, else `transfer`; a
  * repayment is a refund; a vague merchant with no partner is a purchase or a refund by sign; an unpaired move stays
- * the provider's; a money-in row of a spending kind is a refund; nothing known is a purchase or a refund by sign.
+ * the provider's; a money-in row of a spending kind is a refund; nothing known is a purchase or a refund by sign, or
+ * income when a money-in row's words name a paycheck.
  */
 function kindOf(item: Work, partner: Work | undefined, accounts: ReadonlyMap<string, Account>): TxKind {
 	const next = item.next
@@ -394,7 +400,8 @@ function kindOf(item: Work, partner: Work | undefined, accounts: ReadonlyMap<str
 	if (next.repays) return 'refund'
 	if (item.vague) return bySign
 	const kind = item.provider.kind
-	if (!kind) return bySign
+	// a statement's payroll line has no provider category: its words say it is income (#80)
+	if (!kind) return bySign === 'refund' && looksLikePay(next) ? 'income' : bySign
 	if (SPENDING.includes(kind)) return bySign === 'refund' ? 'refund' : kind
 	return kind
 }

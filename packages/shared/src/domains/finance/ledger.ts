@@ -681,7 +681,7 @@ export function rollupOf(ledger: Ledger, by: RollupKey): LedgerGroup[] {
 }
 
 /** `YYYY-MM` some months on; negative goes back. */
-function addMonths(month: string, months: number): string {
+export function addMonths(month: string, months: number): string {
 	const [year, at] = month.split('-').map(Number) as [number, number]
 	const index = year * 12 + (at - 1) + months
 	return `${String(Math.floor(index / 12)).padStart(4, '0')}-${String((index % 12) + 1).padStart(2, '0')}`

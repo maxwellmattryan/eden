@@ -142,7 +142,13 @@ describe('finance classification', () => {
 			row({ id: 'pay', minor: 250000, providerCategory: 'INCOME_WAGES' }),
 			row({ id: 'odd-out', minor: -999, providerCategory: 'SOMETHING_NEW' }),
 			row({ id: 'odd-in', minor: 999 }),
+			// a statement's payroll line, with no provider category, is income; money out named so is not
+			row({ id: 'payroll', minor: 243000, name: 'NORTHWIND LABS PAYROLL' }),
+			row({ id: 'dir-dep', minor: 180000, name: 'ACME CORP DIR DEP' }),
+			row({ id: 'paid-out', minor: -5000, name: 'PAYROLL SERVICE FEE' }),
 		])
+		for (const id of ['payroll', 'dir-dep']) expect(of(id).kind, id).toBe('income')
+		expect(of('paid-out').kind).toBe('purchase')
 		expect(of('groceries')).toMatchObject({ kind: 'purchase', categoryId: 'cat-groceries', categoryBy: 'provider' })
 		// a money-in row with a spending category is a refund in it (the purchase is after it, so no link)
 		expect(of('back')).toMatchObject({ kind: 'refund', categoryId: 'cat-groceries', categoryBy: 'provider' })

@@ -14,6 +14,7 @@ export const FINANCE = {
 	rule: 'category-rule',
 	merchant: 'merchant',
 	fileImport: 'file-import',
+	income: 'income-source',
 } as const
 
 /**
@@ -251,6 +252,53 @@ export interface MerchantPayload {
 	/** The cleaned names that lead here, distinct, at most 50; a merge moves them. */
 	rawNames: string[]
 }
+
+/** How often an income source pays (#80, D-196): `yearly` is a tax refund's or payment's. */
+export const INCOME_CADENCES = ['weekly', 'biweekly', 'semimonthly', 'monthly', 'irregular', 'yearly'] as const
+export type IncomeCadence = (typeof INCOME_CADENCES)[number]
+
+/**
+ * An `income-source` (#80, D-196): a paycheck, other repeating income, or the yearly tax refund or payment, found by
+ * the income pass (`income.ts`) from the live transactions. Its identity across passes is `kind` with `merchantId`
+ * and `counterparty`, or `nameKey`. The pass writes the detected keys; the owner's keys are only ever the owner's.
+ */
+export interface IncomeSourcePayload {
+	kind: 'income' | 'tax-refund' | 'tax-payment'
+	merchantId?: string
+	counterparty?: string
+	/** `foldText` of the raw name, when the rows have no merchant. */
+	nameKey?: string
+	/** The merchant's name when detected; the page reads the merchant live. */
+	name: string
+	/** The latest row's account. */
+	accountId: string
+	cadence: IncomeCadence
+	/** Semimonthly and monthly: days of the month, 31 is the last day. */
+	anchors?: number[]
+	/** Signed as the rows. */
+	expected: Money
+	firstDay: string
+	/** The latest pay day: the last day the cadence was read from, or the latest row's for an irregular source. */
+	lastDay: string
+	nextDay?: string
+
+	// ---- the owner's keys: the pass never writes them
+
+	/** The job ended on this day. */
+	endedOn?: string
+	/** Lean mode is on since this day. */
+	leanSince?: string
+	/** The owner said the paycheck due this day is just late. */
+	lateOk?: string
+	/** Not income (or not a tax payment): hidden, and asked nothing about. */
+	ignored?: true
+	/** The owner has seen that this source is new. */
+	seenNew?: true
+	/** The extra rows answered on the bonus sheet, the newest last, at most 20. */
+	handled?: string[]
+}
+
+export type IncomeSource = IncomeSourcePayload & { id: string }
 
 export type Category = CategoryPayload & { id: string }
 export type Rule = RulePayload & { id: string; updatedAt: string }
