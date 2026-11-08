@@ -1,4 +1,4 @@
-// Which payment paid which bill (product/domains/finance.md §6, D-194), pure so it is tested here. A candidate is a
+// Which payment paid which bill (product/domains/finance.md §6, D-195), pure so it is tested here. A candidate is a
 // posted money-out row in the bill's window whose payee matches and whose amount is close; exactly one pays the bill,
 // two or more ask the owner. A card statement's payments are every `card-payment` row into its card after the
 // statement day. The owner's Mark paid lists the payments in the window whatever their amount.

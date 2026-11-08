@@ -66,7 +66,7 @@ The substrate's tools are declared in code, since no manifest holds them (`subst
 What the task tools do (D-124, D-125):
 
 - `draft-tasks` drafts every task in one call: a todo, a routine when it names how it repeats, a habit when it names a target. Nothing is stored until the owner keeps the card.
-- A drafted task may say which row it is for, `about: { type, id }` (#78). The handler refuses the whole call when the type is not in the conversation's reach or not an entity type, or the row is not live, and says which (`parseAbout` in `@eden/shared/tasks`). A kept draft creates the task with the link `{ uri, relation: 'about', label }`, the label the row's name from its domain's `labels`, else its `name`, `title`, `label` or `payee`; the card reads "For <label>". A domain that watches the row may close the task: a bill's todos are done once the bill is paid (`product/domains/finance.md`, D-194).
+- A drafted task may say which row it is for, `about: { type, id }` (#78). The handler refuses the whole call when the type is not in the conversation's reach or not an entity type, or the row is not live, and says which (`parseAbout` in `@eden/shared/tasks`). A kept draft creates the task with the link `{ uri, relation: 'about', label }`, the label the row's name from its domain's `labels`, else its `name`, `title`, `label` or `payee`; the card reads "For <label>". A domain that watches the row may close the task: a bill's todos are done once the bill is paid (`product/domains/finance.md`, D-195).
 - `update-tasks` changes tasks that exist, in one write with one undo: a title, a day, a time, a priority or notes; done (a todo finished, a routine's occurrence today, one more on a habit); open again; a routine skipped today; a delete.
 - `agenda` answers what a day or a run of days holds, any day, with no model request: the events, the tasks due and done, the routines and what became of each, and, when the days reach today, what is overdue and where the habits stand. A conversation's context carries only the tasks that are open and those done in the last week; `agenda` reaches the rest.
 
@@ -86,7 +86,7 @@ None of this is built with Today. Reminders can be stored but are never shown or
 | Toolbench | a project's next steps as todos linked to the project | 1 |
 | Vigor | the training schedule as a routine; supplement doses as a routine; workout sessions are Events, not tasks | 2 |
 | Sanctuary | the reading routine | 2 |
-| Orchard | "Pay <payee>" todo, linked `about` its bill, when the bill is due soon or overdue; done once the bill is paid (built, #78, D-194) | 1 |
+| Orchard | "Pay <payee>" todo, linked `about` its bill, when the bill is due soon or overdue; done once the bill is paid (built, #78, D-195) | 1 |
 | Wellspring (later) | medication routines with a stricter nudge | later |
 | Trails (candidate) | packing lists as checklists from templates | later |
 

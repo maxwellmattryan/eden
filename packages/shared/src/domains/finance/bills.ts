@@ -1,4 +1,4 @@
-// Orchard's bills (product/domains/finance.md §6, D-194), pure so they are tested here: a bill's state, derived on
+// Orchard's bills (product/domains/finance.md §6, D-195), pure so they are tested here: a bill's state, derived on
 // read and never stored; what its payments come to (settled, partly paid, overpaid); the next occurrence of a series
 // and its estimate; the draft the owner's form and the Gardener's answer hand over, and the bill it makes or updates;
 // and the ops that store a bill and take it back. Every percentage is worked in minor units through `shareOf`

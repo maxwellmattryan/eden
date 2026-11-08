@@ -37,7 +37,7 @@ export interface BillPayment {
 }
 
 /**
- * A `bill` (#78, D-194): what the owner owes a payee for a period. Its state (`billState`) is derived on read and
+ * A `bill` (#78, D-195): what the owner owes a payee for a period. Its state (`billState`) is derived on read and
  * never stored. A bill with `accountId` is a card statement: its amount is the statement balance and it is settled
  * once its payments reach the minimum.
  */
@@ -268,6 +268,8 @@ export interface TransactionPayload {
 	review?: 'vague'
 	/** The sync's: the pending row this posted row took over. */
 	replaced?: string
+	/** The owner's (#83's detail); searched by the ledger. */
+	notes?: string
 
 	// ---- #78's own key: the bill pass and the owner's Mark paid set it, and a sync keeps it
 
