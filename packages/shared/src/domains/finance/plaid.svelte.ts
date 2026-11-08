@@ -2,7 +2,9 @@
 // every token and makes every call (`api/plaid.ts`); this module is the session the Link sheet shows, the keys sheet's
 // saves, and the sync: on launch, every hour (`finance.sync`), and on the retries after a failure (`finance.retry`),
 // one link after another and one run at a time. A removed link is revoked at Plaid two minutes after its tombstone
-// (`finance.revoke`), so the page's Undo stays true, and again at the start of every run until it is done.
+// (`finance.revoke`), so the page's Undo stays true, and again at the start of every run until it is done. At the end
+// of a run, each link holding investments gets its one investments read of the day (D-197); there is no schedule of
+// its own and never a paid refresh.
 //
 // Nothing here logs more than a code: no name, no amount, no token.
 import { toast } from '@eden/ui-kit'
@@ -12,6 +14,7 @@ import { openExternal } from '../../api/external.js'
 import {
 	plaidClearKeys,
 	plaidErrorCode,
+	plaidInvestments,
 	plaidLinkPoll,
 	plaidLinkStart,
 	plaidRevoke,
@@ -30,6 +33,7 @@ import { setSchedule } from '../../scheduler/client.js'
 import { settings } from '../../settings/index.js'
 import { emit, onSchedule } from '../../signals/runtime.js'
 import { payloadOf } from './accounts.js'
+import { investmentOps, investmentsDue, investmentsWindow, PLAID_INVESTMENTS_SOURCE } from './investments.js'
 import { bindProvider, type FinanceProvider } from './provider.svelte.js'
 import { finance } from './store.svelte.js'
 import {
@@ -50,8 +54,10 @@ import {
 	FINANCE,
 	type Account,
 	type BillPayload,
+	type HoldingPayload,
 	type ProviderLink,
 	type ProviderLinkPayload,
+	type SecurityPayload,
 	type TransactionPayload,
 } from './types.js'
 import { dayLine } from './words.js'
@@ -74,6 +80,8 @@ export type SessionState = 'starting' | 'waiting' | 'reading' | 'linked' | 'canc
 
 export interface LinkSession {
 	mode: 'link' | 'reconnect'
+	/** A new link that asks for investments first (D-197). */
+	brokerage?: boolean
 	/** The link a reconnect signs in again. */
 	linkId?: string
 	/** The bank's name, once it is known: the link's for a reconnect, the institution's once linked. */
@@ -99,6 +107,8 @@ class PlaidState {
 	sheet = $state<'none' | 'keys' | 'link'>('none')
 	/** The Link sheet opens once the keys are saved: "Link a bank" asked for them first. */
 	thenLink = false
+	/** The Link sheet waiting on the keys is a brokerage's. */
+	thenBrokerage = false
 }
 
 export const plaid = new PlaidState()
@@ -119,7 +129,7 @@ export async function saveKeys(clientId: string, secret: string): Promise<PlaidE
 	toast({ message: tr('domains.finance.plaid.keys.saved') })
 	if (plaid.thenLink) {
 		plaid.thenLink = false
-		void startSession('link')
+		void startSession('link', undefined, plaid.thenBrokerage)
 	} else plaid.sheet = 'none'
 	void syncAll()
 	return undefined
@@ -153,17 +163,25 @@ function update(session: LinkSession, change: Partial<LinkSession>) {
 
 /**
  * Opens the Link sheet on a session: the live one when there is one (closing the sheet never ends it), else a new
- * one, which makes a link token and opens Plaid's hosted page in the system browser.
+ * one, which makes a link token and opens Plaid's hosted page in the system browser. A brokerage's asks for
+ * investments first (D-197).
  */
-export async function startSession(mode: 'link' | 'reconnect', linkId?: string): Promise<void> {
+export async function startSession(mode: 'link' | 'reconnect', linkId?: string, brokerage = false): Promise<void> {
 	plaid.sheet = 'link'
 	if (plaid.session && LIVE.includes(plaid.session.state)) return
 	stopPolling()
 	const name = linkId ? finance.linkById(linkId)?.institution.name : undefined
-	const session: LinkSession = { mode, linkId, name, startedAt: Date.now(), state: 'starting' }
+	const session: LinkSession = {
+		mode,
+		linkId,
+		name,
+		startedAt: Date.now(),
+		state: 'starting',
+		...(brokerage && mode === 'link' ? { brokerage: true } : {}),
+	}
 	plaid.session = session
 	try {
-		const started = await plaidLinkStart(linkId)
+		const started = await plaidLinkStart(linkId, session.brokerage)
 		if (!current(session)) return
 		const next = { ...session, linkToken: started.linkToken, url: started.url, state: 'waiting' as const }
 		plaid.session = next
@@ -198,12 +216,13 @@ export function sheetClosed(): void {
 export function startAgain(): void {
 	const was = plaid.session
 	plaid.session = undefined
-	void startSession(was?.mode ?? 'link', was?.linkId)
+	void startSession(was?.mode ?? 'link', was?.linkId, was?.brokerage)
 }
 
 /** The keys sheet, from the Link sheet's "Change keys"; the Link sheet comes back once they are saved. */
 export function changeKeys(): void {
 	stopPolling()
+	plaid.thenBrokerage = plaid.session?.brokerage === true
 	plaid.session = undefined
 	plaid.thenLink = true
 	plaid.sheet = 'keys'
@@ -322,21 +341,82 @@ async function run() {
 		})
 		wrote ||= changed
 	}
+	// then the day's investments read, once a day for each link that holds investments (D-197)
+	const valued = await valueLinks()
 	// once every link is done, the rows that came get their kind, merchant and category (#75), and then the bills
 	// their payments, their tasks and the card statements the run read (#78)
-	if (wrote) await finance.classify()
+	if (wrote || valued) await finance.classify()
 	if (done.size) await finance.billPass()
 }
 
+/**
+ * The day's investments read for every link it is due on, one at a time, each read and written in one queue job as a
+ * sync is. Answers whether it wrote investment transactions. A failed read is logged by its code, writes nothing and
+ * leaves the link as it was, so the next hourly run tries again.
+ */
+async function valueLinks(): Promise<boolean> {
+	let wrote = false
+	const today = todayIso()
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- the run's own note, never shown
+	const done = new Set<string>()
+	for (;;) {
+		const next = finance.links.find(
+			(link) => !done.has(link.id) && investmentsDue(link, finance.data().accounts, today)
+		)
+		if (!next) break
+		done.add(next.id)
+		const link = $state.snapshot(next) as ProviderLink
+		try {
+			const window = investmentsWindow(link, today)
+			const result = await plaidInvestments(link.id, window.start, window.end)
+			const made: { out?: ReturnType<typeof investmentOps> } = {}
+			const written = await finance.applySync(async () => {
+				const [holdings, securities, existing] = await Promise.all([
+					queryEntities<HoldingPayload>({ type: FINANCE.holding, includeDeleted: true }),
+					queryEntities<SecurityPayload>({ type: FINANCE.security }),
+					existingRows(
+						result.transactions.map((found) => found.id),
+						PLAID_INVESTMENTS_SOURCE
+					),
+				])
+				// the link as the sync just left it, so its cursor and freshness are kept
+				const latest = finance.linkById(link.id)
+				const out = (made.out = investmentOps({
+					link: latest ? ($state.snapshot(latest) as ProviderLink) : link,
+					accounts: finance.data().accounts,
+					holdings,
+					securities,
+					existingTransactions: existing,
+					result,
+					day: today,
+					newId,
+				}))
+				return {
+					chunks: out.chunks,
+					links: [out.link],
+					holdings: out.holdings,
+					removedHoldings: out.removedHoldings,
+					securities: out.securities,
+				}
+			})
+			if (made.out) logSkipped(made.out.skipped)
+			wrote ||= written && result.transactions.length > 0
+		} catch (error) {
+			report('An investments read failed', plaidErrorCode(error))
+		}
+	}
+	return wrote
+}
+
 /** The live provider rows the result names, by provider id, read in lookups of `CHUNK`. */
-async function existingRows(ids: string[]): Promise<Map<string, Entity<TransactionPayload>>> {
+async function existingRows(ids: string[], source = PLAID_SOURCE): Promise<Map<string, Entity<TransactionPayload>>> {
 	// a lookup handed to the pure rules, never shown
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity
 	const found = new Map<string, Entity<TransactionPayload>>()
 	for (let at = 0; at < ids.length; at += CHUNK) {
 		const rows = await queryEntities<TransactionPayload>({
 			type: FINANCE.transaction,
-			source: PLAID_SOURCE,
+			source,
 			externalIds: ids.slice(at, at + CHUNK),
 		})
 		for (const row of rows) if (row.externalId) found.set(row.externalId, row)
@@ -436,13 +516,15 @@ export const plaidProvider: FinanceProvider = {
 	get sandbox() {
 		return plaid.status?.environment === 'sandbox'
 	},
-	link() {
+	link(kind?: 'bank' | 'brokerage') {
+		const brokerage = kind === 'brokerage'
 		if (!plaid.status?.hasKeys) {
 			plaid.thenLink = true
+			plaid.thenBrokerage = brokerage
 			plaid.sheet = 'keys'
 			return
 		}
-		void startSession('link')
+		void startSession('link', undefined, brokerage)
 	},
 	reconnect(linkId: string) {
 		if (!plaid.status?.hasKeys) {

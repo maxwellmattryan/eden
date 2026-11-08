@@ -1,0 +1,33 @@
+{
+	"accounts": [],
+	"investment_transactions": [
+		{
+			"account_id": "acc-brokerage",
+			"amount": -1234.5,
+			"date": "2026-08-02",
+			"fees": 0,
+			"investment_transaction_id": "inv-t3",
+			"iso_currency_code": "USD",
+			"name": "SELL Sold Fund",
+			"price": 12.345,
+			"quantity": -100,
+			"security_id": "sec-gone",
+			"subtype": "sell",
+			"type": "sell"
+		}
+	],
+	"item": { "item_id": "item-m1", "institution_id": "ins_116530" },
+	"securities": [
+		{
+			"close_price": 0.12345678,
+			"close_price_as_of": "2026-11-05",
+			"iso_currency_code": "USD",
+			"name": "Sold Fund",
+			"security_id": "sec-gone",
+			"ticker_symbol": null,
+			"type": "mutual fund"
+		}
+	],
+	"total_investment_transactions": 3,
+	"request_id": "inv-tx-2"
+}

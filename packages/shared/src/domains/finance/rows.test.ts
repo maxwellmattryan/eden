@@ -28,6 +28,8 @@ function readBack(engine: ReturnType<typeof createEngine>) {
 		links: engine.queryEntities({ type: FINANCE.link }),
 		accounts: engine.queryEntities({ type: FINANCE.account }),
 		assets: engine.queryEntities({ type: FINANCE.asset }),
+		holdings: engine.queryEntities({ type: FINANCE.holding }),
+		securities: engine.queryEntities({ type: FINANCE.security }),
 	} as Parameters<typeof financeFromRows>[0])
 }
 
@@ -52,6 +54,25 @@ describe('finance rows', () => {
 		}
 		expect(financeUris(written.data)).toHaveLength(written.ops.length)
 		expect(financeRows({}, createIdGenerator()).ops).toEqual([])
+	})
+
+	it("reads the seed's holdings and securities back as written", () => {
+		const { engine, written } = seeded()
+		const back = readBack(engine)
+		expect(back.holdings).toEqual(written.data.holdings)
+		expect(back.securities).toEqual(written.data.securities)
+		expect(back.holdings).toHaveLength(5)
+		expect(back.securities).toHaveLength(5)
+		// every holding points at a written account and security
+		for (const holding of back.holdings!) {
+			expect(back.accounts.some((account) => account.id === holding.accountId)).toBe(true)
+			expect(back.securities!.some((security) => security.id === holding.securityId)).toBe(true)
+		}
+		const ticker = (id: string) => back.securities!.find((security) => security.id === id)?.ticker
+		expect(back.holdings!.filter((holding) => !holding.costBasis).map((holding) => ticker(holding.securityId))).toEqual(
+			['SCHD']
+		)
+		expect(back.securities!.find((security) => security.ticker === 'VTI')?.prices).toHaveLength(3)
 	})
 
 	it('keeps one snapshot a day: a second balance that day updates it, the next day adds one', () => {

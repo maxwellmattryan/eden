@@ -2413,6 +2413,10 @@ export const DECLARATIONS = {
 			{
 				"id": "bills",
 				"label": "domains.finance.tabs.bills"
+			},
+			{
+				"id": "investments",
+				"label": "domains.finance.tabs.investments"
 			}
 		],
 		"resources": [
@@ -2529,7 +2533,9 @@ export const DECLARATIONS = {
 			"category-rule",
 			"merchant",
 			"bill",
-			"file-import"
+			"file-import",
+			"holding",
+			"security"
 		]
 	}
 } as const

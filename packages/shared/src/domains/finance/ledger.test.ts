@@ -711,3 +711,59 @@ describe('the ledger', () => {
 			).toEqual(expected)
 	})
 })
+
+describe('investments', () => {
+	const investment = (type: string, subtype: string) => ({ type, subtype, securityId: 'vti' })
+	const ROWS_WITH_INVESTMENTS = [
+		row({ id: 'buy', minor: -57200, accountId: 'brk', kind: 'investment-buy', investment: investment('buy', 'buy') }),
+		row({
+			id: 'sell',
+			minor: 30000,
+			accountId: 'brk',
+			kind: 'investment-sell',
+			investment: investment('sell', 'sell'),
+		}),
+		row({
+			id: 're-div',
+			minor: 1842,
+			accountId: 'brk',
+			kind: 'dividend',
+			categoryId: 'groc',
+			reinvested: 're-buy',
+			investment: investment('cash', 'dividend'),
+		}),
+		row({
+			id: 're-buy',
+			minor: -1842,
+			accountId: 'brk',
+			kind: 'investment-buy',
+			investment: investment('buy', 'dividend reinvestment'),
+		}),
+		row({ id: 'div', minor: 900, accountId: 'brk', kind: 'dividend', investment: investment('cash', 'dividend') }),
+	]
+	const ledger = buildLedger({
+		transactions: ROWS_WITH_INVESTMENTS,
+		accounts: [...ACCOUNTS, account('brk', 'investment', 'L3')],
+		categories: CATEGORIES,
+		merchants: MERCHANTS,
+		home: 'USD',
+	})
+
+	it('counts buys, sells and reinvested dividends in no measure, but lists them; a plain dividend is money in', () => {
+		const all = queryLedger(ledger, { filter: {} })
+		expect(all.rows.map((entry) => entry.id).sort()).toEqual(['buy', 'div', 're-buy', 're-div', 'sell'])
+		expect(all.count).toBe(5)
+		expect(all.in.minor).toBe(900)
+		expect(all.out.minor).toBe(0)
+		expect(all.net.minor).toBe(900)
+		expect(all.spending.minor).toBe(0)
+
+		const scoped = queryLedger(ledger, { filter: { accountIds: ['brk'], kinds: ['investment-buy'] } })
+		expect(scoped.count).toBe(2)
+		expect([scoped.in.minor, scoped.out.minor, scoped.net.minor, scoped.spending.minor]).toEqual([0, 0, 0, 0])
+		// the categorised reinvested dividend adds nothing even under its category
+		const category = queryLedger(ledger, { filter: { categoryIds: ['groc'] } })
+		expect(category.rows.map((entry) => entry.id)).toEqual(['re-div'])
+		expect([category.in.minor, category.spending.minor]).toEqual([0, 0])
+	})
+})
