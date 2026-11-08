@@ -4,7 +4,7 @@ status: draft
 summary: The scheduler, signals, rules and the inbox as code: the alarm in the crate and the take in the webview, the store and its commands, the rules a manifest declares and the frontend evaluates, the runtime both apps start, the refresh coordinator, the inbox with its OS notifications on desktop and on the phone, the first consumers, and how it is tested.
 read-this-if: You are adding a schedule, a signal, a rule or a mirror that refreshes itself, touching the inbox or an OS notification, or changing when Sky fetches.
 depends-on: [product/substrate/signals-notifications, engineering/data-layer, engineering/domain-module, engineering/app-scaffold]
-updated: 2026-11-07
+updated: 2026-11-08
 ---
 
 ## Where it stands
@@ -199,6 +199,7 @@ Here the key alone is not enough, since what must happen once a week is the requ
 | `finance.revoke`, a one-shot two minutes after a link is removed | for each Plaid link tombstoned at least two minutes ago, removes its Item at Plaid and its token here | – |
 | after each run of a link | emits `finance.link-broken` when it turned `needs-reauth` (keyed `<link>:needs-reauth:<lastSyncedAt>`) or its consent ends within seven days (keyed `<link>:expiring:<consentExpiresAt>`) | `link-needs-reconnecting`, in-app; its card carries the warning glyph |
 | after each classification pass (`finance.classify()`, `store.svelte.ts`), once its job has ended | emits `finance.price-rise` once per row in the recurring pass's `rises`, payload `{ uris: [recurring-charge uri], merchant }` with no amount, keyed `<recurring-charge>:<day>`; a failed emit is logged by its code | `price-rise`, in-app: "{merchant} costs more than last time" |
+| after the income pass (`finance.detectIncome()`, `store.svelte.ts`, with the pure parts in `income.ts`), on both apps: after each classification pass, after a sync run that wrote nothing, and when the Orchard page mounts | emits `finance.paycheck-late` (keyed `<source>:<missed day>`), `finance.bonus` (keyed `<row>`) and `finance.income-new` (keyed `<source>:new`, only for a source whose first day is within 100 days); answering on the page withdraws the card (D-200) | `paycheck-late`, `bonus` and `new-income`, in-app; Open goes to Orchard |
 
 **Tasks** (`packages/shared/src/tasks/signals.ts`, with the pure part, `taskSignal`, in `rules.ts`). The data layer emits nothing for a task (D-75): the crate cannot see a routine's or a habit's completion, which lives in `progress`, and cannot evaluate the rules. So the frontend emits, once the write has landed, one signal per owner action:
 

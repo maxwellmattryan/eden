@@ -37,9 +37,20 @@
 		{ "id": "draft", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] },
 		{ "id": "read-statement", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] }
 	],
-	"signals": ["finance.link-broken", "finance.bill-due", "finance.bill-overdue", "finance.price-rise"],
+	"signals": [
+		"finance.link-broken",
+		"finance.paycheck-late",
+		"finance.bonus",
+		"finance.income-new",
+		"finance.bill-due",
+		"finance.bill-overdue",
+		"finance.price-rise"
+	],
 	"notificationKinds": [
 		{ "id": "link-needs-reconnecting", "channel": "in-app", "cadence": "when-found", "signal": "finance.link-broken" },
+		{ "id": "paycheck-late", "channel": "in-app", "cadence": "when-found", "signal": "finance.paycheck-late" },
+		{ "id": "bonus", "channel": "in-app", "cadence": "when-found", "signal": "finance.bonus" },
+		{ "id": "new-income", "channel": "in-app", "cadence": "when-found", "signal": "finance.income-new" },
 		{ "id": "bill-due-soon", "channel": "in-app", "cadence": "when-found", "signal": "finance.bill-due" },
 		{ "id": "bill-overdue", "channel": "in-app", "cadence": "when-found", "signal": "finance.bill-overdue" },
 		{ "id": "price-rise", "channel": "in-app", "cadence": "when-found", "signal": "finance.price-rise" }

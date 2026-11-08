@@ -1724,7 +1724,91 @@
 				"unit": "Enter a unit",
 				"futureDay": "Pick today or an earlier day"
 			},
+			"income": {
+				"title": "Income",
+				"summary": "About {monthly} a month",
+				"average": "{months}-month average {average}",
+				"cadence": {
+					"weekly": "Weekly",
+					"biweekly": "Every two weeks",
+					"semimonthly": "Twice a month",
+					"monthly": "Monthly"
+				},
+				"into": "into {account}",
+				"thirdChecks": "3 paychecks in {months}",
+				"state": {
+					"next": "Next about {day}",
+					"late": "Late, due {day}",
+					"ended": "Ended {day}",
+					"irregular": "Irregular",
+					"taxRefund": "Tax refund · around {month}",
+					"taxPayment": "Tax payment · around {month}"
+				},
+				"perMonth": "about {amount} a month",
+				"about": "about {amount}",
+				"menu": {
+					"ended": "This job ended",
+					"stillPaid": "Still paid here",
+					"startLean": "Start lean mode",
+					"notIncome": "Not income",
+					"notTaxPayment": "Not a tax payment"
+				},
+				"questions": {
+					"late": "Your {employer} paycheck due {day} hasn't arrived",
+					"bonus": "{employer} paid you extra. Where should it go?",
+					"new": "A paycheck from {employer} came in",
+					"answer": "Answer",
+					"choose": "Choose",
+					"leaveLean": "Leave lean mode"
+				},
+				"paycheck": {
+					"title": "Did your job at {employer} end?",
+					"due": "Your paycheck was due {day}.",
+					"text": "If it ended, Orchard switches to lean mode: a runway, the essentials and what to pause.",
+					"justLate": "No, it's just late",
+					"ended": "Yes, it ended"
+				},
+				"bonus": {
+					"title": "Where should this go?",
+					"context": "{employer} · into {account} · {day}",
+					"destination": "Destination",
+					"leave": "Leave it in {account}",
+					"payDown": "Pay down {account}",
+					"outOfAverage": "Leave it out of the monthly average",
+					"combined": "Part of your usual paycheck deposit, so it cannot be left out on its own.",
+					"reminder": "Orchard never moves the money. This only adds a reminder.",
+					"notBonus": "Not a bonus",
+					"save": "Save",
+					"task": "Move the {employer} bonus to {account}"
+				}
+			},
+			"lean": {
+				"title": "Lean mode",
+				"since": "since {day}",
+				"end": "End lean mode",
+				"onEssentials": "On essentials",
+				"atUsual": "At your usual spending",
+				"months": "{months, plural, one {# month} other {# months}}",
+				"until": "until about {month}",
+				"covered": "Your other income covers the essentials",
+				"noHistory": "Orchard needs a full month of spending to work out a runway.",
+				"essentials": "Essentials",
+				"perMonth": "about {amount} a month",
+				"total": "about {amount} a month in all",
+				"pause": "What to pause",
+				"uncategorised": "Uncategorised",
+				"nothing": "Nothing repeats outside the essentials."
+			},
 			"toasts": {
+				"incomeEnded": "Marked {employer} as ended",
+				"justLate": "Noted: due {day}",
+				"bonusSaved": "Saved",
+				"notBonus": "Not a bonus",
+				"notIncome": "Not income",
+				"notTaxPayment": "Not a tax payment",
+				"stillPaid": "Still paid by {employer}",
+				"leanOn": "Lean mode on",
+				"leanOff": "Lean mode off",
 				"accountAdded": "Account added",
 				"accountSaved": "Account saved",
 				"balanceUpdated": "Balance updated",
@@ -1801,6 +1885,15 @@
 				},
 				"billOverdue": {
 					"line": "{payee} was due {dueDay}"
+				},
+				"paycheckLate": {
+					"line": "Your {employer} paycheck due {day} hasn't arrived"
+				},
+				"bonus": {
+					"line": "{employer} paid you extra. Where should it go?"
+				},
+				"newIncome": {
+					"line": "A new paycheck from {employer}"
 				}
 			}
 		},

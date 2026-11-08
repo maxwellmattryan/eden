@@ -343,9 +343,11 @@ async function run() {
 	}
 	// then the day's investments read, once a day for each link that holds investments (D-197)
 	const valued = await valueLinks()
-	// once every link is done, the rows that came get their kind, merchant and category (#75), and then the bills
-	// their payments, their tasks and the card statements the run read (#78)
+	// once every link is done, the rows that came get their kind, merchant and category (#75), and the income pass
+	// follows it (#80); with nothing written it runs on its own, so a paycheck that did not come is still noticed.
+	// Then the bills get their payments, their tasks and the card statements the run read (#78)
 	if (wrote || valued) await finance.classify()
+	else await finance.detectIncome()
 	if (done.size) await finance.billPass()
 }
 
