@@ -1,5 +1,5 @@
 <script lang="ts">
-	// A goal's sheet (product/domains/finance.md §6, "Goals (#88)", D-202), built as the budget line's is. Add offers
+	// A goal's sheet (product/domains/finance.md §6, "Goals (#88)", D-203), built as the budget line's is. Add offers
 	// saving for something or an emergency fund (while none is open); Edit keeps the kind. The account is an open one
 	// that is not a debt, and the target is in its currency. An emergency fund is sized in months of essentials, which
 	// fill the target; with no essentials history the target is typed. The date is a month or none, and the sheet says

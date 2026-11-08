@@ -5,6 +5,7 @@ import { formatDateOf, formatTime, formatWeekdayOf, type DateFormat } from '../.
 import { currencyUnitName, decimalsOf, formatMoney, type Money, type MoneyParseError } from '../../money/index.js'
 import { dayOfInstant } from './accounts.js'
 import { isStatement, overpaidOf, remainingOf, type BillState } from './bills.js'
+import { isOpenEob, setAsideOf } from './insurance.js'
 import {
 	WHOLE,
 	type Account,
@@ -138,12 +139,30 @@ export function billSecondary(bill: Bill, state: BillState, words: BillWords): s
 		if (over) parts.push(tr('domains.finance.bills.line.over', { values: { amount: money(over) } }))
 		return parts.join(' · ')
 	}
+	const eob = isOpenEob(bill)
 	parts.push(cadenceLabel(bill.repeat, tr))
-	parts.push(tr(bill.estimate ? 'domains.finance.bills.line.estimate' : 'domains.finance.bills.line.actual'))
-	parts.push(billSourceLabel(bill.source, tr))
+	if (bill.insurance) parts.push(tr(`domains.finance.bills.insurance.${bill.insurance}`))
+	parts.push(
+		tr(
+			eob
+				? 'domains.finance.bills.line.notYet'
+				: bill.estimate
+					? 'domains.finance.bills.line.estimate'
+					: 'domains.finance.bills.line.actual'
+		)
+	)
+	if (eob)
+		parts.push(
+			bill.insurer
+				? tr('domains.finance.bills.line.fromEob', { values: { insurer: bill.insurer } })
+				: tr('domains.finance.bills.line.fromAnEob')
+		)
+	else parts.push(billSourceLabel(bill.source, tr))
 	if (bill.minimum) parts.push(tr('domains.finance.bills.line.minimum', { values: { amount: money(bill.minimum) } }))
 	if (bill.interest && bill.interest.minor > 0)
 		parts.push(tr('domains.finance.bills.line.interest', { values: { amount: money(bill.interest) } }))
+	const aside = setAsideOf(bill)
+	if (aside) parts.push(tr('domains.finance.bills.line.setAside', { values: { amount: money(aside) } }))
 	if (bill.payments?.length && left)
 		parts.push(tr('domains.finance.bills.line.stillDue', { values: { amount: money(left) } }))
 	if (over) parts.push(tr('domains.finance.bills.line.over', { values: { amount: money(over) } }))
@@ -207,6 +226,8 @@ export interface IncomeLineInput {
 	/** `YYYY-MM` months with three biweekly paychecks. */
 	thirdChecks: readonly string[]
 	home: string
+	/** The insurance premiums of its stored pay stub (#85), written as the page writes amounts. */
+	premiums?: string
 }
 
 /**
@@ -238,6 +259,7 @@ export function incomeLine(input: IncomeLineInput, tr: Translate, lang: string):
 	else if (source.cadence === 'irregular') parts.push(tr('domains.finance.income.state.irregular'))
 	else if (source.nextDay) parts.push(tr('domains.finance.income.state.next', { values: { day: day(source.nextDay) } }))
 	if (source.expected.currency !== input.home) parts.push(tr('domains.finance.row.notInTotals'))
+	if (input.premiums) parts.push(tr('domains.finance.income.premiums', { values: { amount: input.premiums } }))
 	return parts.join(' · ')
 }
 

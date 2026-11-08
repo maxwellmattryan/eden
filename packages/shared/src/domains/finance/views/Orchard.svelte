@@ -1,6 +1,6 @@
 <script lang="ts">
 	// Orchard's page (product/domains/finance.md, "Surfaces"): the header with the tab's actions, the tabs (Activity,
-	// #83, D-199, which has none; Accounts; Bills, #78; Budget, #84, D-201; Investments, #76, D-197; and Goals, #88, D-202), the page's error with Retry when a write failed or the rows could not be read, and the tab's view.
+	// #83, D-199, which has none; Accounts; Bills, #78; Budget, #84, D-201; Investments, #76, D-197; and Goals, #88, D-203), the page's error with Retry when a write failed or the rows could not be read, and the tab's view.
 	// Goals' header adds a goal while an account can hold one; a bought goal's Done row opens the asset and account
 	// sheets with a preset.
 	// Budget's view holds the month it shows and tells the page through `onmonth`, so its header's Draft from history
@@ -35,6 +35,7 @@
 	import { linesOf } from '../budget.js'
 	import { billCapture } from '../capture.svelte.js'
 	import { canEarmark } from '../goals.js'
+	import { payStubRead } from '../paystub.svelte.js'
 	import { plaid } from '../plaid.svelte.js'
 	import { provider } from '../provider.svelte.js'
 	import { documentRead } from '../reader.svelte.js'
@@ -77,6 +78,7 @@
 	import LinkSheet from './LinkSheet.svelte'
 	import PaycheckSheet from './PaycheckSheet.svelte'
 	import PaySheet from './PaySheet.svelte'
+	import PayStubSheet from './PayStubSheet.svelte'
 	import PlaidKeysSheet from './PlaidKeysSheet.svelte'
 	import RateSheet from './RateSheet.svelte'
 	import RebuildSheet from './RebuildSheet.svelte'
@@ -101,7 +103,11 @@
 		readerOf(
 			$t,
 			documentRead.options?.preview,
-			statementImport.open ? 'domains.finance.import.failures' : 'domains.finance.bills.failure'
+			statementImport.open
+				? 'domains.finance.import.failures'
+				: payStubRead.asking
+					? 'domains.finance.payStub.failure'
+					: 'domains.finance.bills.failure'
 		)
 	)
 
@@ -494,6 +500,13 @@
 {#key billCapture.opened}
 	{#if billCapture.open}
 		<BillSheet bind:open={billCapture.open} capture />
+	{/if}
+{/key}
+
+<!-- The pay stub sheet a read or Edit deductions opens (#85): made afresh as its deductions arrive. -->
+{#key payStubRead.opened}
+	{#if payStubRead.open}
+		<PayStubSheet bind:open={payStubRead.open} />
 	{/if}
 {/key}
 

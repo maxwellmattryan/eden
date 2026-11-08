@@ -1,5 +1,5 @@
 <script lang="ts">
-	// The savings-rate goal (product/domains/finance.md §6, "Goals (#88)", D-202): one whole percent from 1 to 99. The
+	// The savings-rate goal (product/domains/finance.md §6, "Goals (#88)", D-203): one whole percent from 1 to 99. The
 	// error shows on the field and takes focus on Save; Save stores it with an undo toast. Cancel writes nothing.
 	import { Button, Field, Sheet } from '@eden/ui-kit'
 	import { tick } from 'svelte'

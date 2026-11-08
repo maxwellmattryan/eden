@@ -1,4 +1,4 @@
-// Orchard's goals (product/domains/finance.md §6, "Goals (#88)", D-202): what each goal in an account holds when the
+// Orchard's goals (product/domains/finance.md §6, "Goals (#88)", D-203): what each goal in an account holds when the
 // goals fill its balance in their order, the recent pace and the month each is reached at it, the monthly a date asks,
 // an emergency fund in months of essentials, the savings rate, the dips under a goal's high-water mark, and the ops
 // that store an owner's change with the ops that take it back. Every figure is integer minor units worked out here,
@@ -66,7 +66,7 @@ function fill(account: Account | undefined, list: readonly SavingsGoal[]) {
 }
 
 /**
- * What each open goal holds (D-202): the goals in one account fill its balance at the owner's share in their order,
+ * What each open goal holds (D-203): the goals in one account fill its balance at the owner's share in their order,
  * lowest first, each taking what is left clamped between 0 and its target. A goal in a closed, debt or gone account
  * holds 0.
  */
@@ -81,7 +81,7 @@ export function savedOf(goals: readonly SavingsGoal[], accounts: readonly Accoun
 }
 
 /**
- * An account's recent pace (D-202): the mean net money into it over the complete months among the last 3 before
+ * An account's recent pace (D-203): the mean net money into it over the complete months among the last 3 before
  * today's, every line on it in its currency (transfers in and interest count), at the owner's share. None with no
  * complete month.
  */
@@ -154,7 +154,7 @@ const rateOf = (income: number, spending: number) =>
 	income > 0 ? roundHalfAway(((income - spending) * 100) / income) : undefined
 
 /**
- * The savings rate (D-202): (income − spending) ÷ income over the complete months among the last 3, and per month.
+ * The savings rate (D-203): (income − spending) ÷ income over the complete months among the last 3, and per month.
  * Income is the home-currency lines of `income` entries, one-offs included, the tax rows (`exclude`, or a "tax ref"
  * name) left out as `incomeAverage` leaves them; spending is the negated sum of the `spending` lines. None with no
  * complete month.
@@ -260,7 +260,7 @@ export interface GoalsView {
 const dipFloor = (target: Money) => Math.max(1, Math.ceil(target.minor / 100))
 
 /**
- * The Goals tab as it reads (D-202). `accounts` comes in the Accounts tab's order and the groups follow it, a gone
+ * The Goals tab as it reads (D-203). `accounts` comes in the Accounts tab's order and the groups follow it, a gone
  * account's goals last.
  */
 export function goalsOf(input: {
@@ -521,7 +521,7 @@ function nextOrder(goals: readonly SavingsGoal[], accountId: string, except?: st
 }
 
 /**
- * The high-water reset every owner change makes (D-202): each open goal in the accounts named takes `high` at what it
+ * The high-water reset every owner change makes (D-203): each open goal in the accounts named takes `high` at what it
  * holds now, with `today`, and drops `rebuildBy`, so re-earmarking never reads as a dip. A goal already there is left.
  */
 export function resetHighs(
@@ -696,7 +696,7 @@ export function rateOps(
 }
 
 /**
- * The goal pass (D-202): each open goal in an open account takes `high` when it holds more than it (or has none), with
+ * The goal pass (D-203): each open goal in an open account takes `high` when it holds more than it (or has none), with
  * today, and drops `rebuildBy` once it holds its high again. It writes nothing else.
  */
 export function goalPassOps(rows: readonly SavingsGoal[], accounts: readonly Account[], today: string): GoalEdit {

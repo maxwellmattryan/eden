@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Plan the rebuild (product/domains/finance.md §6, "Goals (#88)", D-202): a dipped goal's month to be made whole by,
+	// Plan the rebuild (product/domains/finance.md §6, "Goals (#88)", D-203): a dipped goal's month to be made whole by,
 	// over the next 24 months and 6 out at first, with what that asks a month said live. Save stores the plan with an
 	// undo toast; Cancel, or dismissing the sheet, writes nothing.
 	import { Button, Select, Sheet } from '@eden/ui-kit'

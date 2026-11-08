@@ -5,7 +5,9 @@
 	// statement, with its minimum. Errors show on their field and the first one takes focus on Save; Save writes the bill
 	// (with the letter's `file-import` row, for a capture) and shows an undo toast. On a capture it first shows Drafting
 	// while the Gardener reads the letter, then the form filled from the answer, or why there is none with a way to enter
-	// it by hand. A draft of a live bill of the same payee and period says it updates that bill.
+	// it by hand. A draft of a live bill of the same payee and period says it updates that bill; a provider's bill over
+	// an EOB's estimate says it replaces it, and an EOB for a bill already here says that bill stays as it is (#85).
+	// Insurance marks a premium or a medical bill, and a medical one has a day of service.
 	import { Button, Field, InlineError, Select, Sheet, Spinner, Toggle } from '@eden/ui-kit'
 	import { tick } from 'svelte'
 	import { t } from '../../../i18n/index.js'
@@ -15,7 +17,7 @@
 	import { draftOfBill, safeUrl, type BillDraft } from '../bills.js'
 	import { billCapture } from '../capture.svelte.js'
 	import { finance } from '../store.svelte.js'
-	import { BILL_REPEATS, type Bill, type BillRepeat } from '../types.js'
+	import { BILL_REPEATS, INSURANCE_KINDS, type Bill, type BillRepeat, type InsuranceKind } from '../types.js'
 	import { cadenceLabel, moneyError } from '../words.js'
 
 	type Props = {
@@ -42,6 +44,8 @@
 		accountId: given?.accountId ?? '',
 		minimum: given?.minimum ? toDecimal(given.minimum) : '',
 		url: given?.url ?? '',
+		insurance: (given?.insurance ?? 'none') as InsuranceKind | 'none',
+		serviceDay: given?.serviceDay ?? '',
 	})
 	type Key = 'payee' | 'amount' | 'minimum' | 'url'
 	let errors = $state<Partial<Record<Key, string>>>({})
@@ -63,6 +67,22 @@
 				label: account.last4 ? `${account.name} ••${account.last4}` : account.name,
 			})),
 	])
+	const insurances = $derived([
+		{ value: 'none', label: $t('domains.finance.bills.form.noInsurance') },
+		...INSURANCE_KINDS.map((kind) => ({ value: kind, label: $t(`domains.finance.bills.insurance.${kind}`) })),
+	])
+	/** What the capture's form says of the live bill its draft lands on. */
+	const note = $derived.by(() => {
+		const said = capture ? billCapture.note : undefined
+		if (!said) return undefined
+		const values = { payee: said.payee, month: said.month, insurer: said.insurer ?? '' }
+		if (said.how === 'replaces')
+			return $t(said.insurer ? 'domains.finance.bills.form.replaces' : 'domains.finance.bills.form.replacesEob', {
+				values,
+			})
+		if (said.how === 'billed') return $t('domains.finance.bills.form.billed', { values })
+		return $t('domains.finance.bills.form.updates', { values })
+	})
 	const title = $derived(
 		id
 			? $t('domains.finance.bills.form.titleEdit')
@@ -100,6 +120,7 @@
 			return
 		}
 		const repeat = form.repeat === 'none' ? undefined : (Number(form.repeat) as BillRepeat)
+		const medical = form.insurance === 'medical'
 		const draft: BillDraft = {
 			...(id ? { id } : {}),
 			payee: form.payee,
@@ -112,6 +133,11 @@
 			...(form.url.trim() ? { url: form.url.trim() } : {}),
 			...(given?.period && given.due === (form.due || undefined) ? { period: given.period } : {}),
 			...(capture && given?.source ? { source: given.source } : {}),
+			...(form.insurance !== 'none' ? { insurance: form.insurance } : {}),
+			// the EOB and its insurer have no field: they stay while the bill is medical
+			...(medical && form.serviceDay ? { serviceDay: form.serviceDay } : {}),
+			...(medical && given?.eob ? { eob: true } : {}),
+			...(medical && given?.insurer ? { insurer: given.insurer } : {}),
 		}
 		const fingerprint = capture ? billCapture.fingerprint : undefined
 		const saved = await finance.saveBill(draft, fingerprint ? { fingerprint } : undefined)
@@ -149,10 +175,8 @@
 		</div>
 	{:else}
 		<form class="form" id="{uid}-form" onsubmit={save} novalidate>
-			{#if capture && billCapture.updates}
-				<p class="line quiet">
-					{$t('domains.finance.bills.form.updates', { values: billCapture.updates })}
-				</p>
+			{#if note}
+				<p class="line quiet">{note}</p>
 			{/if}
 			<Field
 				id="{uid}-payee"
@@ -186,6 +210,17 @@
 			{#if form.repeat !== 'none'}
 				<Toggle label={$t('domains.finance.bills.form.fixed')} bind:checked={form.fixed} />
 			{/if}
+			<div class="pair">
+				<Select label={$t('domains.finance.bills.form.insurance')} options={insurances} bind:value={form.insurance} />
+				{#if form.insurance === 'medical'}
+					<Field
+						id="{uid}-service"
+						label={$t('domains.finance.bills.form.serviceDay')}
+						type="date"
+						bind:value={form.serviceDay}
+					/>
+				{/if}
+			</div>
 			<div class="pair">
 				<Select label={$t('domains.finance.bills.form.card')} options={cards} bind:value={form.accountId} />
 				{#if form.accountId}

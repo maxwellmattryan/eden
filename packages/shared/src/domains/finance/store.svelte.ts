@@ -19,7 +19,7 @@
 // The holdings and securities (#76, D-197) are held whole, like the accounts; a daily investments read writes them
 // through `applySync`, and the owner's cost basis and typed value go through `#commit` with an undo.
 // The budget rows (#84, D-201) are held whole too; a month, its carries and its draft are read from them and the ledger
-// in `budget.ts`, and each write re-reads them in the queue's turn. The goals (#88, D-202) are held the same way: what
+// in `budget.ts`, and each write re-reads them in the queue's turn. The goals (#88, D-203) are held the same way: what
 // each holds is read in `goals.ts` from the balances, and the goal pass keeps only each one's high-water mark.
 import { get } from 'svelte/store'
 import { logError } from '../../api/index.js'
@@ -144,6 +144,7 @@ import {
 	withUpdates,
 	type RecurringEdit,
 } from './recurring.js'
+import { payStubOps } from './paystub.js'
 import { financeFromRows, financeRows, financeUris } from './rows.js'
 import { seedData } from './seed.js'
 import { FILE_SOURCE, importOps, matchRows, type ParsedStatement, type StatementRow } from './statement.js'
@@ -168,7 +169,8 @@ import {
 	type IncomeSourcePayload,
 	type Holding,
 	type HoldingPayload,
-	type LetterImportPayload,
+	type DocumentImportPayload,
+	type PayStub,
 	type Merchant,
 	type MerchantPayload,
 	type ProviderLink,
@@ -324,7 +326,7 @@ export class FinanceStore {
 	asked = $state<Record<string, AskedPayment>>({})
 	/** The live `budget` rows (#84, D-201): each holds its category's line from its month on. */
 	budgets = $state<Budget[]>([])
-	/** The live `savings-goal` rows (#88, D-202): the targets, the emergency fund and the savings-rate target. */
+	/** The live `savings-goal` rows (#88, D-203): the targets, the emergency fund and the savings-rate target. */
 	goals = $state<SavingsGoal[]>([])
 	/** The minute, while a page is watching: a link goes stale as it moves. */
 	clock = $state(Date.now())
@@ -456,7 +458,7 @@ export class FinanceStore {
 	})
 
 	/**
-	 * The Goals tab as it reads (#88, D-202), once the ledger is ready: the savings rate, the totals, one group per
+	 * The Goals tab as it reads (#88, D-203), once the ledger is ready: the savings rate, the totals, one group per
 	 * earmarked account in the Accounts tab's order, and the closed goals.
 	 */
 	readonly goalsView = $derived.by(() => {
@@ -1079,7 +1081,7 @@ export class FinanceStore {
 	}
 
 	/**
-	 * The goal pass (#88, D-202): each open goal's high-water mark raised to what it holds, and a rebuild plan dropped
+	 * The goal pass (#88, D-203): each open goal's high-water mark raised to what it holds, and a rebuild plan dropped
 	 * once it holds its high again, as one queue job. It runs wherever the income pass does; a failure logs its code.
 	 */
 	async #goalPass() {
@@ -1121,6 +1123,28 @@ export class FinanceStore {
 
 	incomeById(id: string): IncomeSource | undefined {
 		return this.income?.sources.find((source) => source.id === id)
+	}
+
+	/**
+	 * Keeps a pay stub's deductions on their income source (#85), in one write with one undo: with `read`, the stub's
+	 * `file-import` row too. A stub with no deductions clears the stored ones and lets their file be read again.
+	 * Nothing when the source is gone.
+	 */
+	savePayStub(sourceId: string, stub: PayStub | undefined, read?: { fingerprint: string }): Undo | undefined {
+		const plain = $state.snapshot(this.incomeSources) as IncomeSource[]
+		const was = plain.find((source) => source.id === sourceId)
+		if (!was) return undefined
+		const file =
+			read && stub?.deductions.length ? { id: newId(), fingerprint: read.fingerprint, day: todayIso() } : undefined
+		const made = payStubOps(was, stub, file)
+		const before = this.incomeSources
+		return this.#commit({
+			apply: () =>
+				(this.incomeSources = this.incomeSources.map((source) => (source.id === sourceId ? made.source : source))),
+			revert: () => (this.incomeSources = before),
+			ops: made.ops,
+			inverse: made.inverse,
+		})
 	}
 
 	/**
@@ -1608,7 +1632,7 @@ export class FinanceStore {
 
 	// ---- Goals (#88) ---------------------------------------------------------------------------------------------
 
-	/** A target or an emergency fund, new or changed (D-202); a refusal answers its code and writes nothing. */
+	/** A target or an emergency fund, new or changed (D-203); a refusal answers its code and writes nothing. */
 	saveGoal(draft: GoalDraft): Promise<EditAnswer<GoalError>> {
 		return this.#goalEdit((rows, accounts, today) => saveGoalOps(rows, accounts, draft, today, newId))
 	}
@@ -1710,12 +1734,13 @@ export class FinanceStore {
 		return this.#billJob(async (state) => {
 			const bill = state.live.find((entry) => entry.id === id)
 			if (!bill) return undefined
-			const files = await queryEntities<LetterImportPayload>({ type: FINANCE.fileImport, source: FILE_IMPORT_SOURCE })
+			const files = await queryEntities<DocumentImportPayload>({ type: FINANCE.fileImport, source: FILE_IMPORT_SOURCE })
 			const own = bill.task ? state.tasks.find((task) => task.id === bill.task!.id) : undefined
 			const taskIds = own && own.kind === 'todo' && !own.done ? [own.id] : []
 			const made = deleteBillOps(
 				bill,
-				files.filter((row) => row.payload.billId === id).map((row) => row.id),
+				// a pay stub's row has no bill (#85)
+				files.filter((row) => row.payload.kind === 'letter' && row.payload.billId === id).map((row) => row.id),
 				taskIds
 			)
 			const rows = state.rows

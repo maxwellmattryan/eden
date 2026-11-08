@@ -50,8 +50,8 @@ const TAX_PAYMENT_CODE = 'GOVERNMENT_AND_NON_PROFIT_TAX_PAYMENT'
 
 // ---- Shapes ----------------------------------------------------------------------------------------------------------
 
-type OwnerKey = 'endedOn' | 'leanSince' | 'lateOk' | 'ignored' | 'seenNew' | 'handled'
-const OWNER_KEYS: readonly OwnerKey[] = ['endedOn', 'leanSince', 'lateOk', 'ignored', 'seenNew', 'handled']
+type OwnerKey = 'endedOn' | 'leanSince' | 'lateOk' | 'ignored' | 'seenNew' | 'handled' | 'payStub'
+const OWNER_KEYS: readonly OwnerKey[] = ['endedOn', 'leanSince', 'lateOk', 'ignored', 'seenNew', 'handled', 'payStub']
 const DETECTED_KEYS = [
 	'kind',
 	'merchantId',

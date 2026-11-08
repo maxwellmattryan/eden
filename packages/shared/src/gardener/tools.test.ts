@@ -31,10 +31,10 @@ import {
 const index = toolIndex(declarations)
 
 describe('the tool index', () => {
-	it('validates, and holds the thirty-eight tools', () => {
+	it('validates, and holds the forty tools', () => {
 		expect(validateTools(index)).toEqual([])
-		expect(index).toHaveLength(39)
-		expect(Object.keys(SCHEMAS)).toHaveLength(39)
+		expect(index).toHaveLength(40)
+		expect(Object.keys(SCHEMAS)).toHaveLength(40)
 	})
 
 	it('declares Orchard’s bill draft as a light vision draft that reads nothing, read loosely (#78)', () => {
@@ -50,6 +50,16 @@ describe('the tool index', () => {
 		expect(isStrict(tool)).toBe(true)
 		expect(optionalCount(tool.schema)).toBe(0)
 		expect(tool.description).toContain('refuses when called in a conversation')
+	})
+
+	it('declares Orchard’s read-pay-stub as a light vision draft, strict with no optional parameter (#85)', () => {
+		const tool = parseWireName('finance_read-pay-stub', index)!
+		expect(tool.declaration).toMatchObject({ access: 'write-draft', grade: 'light', needs: ['vision'], reads: [] })
+		expect(isStrict(tool)).toBe(true)
+		expect(tool.schema.required).toEqual(['text', 'currency'])
+		expect(optionalCount(tool.schema)).toBe(0)
+		expect(tool.description).toContain('refuses when called in a conversation')
+		expect(tool.description).toContain('Income section')
 	})
 
 	it('declares Meadow’s searching tools as needing a model that searches, and its writes as strict (D-132)', () => {
@@ -70,8 +80,8 @@ describe('the tool index', () => {
 		const batch = parseWireName('places_update-places', index)!
 		expect(batch.declaration).toMatchObject({ access: 'write', confirm: true, grade: null })
 		expect(isStrict(batch)).toBe(false)
-		// twelve strict tools of the twenty the API takes
-		expect(index.filter(isStrict)).toHaveLength(12)
+		// thirteen strict tools of the twenty the API takes
+		expect(index.filter(isStrict)).toHaveLength(13)
 	})
 
 	it('has a line for every declared domain, and none for another', () => {

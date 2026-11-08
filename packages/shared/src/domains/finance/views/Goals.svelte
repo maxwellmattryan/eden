@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Orchard's Goals tab (product/domains/finance.md §6, "Goals (#88)", D-202), laid out as Budget is: the savings rate
+	// Orchard's Goals tab (product/domains/finance.md §6, "Goals (#88)", D-203), laid out as Budget is: the savings rate
 	// card, then Saved, To go and Needed a month, one card per earmarked account in the Accounts tab's order, and the
 	// closed goals under Done. A goal reads what it holds of its target over the kit's `Meter`, then the first line that
 	// applies (reached, past its date, its date and monthly, or the month at the recent pace), an emergency fund's months
