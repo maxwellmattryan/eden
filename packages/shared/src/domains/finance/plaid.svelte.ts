@@ -315,8 +315,10 @@ async function run() {
 		})
 		wrote ||= changed
 	}
-	// once every link is done, the rows that came get their kind, merchant and category (#75)
+	// once every link is done, the rows that came get their kind, merchant and category (#75), and the income pass
+	// follows it (#80); with nothing written it runs on its own, so a paycheck that did not come is still noticed
 	if (wrote) await finance.classify()
+	else await finance.detectIncome()
 }
 
 /** The live provider rows the result names, by provider id, read in lookups of `CHUNK`. */

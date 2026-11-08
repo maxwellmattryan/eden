@@ -1411,7 +1411,91 @@
 				"quantity": "数値を入力してください",
 				"unit": "単位を入力してください"
 			},
+			"income": {
+				"title": "収入",
+				"summary": "月におよそ{monthly}",
+				"average": "{months}か月平均 {average}",
+				"cadence": {
+					"weekly": "毎週",
+					"biweekly": "隔週",
+					"semimonthly": "月2回",
+					"monthly": "毎月"
+				},
+				"into": "{account}に入金",
+				"thirdChecks": "{months}は3回支給",
+				"state": {
+					"next": "次回は{day}ごろ",
+					"late": "遅れています({day}予定)",
+					"ended": "{day}に終了",
+					"irregular": "不定期",
+					"taxRefund": "税金の還付 · {month}ごろ",
+					"taxPayment": "税金の納付 · {month}ごろ"
+				},
+				"perMonth": "月におよそ{amount}",
+				"about": "およそ{amount}",
+				"menu": {
+					"ended": "この仕事は終わった",
+					"stillPaid": "まだ支給されている",
+					"startLean": "節約モードを始める",
+					"notIncome": "収入ではない",
+					"notTaxPayment": "税金の納付ではない"
+				},
+				"questions": {
+					"late": "{employer}の{day}の給与がまだ届いていません",
+					"bonus": "{employer}から臨時の入金がありました。どこに回しますか?",
+					"new": "{employer}から給与が入りました",
+					"answer": "回答する",
+					"choose": "選ぶ",
+					"leaveLean": "節約モードを終える"
+				},
+				"paycheck": {
+					"title": "{employer}での仕事は終わりましたか?",
+					"due": "給与の予定日は{day}でした。",
+					"text": "終わった場合、Orchardは節約モードに切り替わり、残りの期間、必需品、止められる支出を表示します。",
+					"justLate": "いいえ、遅れているだけ",
+					"ended": "はい、終わりました"
+				},
+				"bonus": {
+					"title": "これをどこに回しますか?",
+					"context": "{employer} · {account}に入金 · {day}",
+					"destination": "行き先",
+					"leave": "{account}に置いておく",
+					"payDown": "{account}を返済",
+					"outOfAverage": "月平均から除外する",
+					"combined": "いつもの給与と一緒に入金されたため、これだけを除外することはできません。",
+					"reminder": "Orchardがお金を動かすことはありません。リマインダーを追加するだけです。",
+					"notBonus": "ボーナスではない",
+					"save": "保存",
+					"task": "{employer}のボーナスを{account}に移す"
+				}
+			},
+			"lean": {
+				"title": "節約モード",
+				"since": "{day}から",
+				"end": "節約モードを終える",
+				"onEssentials": "必需品だけなら",
+				"atUsual": "いつもの支出なら",
+				"months": "{months}か月",
+				"until": "{month}ごろまで",
+				"covered": "ほかの収入で必需品をまかなえます",
+				"noHistory": "残りの期間を計算するには、まる1か月分の支出が必要です。",
+				"essentials": "必需品",
+				"perMonth": "月におよそ{amount}",
+				"total": "合計で月におよそ{amount}",
+				"pause": "止められる支出",
+				"uncategorised": "未分類",
+				"nothing": "必需品以外に繰り返す支出はありません。"
+			},
 			"toasts": {
+				"incomeEnded": "{employer}を終了にしました",
+				"justLate": "{day}予定として記録しました",
+				"bonusSaved": "保存しました",
+				"notBonus": "ボーナスではないとしました",
+				"notIncome": "収入ではないとしました",
+				"notTaxPayment": "税金の納付ではないとしました",
+				"stillPaid": "{employer}からまだ支給されています",
+				"leanOn": "節約モードを始めました",
+				"leanOff": "節約モードを終えました",
 				"accountAdded": "口座を追加しました",
 				"accountSaved": "口座を保存しました",
 				"balanceUpdated": "残高を更新しました",
@@ -1476,6 +1560,15 @@
 			"notifications": {
 				"linkNeedsReconnecting": {
 					"line": "{reason, select, expiring {{institution}は{byDay}までに再ログインが必要です} other {{institution}に再ログインが必要です}}"
+				},
+				"paycheckLate": {
+					"line": "{employer}の{day}の給与がまだ届いていません"
+				},
+				"bonus": {
+					"line": "{employer}から臨時の入金がありました。どこに回しますか?"
+				},
+				"newIncome": {
+					"line": "{employer}から新しい給与"
 				}
 			}
 		},

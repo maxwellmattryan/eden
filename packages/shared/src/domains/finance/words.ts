@@ -1,8 +1,8 @@
 // How Orchard writes its lines: a day ("Sun 27 Sep"), how fresh a link is, what the totals leave out, an account's
-// detail line, a share and the field errors of an amount. Pure: the translator, the language and the clock arrive as
+// detail line, a share, an income source's lines (#80) and the field errors of an amount. Pure: the translator, the language and the clock arrive as
 // parameters.
 import { formatDateOf, formatTime, formatWeekdayOf, type DateFormat } from '../../dates/index.js'
-import { currencyUnitName, decimalsOf, type MoneyParseError } from '../../money/index.js'
+import { currencyUnitName, decimalsOf, formatMoney, type Money, type MoneyParseError } from '../../money/index.js'
 import { dayOfInstant } from './accounts.js'
 import {
 	WHOLE,
@@ -10,6 +10,7 @@ import {
 	type AccountKind,
 	type AssetKind,
 	type FileImportPayload,
+	type IncomeSource,
 	type LinkState,
 	type ProviderLink,
 } from './types.js'
@@ -105,6 +106,73 @@ export function importDetail(
 	const account = accounts.find((entry) => entry.id === row.accountId)
 	const name = account ? importAccountName(account, tr) : tr('domains.finance.import.unknownAccount')
 	return tr('domains.finance.import.knownDetail', { values: { count: row.rows, account: name } })
+}
+
+const monthFormats = new Map<string, Intl.DateTimeFormat>()
+/** A day's month in words, "October", or with its year, "January 2027". */
+export function monthLine(day: string, lang: string, withYear = false): string {
+	const key = `${lang}:${withYear}`
+	let format = monthFormats.get(key)
+	if (!format) {
+		format = new Intl.DateTimeFormat(lang, { month: 'long', timeZone: 'UTC', ...(withYear ? { year: 'numeric' } : {}) })
+		monthFormats.set(key, format)
+	}
+	return format.format(new Date(`${day.slice(0, 7)}-01T00:00:00Z`))
+}
+
+/** The parts of an income source's second line (#80): cadence, account, third paychecks, state, other currency. */
+export interface IncomeLineInput {
+	source: IncomeSource
+	/** The account its latest row came into. */
+	account?: Account
+	/** The expected pay day that passed with no paycheck. */
+	missed?: string
+	/** `YYYY-MM` months with three biweekly paychecks. */
+	thirdChecks: readonly string[]
+	home: string
+}
+
+/**
+ * An income source's second line: "Twice a month · into Chase Total Checking ••4417 · Late, due Thu 15 Oct", "Every
+ * two weeks · into … · 3 paychecks in January and July · Next about Fri 30 Oct", "Tax refund · around April".
+ */
+export function incomeLine(input: IncomeLineInput, tr: Translate, lang: string): string {
+	const { source, account, missed, thirdChecks } = input
+	const parts: string[] = []
+	const income = source.kind === 'income'
+	const cadenced = income && source.cadence !== 'irregular' && source.cadence !== 'yearly'
+	if (cadenced) parts.push(tr(`domains.finance.income.cadence.${source.cadence}`))
+	if (account) parts.push(tr('domains.finance.income.into', { values: { account: importAccountName(account, tr) } }))
+	if (cadenced && !source.endedOn && thirdChecks.length) {
+		const months = new Intl.ListFormat(lang, { type: 'conjunction' }).format(
+			thirdChecks.map((month) => monthLine(`${month}-01`, lang, month.slice(0, 4) !== thirdChecks[0]!.slice(0, 4)))
+		)
+		parts.push(tr('domains.finance.income.thirdChecks', { values: { months } }))
+	}
+	const day = (iso: string) => dayLine(iso, lang)
+	const around = source.nextDay ? monthLine(source.nextDay, lang) : undefined
+	if (source.kind === 'tax-refund')
+		parts.push(tr('domains.finance.income.state.taxRefund', { values: { month: around ?? '' } }))
+	else if (source.kind === 'tax-payment')
+		parts.push(tr('domains.finance.income.state.taxPayment', { values: { month: around ?? '' } }))
+	else if (source.endedOn)
+		parts.push(tr('domains.finance.income.state.ended', { values: { day: day(source.endedOn) } }))
+	else if (missed) parts.push(tr('domains.finance.income.state.late', { values: { day: day(missed) } }))
+	else if (source.cadence === 'irregular') parts.push(tr('domains.finance.income.state.irregular'))
+	else if (source.nextDay) parts.push(tr('domains.finance.income.state.next', { values: { day: day(source.nextDay) } }))
+	if (source.expected.currency !== input.home) parts.push(tr('domains.finance.row.notInTotals'))
+	return parts.join(' · ')
+}
+
+/** An income source's amount: the expected paycheck, "about … a month" when irregular, "about …" for a tax one. */
+export function incomeMeta(source: IncomeSource, monthly: Money, tr: Translate, lang: string): string {
+	if (source.kind !== 'income')
+		return tr('domains.finance.income.about', {
+			values: { amount: formatMoney(source.expected, lang, { sign: 'never' }) },
+		})
+	if (source.cadence === 'irregular')
+		return tr('domains.finance.income.perMonth', { values: { amount: formatMoney(monthly, lang) } })
+	return formatMoney(source.expected, lang)
 }
 
 /** What a field says of an amount it could not read in the currency. */

@@ -23,10 +23,12 @@ import {
 	type Entity,
 	type Write,
 } from '../../data/index.js'
-import { nowIso, todayIso } from '../../dates/index.js'
+import { dateIn, nowIso, todayIso } from '../../dates/index.js'
 import { t } from '../../i18n/index.js'
 import type { Money } from '../../money/index.js'
+import { assertFact, deleteFact, queryFacts, updateFact } from '../../profile/client.js'
 import { settings } from '../../settings/index.js'
+import { emit, withdraw } from '../../signals/runtime.js'
 import {
 	accountGroups,
 	accountTotals,
@@ -59,6 +61,24 @@ import {
 	type RepaymentError,
 	type SplitError,
 } from './edits.js'
+import {
+	bandOf,
+	detectIncome,
+	HANDLED_MAX,
+	incomeAverage,
+	incomeOps,
+	incomeQuestions,
+	incomeSignals,
+	leanSinceOf,
+	missedDay,
+	monthlyIncome,
+	monthlyOf,
+	taxRowIds,
+	thirdCheckMonths,
+	type IncomeSignal,
+	type IncomeSignalName,
+} from './income.js'
+import { essentialLines, pauseCandidates, runwayOf } from './lean.js'
 import { buildLedger, queryLedger, touchedTransactions, type LedgerAnswer, type LedgerQuery } from './ledger.js'
 import { provider } from './provider.svelte.js'
 import { financeFromRows, financeRows, financeUris } from './rows.js'
@@ -76,6 +96,8 @@ import {
 	type Category,
 	type CategoryPayload,
 	type FinanceData,
+	type IncomeSource,
+	type IncomeSourcePayload,
 	type Merchant,
 	type MerchantPayload,
 	type ProviderLink,
@@ -107,6 +129,19 @@ const code = (error: unknown) => dataErrorCode(error) ?? 'unknown'
 const withId = <T>(row: Entity<T>): T & { id: string } => ({ ...row.payload, id: row.id })
 const ruleOf = (row: Entity<RulePayload>): Rule => ({ ...row.payload, id: row.id, updatedAt: row.updatedAt })
 
+/** The fact the income pass keeps (finance.md §4). */
+const BAND = 'monthly-income-band'
+
+/** A question the owner answered on the page: the signal and key whose card leaves the inbox once the write lands. */
+type Answered = { name: IncomeSignalName; key: string }
+
+/** A source without some of its keys. */
+function without(source: IncomeSource, ...keys: (keyof IncomeSource)[]): IncomeSource {
+	const next = { ...source }
+	for (const key of keys) delete next[key]
+	return next
+}
+
 /** What an owner's fix answers: its undo, a refusal's code, or nothing when the row is gone or nothing changed. */
 export type EditAnswer<C extends string = never> = Undo | Refused<C> | undefined
 
@@ -130,6 +165,8 @@ export class FinanceStore {
 	categories = $state<Category[]>([])
 	merchants = $state<Merchant[]>([])
 	rules = $state<Rule[]>([])
+	/** The income sources the income pass keeps (#80), the hidden ones too. */
+	incomeSources = $state<IncomeSource[]>([])
 	/** The minute, while a page is watching: a link goes stale as it moves. */
 	clock = $state(Date.now())
 
@@ -138,6 +175,7 @@ export class FinanceStore {
 
 	#loading: Promise<void> | undefined
 	#classifying: Promise<void> | undefined
+	#detecting: Promise<void> | undefined
 	/** The live transactions by id, once read; a plain map, so `#version` says when it changed. */
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- a plain map: `#version` is what the ledger reads
 	#rows = new Map<string, Entity<TransactionPayload>>()
@@ -176,6 +214,59 @@ export class FinanceStore {
 			home: settings.homeCurrency,
 		})
 	})
+	/** The owner's calendar day, which moves with the minute only when the day turns. */
+	readonly #today = $derived(dateIn(undefined, this.clock))
+	/**
+	 * What the page shows of income (#80, D-196), once the ledger is ready: each source with its merchant's current
+	 * name, the rows the Income section draws, the questions most urgent first, the monthly income and the trailing
+	 * average (#84 reads it), and lean mode's runway, essentials and what to pause while it is on.
+	 */
+	readonly income = $derived.by(() => {
+		if (!this.ledgerReady) return undefined
+		void this.#version
+		const today = this.#today
+		const home = settings.homeCurrency
+		const ledger = this.ledger
+		const detected = detectIncome({
+			transactions: [...this.#rows.values()],
+			merchants: this.merchants,
+			categories: this.categories,
+			today,
+		})
+		// a lookup made and read inside this derivation, never kept
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity
+		const names = new Map(this.merchants.map((merchant) => [merchant.id, merchant.name]))
+		const sources = this.incomeSources.map((source) => {
+			const name = source.merchantId ? names.get(source.merchantId) : undefined
+			return name ? { ...source, name } : source
+		})
+		const exclude = taxRowIds(detected)
+		const since = leanSinceOf(sources)
+		const lean = { ledger, categories: this.categories, today, exclude }
+		return {
+			today,
+			sources,
+			rows: sources
+				.filter((source) => !source.ignored)
+				.map((source) => ({
+					source,
+					monthly: monthlyOf(source, ledger, today),
+					missed: missedDay(source, today),
+					thirdChecks: thirdCheckMonths(source, today),
+				})),
+			questions: incomeQuestions(sources, detected, today),
+			monthly: monthlyIncome(sources, ledger, home, today),
+			average: incomeAverage(ledger, { month: today.slice(0, 7), exclude }),
+			lean: since
+				? {
+						since,
+						runway: runwayOf({ ...lean, accounts: this.accounts, sources, home }),
+						essentials: essentialLines(lean),
+						pause: pauseCandidates(lean),
+					}
+				: undefined,
+		}
+	})
 
 	accountById(id?: string): Account | undefined {
 		return id ? this.accounts.find((account) => account.id === id) : undefined
@@ -198,18 +289,20 @@ export class FinanceStore {
 
 	async #read() {
 		try {
-			const [links, accounts, assets, categories, merchants, rules] = await Promise.all([
+			const [links, accounts, assets, categories, merchants, rules, sources] = await Promise.all([
 				queryEntities<ProviderLinkPayload>({ type: FINANCE.link }),
 				queryEntities<AccountPayload>({ type: FINANCE.account }),
 				queryEntities<AssetPayload>({ type: FINANCE.asset }),
 				queryEntities<CategoryPayload>({ type: FINANCE.category }),
 				queryEntities<MerchantPayload>({ type: FINANCE.merchant }),
 				queryEntities<RulePayload>({ type: FINANCE.rule }),
+				queryEntities<IncomeSourcePayload>({ type: FINANCE.income }),
 			])
 			this.#show(financeFromRows({ links, accounts, assets }))
 			this.categories = categories.map(withId)
 			this.merchants = merchants.map(withId)
 			this.rules = rules.map(ruleOf)
+			this.incomeSources = sources.map(withId)
 			this.saveFailed = this.#queue.failed
 		} catch (error) {
 			// nothing was read: say so, and let the retry read again
@@ -631,6 +724,182 @@ export class FinanceStore {
 				await logError('data', 'The Orchard classification pass failed', code(error)).catch(() => null)
 			}
 		})
+		// the rows have their kinds now: the income pass reads them
+		await this.detectIncome()
+	}
+
+	// ---- Income (#80, D-196) ---------------------------------------------------------------------------------------
+
+	/**
+	 * The income pass over every live transaction: after each classification pass, after a sync that wrote nothing
+	 * and when the page mounts, so a late paycheck shows even when no rows arrive. One queue job reads, works out and
+	 * writes the `income-source` rows; then the questions' signals are emitted, each once per key, and the
+	 * `monthly-income-band` fact is brought in line. A failure is logged by its code and leaves the rows; the next pass
+	 * tries again. A second ask while one runs joins it.
+	 */
+	detectIncome(): Promise<void> {
+		return (this.#detecting ??= this.#detectIncome().finally(() => (this.#detecting = undefined)))
+	}
+
+	async #detectIncome() {
+		await this.load()
+		if (this.#queue.failed) return
+		let made: { signals: IncomeSignal[]; sources: IncomeSource[]; today: string } | undefined
+		try {
+			made = await this.#exclusive(async () => {
+				try {
+					const today = todayIso()
+					const [transactions, rows] = await Promise.all([
+						this.#transactions(),
+						queryEntities<IncomeSourcePayload>({ type: FINANCE.income }),
+					])
+					const detected = detectIncome({ transactions, merchants: this.merchants, categories: this.categories, today })
+					const out = incomeOps(detected, rows, newId)
+					for (const ops of chunked(out.ops)) await this.#write(ops)
+					this.incomeSources = out.sources
+					const lang = settings.language
+					const questions = incomeQuestions(out.sources, detected, today)
+					const signals = incomeSignals(questions, out.created, out.sources, today, (day) => dayLine(day, lang))
+					return { signals, sources: out.sources, today }
+				} catch (error) {
+					await logError('data', 'The Orchard income pass failed', code(error)).catch(() => null)
+					return undefined
+				}
+			})
+		} catch {
+			return
+		}
+		if (!made) return
+		for (const signal of made.signals) {
+			await emit(signal.name, signal.payload, { dedupeKey: signal.dedupeKey }).catch(
+				(error: unknown) =>
+					void logError('data', 'An Orchard income signal was not emitted', code(error)).catch(() => null)
+			)
+		}
+		await this.#syncBand(made.sources, made.today)
+	}
+
+	/**
+	 * `monthly-income-band` (finance.md §4): the fact Orchard derived is made to say what the sources now say,
+	 * asserted, updated or deleted. The owner's own facts of the type are never read or changed here.
+	 */
+	async #syncBand(sources: IncomeSource[], today: string) {
+		try {
+			const want = bandOf(sources, this.ledger, settings.homeCurrency, today)
+			const have = (await queryFacts({ types: [BAND] })).filter((fact) => fact.provenance === 'domain-derived')
+			const [first, ...rest] = have
+			for (const fact of want ? rest : have) await deleteFact(fact.id)
+			if (!want) return
+			if (!first)
+				await assertFact({ type: BAND, value: want.value, provenance: 'domain-derived', confidence: want.confidence })
+			else if (first.value !== want.value || first.confidence !== want.confidence)
+				await updateFact(first.id, { value: want.value, confidence: want.confidence })
+		} catch (error) {
+			await logError('data', 'The monthly income band could not be written', code(error)).catch(() => null)
+		}
+	}
+
+	incomeById(id: string): IncomeSource | undefined {
+		return this.income?.sources.find((source) => source.id === id)
+	}
+
+	/**
+	 * The owner's answer on one or more sources: shown at once, written in one batch with one undo (D-12), and the
+	 * questions it answers withdrawn from the inbox once it lands. Nothing when no source changes.
+	 */
+	#incomeChange(change: (source: IncomeSource) => IncomeSource | undefined, answered: Answered[] = []) {
+		const plain = $state.snapshot(this.incomeSources) as IncomeSource[]
+		const was: IncomeSource[] = []
+		const next: IncomeSource[] = []
+		for (const source of plain) {
+			const changed = change(source)
+			if (!changed) continue
+			was.push(source)
+			next.push(changed)
+		}
+		if (!next.length) return undefined
+		const before = this.incomeSources
+		const changedOf = (id: string) => next.find((source) => source.id === id)
+		return this.#commit({
+			apply: () => (this.incomeSources = this.incomeSources.map((source) => changedOf(source.id) ?? source)),
+			revert: () => (this.incomeSources = before),
+			ops: next.map((source) => ({ op: 'updateEntity', id: source.id, payload: payloadOf(source) })),
+			inverse: was.map((source) => ({ op: 'updateEntity', id: source.id, payload: payloadOf(source) })),
+			after: answered.length
+				? async () => {
+						for (const { name, key } of answered) await withdraw(name, key).catch(() => null)
+					}
+				: undefined,
+		})
+	}
+
+	/** The late question a source would ask today, as what an answer withdraws. */
+	#lateOf(source: IncomeSource | undefined): Answered[] {
+		const day = source ? missedDay(source, todayIso()) : undefined
+		return source && day ? [{ name: 'finance.paycheck-late', key: `${source.id}:${day}` }] : []
+	}
+
+	/** "No, it's just late": the paycheck due that day is late, and nothing is asked about it again. */
+	paycheckLate(id: string, day: string): Undo | undefined {
+		const answered: Answered[] = [{ name: 'finance.paycheck-late', key: `${id}:${day}` }]
+		return this.#incomeChange((source) => (source.id === id ? { ...source, lateOk: day } : undefined), answered)
+	}
+
+	/** The job ended today; with `lean`, lean mode starts too ("Yes, it ended"). */
+	endIncome(id: string, options: { lean?: boolean } = {}): Undo | undefined {
+		const today = todayIso()
+		const answered = this.#lateOf(this.incomeSources.find((source) => source.id === id))
+		return this.#incomeChange(
+			(source) =>
+				source.id === id && !source.endedOn
+					? { ...source, endedOn: today, ...(options.lean ? { leanSince: today } : {}) }
+					: undefined,
+			answered
+		)
+	}
+
+	/** "Still paid here": the source is active again, and lean mode and the late answer go with its end. */
+	restoreIncome(id: string): Undo | undefined {
+		return this.#incomeChange((source) =>
+			source.id === id && source.endedOn ? without(source, 'endedOn', 'leanSince', 'lateOk') : undefined
+		)
+	}
+
+	startLean(id: string): Undo | undefined {
+		const today = todayIso()
+		return this.#incomeChange((source) =>
+			source.id === id && !source.leanSince ? { ...source, leanSince: today } : undefined
+		)
+	}
+
+	/** Lean mode off: no source keeps `leanSince`. */
+	endLean(): Undo | undefined {
+		return this.#incomeChange((source) => (source.leanSince ? without(source, 'leanSince') : undefined))
+	}
+
+	/** "Not income" or "Not a tax payment": the row hides, and the pass asks nothing more about it. */
+	ignoreIncome(id: string): Undo | undefined {
+		const answered = this.#lateOf(this.incomeSources.find((source) => source.id === id))
+		return this.#incomeChange((source) => (source.id === id ? { ...source, ignored: true } : undefined), answered)
+	}
+
+	/** The bonus row is answered (Save or Not a bonus); the source remembers the latest 20. */
+	handleBonus(sourceId: string, rowId: string): Undo | undefined {
+		const answered: Answered[] = [{ name: 'finance.bonus', key: rowId }]
+		return this.#incomeChange((source) => {
+			if (source.id !== sourceId) return undefined
+			const handled = [...(source.handled ?? []).filter((id) => id !== rowId), rowId].slice(-HANDLED_MAX)
+			return { ...source, handled }
+		}, answered)
+	}
+
+	/** The owner has seen the new paycheck during lean mode. */
+	seenNewIncome(id: string): Undo | undefined {
+		const answered: Answered[] = [{ name: 'finance.income-new', key: `${id}:new` }]
+		return this.#incomeChange(
+			(source) => (source.id === id && !source.seenNew ? { ...source, seenNew: true } : undefined),
+			answered
+		)
 	}
 
 	/**

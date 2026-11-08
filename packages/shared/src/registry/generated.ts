@@ -2453,7 +2453,10 @@ export const DECLARATIONS = {
 			}
 		],
 		"signals": [
-			"finance.link-broken"
+			"finance.link-broken",
+			"finance.paycheck-late",
+			"finance.bonus",
+			"finance.income-new"
 		],
 		"notificationKinds": [
 			{
@@ -2462,6 +2465,30 @@ export const DECLARATIONS = {
 				"cadence": "when-found",
 				"default": true,
 				"signal": "finance.link-broken",
+				"when": null
+			},
+			{
+				"id": "paycheck-late",
+				"channel": "in-app",
+				"cadence": "when-found",
+				"default": true,
+				"signal": "finance.paycheck-late",
+				"when": null
+			},
+			{
+				"id": "bonus",
+				"channel": "in-app",
+				"cadence": "when-found",
+				"default": true,
+				"signal": "finance.bonus",
+				"when": null
+			},
+			{
+				"id": "new-income",
+				"channel": "in-app",
+				"cadence": "when-found",
+				"default": true,
+				"signal": "finance.income-new",
 				"when": null
 			}
 		],
