@@ -1,4 +1,4 @@
-// Insurance and medical bills (product/domains/finance.md §6, #85, D-201), pure so they are tested here: what a
+// Insurance and medical bills (product/domains/finance.md §6, #85, D-202), pure so they are tested here: what a
 // premium that comes every few months asks the owner to set aside each month, and which live bill a captured
 // document lands on. An insurer's EOB is not a bill yet: it drafts the provider's estimate, the provider's own bill
 // replaces that estimate, a corrected EOB updates it, and an EOB that arrives after its bill leaves the bill as it is.

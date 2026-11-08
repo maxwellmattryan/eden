@@ -1207,6 +1207,7 @@
 				"activity": "取引",
 				"accounts": "口座",
 				"bills": "請求",
+				"budget": "予算",
 				"investments": "投資"
 			},
 			"tabsLabel": "果樹園のセクション",
@@ -1868,6 +1869,68 @@
 				"pause": "止められる支出",
 				"uncategorised": "未分類",
 				"nothing": "必需品以外に繰り返す支出はありません。"
+			},
+			"budget": {
+				"previous": "前の月",
+				"next": "次の月",
+				"planned": "予定",
+				"spent": "支出",
+				"left": "残り",
+				"income": "収入",
+				"toPlan": "未計画",
+				"notPlanned": "{amount}がまだ計画されていません",
+				"overPlanned": "収入より{amount}多く計画しています",
+				"fromPaychecks": "給与から",
+				"average": "収入が一定でないため、{months}か月の平均",
+				"stale": "支出には{day}時点の{institution}を含みます",
+				"outside": "予算外の支出 {amount}",
+				"otherCurrencies": "ほかの通貨での支出は含みません",
+				"lean": "節約モード中：新しい下書きは必需品だけになります",
+				"readFailed": "取引を読み込めませんでした",
+				"emptyTitle": "予算はまだありません",
+				"emptyText": "これまでの月から下書きを作れます。固定費は請求とサブスクから、それ以外は支出から計算します。",
+				"draft": "履歴から下書き",
+				"addLine": "項目を追加",
+				"groups": {
+					"fixed": "固定費",
+					"variable": "変動費",
+					"sinking": "積立"
+				},
+				"of": "{available}のうち{spent}",
+				"over": "{amount}超過",
+				"rolledOver": "{amount}を繰り越し",
+				"rollsOver": "繰り越します",
+				"due": "{month}期限",
+				"monthly": "月に{amount}",
+				"planPercent": "予定の{percent}%",
+				"savedPercent": "{percent}%積立済み",
+				"actions": "{category}の操作",
+				"edit": "項目を編集",
+				"remove": "項目を削除",
+				"sheet": {
+					"editTitle": "{category}を編集",
+					"addTitle": "項目を追加",
+					"category": "カテゴリ",
+					"choose": "カテゴリを選ぶ",
+					"amount": "金額",
+					"rollover": "残りを繰り越す",
+					"sinking": "請求に向けて積み立てる",
+					"sinkingHint": "積立は常に繰り越します。",
+					"target": "目標額",
+					"due": "期限"
+				},
+				"errors": {
+					"budget:amount": "0より大きい金額を入力してください",
+					"budget:target": "0より大きい目標額を入力してください",
+					"budget:category": "カテゴリを選んでください"
+				},
+				"toasts": {
+					"drafted": "{month}の項目を{count}件下書きしました",
+					"nothing": "まだ下書きできるものがありません。まる1か月分の支出か、繰り返しの請求が必要です。",
+					"removed": "{category}を予算から外しました",
+					"updated": "{category}を更新しました",
+					"added": "{category}を追加しました"
+				}
 			},
 			"toasts": {
 				"incomeEnded": "{employer}を終了にしました",

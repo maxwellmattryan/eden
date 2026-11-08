@@ -1,4 +1,4 @@
-// Pay stub deductions (product/domains/finance.md §6, #85, D-201), pure so they are tested here: the shape the
+// Pay stub deductions (product/domains/finance.md §6, #85, D-202), pure so they are tested here: the shape the
 // document reader's answer is held to (`finance.read-pay-stub`), the deductions of it that hold, what of them are
 // insurance premiums, and the ops that keep them on their income source with the stub's `file-import` row. Health
 // premiums leave through the paycheck and are never a transaction, so nothing here touches the ledger. The figures

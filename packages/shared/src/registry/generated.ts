@@ -2419,6 +2419,10 @@ export const DECLARATIONS = {
 				"label": "domains.finance.tabs.bills"
 			},
 			{
+				"id": "budget",
+				"label": "domains.finance.tabs.budget"
+			},
+			{
 				"id": "investments",
 				"label": "domains.finance.tabs.investments"
 			}
@@ -2586,6 +2590,7 @@ export const DECLARATIONS = {
 			"bill",
 			"file-import",
 			"recurring-charge",
+			"budget",
 			"holding",
 			"security"
 		]

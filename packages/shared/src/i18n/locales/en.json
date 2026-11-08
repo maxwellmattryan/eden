@@ -1207,6 +1207,7 @@
 				"activity": "Activity",
 				"accounts": "Accounts",
 				"bills": "Bills",
+				"budget": "Budget",
 				"investments": "Investments"
 			},
 			"tabsLabel": "Orchard sections",
@@ -1868,6 +1869,68 @@
 				"pause": "What to pause",
 				"uncategorised": "Uncategorised",
 				"nothing": "Nothing repeats outside the essentials."
+			},
+			"budget": {
+				"previous": "Previous month",
+				"next": "Next month",
+				"planned": "Planned",
+				"spent": "Spent",
+				"left": "Left",
+				"income": "Income",
+				"toPlan": "To plan",
+				"notPlanned": "{amount} not planned yet",
+				"overPlanned": "Planned {amount} more than you earn",
+				"fromPaychecks": "From your paychecks",
+				"average": "{months}-month average, since your income varies",
+				"stale": "Spent includes {institution} as of {day}",
+				"outside": "{amount} spent outside the budget",
+				"otherCurrencies": "Spending in other currencies is left out",
+				"lean": "Lean mode is on: a new draft keeps the essentials only",
+				"readFailed": "Couldn't read your transactions",
+				"emptyTitle": "No budget yet",
+				"emptyText": "Draft one from your last months: fixed lines from your bills and subscriptions, the rest from what you spend.",
+				"draft": "Draft from history",
+				"addLine": "Add line",
+				"groups": {
+					"fixed": "Fixed",
+					"variable": "Variable",
+					"sinking": "Sinking funds"
+				},
+				"of": "{spent} of {available}",
+				"over": "Over by {amount}",
+				"rolledOver": "{amount} rolled over",
+				"rollsOver": "Rolls over",
+				"due": "Due {month}",
+				"monthly": "{amount} a month",
+				"planPercent": "{percent}% of plan",
+				"savedPercent": "{percent}% saved",
+				"actions": "Actions for {category}",
+				"edit": "Edit line",
+				"remove": "Remove line",
+				"sheet": {
+					"editTitle": "Edit {category}",
+					"addTitle": "Add a line",
+					"category": "Category",
+					"choose": "Choose a category",
+					"amount": "Amount",
+					"rollover": "Roll over what's left",
+					"sinking": "Save toward a bill",
+					"sinkingHint": "A sinking fund always rolls over.",
+					"target": "Target",
+					"due": "Due"
+				},
+				"errors": {
+					"budget:amount": "Enter an amount above zero",
+					"budget:target": "Enter a target above zero",
+					"budget:category": "Choose a category"
+				},
+				"toasts": {
+					"drafted": "Drafted {count, plural, one {# line} other {# lines}} for {month}",
+					"nothing": "Nothing to draft yet: Orchard needs a full month of spending or a repeating bill.",
+					"removed": "Removed {category} from the budget",
+					"updated": "Updated {category}",
+					"added": "Added {category}"
+				}
 			},
 			"toasts": {
 				"incomeEnded": "Marked {employer} as ended",

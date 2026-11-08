@@ -4,7 +4,7 @@ status: draft
 summary: The contract for every component in `@eden/ui-kit`: purpose, props with the bindable ones marked, callbacks, snippets, platform behaviour and the stories each ships, grouped by the wave it is built in.
 read-this-if: You are building, changing or consuming a kit component.
 depends-on: [engineering/ui-kit, design/ux-patterns]
-updated: 2026-11-06
+updated: 2026-11-08
 ---
 
 ## How to read this
@@ -32,6 +32,7 @@ Props are listed by name; `*` marks a bindable prop; every component also takes 
 | `Segmented` | tabs inside a domain, with a sliding pill | `items` (strings or `{ id, label, icon }`), `selected*`, `iconPosition`, `label` | `onchange` (only on a real change) | | Text, Icons, In a header |
 | `Skeleton` | loading rows matching the final layout | `rows`, `icon` | | one fade-in, no loop | Default, Compact |
 | `Stat` | a figure and its unit: a widget's headline, or one figure among several | `value`, `unit`, `size` (lg 28, the default; md 18, a figure among several in a card; sm 14, a figure in a dense row) | | | Default, With unit, Sizes, Long value |
+| `Meter` | a bounded quantity: what a budget line has spent of its plan, what a fund has saved of its target (#84) | `value`, `max`, `label` (the accessible name), `valuetext` (read in place of the number; a caller hiding amounts passes a percentage), `tone` (auto, the default, turns to danger past `max`; default; danger) | | `role="meter"` with `aria-valuemax` the larger of value and max; a 6 px track, the fill clamped to its end, danger past the max (3:1 on the track in both themes), no motion; no copy of its own, so the caller says "over" in words too | Default, Over, Empty |
 | `DailyLine` | the italic line and its source | `line`, `source`, `large` (the `daily-line-lg` style) | | | Default, Large, Japanese |
 | `Wordmark` | "Eden" in the display face, written as the locale writes it (D-66) | `name`, `size` (xl, md) | splash and About at xl; the sidebar's head at md (D-55) | | Default, Sidebar size, Splash |
 | `AppMark` | the app mark (D-65): the overgrown trilithon alone in the brand colour, no square behind it, decorative | | always beside a `Wordmark`; 32 px by default, sized by the caller through `class`; the drawing is a mask with an id from `$props.id()`, so the surface shows through its cuts; draws the same paths as `app-mark.svg` beside it (exported as `@eden/ui-kit/app-mark.svg` for the splash), and `AppMark.test.ts` fails if they differ | | Default, With wordmark, Large |

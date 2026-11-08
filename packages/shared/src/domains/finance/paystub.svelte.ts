@@ -1,4 +1,4 @@
-// Read a pay stub (product/domains/finance.md §6, #85, D-201): the session behind the pay stub sheet. It opens the
+// Read a pay stub (product/domains/finance.md §6, #85, D-202): the session behind the pay stub sheet. It opens the
 // document reader with the provider line and the file's earlier import (shared with Capture a bill, so a document is
 // read once), and on the owner's confirm (the consent, D-86) runs `finance.read-pay-stub` from the page with the
 // checked text and the source's currency, or with the picture passed in memory and read once. The answer opens the
