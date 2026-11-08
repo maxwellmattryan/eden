@@ -4,7 +4,7 @@ status: draft
 summary: Everything the owner owns and owes, kept current from their real accounts by Plaid on each device, with Activity, bills, budgets, debt, investments and goals, and the Gardener reading it to find where money leaks. Id `finance`, after Phase 2, built ahead of it.
 read-this-if: You are working on accounts, transactions, bills, budgets, debt, investments, goals, or the Gardener for money.
 depends-on: [substrate/privacy, substrate/registry, substrate/integrations, substrate/grants, substrate/tasks, substrate/ai, domains/_template]
-updated: 2026-11-06
+updated: 2026-11-07
 ---
 
 ## 1. Purpose
@@ -64,6 +64,7 @@ D-188 is the model. What Orchard adds:
 - A holding's or an asset's value is its quantity × the security's price, in the home currency once the price is.
 - Hide amounts (#68) masks every figure on both apps without changing what is stored.
 - Built in #75 (D-193): a pass after every sync that wrote transactions (`finance.classify()`) gives each live `transaction` its own keys: `kind`, `merchantId`, `counterparty`, `categoryId` with `categoryBy`, `transferId`, `refundOf` and `review`; the owner's fixes add `repays`, `reimbursable`, `parts`, `oneOff`, and the sync adds `replaced` on a posted row that took over a pending one. `budget-category`, `category-rule` and `merchant` are live rows, the defaults seeded once. The modules: `merchants.ts` (cleaning and vague brands), `categories.ts` (defaults and the provider mapping), `classify.ts` (the pass, `spendingOf`, `fitParts`, `ruleFor`), `edits.ts` (the owner's fixes) and the store's methods over them. No page shows them yet (#83).
+- Built in #74 (D-194): a `file-import` is one statement file brought in: `source: 'file'` with the file's SHA-256 as its `externalId`, so the engine refuses a second live record of the same file, and a payload of `what` (`csv`, `ofx`, `pdf` or `picture`), `accountId`, `from`, `to`, `rows`, `matched`, `skipped` and `at`. A row read from a statement is an ordinary `transaction` with no `source` (a statement line has no stable id) and one key of its own, `importId`, the `file-import` that made it, so the undo and later audits find it. `file-import` stays out of the export.
 - Built in #71 (D-191): `@eden/shared/money` holds the type and its arithmetic, proven by `money.vectors.json`. A balance is kept as the bank states it and the kind (credit card, loan) says it is owed; a share is in basis points; a `balance-snapshot` is upserted per account per local day through the account's `lastSnapshot`, and the store never reads snapshots. The home currency is a setting a bundle carries; an account or asset in another stays out of totals and the page says so.
 
 ### Encryption (#69)
@@ -97,6 +98,9 @@ Orchard's reads are `never` until the owner grants them (D-182). The finance gra
 | `wealth` (`finance_wealth`): net worth over time, holdings and allocation, debts and APRs, contributions against limits | `account`, `balance-snapshot`, `holding`, `security`, `asset`, `liability`, `contribution-limit` | read | none | plain |
 | `flags` (`finance_flags`): precomputed oddities: fees, interest charged, duplicates, new merchants, unusual amounts; price rises are `recurring`'s | `transaction`, `money-rollup`, `merchant`, `account` | read | none | plain |
 | `draft` (`finance_draft`): a batch of drafts: a budget from history, a goal, a bill from confirmed text, rules from the owner's fixes, a merchant merge, a watch | `budget`, `budget-category`, `category-rule`, `merchant`, `savings-goal`, `bill`, `spending-watch`, `money-rollup` | write-draft | one batch card (D-108) | `light` |
+| `read-statement` (`finance_read-statement`, built in #74): the transaction lines of a statement the owner is importing, from the confirmed text or the picture; a page's own run from Import, refused in a conversation (D-194) | none | write-draft | none: nothing is written until the owner imports | `light`, needs `vision` |
+
+That is the seven tools #90 builds plus `read-statement`, which is already declared. It is strict, with `text` and `currency` both required, so it spends none of the strict tools' optional parameters.
 
 Three substrate tools are reused, not added: `draft-tasks` for reminders such as "cancel Hulu before the 14th", which gains an optional `about` naming the row a task is for, so a bill's Task closes when the bill is paid (#78); `read-rows` for rows by id, where `finance_query` is for filters; and `agenda`, unchanged, where a bill's Task shows like any other. There is no compare, plan, remind or watch tool: those are `versus`, `changes`, `draft-tasks` and a row in `finance_draft`. The six read tools answer from numbers Eden has, so they declare no grade (D-74); `finance_draft` declares `light` because bill capture runs it as a tool run from a page, with the confirmed text (`engineering/gardener.md`).
 
@@ -165,6 +169,17 @@ Built once for bills (#78) and statement import (#74), which only mount it. It f
 - **The sheet** is the kit's `DocumentSheet` (`engineering/ui-kit-components.md`). Its states are Collect (one document at a time), Reading, Read, Read badly (the picture becomes the primary button), Could not read (`no-text` and `unavailable` offer the picture, the others only Cancel) and Already imported (Close only). The `Domains/Orchard/ReadConfirm` mock renders through it.
 - **The session** is `documentRead` in `@eden/shared/domains/finance`. A caller awaits `documentRead.read({ confirmLabel, next, known?, preview? })`. The result is `{ kind: 'text', text, fingerprint, name, mime }` on confirm, with the text as edited, or `{ kind: 'picture', bytes, fingerprint, name, mime }`, or `undefined` for Cancel, Close or a dismissed sheet. The fingerprint is the SHA-256 hex of the bytes, worked out first. `known(fingerprint)` answering `{ day, detail }` goes straight to Already imported. The bytes are held in memory and let go when the session settles, and a read that answers after Cancel is dropped.
 - **Mounting it** (#78, #74). The view binds `DocumentSheet` to the session field for field: `bind:open={documentRead.open}`, then `phase`, `quality`, `failure`, `file`, `bind:text={documentRead.text}`, `masked`, `pages` and `imported`. `confirmLabel` and `next` come from `documentRead.options`, and the provider line is worked out from `options.preview` as `domains/kitchen/words.ts` `readerOf` does. The callbacks map as `onfiles` to `take`, `onconfirm` to `confirm`, `onsendpicture` to `sendPicture`, and `oncancel` and `onclose` to `cancel`.
+
+### Statement import (#74)
+
+D-194. Plaid reaches 24 months at most (D-187); older months, and accounts Plaid cannot see, come from a bank's CSV, OFX or QFX export or a PDF statement.
+
+- **Entry points**, on both apps: **Import** in the page header after Add asset, shown while there is at least one account, and **Import a statement** in each account row's menu, open or closed, after the account's own actions and before Close account and Delete. The row's opens the sheet with that account chosen.
+- **The sheet** is `views/ImportSheet.svelte` over the session `statementImport` (`statement.svelte.ts`). Collect takes an account and one file (`IMPORT_ACCEPT`: CSV, OFX, QFX, PDF, JPEG, PNG, WebP; a CSV or OFX up to 5 MB, a PDF or picture within the reader's caps) and starts the read on whichever comes second; there is no Continue. Review shows the account, the period, "n new rows · m already in Orchard", money in and out through Hide amounts, the lines left out, an OFX's other account number as a warning, the first 10 new rows, and for CSV, PDF and picture the **Charges are positive in this file** toggle, which starts on for a card or loan whose rows are mostly positive. The summary card is a polite live region. Import writes; with nothing new the primary is Done, which still records the file. Already imported and Couldn't import end in Close.
+- **CSV and OFX** are read on the device with no model: `csv.ts` (RFC 4180, `;` or tab, up to 10 preamble lines, the header aliases, signed amount or debit and credit, brackets and CR/DR, Y-M-D, M/D/Y or D/M/Y for the whole file) and `ofx.ts` (SGML or XML, one statement, its `CURDEF` the account's, a duplicate `FITID` kept once, the account number's last four compared in memory and never kept). Failures: `no-columns`, `no-rows`, `too-many` (over 5,000), `currency`, `several-accounts`, `unreadable`.
+- **A PDF or a picture** goes through the document reader: the import sheet closes, `documentRead.read` opens `DocumentSheet` with "Find the rows" and `known: finance.knownImport`, and `documentRead.take([file])` hands it the same file. The confirmed text, or the picture, runs `finance.read-statement` as a page tool run, and the import sheet opens again on Reading and then Review. A file imported before is Already imported inside `DocumentSheet`.
+- **Matching** follows D-194 and is `matchRows` in `statement.ts`, with `sameDescription` comparing the descriptions through `merchants.ts`. Matched lines are counted and never written.
+- **The write** is one queue job in the store (`importStatement`): it reads and matches again, writes the rows and the `file-import` in batches (the record last), then runs `classify()`. The toast's Undo deletes every row the import made and the record, then runs `classify()` again, so the same file reads again. A failed write sets `saveFailed`, and the page's Retry runs the job again. No log carries a name, a description or an amount.
 
 ## 7. Kinds, signals, notifications, intents
 
@@ -322,3 +337,12 @@ From #75:
 - #84 manages categories (the default set is seeded once; budget fields beyond name, group and essential are its own).
 - A non-card `LOAN_PAYMENTS_*` row with no partner stays a `transfer`, so the `debt` default is only reached by a rule or the owner; #86 decides whether an unlinked loan's payment counts as spending.
 - The Hearth receipt split ("a Hearth haul with a receipt can split it for you") needs a cross-domain path, since no domain hears another's signals yet, and a currency on Hearth's prices, which are cents with none. The owner files it as its own issue.
+
+From #74:
+
+- Sync-side matching: a Plaid row that arrives after an import of the same day and amount is not deduplicated, since Plaid's window is fixed at link time (D-187) and imports are for older months. If the two ever overlap, the sync runs `matchRows` (`statement.ts`) over the imported rows (`importId` set, no `source`) before it creates a row.
+- A column-mapping step for a CSV whose headers match no alias in `csv.ts`; today it is `no-columns`.
+- A statement's closing balance as a `balance-snapshot`: the readers drop balances today.
+- #78 mounts nothing new: `DocumentSheet` is mounted once in `views/Orchard.svelte` over `documentRead`, and `finance.knownImport(fingerprint)` answers Already imported from a `file-import`; a bill's letter records its own `file-import` the same way (`importOps` in `statement.ts` shows the shape).
+- #90 counts `finance_read-statement` among Orchard's tools; it refuses in a conversation through its `check` and needs no grant.
+- Only the browser build has run it (CSV and OFX, desktop and phone frontends); the PDF and picture path through the reader and the Gardener has not been run in the Tauri app.
