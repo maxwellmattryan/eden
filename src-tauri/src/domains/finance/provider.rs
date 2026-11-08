@@ -89,6 +89,68 @@ pub struct SyncResult {
     pub cursor: String,
 }
 
+/// One holding as the provider lists it: what an account holds of one security. Every number is a decimal string.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProviderHolding {
+    pub provider_account_id: String,
+    pub security_id: String,
+    pub quantity: String,
+    pub institution_price: Option<String>,
+    /// `YYYY-MM-DD`.
+    pub institution_price_as_of: Option<String>,
+    pub institution_value: Option<String>,
+    /// The total paid, not per share.
+    pub cost_basis: Option<String>,
+    /// ISO 4217, or nothing when the provider gave only an unofficial code.
+    pub currency: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProviderSecurity {
+    pub security_id: String,
+    pub name: String,
+    pub ticker: Option<String>,
+    /// The provider's type (`equity`, `etf`, `mutual fund`, …); TypeScript maps it to a security type.
+    pub kind: Option<String>,
+    pub currency: Option<String>,
+    pub close_price: Option<String>,
+    /// `YYYY-MM-DD`.
+    pub close_price_as_of: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProviderInvestmentTransaction {
+    pub id: String,
+    pub provider_account_id: String,
+    pub security_id: Option<String>,
+    /// `YYYY-MM-DD`.
+    pub date: String,
+    pub name: String,
+    pub quantity: Option<String>,
+    /// As the provider states it: positive is money out of the account.
+    pub amount: String,
+    pub price: Option<String>,
+    /// The provider's type (`buy`, `sell`, `cash`, `fee`, `transfer`, `cancel`).
+    pub kind: String,
+    pub subtype: Option<String>,
+    pub currency: Option<String>,
+}
+
+/// One investments read: the holdings, the securities with their closing prices, and the investment transactions.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InvestmentsResult {
+    /// `ok`, or `none` when the item has no investments to read.
+    pub status: String,
+    pub accounts: Vec<ProviderAccount>,
+    pub holdings: Vec<ProviderHolding>,
+    pub securities: Vec<ProviderSecurity>,
+    pub transactions: Vec<ProviderInvestmentTransaction>,
+}
+
 /// What a new Link session hands the webview: the token it polls with and the page to open.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]

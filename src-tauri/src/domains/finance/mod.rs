@@ -15,9 +15,9 @@ use tauri::State;
 
 use crate::db::secret_store::SecretStore;
 use crate::error::{EdenError, Result};
-use crate::substrate::{egress, ids, Workspace};
+use crate::substrate::{egress, ids, usage, Workspace};
 use plaid::{refused, Env, Keys, Mode, Plaid, Session, Transport};
-use provider::{LinkPoll, LinkStart, PlaidStatus, SyncResult};
+use provider::{InvestmentsResult, LinkPoll, LinkStart, PlaidStatus, SyncResult};
 
 pub mod plaid;
 pub mod provider;
@@ -521,12 +521,14 @@ pub async fn plaid_clear_keys(secrets: State<'_, Box<dyn SecretStore>>) -> Resul
     Ok(())
 }
 
-/// A hosted Link session: a new Item, or with `link_id` the update mode of that link's own Item.
+/// A hosted Link session: a new Item (a brokerage's with `brokerage`), or with `link_id` the update mode of that
+/// link's own Item.
 #[tauri::command]
 pub async fn plaid_link_start(
     workspace: State<'_, Workspace>,
     secrets: State<'_, Box<dyn SecretStore>>,
     link_id: Option<String>,
+    brokerage: Option<bool>,
 ) -> Result<LinkStart> {
     let secrets = secrets.inner().as_ref();
     let plaid = client(&workspace, secrets)?;
@@ -543,7 +545,12 @@ pub async fn plaid_link_start(
                 )
                 .await
         }
-        None => plaid.start_link(&user, &Mode::Link).await,
+        None => {
+            let mode = Mode::Link {
+                brokerage: brokerage.unwrap_or(false),
+            };
+            plaid.start_link(&user, &mode).await
+        }
     }
 }
 
@@ -595,6 +602,34 @@ pub async fn plaid_sync(
     let plaid = client(&workspace, secrets)?;
     let access_token = token(secrets, &link_id)?;
     plaid.sync(&access_token, cursor, chrono::Utc::now()).await
+}
+
+/// The investments read's arguments: a link's ULID and two `YYYY-MM-DD` days, or `plaid:other`.
+pub(crate) fn investments_args(link_id: &str, start_day: &str, end_day: &str) -> Result<()> {
+    if !ids::is_ulid(link_id) {
+        return Err(refused("other", "not a link id"));
+    }
+    if !usage::is_day(start_day) || !usage::is_day(end_day) {
+        return Err(refused("other", "not a day"));
+    }
+    Ok(())
+}
+
+/// One investments read for one link (D-195): holdings, securities with their closing prices, and the investment
+/// transactions from `start_day` to `end_day`.
+#[tauri::command]
+pub async fn plaid_investments(
+    workspace: State<'_, Workspace>,
+    secrets: State<'_, Box<dyn SecretStore>>,
+    link_id: String,
+    start_day: String,
+    end_day: String,
+) -> Result<InvestmentsResult> {
+    investments_args(&link_id, &start_day, &end_day)?;
+    let secrets = secrets.inner().as_ref();
+    let plaid = client(&workspace, secrets)?;
+    let access_token = token(secrets, &link_id)?;
+    plaid.investments(&access_token, &start_day, &end_day).await
 }
 
 /// Removes a tombstoned link's Item at Plaid and its token here. Answers whether there was a token.
