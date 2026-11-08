@@ -1,10 +1,10 @@
 ---
 title: Orchard
 status: draft
-summary: Everything the owner owns and owes, kept current from their real accounts by Plaid on each device, with Activity, bills, budgets, debt, investments and goals, and the Gardener reading it to find where money leaks. Id `finance`, after Phase 2, built ahead of it.
+summary: Everything the owner owns and owes, kept current from their real accounts by Plaid on each device, with income and lean mode, Activity, bills, budgets, debt, investments and goals, and the Gardener reading it to find where money leaks. Id `finance`, after Phase 2, built ahead of it.
 read-this-if: You are working on accounts, transactions, bills, budgets, debt, investments, goals, or the Gardener for money.
 depends-on: [substrate/privacy, substrate/registry, substrate/integrations, substrate/grants, substrate/tasks, substrate/ai, domains/_template]
-updated: 2026-11-07
+updated: 2026-11-08
 ---
 
 ## 1. Purpose
@@ -48,7 +48,7 @@ Everything is T2 unless marked. T3 is stored only on the device, and no tool eve
 | `holding` | quantity, cost basis, value | T2 | `account`, `security` |
 | `security` | a ticker or coin and its daily price history, in its own currency | T0 | |
 | `asset` | anything not linked: cold-storage crypto by quantity or watched address, a car, a home; entered once, valued where possible; an xpub is T3 | T2 | |
-| `income-source` | a detected paycheck: employer, cadence, expected net amount | T2 | `account` |
+| `income-source` | a detected paycheck, other repeating income, or the yearly tax refund or payment: employer, cadence, expected net amount, next day; the owner's answers on it | T2 | `account`, `merchant` |
 | `savings-goal` | a savings rate, or a target with an amount and a date, earmarked within an account | T2 | `account` |
 | `contribution-limit` | the yearly limits for 401(k), IRA and HSA | T0 | |
 | `spending-watch` | a threshold on a category, merchant or account that raises Orchard's own signal | T2 | `budget-category`, `merchant`, `account` |
@@ -66,6 +66,7 @@ D-188 is the model. What Orchard adds:
 - Built in #75 (D-193): a pass after every sync that wrote transactions (`finance.classify()`) gives each live `transaction` its own keys: `kind`, `merchantId`, `counterparty`, `categoryId` with `categoryBy`, `transferId`, `refundOf` and `review`; the owner's fixes add `repays`, `reimbursable`, `parts`, `oneOff`, and the sync adds `replaced` on a posted row that took over a pending one. `budget-category`, `category-rule` and `merchant` are live rows, the defaults seeded once. The modules: `merchants.ts` (cleaning and vague brands), `categories.ts` (defaults and the provider mapping), `classify.ts` (the pass, `spendingOf`, `fitParts`, `ruleFor`), `edits.ts` (the owner's fixes) and the store's methods over them. No page shows them yet (#83).
 - Built in #77 (D-194): the index and query engine, `ledger.ts` in `packages/shared/src/domains/finance`, pure TypeScript. `buildLedger` turns the live transactions, the accounts, the merchants and the home currency into a `Ledger` of one entry per money event: a row, or a transfer or card-payment pair as one entry whose id is the money-out side's (`pairId` the money-in side's, `accountId` from, `toAccountId` to; `ledger.entry(id)` finds it by either side). Every figure is a sum of lines, a row's split parts or the row, a pair's two sides. The account filter is the scope: a pair with both sides in it adds nothing to `in`, `out` and `net` and shows its out side; one side in it adds and shows that side. `spending` is `spendingOf` over the matched lines; `average` leaves one-off lines out; only home-currency lines enter a total, the rest go in `left` per currency and their rows carry `other-currency`. `queryLedger(ledger, query)` answers the measures over everything matched, a page of `rows` (`newest`, `oldest`, `largest`; 50 by default, at most 1000) with `flags`, `groups` by one or two of `category`, `merchant`, `account`, `kind`, `month`, `week`, `weekday`, `day`, and a `versus` period by one non-time key; an invalid query throws `LedgerQueryError`. `TxFilter` holds every Activity filter, full text folded and matched by substring per word; `parseSearch` reads `>N`/`<=N` words as amount bounds and `periodOf` the four presets. `rollupOf` is the `money-rollup` resource (month × category, merchant or account, and daily), memoised per ledger and never stored; `typicalOf` is the mean month over the complete months before. The store holds the live rows in memory, read once by the first `query()`, pass or fix, and re-reads exactly the transactions each batch it sends names (`touchedTransactions`); `finance.ledger` is derived from them, `finance.ledgerReady` says when it holds them all, and the pass and the fixes read from that map.
 - Built in #74 (D-195): a `file-import` is one statement file brought in: `source: 'file'` with the file's SHA-256 as its `externalId`, so the engine refuses a second live record of the same file, and a payload of `what` (`csv`, `ofx`, `pdf` or `picture`), `accountId`, `from`, `to`, `rows`, `matched`, `skipped` and `at`. A row read from a statement is an ordinary `transaction` with no `source` (a statement line has no stable id) and one key of its own, `importId`, the `file-import` that made it, so the undo and later audits find it. `file-import` stays out of the export.
+- Built in #80 (D-198): the income pass, `income.ts`, and lean mode, `lean.ts`, both pure. `detectIncome` groups the live `income` rows of the last 400 days by merchant and counterparty (or the folded name), finds each group's cadence, expected amount and next day, and keeps the tax refunds and payments of the last 800 days as `yearly` sources; `incomeOps` writes one `income-source` per group, identified by `kind` with `merchantId` and `counterparty`, or `nameKey`. The pass's keys are `kind`, `merchantId`, `counterparty`, `nameKey`, `name`, `accountId`, `cadence`, `anchors`, `expected`, `firstDay`, `lastDay` and `nextDay`; the owner's are `endedOn`, `leanSince`, `lateOk`, `ignored`, `seenNew` and `handled` (the bonus rows answered, the newest 20), and the pass never writes them. A source with no rows left is deleted unless it carries an owner key. The store runs the pass (`finance.detectIncome()`) after every classification pass, after a sync run that wrote nothing and when the page mounts; `finance.income` is what the page reads. `income-source` stays out of the export: the sources are rebuilt from transactions and the answers stay on the device (D-184).
 - Built in #71 (D-191): `@eden/shared/money` holds the type and its arithmetic, proven by `money.vectors.json`. A balance is kept as the bank states it and the kind (credit card, loan) says it is owed; a share is in basis points; a `balance-snapshot` is upserted per account per local day through the account's `lastSnapshot`, and the store never reads snapshots. The home currency is a setting a bundle carries; an account or asset in another stays out of totals and the page says so.
 
 ### Encryption (#69)
@@ -82,7 +83,7 @@ Claude Code keeps conversation transcripts on the Mac in plain text, including w
 
 ## 4. Facts
 
-Written: `monthly-income-band` T2, `domain-derived` from `income-source` rows (#80).
+Written: `monthly-income-band` T2, `domain-derived` from `income-source` rows (#80, D-198), built. Its basis is the monthly equivalents of the active, not ended, home-currency `income` sources (weekly × 52 ÷ 12, biweekly × 26 ÷ 12, semimonthly × 2, monthly × 1, irregular the sum of its rows over the last 3 complete months ÷ 3). The value is `"<lo>-<hi> <CUR>"` in whole major units, in steps of 1,000 (100,000 for a currency with no decimals), so 4,860 USD is `"4000-5000 USD"`; the confidence is 0.9 when a source with a cadence contributes, else 0.6. The pass asserts it when there is none, updates it when the value changes and deletes it when the basis is 0, touching only facts whose provenance is `domain-derived`; the owner's own are never read or changed.
 
 Read: none.
 
@@ -184,6 +185,17 @@ D-195. Plaid reaches 24 months at most (D-187); older months, and accounts Plaid
 - **Matching** follows D-195 and is `matchRows` in `statement.ts`, with `sameDescription` comparing the descriptions through `merchants.ts`. Matched lines are counted and never written.
 - **The write** is one queue job in the store (`importStatement`): it reads and matches again, writes the rows and the `file-import` in batches (the record last), then runs `classify()`. The toast's Undo deletes every row the import made and the record, then runs `classify()` again, so the same file reads again. A failed write sets `saveFailed`, and the page's Retry runs the job again. No log carries a name, a description or an amount.
 
+### Income and lean mode (#80)
+
+D-198. The views are `views/Income.svelte`, `Lean.svelte`, `PaycheckSheet.svelte` and `BonusSheet.svelte`, mounted by `views/Orchard.svelte` on both apps.
+
+- **The question** is one `Notice` in the page header after the stale-link notice: the most urgent unanswered one, late first, then a bonus, then new income during lean mode. Its title carries the whole sentence and its one action opens the answer. It is page content (`role="note"`), not a live region. Late is `warning`: "Your {employer} paycheck due {day} hasn't arrived", **Answer**. Bonus is `info`: "{employer} paid you extra. Where should it go?", **Choose**. New income during lean mode is `info`: "A paycheck from {employer} came in", **Leave lean mode**; dismissing it marks the source seen too. Answering on the page withdraws the inbox card.
+- **The paycheck sheet** asks "Did your job at {employer} end?" with no fields. **No, it's just late** sets `lateOk` to that day, and the row reads "Late, due {day}" until a paycheck comes; **Yes, it ended** sets `endedOn` and `leanSince` to today. Each answer has an Undo, and dismissing the sheet answers nothing.
+- **The bonus sheet** shows the amount, the employer, the account and the day. The destination is "Leave it in {account}" (the default), an open savings, investment or retirement account, or "Pay down {card or loan}" for one with a balance owed. Any destination but Leave it adds a todo due today, "Move the {employer} bonus to {account}", never with an amount, and the sheet says Orchard never moves the money (D-8). A separate bonus row can be left out of the monthly average (`setOneOff`), on by default; one paid in the paycheck's deposit cannot, and the sheet says why. Save and **Not a bonus** each mark the row handled, with one Undo for everything.
+- **The Income section** follows the accounts, only once the ledger is ready and a source is not hidden, with no empty state. Its line is "About {monthly} a month · {n}-month average {average}". A row is the merchant's live name, then the cadence, "into {account}", a biweekly source's months with three paychecks, and its state ("Next about {day}", "Late, due {day}", "Ended {day}", "Irregular", "Tax refund · around {Month}" or "Tax payment · around {Month}"), with the expected amount as the meta. Paychecks come first, ended ones next and tax sources last. A late row is never coloured. Rows do not act (D-118). Their menus offer **This job ended**, **Still paid here**, **Start lean mode** while lean mode is off, and **Not income** (**Not a tax payment**), each with an Undo.
+- **Lean mode** is on while a live source carries `leanSince`. A card above the accounts shows the runway, "{months} months on essentials" until about a month, and "{months} months at your usual spending"; when other income covers the essentials it says so instead. Under it come the essential categories with their monthly means and a total, then **What to pause**: up to 8 merchants outside the essentials seen in each of the last 3 complete months. With no complete month of spending, only the heading and "Orchard needs a full month of spending to work out a runway." show. **End lean mode** clears `leanSince` on every source. Every figure goes through `formatMoney`; the month counts are not money.
+- Only the browser builds have run it (desktop and phone frontends, CSV imports); Plaid rows with provider categories, the tax sources and the fact write have been proven in tests only.
+
 ## 7. Kinds, signals, notifications, intents
 
 Kinds: `bill-due` (event, T2), once Almanac exists (D-186). Orchard registers no attachment kind (D-189).
@@ -200,10 +212,16 @@ Signals, each `finance.<id>`:
 | `watch-crossed` | a watch's threshold is passed | #90 |
 | `low-balance` | the forecast dips below zero before payday | #87 |
 | `limit-missing` | next year's contribution limits are not in yet | #82 |
+| `paycheck-late` | an expected paycheck is past its grace (2 days weekly, 3 otherwise) and not answered; payload `{ uris: [income-source uri], employer, day }` (the day in words, never an amount), keyed `<source>:<missed day>`; built | #80 |
+| `bonus` | a posted extra row of a paying source in the last 30 days, not yet handled; payload as above, keyed `<row>`; built | #80 |
+| `income-new` | the pass creates a source with a cadence whose first day is within 100 days, so a first link with two years of history announces no old job; payload as above with the first day, keyed `<source>:new`; #82 hears it; built | #80 |
 
 | notification | channel | cadence | default |
 |---|---|---|---|
 | a link needs reconnecting (`link-needs-reconnecting`, built: "Chase needs you to sign in again", "Chase asks you to sign in again by Mon 2 Nov"; the warning glyph, Open goes to Accounts) | in-app | when found | on |
+| a paycheck is late (`paycheck-late`, built: "Your Northwind Labs paycheck due Fri Oct 30 hasn't arrived"; Open goes to Orchard, where the header asks) | in-app | when found | on |
+| a bonus (`bonus`, built: "Northwind Labs paid you extra. Where should it go?") | in-app | when found | on |
+| a new paycheck (`new-income`, built: "A new paycheck from Northwind Labs") | in-app | when found | on |
 | a bill due soon | in-app, and its Task in Today | when it enters Due soon | on |
 | a bill overdue | in-app | once, the day after | on |
 | a flag or a price rise | in-app | when found | on |
@@ -356,3 +374,13 @@ From #74:
 - #78 mounts nothing new: `DocumentSheet` is mounted once in `views/Orchard.svelte` over `documentRead`, and `finance.knownImport(fingerprint)` answers Already imported from a `file-import`; a bill's letter records its own `file-import` the same way (`importOps` in `statement.ts` shows the shape).
 - #90 counts `finance_read-statement` among Orchard's tools; it refuses in a conversation through its `check` and needs no grant.
 - Only the browser build has run it (CSV and OFX, desktop and phone frontends); the PDF and picture path through the reader and the Gardener has not been run in the Tauri app.
+
+From #80:
+
+- #84 reads `finance.income.average` (`incomeAverage(ledger, { month, exclude })` in `income.ts`: the mean monthly money in from `income` entries over the complete months among the last 3, one-off rows and tax refunds left out, undefined with no complete month) for the trailing average on irregular income, and `essentialLines` (`lean.ts`) for its essential lines. While lean mode is on (`leanSinceOf(finance.incomeSources)`), it drafts the essentials only.
+- #87 and #90 read the sources (`finance.income.sources`, each with `cadence`, `expected` and `nextDay`) for the next paycheck and the low balance before payday, and `runwayOf` for the runway; `finance_forecast` counts `income-source` as its spec says.
+- #82 hears `finance.income-new` to start the 401(k) flow on a new job.
+- #79 replaces `pauseCandidates` (merchants outside the essentials seen in each of the last 3 complete months) with the recurring charges, keeping its shape for `Lean.svelte`.
+- #78 may make a `tax-payment` source a yearly bill.
+- The domain's export still leaves `income-source` out (D-184); if sync (#40) ever carries the owner's answers, they move with it.
+- The stale-link notice keeps the kit's `alert` role; the income question uses `role="note"` so it is not announced. Whether the stale one should follow is the owner's call.
