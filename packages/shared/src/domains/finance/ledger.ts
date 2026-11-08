@@ -13,6 +13,7 @@ import {
 	type Account,
 	type Category,
 	type Merchant,
+	type RecurringCharge,
 	type TransactionPayload,
 	type TxKind,
 	type TxPart,
@@ -66,6 +67,10 @@ export interface LedgerEntry {
 	notes?: string
 	/** A buy, a sell or a reinvested dividend: money moving inside one account, in no measure (D-197). */
 	insideAccount?: true
+	/** The bill the row paid (#78); a pair's out side's, else its in side's. */
+	billId?: string
+	/** The recurring charge the row is in (#79), when that charge is live and not dismissed. */
+	recurringId?: string
 	/** A single row's parts (or the row), or a pair's out side then its in side. */
 	lines: LedgerLine[]
 }
@@ -90,15 +95,23 @@ export interface LedgerInput {
 	merchants: readonly Merchant[]
 	/** ISO 4217. */
 	home: string
+	/**
+	 * The live recurring charges (#79). When given, an entry keeps `recurringId` only if it names one of them whose
+	 * state is not `dismissed`; without it, `recurringId` is kept as stored.
+	 */
+	recurring?: readonly Pick<RecurringCharge, 'id' | 'state'>[]
 }
 
-export type RowFlag = 'pending' | 'split' | 'one-off' | 'reimbursable' | 'refund' | 'review' | 'other-currency'
+export type RowFlag =
+	'pending' | 'split' | 'one-off' | 'reimbursable' | 'refund' | 'recurring' | 'bill' | 'review' | 'other-currency'
 const FLAG_ORDER: readonly RowFlag[] = [
 	'pending',
 	'split',
 	'one-off',
 	'reimbursable',
 	'refund',
+	'recurring',
+	'bill',
 	'review',
 	'other-currency',
 ]
@@ -127,6 +140,10 @@ export interface TxFilter {
 	pending?: boolean
 	oneOff?: true
 	reimbursable?: true
+	/** An entry with a `billId`. */
+	bill?: true
+	/** An entry with a `recurringId`. */
+	recurring?: true
 	/** A `spendingOf` line with no category. */
 	uncategorised?: true
 	review?: true
@@ -257,6 +274,8 @@ function entryOf(id: string, row: TransactionPayload, merchants: ReadonlyMap<str
 	if (row.repays) entry.repays = row.repays
 	if (row.notes) entry.notes = row.notes
 	if (insideAccount(row)) entry.insideAccount = true
+	if (row.billId) entry.billId = row.billId
+	if (row.recurringId) entry.recurringId = row.recurringId
 	return entry
 }
 
@@ -267,6 +286,13 @@ export function buildLedger(input: LedgerInput): Ledger {
 	const merchants = new Map(input.merchants.map((merchant) => [merchant.id, merchant.name]))
 	const linkOf = new Map<string, string>()
 	for (const account of input.accounts) if (account.linkId) linkOf.set(account.id, account.linkId)
+	const charges = input.recurring
+		? new Set(input.recurring.filter((charge) => charge.state !== 'dismissed').map((charge) => charge.id))
+		: undefined
+	/** A missing or dismissed charge leaves the entry with no `recurringId`. */
+	const keepRecurring = (entry: LedgerEntry) => {
+		if (charges && entry.recurringId && !charges.has(entry.recurringId)) delete entry.recurringId
+	}
 
 	const built: { entry: LedgerEntry; hay: string }[] = []
 	const byId = new Map<string, LedgerEntry>()
@@ -293,6 +319,9 @@ export function buildLedger(input: LedgerInput): Ledger {
 			entry.merchantId ??= into.merchantId
 			if (entry.merchantId && entry.merchant === undefined && merchants.has(entry.merchantId))
 				entry.merchant = merchants.get(entry.merchantId)
+			if (into.billId) entry.billId ??= into.billId
+			if (into.recurringId) entry.recurringId ??= into.recurringId
+			keepRecurring(entry)
 			entry.lines = [
 				lineOf(out.amount, out.accountId, out, spendingOf(out).length > 0),
 				lineOf(into.amount, into.accountId, into, spendingOf(into).length > 0),
@@ -305,6 +334,7 @@ export function buildLedger(input: LedgerInput): Ledger {
 		}
 		seen.add(id)
 		const entry = entryOf(id, row, merchants)
+		keepRecurring(entry)
 		const spending = spendingOf(row).length > 0
 		entry.lines = row.parts?.length
 			? row.parts.map((part) => lineOf(part.amount, row.accountId, row, spending, part.categoryId))
@@ -430,6 +460,8 @@ function matcher(ledger: Ledger, filter: TxFilter): (entry: LedgerEntry, at: num
 		if (filter.pending !== undefined && entry.pending !== filter.pending) return undefined
 		if (filter.oneOff && !entry.oneOff) return undefined
 		if (filter.reimbursable && !entry.reimbursable) return undefined
+		if (filter.bill && !entry.billId) return undefined
+		if (filter.recurring && !entry.recurringId) return undefined
 		if (filter.review && !entry.review) return undefined
 		if (merchants && !(entry.merchantId && merchants.has(entry.merchantId))) return undefined
 		if (kinds && !kinds.has(entry.kind)) return undefined
@@ -482,6 +514,8 @@ function flagsOf(entry: LedgerEntry, home: string): RowFlag[] {
 		'one-off': entry.oneOff,
 		reimbursable: Boolean(entry.reimbursable),
 		refund: Boolean(entry.refundOf || entry.repays),
+		recurring: Boolean(entry.recurringId),
+		bill: Boolean(entry.billId),
 		review: Boolean(entry.review),
 		'other-currency': entry.lines.some((line) => line.amount.currency !== home),
 	}
@@ -701,13 +735,19 @@ export interface Typical {
 
 /**
  * The typical month: per key, the mean monthly spending over the complete calendar months before `month` (the last
- * `months` of them, never before the ledger's first month), one-off lines left out. Empty with no such month.
+ * `months` of them, never before the ledger's first month), one-off lines left out. Empty with no such month. With a
+ * `filter`, only the lines it keeps are measured; its `from` and `to` are ignored, since the window is the months.
  */
 export function typicalOf(
 	ledger: Ledger,
-	options: { month: string; months?: number; groupBy?: 'category' | 'merchant' | 'account' | 'kind' }
+	options: {
+		month: string
+		months?: number
+		groupBy?: 'category' | 'merchant' | 'account' | 'kind'
+		filter?: TxFilter
+	}
 ): Typical[] {
-	const { month, months = 6, groupBy = 'category' } = options
+	const { month, months = 6, groupBy = 'category', filter } = options
 	if (!ledger.firstMonth) return []
 	let from = addMonths(month, -months)
 	if (from < ledger.firstMonth) from = ledger.firstMonth
@@ -716,10 +756,13 @@ export function typicalOf(
 	let count = 0
 	for (let at = from; at <= to; at = addMonths(at, 1)) count += 1
 	const sums = new Map<string, number>()
-	for (const entry of ledger.entries) {
+	const kept: Iterable<{ entry: LedgerEntry; lines: readonly LedgerLine[] }> = filter
+		? matchAll(ledger, { ...filter, from: undefined, to: undefined })
+		: ledger.entries.map((entry) => ({ entry, lines: entry.lines }))
+	for (const { entry, lines } of kept) {
 		const at = entry.day.slice(0, 7)
 		if (at < from || at > to) continue
-		for (const line of entry.lines) {
+		for (const line of lines) {
 			if (!line.spending || line.oneOff || line.amount.currency !== ledger.home) continue
 			const key = keyOf(groupBy, entry, line, 'monday')
 			sums.set(key, (sums.get(key) ?? 0) + line.amount.minor)

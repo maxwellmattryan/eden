@@ -1,6 +1,6 @@
 <script lang="ts">
-	// Orchard's page (product/domains/finance.md, "Surfaces"): the header with the tab's actions, the tabs (Accounts,
-	// Bills, #78, and Investments, #76, D-197), the page's error with Retry when a write failed or the rows could not be read, and the tab's view.
+	// Orchard's page (product/domains/finance.md, "Surfaces"): the header with the tab's actions, the tabs (Activity,
+	// #83, D-199, which has none; Accounts; Bills, #78; and Investments, #76, D-197), the page's error with Retry when a write failed or the rows could not be read, and the tab's view.
 	// The tab lives in the address; a pick goes back through the navigation seam. The sheets are the page's, so a header
 	// action and a row's menu open the same one. While a provider is bound (the desktop's Plaid), "Link a bank" leads
 	// Accounts' header, "Link a brokerage" the Investments one, a stale link raises a notice beside it on every tab, a quiet key opens the provider's keys, and
@@ -34,19 +34,23 @@
 	import { finance } from '../store.svelte.js'
 	import { FINANCE_TABS, financeTab, type FinanceTab } from '../tabs.js'
 	import type { Account, Asset, Bill, Holding, ProviderLink } from '../types.js'
+	import type { LedgerRow } from '../ledger.js'
 	import { dayLine } from '../words.js'
 	import AccountSheet from './AccountSheet.svelte'
 	import Accounts from './Accounts.svelte'
+	import Activity from './Activity.svelte'
 	import AssetSheet from './AssetSheet.svelte'
 	import BalanceSheet from './BalanceSheet.svelte'
 	import BillSheet from './BillSheet.svelte'
 	import Bills from './Bills.svelte'
+	import CategorySheet from './CategorySheet.svelte'
 	import HoldingSheet from './HoldingSheet.svelte'
 	import ImportSheet from './ImportSheet.svelte'
 	import Investments from './Investments.svelte'
 	import LinkSheet from './LinkSheet.svelte'
 	import PaySheet from './PaySheet.svelte'
 	import PlaidKeysSheet from './PlaidKeysSheet.svelte'
+	import ReimbursableSheet from './ReimbursableSheet.svelte'
 	import ReplaceSheet from './ReplaceSheet.svelte'
 
 	type Props = {
@@ -84,6 +88,8 @@
 		| { sheet: 'bill'; bill?: Bill }
 		| { sheet: 'pay'; bill: Bill }
 		| { sheet: 'holding'; holding: Holding; field: 'cost-basis' | 'value' }
+		| { sheet: 'category'; row: LedgerRow }
+		| { sheet: 'reimbursable'; row: LedgerRow }
 	let current = $state<Open>()
 	let shown = $state(false)
 	let opened = $state(0)
@@ -104,6 +110,7 @@
 	const bound = $derived(provider.bound)
 	const linkBrokerage = $derived(bound ? () => bound.link('brokerage') : undefined)
 	const actions = $derived.by<PageHeaderAction[]>(() => {
+		if (tab === 'activity') return []
 		if (tab === 'bills')
 			return [
 				{
@@ -224,7 +231,19 @@
 		</div>
 	{/if}
 
-	{#if tab === 'bills'}
+	{#if tab === 'activity'}
+		<!-- nothing is drawn until the rows are read, as on Bills -->
+		{#if finance.ready}
+			<Activity
+				oncategorise={(row) => show({ sheet: 'category', row })}
+				onreimbursable={(row) => show({ sheet: 'reimbursable', row })}
+				onlink={bound ? () => bound.link('bank') : undefined}
+				onaddaccount={() => show({ sheet: 'account' })}
+				onimport={() => statementImport.begin()}
+				onsample={seed}
+			/>
+		{/if}
+	{:else if tab === 'bills'}
 		<!-- nothing is drawn until the rows are read, as on Accounts -->
 		{#if finance.ready}
 			<Bills
@@ -325,6 +344,10 @@
 		<BillSheet bind:open={shown} bill={current.bill} />
 	{:else if current?.sheet === 'pay'}
 		<PaySheet bind:open={shown} bill={current.bill} />
+	{:else if current?.sheet === 'category'}
+		<CategorySheet bind:open={shown} row={current.row} />
+	{:else if current?.sheet === 'reimbursable'}
+		<ReimbursableSheet bind:open={shown} row={current.row} />
 	{:else if current?.sheet === 'holding'}
 		<HoldingSheet bind:open={shown} holding={current.holding} field={current.field} />
 	{:else if current?.sheet === 'remove'}

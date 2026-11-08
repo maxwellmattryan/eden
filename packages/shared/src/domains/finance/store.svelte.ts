@@ -311,6 +311,7 @@ export class FinanceStore {
 			categories: this.categories,
 			merchants: this.merchants,
 			home: settings.homeCurrency,
+			recurring: this.recurring,
 		})
 	})
 

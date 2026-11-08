@@ -3,6 +3,8 @@
 // same ones. The document reader (D-190) is here as well: its rules, the call into the crate and the session behind the
 // kit's `DocumentSheet`.
 export * from './accounts.js'
+export * from './activity.js'
+export { ActivitySession, activitySession } from './activity.svelte.js'
 export * from './bill-pass.js'
 export * from './bills.js'
 export * from './categories.js'

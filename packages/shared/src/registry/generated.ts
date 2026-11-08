@@ -2407,6 +2407,10 @@ export const DECLARATIONS = {
 		},
 		"tabs": [
 			{
+				"id": "activity",
+				"label": "domains.finance.tabs.activity"
+			},
+			{
 				"id": "accounts",
 				"label": "domains.finance.tabs.accounts"
 			},
