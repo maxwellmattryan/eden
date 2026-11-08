@@ -1,12 +1,13 @@
 <script lang="ts">
 	// The asset form, the one for every kind of thing owned: its name and kind, the value the owner gives it in a
 	// currency and the day it was valued, a quantity with its unit when it is counted (0.0412 BTC), and the owner's
-	// share. Pricing it from a feed comes later (#76, #81); here the value is what the owner says.
+	// share. Pricing it from a feed comes later (#76, #81); here the value is what the owner says. A new one may start
+	// from a preset: a bought goal's name, kind and target (#88).
 	import { Button, Field, Select, Sheet } from '@eden/ui-kit'
 	import { tick } from 'svelte'
 	import { todayIso } from '../../../dates/index.js'
 	import { t } from '../../../i18n/index.js'
-	import { currencyOptions, parseMoney, toDecimal } from '../../../money/index.js'
+	import { currencyOptions, parseMoney, toDecimal, type Money } from '../../../money/index.js'
 	import { settings } from '../../../settings/index.js'
 	import { undoToast } from '../../../shell/index.js'
 	import { finance } from '../store.svelte.js'
@@ -16,17 +17,21 @@
 	type Props = {
 		open: boolean
 		asset?: Asset
+		/** What a new asset starts from; ignored with `asset`. */
+		preset?: { name: string; kind: AssetKind; value?: Money }
 	}
-	let { open = $bindable(), asset }: Props = $props()
+	let { open = $bindable(), asset, preset }: Props = $props()
 
 	const uid = $props.id()
 	const lang = $derived(settings.language)
 	// svelte-ignore state_referenced_locally
+	const start = asset ? undefined : preset
+	// svelte-ignore state_referenced_locally
 	let form = $state({
-		name: asset?.name ?? '',
-		kind: (asset?.kind ?? 'vehicle') as string,
-		currency: asset?.value.currency ?? settings.homeCurrency,
-		value: asset ? toDecimal(asset.value) : '',
+		name: asset?.name ?? start?.name ?? '',
+		kind: (asset?.kind ?? start?.kind ?? 'vehicle') as string,
+		currency: asset?.value.currency ?? start?.value?.currency ?? settings.homeCurrency,
+		value: asset ? toDecimal(asset.value) : start?.value ? toDecimal(start.value) : '',
 		valuedOn: asset?.valuedOn ?? todayIso(),
 		quantity: asset?.quantity ?? '',
 		unit: asset?.unit ?? '',

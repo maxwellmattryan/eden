@@ -2,7 +2,7 @@
 	"id": "finance",
 	"phase": "later",
 	"sidebar": { "group": "domains", "order": 50, "visible": true },
-	"tabs": ["activity", "accounts", "bills", "budget", "investments"],
+	"tabs": ["activity", "accounts", "bills", "budget", "investments", "goals"],
 	"resources": {
 		"facts": [{ "id": "monthly-income-band", "tier": "T2" }],
 		"entities": [
@@ -75,6 +75,7 @@
 		"file-import",
 		"recurring-charge",
 		"budget",
+		"savings-goal",
 		"holding",
 		"security"
 	]

@@ -20,6 +20,7 @@ export const FINANCE = {
 	security: 'security',
 	income: 'income-source',
 	budget: 'budget',
+	goal: 'savings-goal',
 } as const
 
 /** Where a bill came from (#78): a letter read on the device, a card's statement, a series, or the owner's hand. */
@@ -586,6 +587,35 @@ export interface BudgetPayload {
 }
 
 export type Budget = BudgetPayload & { id: string }
+
+/**
+ * A `savings-goal` row (#88, D-203): a target saved toward in an account, an emergency fund sized in months of
+ * essentials, or the one savings-rate target. The goals in one account fill its balance in `order`; what each holds is
+ * read, never stored. `high` is the goal pass's key; every other key is the owner's.
+ */
+export interface SavingsGoalPayload {
+	kind: 'target' | 'emergency' | 'rate'
+	/** target, emergency */
+	name?: string
+	accountId?: string
+	/** Positive, the account's currency. */
+	target?: Money
+	/** emergency: the months of essentials it was sized at, 1–12. */
+	months?: number
+	/** `YYYY-MM`. */
+	by?: string
+	/** rate: basis points, 100–9900. */
+	rate?: number
+	/** Fill order within its account, 0 first. */
+	order?: number
+	closedOn?: string
+	closedAs?: 'bought' | 'closed'
+	/** `YYYY-MM`; the owner's rebuild plan. */
+	rebuildBy?: string
+	/** The pass's key: the most this goal has held and the day. */
+	high?: { amount: Money; day: string }
+}
+export type SavingsGoal = SavingsGoalPayload & { id: string }
 
 export type Category = CategoryPayload & { id: string }
 export type Rule = RulePayload & { id: string; updatedAt: string }

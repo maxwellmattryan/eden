@@ -2425,6 +2425,10 @@ export const DECLARATIONS = {
 			{
 				"id": "investments",
 				"label": "domains.finance.tabs.investments"
+			},
+			{
+				"id": "goals",
+				"label": "domains.finance.tabs.goals"
 			}
 		],
 		"resources": [
@@ -2591,6 +2595,7 @@ export const DECLARATIONS = {
 			"file-import",
 			"recurring-charge",
 			"budget",
+			"savings-goal",
 			"holding",
 			"security"
 		]

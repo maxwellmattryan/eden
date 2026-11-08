@@ -1208,7 +1208,8 @@
 				"accounts": "Accounts",
 				"bills": "Bills",
 				"budget": "Budget",
-				"investments": "Investments"
+				"investments": "Investments",
+				"goals": "Goals"
 			},
 			"tabsLabel": "Orchard sections",
 			"txKinds": {
@@ -1930,6 +1931,118 @@
 					"removed": "Removed {category} from the budget",
 					"updated": "Updated {category}",
 					"added": "Added {category}"
+				}
+			},
+			"goals": {
+				"add": "Add a goal",
+				"readFailed": "Couldn't read your transactions",
+				"emptyTitle": "No goals yet",
+				"emptyNoAccount": "Goals set money aside in an account. Add one first.",
+				"emptyText": "Save toward something, or build an emergency fund.",
+				"rate": {
+					"title": "Savings rate",
+					"percent": "{rate}%",
+					"sentence": "You saved {rate}% of your income over the last {months, plural, one {month} other {# months}}",
+					"month": "{month}: {rate}%",
+					"target": "Goal {rate}%",
+					"ofGoal": "{percent}% of goal",
+					"noIncome": "Orchard needs a month with income to measure your savings rate",
+					"actions": "Savings rate actions",
+					"set": "Set a goal",
+					"edit": "Edit goal",
+					"remove": "Remove goal"
+				},
+				"totals": {
+					"saved": "Saved",
+					"toGo": "To go",
+					"monthly": "Needed a month",
+					"otherCurrencies": "Goals in other currencies are left out of the totals"
+				},
+				"of": "{saved} of {target}",
+				"savedPercent": "{percent}% saved",
+				"reached": "Reached",
+				"past": "Past its date",
+				"byMonthly": "By {month} · {amount} a month",
+				"about": "About {month} at your recent pace",
+				"aboutAfter": "· about {month} at your recent pace",
+				"behind": "· behind at your recent pace",
+				"covers": "Covers {months} months of essentials",
+				"accountClosed": "{account} is closed",
+				"accountGone": "Its account is gone",
+				"goneTitle": "Account gone",
+				"dip": "Down {amount} from {high} on {day}",
+				"rebuild": "Rebuild by {month}: {amount} a month",
+				"notEarmarked": "{amount} not earmarked",
+				"shared": "{amount} a month reaches these on time",
+				"actions": "Actions for {name}",
+				"menu": {
+					"edit": "Edit",
+					"up": "Move up",
+					"down": "Move down",
+					"rebuild": "Plan the rebuild",
+					"fromHere": "Start from here",
+					"bought": "Mark as bought",
+					"close": "Close goal",
+					"delete": "Delete",
+					"reopen": "Reopen",
+					"asset": "Add as an asset",
+					"loan": "Add a loan"
+				},
+				"done": {
+					"title": "Done",
+					"bought": "Bought {month}",
+					"closed": "Closed {month}"
+				},
+				"loanName": "{name} loan",
+				"sheet": {
+					"addTitle": "Add a goal",
+					"editTitle": "Edit goal",
+					"kind": "Kind of goal",
+					"target": "Saving for something",
+					"emergency": "Emergency fund",
+					"name": "Name",
+					"emergencyName": "Emergency fund",
+					"account": "Account",
+					"chooseAccount": "Choose an account",
+					"amount": "Target",
+					"months": "Months of essentials",
+					"monthsOption": "{months, plural, one {# month} other {# months}}",
+					"sized": "{months} months of essentials is {amount}",
+					"noEssentials": "Orchard needs a full month of spending to size it",
+					"by": "By",
+					"noDate": "No date",
+					"live": "{amount} a month reaches it by {month}"
+				},
+				"rebuildSheet": {
+					"title": "Plan the rebuild",
+					"down": "Down {amount} from {high}",
+					"by": "Rebuild by",
+					"live": "{amount} a month rebuilds it by {month}"
+				},
+				"rateSheet": {
+					"title": "Savings rate goal",
+					"field": "Target savings rate (%)"
+				},
+				"errors": {
+					"goal:name": "Enter a name of up to 60 characters",
+					"goal:account": "Choose an open account that isn't a debt",
+					"goal:target": "Enter a target above zero",
+					"goal:months": "Choose 1 to 12 months",
+					"goal:rate": "Enter a whole percent from 1 to 99",
+					"goal:emergency": "You already have an emergency fund"
+				},
+				"toasts": {
+					"added": "Added {name}",
+					"saved": "Saved {name}",
+					"moved": "Moved {name}",
+					"closed": "Closed {name}",
+					"bought": "Marked {name} as bought",
+					"reopened": "Reopened {name}",
+					"deleted": "Deleted {name}",
+					"rebuild": "Rebuild planned for {name}",
+					"fromHere": "{name} starts from here",
+					"rateSet": "Savings rate goal set",
+					"rateRemoved": "Savings rate goal removed"
 				}
 			},
 			"toasts": {
