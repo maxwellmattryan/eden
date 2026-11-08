@@ -57,7 +57,8 @@ const sameService = (bill: Bill, draft: BillDraft, fallback: () => boolean) =>
  * The live bill a captured draft lands on, and how:
  * - an EOB updates the open EOB estimate from the same provider for the same service (or month, when either has no
  *   day of service), else is `billed` when the provider's actual bill is here: the equal day of service, or the bill's
- *   month in the 6 months from the EOB's;
+ *   month in the 6 months from the EOB's, else lands on nothing: an EOB never falls back to `sameBill`, so it never
+ *   turns another visit's bill into an estimate;
  * - a provider's letter that is not a card statement `replaces` the open EOB estimate from the same provider: the
  *   equal day of service when both are known, else the EOB's month in the 6 months up to the letter's;
  * - otherwise the bill of the same payee and month (`sameBill`) is `updates`. A card statement never lands on an EOB.
@@ -84,6 +85,7 @@ export function captureTarget(draft: BillDraft, bills: readonly Bill[]): Capture
 		)
 		const actual = bestOf(billed, draft.serviceDay)
 		if (actual) return { bill: actual, how: 'billed' }
+		return undefined
 	} else if (!isStatement(draft)) {
 		const estimates = bills.filter(
 			(bill) =>
@@ -100,7 +102,7 @@ export function captureTarget(draft: BillDraft, bills: readonly Bill[]): Capture
 	}
 	const same = sameBill(draft, isStatement(draft) ? bills.filter((bill) => !isOpenEob(bill)) : bills)
 	if (!same) return undefined
-	return { bill: same, how: !draft.eob && isOpenEob(same) ? 'replaces' : 'updates' }
+	return { bill: same, how: isOpenEob(same) ? 'replaces' : 'updates' }
 }
 
 /**

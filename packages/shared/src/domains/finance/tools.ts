@@ -3,8 +3,9 @@
 // form before anything is saved (D-86). A page run (Capture a bill) has no thread and passes the picture in memory;
 // in a conversation the tool never reads an attachment, so no letter is stored or sent from the thread (D-189, D-190).
 // `read-statement` (#74) reads a statement's lines for Import, and `read-pay-stub` (#85) a pay stub's deductions for
-// the Income section; both refuse in a conversation. An EOB drafts the provider's estimate (#85). #90 widens `draft` to a batch and adds `finance_bills`. Pure: the accounts and the home currency arrive from the store
-// through `logic.ts`, so this is tested here.
+// the Income section; both refuse in a conversation. An EOB drafts the provider's estimate (#85). #90 widens `draft`
+// to a batch and adds `finance_bills`. Pure: the accounts and the home currency arrive from the store through
+// `logic.ts`, so this is tested here.
 import { answer } from '../../gardener/tools.js'
 import { DRAFTED, parseJson, str, type ToolHandler, type ToolResult } from '../../shell/gardener/types.js'
 import { billDraftOf, eobNothingOwed } from './bills.js'

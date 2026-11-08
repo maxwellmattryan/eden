@@ -215,7 +215,8 @@ export function nextOccurrence(given: readonly SeriesBill[], today: string, newI
 		...(latest.accountId ? { accountId: latest.accountId } : {}),
 		...(latest.url ? { url: latest.url } : {}),
 		...(latest.merchantIds?.length ? { merchantIds: [...latest.merchantIds] } : {}),
-		// a premium stays a premium; an EOB, its insurer and its day of service belong to the one occurrence
+		// only the kind carries on: a premium stays a premium; an EOB, its insurer and its day of service stay behind
+		// with the one occurrence they describe
 		...(latest.insurance ? { insurance: latest.insurance } : {}),
 	}
 }

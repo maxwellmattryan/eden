@@ -142,6 +142,24 @@ describe('capture target', () => {
 			undefined,
 		],
 		[
+			'an EOB for another visit that month leaves the provider’s actual bill alone',
+			{ ...eobDraft, period: '2026-10', serviceDay: '2026-10-20' },
+			[bill({ id: 'b1', period: '2026-10', due: '2026-10-25', serviceDay: '2026-10-03', insurance: 'medical' })],
+			undefined,
+		],
+		[
+			'an EOB for another visit that month is not the open EOB of the first',
+			{ ...eobDraft, serviceDay: '2026-08-20' },
+			[eob({ id: 'e1' })],
+			undefined,
+		],
+		[
+			'an EOB never lands on another bill of the same payee and month',
+			eobDraft,
+			[bill({ id: 'b1', period: '2026-08', estimate: true })],
+			undefined,
+		],
+		[
 			'the same payee and period still updates',
 			{ payee: 'Austin Energy', amount: usd(100), period: '2026-09' },
 			[bill({ id: 'ae', payee: 'AUSTIN ENERGY', period: '2026-09' })],
