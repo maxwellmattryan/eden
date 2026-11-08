@@ -1,4 +1,4 @@
-// The statement import's session (#74, D-194; product/domains/finance.md, "Statement import"): the state behind
+// The statement import's session (#74, D-195; product/domains/finance.md, "Statement import"): the state behind
 // Orchard's `ImportSheet`. The owner chooses an account and gives one file; the read starts on whichever comes second.
 // A CSV or OFX is fingerprinted, checked against the files imported before and read on the device with no model. A PDF
 // or a picture goes to the document reader (`documentRead`), whose sheet takes the same file; what the owner confirms

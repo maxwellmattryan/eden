@@ -5,9 +5,11 @@
 // No write lands in the Garden feed and no log carries more than an error's code, so no figure, name or number
 // leaves the page.
 //
-// The categories, merchants and rules (#75) are small sets the store holds; the transactions stay in the data layer
-// and are read whole by the classification pass after a sync and by an owner's fix, inside the queue, so a pass and
-// an edit never interleave (#77's index replaces the full read).
+// The categories, merchants and rules (#75) are small sets the store holds. The live transactions are held too (#77,
+// D-194), read whole once, lazily, by the first query, classification pass or owner's fix, and kept current after:
+// every batch the store sends re-reads exactly the transactions it names before its queue job ends. The ledger, the
+// one index every money figure is read from, is derived from them. The pass and the fixes read from that map inside
+// the queue, so a pass and an edit never interleave. No query is ever logged.
 import { get } from 'svelte/store'
 import { logError } from '../../api/index.js'
 import {
@@ -57,11 +59,12 @@ import {
 	type RepaymentError,
 	type SplitError,
 } from './edits.js'
+import { buildLedger, queryLedger, touchedTransactions, type LedgerAnswer, type LedgerQuery } from './ledger.js'
 import { provider } from './provider.svelte.js'
 import { financeFromRows, financeRows, financeUris } from './rows.js'
 import { seedData } from './seed.js'
 import { FILE_SOURCE, importOps, matchRows, type ParsedStatement, type StatementRow } from './statement.js'
-import { chunked } from './sync.js'
+import { CHUNK, chunked } from './sync.js'
 import { dayLine, importDetail } from './words.js'
 import {
 	FINANCE,
@@ -130,8 +133,20 @@ export class FinanceStore {
 	/** The minute, while a page is watching: a link goes stale as it moves. */
 	clock = $state(Date.now())
 
+	/** The live transactions have been read, so `ledger` holds them all. */
+	ledgerReady = $state(false)
+
 	#loading: Promise<void> | undefined
 	#classifying: Promise<void> | undefined
+	/** The live transactions by id, once read; a plain map, so `#version` says when it changed. */
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- a plain map: `#version` is what the ledger reads
+	#rows = new Map<string, Entity<TransactionPayload>>()
+	#rowsRead: Promise<void> | undefined
+	/** A refresh failed: the next reader reads every transaction again. */
+	#stale = false
+	/** Counts the refreshes, so a whole read that overlapped one is known to be behind it. */
+	#touches = 0
+	#version = $state(0)
 	#watchers = 0
 	#ticker: ReturnType<typeof setInterval> | undefined
 	readonly #queue = new WriteQueue(
@@ -150,6 +165,17 @@ export class FinanceStore {
 	)
 	readonly groups = $derived(accountGroups(this.accounts, this.assets, this.links, this.clock))
 	readonly empty = $derived(!this.accounts.length && !this.assets.length && !this.links.length)
+	/** Every money figure's index (D-194): empty until the transactions are read (`ledgerReady`). */
+	readonly ledger = $derived.by(() => {
+		void this.#version
+		return buildLedger({
+			transactions: [...this.#rows.values()],
+			accounts: this.accounts,
+			categories: this.categories,
+			merchants: this.merchants,
+			home: settings.homeCurrency,
+		})
+	})
 
 	accountById(id?: string): Account | undefined {
 		return id ? this.accounts.find((account) => account.id === id) : undefined
@@ -198,7 +224,83 @@ export class FinanceStore {
 	async reload() {
 		await this.#queue.settled()
 		this.#loading = undefined
+		const read = this.#rowsRead !== undefined
+		this.#rowsRead = undefined
 		await this.load()
+		// the transactions too, when something reads them: a writer outside the store (#74) changed them under it
+		if (read)
+			await this.#ensureRows().catch(
+				(error) => void logError('data', 'Could not read the Orchard transactions', code(error)).catch(() => null)
+			)
+	}
+
+	/**
+	 * The answer to a query over the ledger (D-194), once the transactions have been read. An invalid query throws a
+	 * `LedgerQueryError`; a failed read rejects with the data layer's error.
+	 */
+	async query(query: LedgerQuery): Promise<LedgerAnswer> {
+		await this.load()
+		await this.#ensureRows()
+		return queryLedger(this.ledger, query)
+	}
+
+	/** Reads every live transaction, once, or again after a refresh failed. */
+	#ensureRows(): Promise<void> {
+		if (this.#stale) {
+			this.#stale = false
+			this.#rowsRead = undefined
+		}
+		return (this.#rowsRead ??= this.#readRows())
+	}
+
+	async #readRows() {
+		const touches = this.#touches
+		try {
+			const rows = await queryEntities<TransactionPayload>({ type: FINANCE.transaction })
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- a plain map: `#version` is what the ledger reads
+			this.#rows = new Map(rows.map((row) => [row.id, row]))
+		} catch (error) {
+			this.#rowsRead = undefined
+			throw error
+		}
+		// a refresh that landed while this read ran may be older than what was read: read again next time
+		if (this.#touches !== touches) this.#stale = true
+		this.#version += 1
+		this.ledgerReady = true
+	}
+
+	/** Sends a batch, then refreshes the transactions it names, before the queue job ends. */
+	async #write(ops: BatchOp[]) {
+		await applyBatch(ops)
+		await this.#touch(ops)
+	}
+
+	/**
+	 * Re-reads the transactions a batch named, tombstones included, so a deleted row leaves the map. Nothing to do
+	 * before the first whole read. A failed read marks the map stale for the next reader, logged by its code only.
+	 */
+	async #touch(ops: BatchOp[]) {
+		if (!this.#rowsRead) return
+		const ids = touchedTransactions(ops, (id) => this.#rows.has(id))
+		if (!ids.length) return
+		this.#touches += 1
+		try {
+			for (let at = 0; at < ids.length; at += CHUNK) {
+				const rows = await queryEntities<TransactionPayload>({
+					type: FINANCE.transaction,
+					ids: ids.slice(at, at + CHUNK),
+					includeDeleted: true,
+				})
+				for (const row of rows) {
+					if (row.deletedAt) this.#rows.delete(row.id)
+					else this.#rows.set(row.id, row)
+				}
+			}
+		} catch (error) {
+			this.#stale = true
+			await logError('data', 'The Orchard index could not be refreshed', code(error)).catch(() => null)
+		}
+		this.#version += 1
 	}
 
 	/** The retry after a failure: reads again if the rows were never read, and sends what is waiting. */
@@ -470,7 +572,7 @@ export class FinanceStore {
 					change = known
 				}
 				try {
-					for (const ops of chunks) if (ops.length) await applyBatch(ops)
+					for (const ops of chunks) if (ops.length) await this.#write(ops)
 				} catch (error) {
 					resolve(false)
 					throw error
@@ -521,7 +623,7 @@ export class FinanceStore {
 					name: (key) => translate(`domains.finance.categories.${key}`),
 					newId,
 				})
-				for (const ops of chunked(out.ops)) await applyBatch(ops)
+				for (const ops of chunked(out.ops)) await this.#write(ops)
 				this.categories = out.categories
 				this.rules = out.rules
 				this.merchants = out.merchants
@@ -548,7 +650,7 @@ export class FinanceStore {
 		})
 	}
 
-	// ---- Statement import (#74, D-194) --------------------------------------------------------------------------
+	// ---- Statement import (#74, D-195) --------------------------------------------------------------------------
 
 	/**
 	 * Whether a file was imported before, by its fingerprint: the day it was and what it made, both in the owner's
@@ -632,12 +734,15 @@ export class FinanceStore {
 		}
 	}
 
-	#transactions(): Promise<Entity<TransactionPayload>[]> {
-		return queryEntities<TransactionPayload>({ type: FINANCE.transaction })
+	/** Every live transaction, from the map. */
+	async #transactions(): Promise<Entity<TransactionPayload>[]> {
+		await this.#ensureRows()
+		return [...this.#rows.values()]
 	}
 
 	async #transaction(id: string): Promise<Entity<TransactionPayload> | undefined> {
-		return (await queryEntities<TransactionPayload>({ type: FINANCE.transaction, ids: [id] }))[0]
+		await this.#ensureRows()
+		return this.#rows.get(id)
 	}
 
 	async #merchants(ids?: string[]): Promise<Merchant[]> {
@@ -657,11 +762,11 @@ export class FinanceStore {
 			return await this.#exclusive(async (): Promise<EditAnswer<C>> => {
 				const made = await build()
 				if (!made || 'error' in made) return made
-				await applyBatch(made.ops)
+				await this.#write(made.ops)
 				made.apply?.()
 				return () => {
 					made.revert?.()
-					this.#queue.enqueue(() => applyBatch(made.inverse))
+					this.#queue.enqueue(() => this.#write(made.inverse))
 				}
 			})
 		} catch {
@@ -825,13 +930,13 @@ export class FinanceStore {
 	#commit(change: Change): Undo {
 		change.apply()
 		const write: Write = async () => {
-			await applyBatch(change.ops)
+			await this.#write(change.ops)
 			await change.after?.()
 		}
 		this.#queue.enqueue(write)
 		return () => {
 			change.revert()
-			this.#queue.enqueue(() => applyBatch(change.inverse))
+			this.#queue.enqueue(() => this.#write(change.inverse))
 		}
 	}
 }

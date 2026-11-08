@@ -1,4 +1,4 @@
-// Orchard's tool handlers (product/domains/finance.md §5): `read-statement` (#74, D-194) finds the transaction lines
+// Orchard's tool handlers (product/domains/finance.md §5): `read-statement` (#74, D-195) finds the transaction lines
 // in a statement the document reader read, from the text the owner confirmed or the picture they chose to send. It is
 // a page's own run (Import on the Accounts page, `runtime.runDirect`): in a conversation it refuses before any
 // request. It answers the lines as the model wrote them, checked; the import sheet matches them and writes nothing

@@ -194,6 +194,8 @@ export interface TransactionPayload {
 	review?: 'vague'
 	/** The sync's: the pending row this posted row took over. */
 	replaced?: string
+	/** The owner's (#83's detail); searched by the ledger. */
+	notes?: string
 
 	// ---- #74's key: a row read from a statement file has no `source`, and names the import that made it
 
@@ -202,7 +204,7 @@ export interface TransactionPayload {
 }
 
 /**
- * A `file-import` (#74, D-194): one statement file brought in, kept as its fingerprint only (D-189). The row has
+ * A `file-import` (#74, D-195): one statement file brought in, kept as its fingerprint only (D-189). The row has
  * `source: 'file'` and the fingerprint as its `externalId`, so a second live record of the same file is refused.
  */
 export interface FileImportPayload {

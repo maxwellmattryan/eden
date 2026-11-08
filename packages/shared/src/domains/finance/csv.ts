@@ -1,4 +1,4 @@
-// A bank's CSV export as a statement (#74, D-194): RFC 4180 fields, a `;` or tab delimiter where the header has more
+// A bank's CSV export as a statement (#74, D-195): RFC 4180 fields, a `;` or tab delimiter where the header has more
 // of them than commas, up to ten lines of preamble before the header, the date, description and amount found by the
 // usual names, and a line that cannot be read left out and counted. Pure, read on the device with no model.
 import { negate, type Money } from '../../money/index.js'

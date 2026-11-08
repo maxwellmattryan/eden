@@ -1,4 +1,4 @@
-// A bank's OFX or QFX export as a statement (#74, D-194): OFX 1.x SGML, whose tags need not close, and OFX 2.x XML,
+// A bank's OFX or QFX export as a statement (#74, D-195): OFX 1.x SGML, whose tags need not close, and OFX 2.x XML,
 // read by a tag scanner with no XML library. One statement per file; its currency must be the account's. The account
 // number is read only for its last four digits, compared in memory and never kept whole. Pure, read on the device.
 import {

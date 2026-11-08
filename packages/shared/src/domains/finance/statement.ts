@@ -1,4 +1,4 @@
-// A bank statement brought in from a file (#74, D-194; product/domains/finance.md, "Statement import"): the shapes
+// A bank statement brought in from a file (#74, D-195; product/domains/finance.md, "Statement import"): the shapes
 // the CSV and OFX readers (`csv.ts`, `ofx.ts`) and the document reader's answer all come to, which files are taken,
 // how the bytes become text, the sign flip, how a row is matched against the rows Orchard already holds, and the
 // writes an import makes with the way back. Pure, so it is tested here; the store and the session drive it.

@@ -1,5 +1,5 @@
 // Orchard's shapes, its rules, its rows and its words, shared so they are tested here (`*.test.ts`) and both apps
-// read one definition. The store, the provider seam and the page with its sheets are here too, so both apps mount the
+// read one definition, the index and query engine (`ledger.js`, D-194) among them. The store, the provider seam and the page with its sheets are here too, so both apps mount the
 // same ones. The document reader (D-190) is here as well: its rules, the call into the crate and the session behind the
 // kit's `DocumentSheet`.
 export * from './accounts.js'
@@ -7,6 +7,7 @@ export * from './categories.js'
 export * from './classify.js'
 export * from './csv.js'
 export * from './edits.js'
+export * from './ledger.js'
 export * from './merchants.js'
 export * from './ofx.js'
 export * from './rows.js'

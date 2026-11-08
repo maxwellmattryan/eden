@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Import a statement (#74, D-194; product/domains/finance.md, "Statement import"): the account and one file, read
+	// Import a statement (#74, D-195; product/domains/finance.md, "Statement import"): the account and one file, read
 	// as soon as both are there; the rows found, matched against what the account already holds; then one write with
 	// one undo. A PDF or a picture is read in the document reader's sheet first, and this one opens again on the rows.
 	// The sheet holds nothing of its own: every step is `statementImport`'s, and this view only shows it. Its body
