@@ -13,6 +13,7 @@ export const FINANCE = {
 	category: 'budget-category',
 	rule: 'category-rule',
 	merchant: 'merchant',
+	fileImport: 'file-import',
 } as const
 
 /**
@@ -193,6 +194,32 @@ export interface TransactionPayload {
 	review?: 'vague'
 	/** The sync's: the pending row this posted row took over. */
 	replaced?: string
+
+	// ---- #74's key: a row read from a statement file has no `source`, and names the import that made it
+
+	/** The `file-import` that made this row, so its undo and later audits find it. */
+	importId?: string
+}
+
+/**
+ * A `file-import` (#74, D-194): one statement file brought in, kept as its fingerprint only (D-189). The row has
+ * `source: 'file'` and the fingerprint as its `externalId`, so a second live record of the same file is refused.
+ */
+export interface FileImportPayload {
+	what: 'csv' | 'ofx' | 'pdf' | 'picture'
+	/** The account the rows went into. */
+	accountId: string
+	/** `YYYY-MM-DD`, the first and last day of the file's rows; absent when it held none. */
+	from?: string
+	to?: string
+	/** How many rows were written. */
+	rows: number
+	/** How many were already in Orchard. */
+	matched: number
+	/** How many lines could not be read. */
+	skipped: number
+	/** ISO instant of the import. */
+	at: string
 }
 
 /** A `budget-category`. A default one keeps its `key`, so the provider mapping finds it after a rename. */
