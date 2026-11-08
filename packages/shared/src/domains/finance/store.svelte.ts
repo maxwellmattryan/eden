@@ -138,7 +138,7 @@ import {
 	type IncomeSourcePayload,
 	type Holding,
 	type HoldingPayload,
-	type LetterImportPayload,
+	type DocumentImportPayload,
 	type Merchant,
 	type MerchantPayload,
 	type ProviderLink,
@@ -1463,12 +1463,13 @@ export class FinanceStore {
 		return this.#billJob(async (state) => {
 			const bill = state.live.find((entry) => entry.id === id)
 			if (!bill) return undefined
-			const files = await queryEntities<LetterImportPayload>({ type: FINANCE.fileImport, source: FILE_IMPORT_SOURCE })
+			const files = await queryEntities<DocumentImportPayload>({ type: FINANCE.fileImport, source: FILE_IMPORT_SOURCE })
 			const own = bill.task ? state.tasks.find((task) => task.id === bill.task!.id) : undefined
 			const taskIds = own && own.kind === 'todo' && !own.done ? [own.id] : []
 			const made = deleteBillOps(
 				bill,
-				files.filter((row) => row.payload.billId === id).map((row) => row.id),
+				// a pay stub's row has no bill (#85)
+				files.filter((row) => row.payload.kind === 'letter' && row.payload.billId === id).map((row) => row.id),
 				taskIds
 			)
 			const rows = state.rows

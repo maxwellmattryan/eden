@@ -1380,7 +1380,15 @@
 					"paidFromBank": "Paid {day} from {bank}",
 					"paidOn": "Paid {day}",
 					"markedPaid": "Marked paid {day}",
-					"minimumPaid": "Minimum paid · {amount} carried to the next statement"
+					"minimumPaid": "Minimum paid · {amount} carried to the next statement",
+					"notYet": "Not a bill yet",
+					"fromEob": "From the {insurer} EOB",
+					"fromAnEob": "From an EOB",
+					"setAside": "Set aside {amount} a month"
+				},
+				"insurance": {
+					"premium": "Premium",
+					"medical": "Medical"
 				},
 				"menu": {
 					"markPaid": "Mark paid",
@@ -1407,6 +1415,12 @@
 					"titleEdit": "Edit bill",
 					"titleDraft": "Check the bill",
 					"updates": "Updates the {payee} bill for {month}",
+					"replaces": "Replaces the estimate from the {insurer} EOB for {payee}",
+					"replacesEob": "Replaces the EOB’s estimate for {payee}",
+					"billed": "This EOB is for the {payee} bill already here. Saving keeps the bill as it is.",
+					"insurance": "Insurance",
+					"noInsurance": "None",
+					"serviceDay": "Day of service",
 					"payee": "Payee",
 					"amount": "Amount",
 					"currency": "Currency",
@@ -1464,6 +1478,59 @@
 					"cancelled": "Drafting was cancelled.",
 					"unreadable": "The Gardener couldn’t read this.",
 					"empty": "This doesn’t read as a bill.",
+					"no-files": "There was nothing to send.",
+					"nothing-owed": "This EOB leaves nothing for you to pay, so there is no bill."
+				}
+			},
+			"payStub": {
+				"title": "Check the deductions",
+				"titleEdit": "Edit deductions",
+				"confirm": "Read the deductions",
+				"next": "The Gardener lists the deductions; you check them before anything is saved.",
+				"reading": "Reading the deductions",
+				"replaces": "Replaces the deductions from your {day} pay stub",
+				"payDay": "Pay day",
+				"list": "Deductions",
+				"rowLabel": "Deduction {n}",
+				"name": "Name",
+				"kind": "Kind",
+				"amount": "Amount",
+				"kinds": {
+					"medical": "Medical",
+					"dental": "Dental",
+					"vision": "Vision",
+					"life": "Life",
+					"disability": "Disability",
+					"hsa": "HSA",
+					"fsa": "FSA",
+					"retirement": "Retirement",
+					"tax": "Tax",
+					"other": "Other"
+				},
+				"remove": "Remove {name}",
+				"removeEmpty": "Remove this deduction",
+				"add": "Add a deduction",
+				"premiums": "Insurance premiums {amount} a paycheck",
+				"byHand": "Enter them by hand",
+				"known": "It recorded your {employer} deductions",
+				"knownGone": "Its income source is gone",
+				"errors": {
+					"name": "Enter a name",
+					"positive": "Enter an amount more than zero",
+					"none": "Add at least one deduction"
+				},
+				"failure": {
+					"busy": "The Gardener is busy with another request. Try again in a moment.",
+					"no-key": "Add an Anthropic key in Settings to read pay stubs.",
+					"unavailable": "The Gardener isn’t available here.",
+					"budget": "This month’s Gardener budget is spent.",
+					"limit": "The subscription’s usage limit is reached until it resets.",
+					"network": "Couldn’t reach the Gardener.",
+					"refusal": "The Gardener wouldn’t read this pay stub.",
+					"max-tokens": "The answer ran too long.",
+					"cancelled": "Reading was cancelled.",
+					"unreadable": "The Gardener couldn’t read this.",
+					"empty": "No deductions could be read from this pay stub.",
 					"no-files": "There was nothing to send."
 				}
 			},
@@ -1746,7 +1813,10 @@
 				},
 				"perMonth": "about {amount} a month",
 				"about": "about {amount}",
+				"premiums": "Premiums {amount} a paycheck",
 				"menu": {
+					"payStub": "Read a pay stub",
+					"editDeductions": "Edit deductions",
 					"ended": "This job ended",
 					"stillPaid": "Still paid here",
 					"startLean": "Start lean mode",
@@ -1823,7 +1893,9 @@
 				"nothingNew": "Nothing new from {name}",
 				"costBasisSet": "Cost basis set for {name}",
 				"costBasisCleared": "Cleared your cost basis for {name}",
-				"valueSet": "Value set for {name}"
+				"valueSet": "Value set for {name}",
+				"payStubSaved": "Saved the {employer} deductions",
+				"payStubCleared": "Cleared the {employer} deductions"
 			},
 			"plaid": {
 				"keysButton": "Plaid keys",

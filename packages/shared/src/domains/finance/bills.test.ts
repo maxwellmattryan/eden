@@ -582,6 +582,12 @@ describe("draft from the model's answer", () => {
 			{ op: 'delete', uri: 'eden://bill/r1' },
 			{ op: 'delete', uri: 'eden://file-import/fi' },
 		])
+		// saved unchanged with a letter (an EOB for a bill already here): the letter's row alone
+		const again = billFromDraft(draftOfBill(made), made, TODAY, () => 'unused')
+		const kept = billOps(made, again, { id: 'fi2', fingerprint: 'cd34', day: TODAY })
+		expect(kept.ops.map((op) => op.op)).toEqual(['createEntity'])
+		expect(kept.inverse).toEqual([{ op: 'delete', uri: 'eden://file-import/fi2' }])
+		expect(billOps(made, again).ops).toHaveLength(1)
 		expect(deleteBillOps(made, ['fi'], ['task-1'])).toEqual({
 			ops: [
 				{ op: 'delete', uri: 'eden://bill/r1' },

@@ -482,10 +482,23 @@ export interface FileImport {
 	day: string
 }
 
-/** Stores a bill, new or changed, with the `file-import` row of the letter it came from; the inverse takes it back. */
+/** A value as JSON with its keys sorted, so two bills compare by what they hold. */
+function canonical(value: unknown): string {
+	return JSON.stringify(value, (_key, entry: unknown) =>
+		entry && typeof entry === 'object' && !Array.isArray(entry)
+			? Object.fromEntries(Object.entries(entry).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+			: entry
+	)
+}
+
+/**
+ * Stores a bill, new or changed, with the `file-import` row of the letter it came from; the inverse takes it back. A
+ * bill saved unchanged with a letter (an EOB for a bill already here, #85) writes the letter's row alone.
+ */
 export function billOps(was: Bill | undefined, bill: Bill, read?: FileImport): Ops {
-	const ops: BatchOp[] = [was ? update(bill) : create(bill)]
-	const inverse: BatchOp[] = [was ? update(was) : { op: 'delete', uri: toUri(FINANCE.bill, bill.id) }]
+	const unchanged = !!was && !!read && canonical(payloadOf(was)) === canonical(payloadOf(bill))
+	const ops: BatchOp[] = unchanged ? [] : [was ? update(bill) : create(bill)]
+	const inverse: BatchOp[] = unchanged ? [] : [was ? update(was) : { op: 'delete', uri: toUri(FINANCE.bill, bill.id) }]
 	if (read) {
 		const payload: LetterImportPayload = { kind: 'letter', day: read.day, billId: bill.id, rows: 1 }
 		ops.push({
