@@ -1,5 +1,5 @@
 <script lang="ts">
-	// A holding's own figures (D-195): with `field: 'cost-basis'` the owner's cost basis, a total in the holding's
+	// A holding's own figures (D-197): with `field: 'cost-basis'` the owner's cost basis, a total in the holding's
 	// currency that no read overwrites; with `field: 'value'` the owner's value for a holding Plaid gives no price for,
 	// with the day it was set, which reads out of date after 90 days. Errors show under their field, never as a toast.
 	import { Button, Field, Sheet } from '@eden/ui-kit'

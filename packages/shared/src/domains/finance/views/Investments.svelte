@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Orchard's Investments tab (product/domains/finance.md, "Investments", D-195): the holdings' value, cost basis and
+	// Orchard's Investments tab (product/domains/finance.md, "Investments", D-197): the holdings' value, cost basis and
 	// gain in the home currency with a caption for what they leave out; the allocation by class; then a group per open
 	// brokerage or retirement account in the Accounts tab's order, one row per holding. Rows do not act (D-118); their
 	// menus do, offering only what applies: a value for a holding Plaid gives no price for, the owner's cost basis, and

@@ -113,7 +113,7 @@ export interface ProviderInvestmentTransaction {
 	currency?: string | null
 }
 
-/** One investments read (D-195); `none` when the Item has no investments. */
+/** One investments read (D-197); `none` when the Item has no investments. */
 export interface InvestmentsResult {
 	status: 'ok' | 'none'
 	accounts: ProviderAccount[]
@@ -183,7 +183,7 @@ export function plaidClearKeys(): Promise<void> {
 
 /**
  * A hosted Link session; with a link id, the update mode of that link's own Item. `brokerage` asks for investments
- * first, so an investments-only institution can link (D-195).
+ * first, so an investments-only institution can link (D-197).
  */
 export function plaidLinkStart(linkId?: string, brokerage?: boolean): Promise<LinkStart> {
 	return invoke<LinkStart>('plaid_link_start', { linkId: linkId ?? null, brokerage: brokerage ?? null })

@@ -52,7 +52,7 @@ const REINVESTMENTS = new Set([
 const REINVESTABLE: readonly TxKind[] = ['dividend', 'interest-earned']
 
 /**
- * Whether a row moves money inside one investment account and so adds nothing to in, out or spending (D-195): a buy,
+ * Whether a row moves money inside one investment account and so adds nothing to in, out or spending (D-197): a buy,
  * a sell, or a dividend or interest a reinvestment buy took straight back.
  */
 export function insideAccount(row: TransactionPayload): boolean {
@@ -214,7 +214,7 @@ export function classifyOps(input: ClassifyInput): { ops: BatchOp[]; merchants: 
 	for (const row of input.rows) {
 		const was = row.payload
 		const next: TransactionPayload = { ...was }
-		// an investment row has no merchant: its name is the security's (D-195)
+		// an investment row has no merchant: its name is the security's (D-197)
 		const investment = was.investment
 		const vague = investment ? undefined : (vagueOf(was.name) ?? vagueOf(was.merchantName))
 		const clean = investment ? '' : cleanMerchant(was.name, was.merchantName)

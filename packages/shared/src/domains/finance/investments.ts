@@ -1,4 +1,4 @@
-// What is inside Orchard's brokerage and retirement accounts (product/domains/finance.md §3, D-195), pure so it is
+// What is inside Orchard's brokerage and retirement accounts (product/domains/finance.md §3, D-197), pure so it is
 // tested here: exact decimal arithmetic for values and cost basis, a holding's value and how old it is, when a link's
 // daily investments read is due and over what window, the cost basis a holding carries over from a replaced account,
 // the writes one read makes, the allocation by class and the tab's grouped rows and totals. Every amount is Money and
@@ -273,7 +273,7 @@ function priced(prices: SecurityPayload['prices'], day: string, price: string): 
 }
 
 /**
- * One investments read as writes (D-195). Securities are upserted by the provider's id and take the day's close once
+ * One investments read as writes (D-197). Securities are upserted by the provider's id and take the day's close once
  * per day. Holdings are upserted per account and security, and one the provider no longer lists on an account it
  * reported is tombstoned; closed accounts and accounts with no row are skipped. The provider's cost basis is written
  * unless the owner typed one; a missing one carries over from a replaced account. Investment transactions with an

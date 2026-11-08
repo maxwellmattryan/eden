@@ -5,7 +5,7 @@
 	// accounts. A bank's heading carries its colour, how fresh it is and its menu. Rows do not act (D-118); their menus
 	// do, offering only what applies: a linked account is read from its bank, so it cannot be edited, given a balance or
 	// deleted here. Every figure is the account's own currency, through `formatMoney` in the app's language. An asset
-	// valued more than 90 days ago says it is out of date and its menu leads with Update value (D-195).
+	// valued more than 90 days ago says it is out of date and its menu leads with Update value (D-197).
 	import {
 		Button,
 		EmptyState,
@@ -99,7 +99,7 @@
 		return items
 	}
 	const today = $derived(dateIn(undefined, finance.clock))
-	/** An asset's menu: an out-of-date one leads with Update value, which opens the same sheet as Edit (D-195). */
+	/** An asset's menu: an out-of-date one leads with Update value, which opens the same sheet as Edit (D-197). */
 	function assetActions(asset: Asset): MenuItem[] {
 		return [
 			...(aged(asset.valuedOn, today)

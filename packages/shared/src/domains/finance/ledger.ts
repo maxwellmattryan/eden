@@ -64,7 +64,7 @@ export interface LedgerEntry {
 	refundOf?: string
 	repays?: string
 	notes?: string
-	/** A buy, a sell or a reinvested dividend: money moving inside one account, in no measure (D-195). */
+	/** A buy, a sell or a reinvested dividend: money moving inside one account, in no measure (D-197). */
 	insideAccount?: true
 	/** A single row's parts (or the row), or a pair's out side then its in side. */
 	lines: LedgerLine[]

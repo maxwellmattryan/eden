@@ -95,7 +95,7 @@ const MOVE: ProviderMeaning = { kind: 'transfer', transferLike: true }
 const CASH_MOVES = new Set(['deposit', 'withdrawal', 'contribution', 'distribution'])
 
 /**
- * What an investment transaction's type and subtype mean (D-195): a buy or a sell, a dividend or capital gain, interest,
+ * What an investment transaction's type and subtype mean (D-197): a buy or a sell, a dividend or capital gain, interest,
  * a fee, or a move of cash in or out; anything else is a transfer that pairs with nothing.
  */
 export function investmentMeaningOf(type: string, subtype: string | undefined): ProviderMeaning {

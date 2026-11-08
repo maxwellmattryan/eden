@@ -2,7 +2,7 @@
 // in again three days after its last good sync, Ally, M1 and Fidelity synced this morning, a Japan Post savings account
 // in yen entered by hand, the car valued on the first of the month and a little Bitcoin. One snapshot per account for
 // today. M1 holds VTI (three days of closes), SCHD with no cost basis and cash; the Fidelity 401(k) holds FXAIX and a
-// stable value fund Plaid gives no price for, its value typed 120 days ago so it reads out of date (D-195). Each
+// stable value fund Plaid gives no price for, its value typed 120 days ago so it reads out of date (D-197). Each
 // account's holdings add up to its balance. Times are relative to `now`, so the freshness reads the same whenever the
 // seed runs.
 import { dateIn, instantAt } from '../../dates/index.js'

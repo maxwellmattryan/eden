@@ -615,7 +615,7 @@ pub(crate) fn investments_args(link_id: &str, start_day: &str, end_day: &str) ->
     Ok(())
 }
 
-/// One investments read for one link (D-195): holdings, securities with their closing prices, and the investment
+/// One investments read for one link (D-197): holdings, securities with their closing prices, and the investment
 /// transactions from `start_day` to `end_day`.
 #[tauri::command]
 pub async fn plaid_investments(
