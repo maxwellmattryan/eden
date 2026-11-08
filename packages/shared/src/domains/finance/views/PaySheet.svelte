@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Mark paid (product/domains/finance.md §6, D-195): the payments around a bill's due day, whatever their amount, the
+	// Mark paid (product/domains/finance.md §6, D-196): the payments around a bill's due day, whatever their amount, the
 	// payee's first and then by how close each is to what is left to pay, at most 20. Each one pays the bill with it, so
 	// a part leaves the rest due and Mark paid can be used again; "Paid another way" records what is left, today, with no
 	// transaction. Each is one write with an undo; the pass then closes the bill's tasks and rolls its series on.

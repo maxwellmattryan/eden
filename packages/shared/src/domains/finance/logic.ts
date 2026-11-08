@@ -1,5 +1,5 @@
 // Orchard's logic (product/domains/finance.md): its store, what its sample data seeds, the bill pass on its morning
-// schedule, its one tool (`finance.draft`, #78) and the surface a bill's draft card opens on. What Orchard declares is
+// schedule, its tools (`finance.draft`, #78; `finance.read-statement`, #74) and the surface a bill's draft card opens on. What Orchard declares is
 // in `./manifest.json`; its page is bound by each app (`src/lib/domains/finance/manifest.ts`). It has no quick actions
 // or Garden tiles yet (#87, #90), and no `extras`, which come with the export work (#69).
 import { navigation } from '../../navigation/index.js'

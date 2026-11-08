@@ -1,4 +1,4 @@
-// The bill pass (product/domains/finance.md §6, D-195, D-186), pure so it is tested here: over every bill and the live
+// The bill pass (product/domains/finance.md §6, D-196, D-186), pure so it is tested here: over every bill and the live
 // transactions, in order, a card statement's interest since the previous statement, the matching of payments, the
 // roll-forward of each series, the bill's Today task (created when it is due soon or overdue, moved with its due day,
 // closed once it is settled) and the signals. The store runs it in one queue job; the ops come with their inverse, so

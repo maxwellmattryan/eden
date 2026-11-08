@@ -775,6 +775,16 @@ export const SCHEMAS: Readonly<Record<string, { description: string; schema: Jso
 			['description']
 		),
 	},
+	'finance.read-statement': {
+		description: `${SEPARATE} that finds the transaction lines in a bank or card statement the owner is importing. It is run by Orchard’s Import on the Accounts page with the text the owner confirmed, or the picture they chose to send, and refuses when called in a conversation: there, tell the owner to use Import on Orchard’s Accounts page. Returns the lines found; nothing is saved until the owner imports them.`,
+		schema: object(
+			{
+				text: text('The statement’s text as the owner confirmed it; empty when the picture is sent.'),
+				currency: text('The account’s currency, ISO 4217.'),
+			},
+			['text', 'currency']
+		),
+	},
 	'weather.forecast': {
 		description:
 			'Returns the forecast Eden holds for the owner’s home area: the `current` conditions, up to seven `days` from `day` on (each with its condition, the high and low in `unit`, the chance of rain in percent, the rainfall in mm and the UV), and the weather `alerts` in force now, the most severe first. An alert marked `dismissed` was put away by the owner in Sky and is still in force. `alertsCovered: false` means no alert service covers the place, which is not the same as no alerts. Use it for any question about the weather or about alerts, warnings and watches. It covers the home area only, and a day the forecast does not reach is an error that names the days it holds.',

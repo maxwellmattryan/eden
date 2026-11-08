@@ -37,7 +37,7 @@ export interface BillPayment {
 }
 
 /**
- * A `bill` (#78, D-195): what the owner owes a payee for a period. Its state (`billState`) is derived on read and
+ * A `bill` (#78, D-196): what the owner owes a payee for a period. Its state (`billState`) is derived on read and
  * never stored. A bill with `accountId` is a card statement: its amount is the statement balance and it is settled
  * once its payments reach the minimum.
  */
@@ -77,8 +77,8 @@ export interface BillPayload {
 	undone?: true
 }
 
-/** A `file-import`: a document read on this device, by its fingerprint (`externalId`), and what it made (D-189). */
-export interface FileImportPayload {
+/** A `file-import` with `source: 'document'` (#78; #74's statement files have `source: 'file'`): a document read on this device, by its fingerprint (`externalId`), and what it made (D-189). */
+export interface LetterImportPayload {
 	kind: 'letter'
 	/** `YYYY-MM-DD`. */
 	day: string
@@ -275,6 +275,32 @@ export interface TransactionPayload {
 
 	/** The bill this row paid; an unpaired money-out row with one is a `bill-payment`. */
 	billId?: string
+
+	// ---- #74's key: a row read from a statement file has no `source`, and names the import that made it
+
+	/** The `file-import` that made this row, so its undo and later audits find it. */
+	importId?: string
+}
+
+/**
+ * A `file-import` (#74, D-195): one statement file brought in, kept as its fingerprint only (D-189). The row has
+ * `source: 'file'` and the fingerprint as its `externalId`, so a second live record of the same file is refused.
+ */
+export interface FileImportPayload {
+	what: 'csv' | 'ofx' | 'pdf' | 'picture'
+	/** The account the rows went into. */
+	accountId: string
+	/** `YYYY-MM-DD`, the first and last day of the file's rows; absent when it held none. */
+	from?: string
+	to?: string
+	/** How many rows were written. */
+	rows: number
+	/** How many were already in Orchard. */
+	matched: number
+	/** How many lines could not be read. */
+	skipped: number
+	/** ISO instant of the import. */
+	at: string
 }
 
 /** A `budget-category`. A default one keeps its `key`, so the provider mapping finds it after a rename. */

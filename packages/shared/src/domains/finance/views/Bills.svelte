@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Orchard's Bills tab (product/domains/finance.md §6, "A bill, from letter to paid"; D-195), ported from
+	// Orchard's Bills tab (product/domains/finance.md §6, "A bill, from letter to paid"; D-196), ported from
 	// Domains/Orchard/Bills: every bill by state, in the order Overdue, Due soon, Upcoming, Expected, Paid, each group with
 	// its count and a group with none left out. A row is the payee, its cadence, estimate or actual and source (a card
 	// statement's minimum and interest, what is still due or paid beyond it, a stale card's "as of"), the amount and the

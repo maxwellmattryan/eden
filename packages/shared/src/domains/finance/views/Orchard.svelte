@@ -30,6 +30,7 @@
 	import { plaid } from '../plaid.svelte.js'
 	import { provider } from '../provider.svelte.js'
 	import { documentRead } from '../reader.svelte.js'
+	import { statementImport } from '../statement.svelte.js'
 	import { finance } from '../store.svelte.js'
 	import { FINANCE_TABS, financeTab, type FinanceTab } from '../tabs.js'
 	import type { Account, Asset, Bill, ProviderLink } from '../types.js'
@@ -40,6 +41,7 @@
 	import BalanceSheet from './BalanceSheet.svelte'
 	import BillSheet from './BillSheet.svelte'
 	import Bills from './Bills.svelte'
+	import ImportSheet from './ImportSheet.svelte'
 	import LinkSheet from './LinkSheet.svelte'
 	import PaySheet from './PaySheet.svelte'
 	import PlaidKeysSheet from './PlaidKeysSheet.svelte'
@@ -59,7 +61,13 @@
 	const capture = () => void billCapture.start()
 
 	/** The reader's provider line: who drafts the bill, on which model, at about what cost, or why none can. */
-	const reader = $derived(readerOf($t, documentRead.options?.preview, 'domains.finance.bills.failure'))
+	const reader = $derived(
+		readerOf(
+			$t,
+			documentRead.options?.preview,
+			statementImport.open ? 'domains.finance.import.failures' : 'domains.finance.bills.failure'
+		)
+	)
 
 	// the minute moves while the page is open, so a link goes stale without a reload
 	onMount(() => finance.watch())
@@ -123,7 +131,19 @@
 			variant: 'secondary',
 			onclick: () => show({ sheet: 'asset' }),
 		}
-		if (!bound) return [addAccount, addAsset]
+		// a statement goes into an account the owner has: with none yet, there is nothing to import into (#74)
+		const importing: PageHeaderAction[] = finance.accounts.length
+			? [
+					{
+						id: 'import',
+						label: $t('domains.finance.actions.import'),
+						icon: 'file-up',
+						variant: 'secondary',
+						onclick: () => statementImport.begin(),
+					},
+				]
+			: []
+		if (!bound) return [addAccount, addAsset, ...importing]
 		const link: PageHeaderAction = {
 			id: 'link-bank',
 			label: $t('domains.finance.actions.linkBank'),
@@ -131,7 +151,7 @@
 			variant: 'primary',
 			onclick: () => bound.link(),
 		}
-		return [link, addAccount, addAsset]
+		return [link, addAccount, addAsset, ...importing]
 	})
 
 	/** The first stale link, while a provider can sign it in again. */
@@ -203,6 +223,7 @@
 			onedit={(account) => show({ sheet: 'account', account })}
 			onbalance={(account) => show({ sheet: 'balance', account })}
 			onreplace={(account) => show({ sheet: 'replace', account })}
+			onimport={(account) => statementImport.begin(account.id)}
 			oneditasset={(asset) => show({ sheet: 'asset', asset })}
 			onremovelink={(link) => show({ sheet: 'remove', link })}
 			onreconnect={bound ? (link) => bound.reconnect(link.id) : undefined}
@@ -212,7 +233,7 @@
 	{/if}
 </div>
 
-<!-- The document reader's sheet, bound to its session field for field (finance.md §6, "Mounting it"). -->
+<!-- The document reader's sheet, for a bill's letter and a statement's PDF or picture, bound to its session field for field (finance.md §6, "Mounting it"). -->
 <DocumentSheet
 	bind:open={
 		() => documentRead.open,
@@ -267,6 +288,8 @@
 	/>
 {/if}
 
+<!-- A statement's import (#74); its PDF or picture is read in the document reader above (D-190). -->
+<ImportSheet bind:open={statementImport.open} />
 {#key opened}
 	{#if current?.sheet === 'account'}
 		<AccountSheet bind:open={shown} account={current.account} />

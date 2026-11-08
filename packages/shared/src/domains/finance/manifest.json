@@ -33,7 +33,10 @@
 	"widgets": [],
 	"quickActions": [],
 	"captureSources": [],
-	"tools": [{ "id": "draft", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] }],
+	"tools": [
+		{ "id": "draft", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] },
+		{ "id": "read-statement", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] }
+	],
 	"signals": ["finance.link-broken", "finance.bill-due", "finance.bill-overdue"],
 	"notificationKinds": [
 		{ "id": "link-needs-reconnecting", "channel": "in-app", "cadence": "when-found", "signal": "finance.link-broken" },

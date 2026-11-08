@@ -403,5 +403,5 @@ export class StagedSources {
 /** The caption beside a source's name on a sheet. */
 export const sourceDetail = (source: CaptureSource) => (source.size ? sizeLabel(source.size) : undefined)
 
-/** A model's name as the owner would say it; the shell's (`reader-line.ts`), where Orchard reads it too. */
-export { modelLabel } from '../../shell/gardener/reader-line.js'
+/** A model's name as the owner would say it; the shell's, since Orchard's reader line says it too (#74). */
+export { modelLabel } from '../../gardener/estimate.js'

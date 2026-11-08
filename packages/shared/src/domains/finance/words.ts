@@ -12,6 +12,7 @@ import {
 	type AssetKind,
 	type Bill,
 	type BillSource,
+	type FileImportPayload,
 	type LinkState,
 	type ProviderLink,
 } from './types.js'
@@ -145,6 +146,34 @@ export function billSecondary(bill: Bill, state: BillState, words: BillWords): s
 export function billChip(bill: Bill, words: Pick<BillWords, 'tr' | 'money'>): string {
 	const amount = words.money(bill.amount)
 	return bill.estimate ? words.tr('domains.finance.bills.line.about', { values: { amount } }) : amount
+}
+
+/**
+ * A statement's period (#74), its days as `dayLine` writes them with the year after the last, and after the first
+ * too when the two differ, since a statement is often from a year before: "Wed 1 Jan to Tue 14 Jan 2025".
+ */
+export function periodLine(from: string, to: string, lang: string, tr: Translate): string {
+	const year = (day: string) => day.slice(0, 4)
+	const first = year(from) === year(to) ? dayLine(from, lang) : `${dayLine(from, lang)} ${year(from)}`
+	return tr('domains.finance.import.periodValue', { values: { from: first, to: `${dayLine(to, lang)} ${year(to)}` } })
+}
+
+/** An account as an import names it: "Everyday checking ••4821". */
+export function importAccountName(account: Pick<Account, 'name' | 'last4'>, tr: Translate): string {
+	return account.last4
+		? `${account.name} ${tr('domains.finance.row.last4', { values: { last4: account.last4 } })}`
+		: account.name
+}
+
+/** The detail of a file imported before (#74): "42 rows into Everyday checking ••4821". */
+export function importDetail(
+	row: Pick<FileImportPayload, 'rows' | 'accountId'>,
+	accounts: readonly Account[],
+	tr: Translate
+): string {
+	const account = accounts.find((entry) => entry.id === row.accountId)
+	const name = account ? importAccountName(account, tr) : tr('domains.finance.import.unknownAccount')
+	return tr('domains.finance.import.knownDetail', { values: { count: row.rows, account: name } })
 }
 
 /** What a field says of an amount it could not read in the currency. */

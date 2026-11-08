@@ -2,7 +2,7 @@
 //! secret in the body, over a `Transport`: `reqwest` in the app, a scripted fake in the tests. Only free calls are
 //! made (D-183): never `/accounts/balance/get` and never a paid refresh. The products asked for are read-only (D-8).
 //! The one exception is `/liabilities/get`, asked once a run and only of an item with a credit account, for its cards'
-//! statements (#78): in production its first call starts that item's Liabilities billing (D-195).
+//! statements (#78): in production its first call starts that item's Liabilities billing (D-196).
 //!
 //! A failure is `EdenError::Refused("plaid:<code>: <Plaid's error code>")`, with the code one of `needs-reauth`,
 //! `invalid-keys`, `rate-limited`, `institution-down`, `provider-down`, `network`, `other`, `no-keys`, `not-found` and

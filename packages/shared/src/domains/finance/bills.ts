@@ -1,4 +1,4 @@
-// Orchard's bills (product/domains/finance.md §6, D-195), pure so they are tested here: a bill's state, derived on
+// Orchard's bills (product/domains/finance.md §6, D-196), pure so they are tested here: a bill's state, derived on
 // read and never stored; what its payments come to (settled, partly paid, overpaid); the next occurrence of a series
 // and its estimate; the draft the owner's form and the Gardener's answer hand over, and the bill it makes or updates;
 // and the ops that store a bill and take it back. Every percentage is worked in minor units through `shareOf`
@@ -15,7 +15,7 @@ import {
 	type Bill,
 	type BillRepeat,
 	type BillSource,
-	type FileImportPayload,
+	type LetterImportPayload,
 } from './types.js'
 
 /** Due within today to today + 3 is Due soon. */
@@ -416,7 +416,7 @@ export function billOps(was: Bill | undefined, bill: Bill, read?: FileImport): O
 	const ops: BatchOp[] = [was ? update(bill) : create(bill)]
 	const inverse: BatchOp[] = [was ? update(was) : { op: 'delete', uri: toUri(FINANCE.bill, bill.id) }]
 	if (read) {
-		const payload: FileImportPayload = { kind: 'letter', day: read.day, billId: bill.id, rows: 1 }
+		const payload: LetterImportPayload = { kind: 'letter', day: read.day, billId: bill.id, rows: 1 }
 		ops.push({
 			op: 'createEntity',
 			input: {

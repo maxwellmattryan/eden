@@ -16,7 +16,7 @@ import { draftOver, sameBill, type BillDraft } from './bills.js'
 import type { DocumentChoice } from './reader.js'
 import { documentRead } from './reader.svelte.js'
 import { finance } from './store.svelte.js'
-import { FILE_IMPORT_SOURCE, FINANCE, type FileImportPayload } from './types.js'
+import { FILE_IMPORT_SOURCE, FINANCE, type LetterImportPayload } from './types.js'
 import { dayLine } from './words.js'
 
 const TOOL = 'finance.draft'
@@ -166,7 +166,7 @@ class BillCapture {
 
 	/** Whether the file was read before: the day, and the bill it made or that the bill is gone. */
 	async #known(fingerprint: string): Promise<{ day: string; detail: string } | undefined> {
-		const [row] = await queryEntities<FileImportPayload>({
+		const [row] = await queryEntities<LetterImportPayload>({
 			type: FINANCE.fileImport,
 			source: FILE_IMPORT_SOURCE,
 			externalIds: [fingerprint],

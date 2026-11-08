@@ -1359,6 +1359,7 @@
 				"addAccount": "口座を追加",
 				"addAsset": "資産を追加",
 				"linkBank": "銀行を連携",
+				"import": "取り込む",
 				"reconnect": "再接続",
 				"captureBill": "請求書を読み取る",
 				"addBill": "請求を追加"
@@ -1419,6 +1420,7 @@
 				"edit": "編集",
 				"updateBalance": "残高を更新",
 				"replaces": "この口座が置き換えるもの…",
+				"import": "明細を取り込む",
 				"close": "口座を解約",
 				"reopen": "再開",
 				"delete": "削除"
@@ -1468,6 +1470,60 @@
 				"subject": "あなた",
 				"resource": "金融機関の連携"
 			},
+			"import": {
+				"title": "明細を取り込む",
+				"titleReading": "取引を探しています",
+				"titleImported": "取り込み済み",
+				"titleFailed": "取り込めませんでした",
+				"account": "口座",
+				"accountPlaceholder": "口座を選択",
+				"invite": "ここに明細をドロップ",
+				"choose": "ファイルを選択",
+				"caption": "CSV・OFX・QFXは5 MBまで、PDFは10 MBまで、または画像。",
+				"needAccount": "続けるには口座を選択してください",
+				"refusals": {
+					"several": "ファイルは一度に1つです。",
+					"unsupported": "この種類のファイルは取り込めません。CSV・OFX・QFX・PDF・画像を使ってください。",
+					"tooLarge": "このファイルは大きすぎて取り込めません。"
+				},
+				"reading": "取引を探しています…",
+				"findRows": "取引を探す",
+				"cost": "最大{cost}",
+				"next": "見つかった取引は、保存する前にOrchardの記録と照合されます。",
+				"accountLabel": "口座",
+				"period": "期間",
+				"periodValue": "{from}〜{to}",
+				"rows": "件数",
+				"rowsValue": "新規{fresh}件 · Orchardに登録済み{matched}件",
+				"moneyIn": "入金",
+				"moneyOut": "出金",
+				"skipped": "{count}行は読み取れず、除外されます",
+				"otherAccount": "このファイルは末尾{last4}の口座のものです",
+				"flip": "このファイルでは請求額が正の数です",
+				"more": "ほか{count}件",
+				"nothingNew": "このファイルの取引はすべてOrchardに登録済みです。",
+				"confirm": "{count}件を取り込む",
+				"done": "完了",
+				"close": "閉じる",
+				"knownOn": "{day}に取り込み済み",
+				"knownDetail": "{count}件を{account}に",
+				"unknownAccount": "現在はない口座",
+				"failures": {
+					"no-columns": "日付・内容・金額の列が見つかりませんでした。",
+					"no-rows": "このファイルに取引がありません。",
+					"too-many": "このファイルは5,000行を超えています。期間を短くして書き出してください。",
+					"currency": "このファイルは口座と別の通貨です。",
+					"several-accounts": "このファイルには複数の口座があります。1つずつ書き出してください。",
+					"unreadable": "このファイルを読み取れませんでした。",
+					"empty": "この明細から取引が見つかりませんでした。",
+					"failed": "取引を見つけられませんでした。何も保存されていません。",
+					"no-key": "設定のGardenerでAnthropicのキーを追加すると、明細を読み取れます。",
+					"unavailable": "これを読み取れるモデルが設定されていません。設定のGardenerでモデルを変更してください。",
+					"budget": "月の利用上限を超えてしまいます。設定のGardenerで上限を上げてください。",
+					"limit": "Claude Codeの利用枠が上限に達しています。リセット後にもう一度お試しください。",
+					"busy": "Gardenerは別のリクエストを処理中です。少し待ってからお試しください。"
+				}
+			},
 			"errors": {
 				"name": "名前を入力してください",
 				"amount": "金額を入力してください",
@@ -1490,7 +1546,9 @@
 				"replaced": "{name}を置き換えました",
 				"assetAdded": "資産を追加しました",
 				"assetSaved": "資産を保存しました",
-				"linkRemoved": "{name}を削除しました"
+				"linkRemoved": "{name}を削除しました",
+				"imported": "{account}に{count}件を取り込みました",
+				"nothingNew": "{name}に新しい取引はありません"
 			},
 			"plaid": {
 				"keysButton": "Plaidのキー",
