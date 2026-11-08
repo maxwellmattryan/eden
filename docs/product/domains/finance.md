@@ -4,7 +4,7 @@ status: draft
 summary: Everything the owner owns and owes, kept current from their real accounts by Plaid on each device, with Activity, bills, budgets, debt, investments and goals, and the Gardener reading it to find where money leaks. Id `finance`, after Phase 2, built ahead of it.
 read-this-if: You are working on accounts, transactions, bills, budgets, debt, investments, goals, or the Gardener for money.
 depends-on: [substrate/privacy, substrate/registry, substrate/integrations, substrate/grants, substrate/tasks, substrate/ai, domains/_template]
-updated: 2026-11-06
+updated: 2026-11-07
 ---
 
 ## 1. Purpose
@@ -64,6 +64,7 @@ D-188 is the model. What Orchard adds:
 - A holding's or an asset's value is its quantity × the security's price, in the home currency once the price is.
 - Hide amounts (#68) masks every figure on both apps without changing what is stored.
 - Built in #75 (D-193): a pass after every sync that wrote transactions (`finance.classify()`) gives each live `transaction` its own keys: `kind`, `merchantId`, `counterparty`, `categoryId` with `categoryBy`, `transferId`, `refundOf` and `review`; the owner's fixes add `repays`, `reimbursable`, `parts`, `oneOff`, and the sync adds `replaced` on a posted row that took over a pending one. `budget-category`, `category-rule` and `merchant` are live rows, the defaults seeded once. The modules: `merchants.ts` (cleaning and vague brands), `categories.ts` (defaults and the provider mapping), `classify.ts` (the pass, `spendingOf`, `fitParts`, `ruleFor`), `edits.ts` (the owner's fixes) and the store's methods over them. No page shows them yet (#83).
+- Built in #79 (D-195): the recurring pass runs in the same queue job right after the classification pass, over the rows as that pass left them (`withUpdates`), and keeps one `recurring-charge` row per series that holds a cadence. Each charge carries `recurringId`, the pass's key. A row holds `merchantId`, `counterparty`, `currency`, `cadence`, `variable`, `expected`, `firstDay`, `lastDay`, `lastAmount`, `nextDay`, `accountId`, `categoryId`, `count` and `priceChanges`, all derived, and the owner's `state` (`kept`, `cancelled`, `dismissed`) with `stateOn`, `billOffer: 'declined'` and `billId`, which the pass keeps. Nothing stored depends on today: `statusOf` computes active, lapsed, cancelled or dismissed. The module is `recurring.ts` (`recurringOps`, `statusOf`, `chargedAfterCancel`, `monthlyCostOf`, `recurringTotals`, `overlapsOf`, `offersBill`, `billDraftOf` and the owner's ops). The store holds `finance.recurring` and answers `setRecurringState`, `declineBillOffer`, `linkBill` and `recurringById`. No page shows them yet (#83, #78).
 - Built in #71 (D-191): `@eden/shared/money` holds the type and its arithmetic, proven by `money.vectors.json`. A balance is kept as the bank states it and the kind (credit card, loan) says it is owed; a share is in basis points; a `balance-snapshot` is upserted per account per local day through the account's `lastSnapshot`, and the store never reads snapshots. The home currency is a setting a bundle carries; an account or asset in another stays out of totals and the page says so.
 
 ### Encryption (#69)
@@ -178,7 +179,7 @@ Signals, each `finance.<id>`:
 | `bill-due` | a bill enters Due soon | #78 |
 | `bill-overdue` | a bill's due date passes unpaid | #78 |
 | `flag` | a new fee, interest charged, a duplicate or an unusual amount | #90 |
-| `price-rise` | a recurring charge costs more than last time | #79 |
+| `price-rise` | a fixed recurring charge that existed before the pass, not cancelled or dismissed, got a dearer charge after its previous last day; payload `{ uris: [recurring-charge uri], merchant }` with no amount, so Hide amounts (#68) has nothing to mask; keyed `<recurring-charge>:<day>`; built | #79 |
 | `watch-crossed` | a watch's threshold is passed | #90 |
 | `low-balance` | the forecast dips below zero before payday | #87 |
 | `limit-missing` | next year's contribution limits are not in yet | #82 |
@@ -188,7 +189,8 @@ Signals, each `finance.<id>`:
 | a link needs reconnecting (`link-needs-reconnecting`, built: "Chase needs you to sign in again", "Chase asks you to sign in again by Mon 2 Nov"; the warning glyph, Open goes to Accounts) | in-app | when found | on |
 | a bill due soon | in-app, and its Task in Today | when it enters Due soon | on |
 | a bill overdue | in-app | once, the day after | on |
-| a flag or a price rise | in-app | when found | on |
+| a price rise (`price-rise`, built: "Netflix costs more than last time"; Open goes to Orchard) | in-app | when found | on |
+| a flag | in-app | when found | on |
 | a watch crossed | in-app | when crossed | on |
 | a low balance ahead | in-app | when the forecast changes | on |
 | the weekly digest | in-app | weekly | off until the finance grant (#90) |
@@ -245,7 +247,7 @@ Open: none.
 
 ## Registry rows
 
-Under Orchard, live since #71 added the manifest (`packages/shared/src/domains/finance/manifest.json`), built ahead of its phase like Meadow (D-130), except the kind `bill-due`, whose row carries Phase 2 and waits on Almanac (D-186). Its export carries `account`, `balance-snapshot`, `asset`, `transaction` (#73), `budget-category`, `category-rule` and `merchant` (#75), never `provider-link`, which is this device's (D-184, D-191). The rows: fact `monthly-income-band` T2; entities `provider-link` T2, `account` T2, `file-import` T2, `balance-snapshot` T2, `transaction` T2, `budget-category` T1, `category-rule` T2, `merchant` T2, `money-rollup` T2, `bill` T2, `recurring-charge` T2, `budget` T2, `liability` T2, `holding` T2, `security` T0, `asset` T2, `income-source` T2, `savings-goal` T2, `contribution-limit` T0, `spending-watch` T2; kind `bill-due` (event, T2). The stub's `savings-goal` fact is now an entity and its attachment kind is gone (D-189).
+Under Orchard, live since #71 added the manifest (`packages/shared/src/domains/finance/manifest.json`), built ahead of its phase like Meadow (D-130), except the kind `bill-due`, whose row carries Phase 2 and waits on Almanac (D-186). Its export carries `account`, `balance-snapshot`, `asset`, `transaction` (#73), `budget-category`, `category-rule` and `merchant` (#75), `recurring-charge` (#79), never `provider-link`, which is this device's (D-184, D-191). The rows: fact `monthly-income-band` T2; entities `provider-link` T2, `account` T2, `file-import` T2, `balance-snapshot` T2, `transaction` T2, `budget-category` T1, `category-rule` T2, `merchant` T2, `money-rollup` T2, `bill` T2, `recurring-charge` T2, `budget` T2, `liability` T2, `holding` T2, `security` T0, `asset` T2, `income-source` T2, `savings-goal` T2, `contribution-limit` T0, `spending-watch` T2; kind `bill-due` (event, T2). The stub's `savings-goal` fact is now an entity and its attachment kind is gone (D-189).
 
 ## Handoffs
 
@@ -322,3 +324,12 @@ From #75:
 - #84 manages categories (the default set is seeded once; budget fields beyond name, group and essential are its own).
 - A non-card `LOAN_PAYMENTS_*` row with no partner stays a `transfer`, so the `debt` default is only reached by a rule or the owner; #86 decides whether an unlinked loan's payment counts as spending.
 - The Hearth receipt split ("a Hearth haul with a receipt can split it for you") needs a cross-domain path, since no domain hears another's signals yet, and a currency on Hearth's prices, which are cents with none. The owner files it as its own issue.
+
+From #79:
+
+- #83: Activity's `recurring` filter reads `recurringId` and leaves out the charges of a dismissed row (`statusOf` is `dismissed`); the subscriptions view reads `finance.recurring` through `statusOf`, `recurringTotals`, `overlapsOf` and `chargedAfterCancel`, and sets the owner's answer with `setRecurringState`.
+- #78: Bills offers a bill where `offersBill(charge, categories, today)` holds, maps `billDraftOf(charge, merchants)` onto its `bill` payload, then calls `linkBill(id, billId)`; "Not a bill" calls `declineBillOffer(id)`.
+- #84: a fixed budget line from a recurring charge takes `monthlyCostOf(charge)`.
+- #87: the forecast reads each active row's `nextDay` and `expected` (negative, the charges' sign).
+- #90: `finance_recurring` reads the same helpers; overlaps between different merchants (two music services) are the Gardener's to find.
+- The pass runs only at a sync's classification: an owner's fix (one-off, merge) is picked up at the next sync.
