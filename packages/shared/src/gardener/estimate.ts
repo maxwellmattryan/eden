@@ -78,3 +78,11 @@ export function formatCost(usd: number): string {
 	}
 	return `$${formatUsd(usd)}`
 }
+
+/** A model's name as the owner would say it, from its id: `claude-haiku-4-5-20251001` is "Haiku 4.5". */
+export function modelLabel(id: string): string {
+	const match = /^claude-([a-z]+)-(\d+)(?:-(\d{1,2}))?(?:-\d{8})?$/.exec(id)
+	if (!match) return id
+	const [, family, major, minor] = match
+	return `${family![0]!.toUpperCase()}${family!.slice(1)} ${major}${minor ? `.${minor}` : ''}`
+}

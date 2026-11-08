@@ -16,7 +16,7 @@ import {
 	type StatementRow,
 } from './statement.js'
 import { FINANCE, type Account, type TransactionPayload } from './types.js'
-import { importDetail } from './words.js'
+import { importDetail, periodLine } from './words.js'
 
 const usd = (minor: number) => ({ minor, currency: 'USD' })
 const line = (day: string, description: string, minor: number): StatementRow => ({
@@ -338,6 +338,15 @@ describe('readStatementCheck', () => {
 		expect(readStatementCheck({ text: 'x', currency: 'USD' }, { threadId: 't' })).toBe(READ_STATEMENT_REFUSAL)
 		expect(READ_STATEMENT_REFUSAL).toContain('Import')
 		expect(readStatementCheck({ text: 'x', currency: 'USD' }, { threadId: '' })).toBeUndefined()
+	})
+})
+
+describe('periodLine', () => {
+	const tr = (_key: string, options?: { values?: Record<string, string | number> }) =>
+		`${options?.values?.from} to ${options?.values?.to}`
+	it('puts the year after the last day, and after the first when it differs', () => {
+		expect(periodLine('2025-01-01', '2025-01-14', 'en', tr)).toBe('Wed Jan 1 to Tue Jan 14 2025')
+		expect(periodLine('2024-12-20', '2025-01-14', 'en', tr)).toBe('Fri Dec 20 2024 to Tue Jan 14 2025')
 	})
 })
 
