@@ -16,6 +16,8 @@
 // (matching, the series, the Today tasks, the signals) and writes both, so its undo takes back what the pass made of
 // it. Orchard writes a bill's task itself rather than through Today's store, so no payee lands in the Garden feed; it
 // emits the task signals and asks Today to reload, as `substrate/tasks.md` says a domain does.
+// The holdings and securities (#76, D-197) are held whole, like the accounts; a daily investments read writes them
+// through `applySync`, and the owner's cost basis and typed value go through `#commit` with an undo.
 import { get } from 'svelte/store'
 import { logError } from '../../api/index.js'
 import {
@@ -34,7 +36,7 @@ import {
 	type TaskRow,
 	type Write,
 } from '../../data/index.js'
-import { nowIso, todayIso } from '../../dates/index.js'
+import { dateIn, nowIso, todayIso } from '../../dates/index.js'
 import { t } from '../../i18n/index.js'
 import type { Money } from '../../money/index.js'
 import { settings } from '../../settings/index.js'
@@ -84,6 +86,7 @@ import {
 	type RepaymentError,
 	type SplitError,
 } from './edits.js'
+import { holdingOps, investmentSummary, withCostBasis, withTypedValue } from './investments.js'
 import { buildLedger, queryLedger, touchedTransactions, type LedgerAnswer, type LedgerQuery } from './ledger.js'
 import { provider } from './provider.svelte.js'
 import {
@@ -112,6 +115,8 @@ import {
 	type CategoryPayload,
 	type FileImportPayload,
 	type FinanceData,
+	type Holding,
+	type HoldingPayload,
 	type LetterImportPayload,
 	type Merchant,
 	type MerchantPayload,
@@ -122,6 +127,8 @@ import {
 	type RecurringState,
 	type Rule,
 	type RulePayload,
+	type Security,
+	type SecurityPayload,
 	type TransactionPayload,
 	type TxPart,
 } from './types.js'
@@ -154,6 +161,10 @@ export type EditAnswer<C extends string = never> = Undo | Refused<C> | undefined
 export interface SyncChange {
 	links?: ProviderLink[]
 	accounts?: Account[]
+	/** The holdings and securities an investments read made or changed (#76), and the holdings it tombstoned. */
+	holdings?: Holding[]
+	removedHoldings?: string[]
+	securities?: Security[]
 }
 
 /** A fix as the store makes it: the ops, and what the store's sets show of it and of its undo. */
@@ -225,6 +236,9 @@ export class FinanceStore {
 	links = $state<ProviderLink[]>([])
 	accounts = $state<Account[]>([])
 	assets = $state<Asset[]>([])
+	/** The live holdings and securities (#76, D-197). */
+	holdings = $state<Holding[]>([])
+	securities = $state<Security[]>([])
 	/** The live budget categories, merchants and category rules (#75). */
 	categories = $state<Category[]>([])
 	merchants = $state<Merchant[]>([])
@@ -275,6 +289,19 @@ export class FinanceStore {
 		void this.clock
 		return billGroups(this.bills, todayIso())
 	})
+
+	/** The Investments tab: grouped holdings, totals and allocation (D-197). */
+	readonly investments = $derived(
+		investmentSummary({
+			holdings: this.holdings,
+			securities: this.securities,
+			accounts: this.accounts,
+			links: this.links,
+			home: settings.homeCurrency,
+			today: dateIn(undefined, this.clock),
+			now: this.clock,
+		})
+	)
 	/** Every money figure's index (D-194): empty until the transactions are read (`ledgerReady`). */
 	readonly ledger = $derived.by(() => {
 		void this.#version
@@ -296,6 +323,12 @@ export class FinanceStore {
 	linkById(id?: string): ProviderLink | undefined {
 		return id ? this.links.find((link) => link.id === id) : undefined
 	}
+	holdingById(id?: string): Holding | undefined {
+		return id ? this.holdings.find((holding) => holding.id === id) : undefined
+	}
+	securityById(id?: string): Security | undefined {
+		return id ? this.securities.find((security) => security.id === id) : undefined
+	}
 	/** The accounts this one may say it replaced. */
 	candidatesFor(id: string): Account[] {
 		return replaceCandidates(this.accounts, id)
@@ -308,17 +341,20 @@ export class FinanceStore {
 
 	async #read() {
 		try {
-			const [links, accounts, assets, categories, merchants, rules, bills, recurring] = await Promise.all([
-				queryEntities<ProviderLinkPayload>({ type: FINANCE.link }),
-				queryEntities<AccountPayload>({ type: FINANCE.account }),
-				queryEntities<AssetPayload>({ type: FINANCE.asset }),
-				queryEntities<CategoryPayload>({ type: FINANCE.category }),
-				queryEntities<MerchantPayload>({ type: FINANCE.merchant }),
-				queryEntities<RulePayload>({ type: FINANCE.rule }),
-				queryEntities<BillPayload>({ type: FINANCE.bill }),
-				queryEntities<RecurringPayload>({ type: FINANCE.recurring }),
-			])
-			this.#show(financeFromRows({ links, accounts, assets }))
+			const [links, accounts, assets, categories, merchants, rules, bills, recurring, holdings, securities] =
+				await Promise.all([
+					queryEntities<ProviderLinkPayload>({ type: FINANCE.link }),
+					queryEntities<AccountPayload>({ type: FINANCE.account }),
+					queryEntities<AssetPayload>({ type: FINANCE.asset }),
+					queryEntities<CategoryPayload>({ type: FINANCE.category }),
+					queryEntities<MerchantPayload>({ type: FINANCE.merchant }),
+					queryEntities<RulePayload>({ type: FINANCE.rule }),
+					queryEntities<BillPayload>({ type: FINANCE.bill }),
+					queryEntities<RecurringPayload>({ type: FINANCE.recurring }),
+					queryEntities<HoldingPayload>({ type: FINANCE.holding }),
+					queryEntities<SecurityPayload>({ type: FINANCE.security }),
+				])
+			this.#show(financeFromRows({ links, accounts, assets, holdings, securities }))
 			this.categories = categories.map(withId)
 			this.merchants = merchants.map(withId)
 			this.rules = rules.map(ruleOf)
@@ -439,13 +475,21 @@ export class FinanceStore {
 
 	/** What the store holds, as plain data. */
 	data(): FinanceData {
-		return $state.snapshot({ links: this.links, accounts: this.accounts, assets: this.assets }) as FinanceData
+		return $state.snapshot({
+			links: this.links,
+			accounts: this.accounts,
+			assets: this.assets,
+			holdings: this.holdings,
+			securities: this.securities,
+		}) as FinanceData
 	}
 
 	#show(data: FinanceData) {
 		this.links = data.links
 		this.accounts = data.accounts
 		this.assets = data.assets
+		this.holdings = data.holdings ?? []
+		this.securities = data.securities ?? []
 	}
 
 	#snapshot(): FinanceData {
@@ -699,8 +743,48 @@ export class FinanceStore {
 					...links.filter((link) => !this.links.some((entry) => entry.id === link.id)),
 				]
 				this.#withAccounts(...(change.accounts ?? []))
+				this.#withInvestments(change)
 				resolve(true)
 			})
+		})
+	}
+
+	/** The holdings and securities a provider's write made, changed or tombstoned. */
+	#withInvestments(change: SyncChange) {
+		const merge = <T extends { id: string }>(held: T[], changed: T[] = [], gone: string[] = []) => {
+			const changedOf = (id: string) => changed.find((entry) => entry.id === id)
+			return [
+				...held.filter((entry) => !gone.includes(entry.id)).map((entry) => changedOf(entry.id) ?? entry),
+				...changed.filter((entry) => !held.some((other) => other.id === entry.id)),
+			]
+		}
+		if (change.securities?.length) this.securities = merge(this.securities, change.securities)
+		if (change.holdings?.length || change.removedHoldings?.length)
+			this.holdings = merge(this.holdings, change.holdings, change.removedHoldings)
+	}
+
+	// ---- Holdings (#76) ------------------------------------------------------------------------------------------
+
+	/** The owner's cost basis for a holding, a total, never overwritten by a read; none clears it (D-197). */
+	setCostBasis(id: string, amount: Money | undefined): Undo | undefined {
+		const holding = $state.snapshot(this.holdingById(id)) as Holding | undefined
+		if (!holding || (!amount && holding.costBasisBy !== 'owner')) return undefined
+		return this.#holdingChange(holding, withCostBasis(holding, amount))
+	}
+
+	/** The owner's value for a holding the provider gives no price for, with the day it was set; none clears it. */
+	setHoldingValue(id: string, typed: { value: Money; on: string } | undefined): Undo | undefined {
+		const holding = $state.snapshot(this.holdingById(id)) as Holding | undefined
+		if (!holding) return undefined
+		return this.#holdingChange(holding, withTypedValue(holding, typed))
+	}
+
+	#holdingChange(was: Holding, next: Holding): Undo {
+		const before = this.holdings
+		return this.#commit({
+			apply: () => (this.holdings = this.holdings.map((entry) => (entry.id === next.id ? next : entry))),
+			revert: () => (this.holdings = before),
+			...holdingOps(was, next),
 		})
 	}
 

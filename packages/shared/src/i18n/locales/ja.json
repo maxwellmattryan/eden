@@ -1205,7 +1205,8 @@
 			"subtitle": "お金、予算、資産",
 			"tabs": {
 				"accounts": "口座",
-				"bills": "請求"
+				"bills": "請求",
+				"investments": "投資"
 			},
 			"tabsLabel": "果樹園のセクション",
 			"bills": {
@@ -1329,6 +1330,7 @@
 					"no-files": "送るものがありませんでした。"
 				}
 			},
+			"tabsLabel": "果樹園のセクション",
 			"categories": {
 				"rent": "家賃",
 				"utilities": "光熱費",
@@ -1362,7 +1364,50 @@
 				"import": "取り込む",
 				"reconnect": "再接続",
 				"captureBill": "請求書を読み取る",
-				"addBill": "請求を追加"
+				"addBill": "請求を追加",
+				"linkBrokerage": "証券口座を連携",
+				"reconnect": "再接続"
+			},
+			"investments": {
+				"label": "投資の合計",
+				"value": "評価額",
+				"costBasis": "取得原価",
+				"gain": "損益",
+				"withoutBasis": "取得原価のない保有銘柄 {count} 件",
+				"leftOut": "{currencies} の保有銘柄 {count} 件は合計に含まれていません",
+				"unpricedCount": "価格のない保有銘柄 {count} 件は含まれていません",
+				"allocation": "資産配分",
+				"columns": {
+					"class": "区分",
+					"value": "評価額",
+					"share": "割合"
+				},
+				"classes": {
+					"stocks": "株式",
+					"funds": "ファンド",
+					"bonds": "債券",
+					"cash": "現金",
+					"crypto": "暗号資産",
+					"other": "その他"
+				},
+				"empty": {
+					"title": "まだ投資はありません",
+					"bound": "証券口座を連携すると保有銘柄が表示されます。",
+					"unbound": "保有銘柄はデスクトップで連携した証券口座から届きます。"
+				},
+				"noHoldings": "保有銘柄は次の同期で届きます。",
+				"unpriced": "価格なし",
+				"asOf": "{day}時点",
+				"outOfDate": "古い評価",
+				"carried": "引き継ぎ",
+				"cost": "原価 {amount}",
+				"costBasisTitleNew": "取得原価を追加",
+				"costBasisTitle": "取得原価",
+				"costBasisLede": "{name}に支払った合計額です。1株あたりではありません。",
+				"valueTitleNew": "評価額を追加",
+				"valueTitle": "評価額を更新",
+				"valueLede": "{name}の評価額と、確認した日。",
+				"valuedOn": "評価日"
 			},
 			"totals": {
 				"label": "合計",
@@ -1423,7 +1468,12 @@
 				"import": "明細を取り込む",
 				"close": "口座を解約",
 				"reopen": "再開",
-				"delete": "削除"
+				"delete": "削除",
+				"updateValue": "評価額を更新",
+				"addValue": "評価額を追加",
+				"addCostBasis": "取得原価を追加",
+				"editCostBasis": "取得原価を編集",
+				"clearCostBasis": "入力した取得原価を消去"
 			},
 			"empty": {
 				"title": "まだ何もありません",
@@ -1534,7 +1584,8 @@
 				"share": "0.01〜100で入力してください",
 				"day": "日付を入力してください",
 				"quantity": "数値を入力してください",
-				"unit": "単位を入力してください"
+				"unit": "単位を入力してください",
+				"futureDay": "今日以前の日を選んでください"
 			},
 			"toasts": {
 				"accountAdded": "口座を追加しました",
@@ -1548,7 +1599,10 @@
 				"assetSaved": "資産を保存しました",
 				"linkRemoved": "{name}を削除しました",
 				"imported": "{account}に{count}件を取り込みました",
-				"nothingNew": "{name}に新しい取引はありません"
+				"nothingNew": "{name}に新しい取引はありません",
+				"costBasisSet": "{name}の取得原価を設定しました",
+				"costBasisCleared": "{name}の取得原価を消去しました",
+				"valueSet": "{name}の評価額を設定しました"
 			},
 			"plaid": {
 				"keysButton": "Plaidのキー",

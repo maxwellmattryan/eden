@@ -229,6 +229,7 @@ pub fn run() {
             domains::finance::plaid_link_start,
             domains::finance::plaid_link_poll,
             domains::finance::plaid_sync,
+            domains::finance::plaid_investments,
             domains::finance::plaid_revoke,
             domains::finance::plaid_sandbox_reset_login,
             domains::weather::weatherkit_status,

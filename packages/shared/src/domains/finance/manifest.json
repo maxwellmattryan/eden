@@ -2,7 +2,7 @@
 	"id": "finance",
 	"phase": "later",
 	"sidebar": { "group": "domains", "order": 50, "visible": true },
-	"tabs": ["accounts", "bills"],
+	"tabs": ["accounts", "bills", "investments"],
 	"resources": {
 		"facts": [{ "id": "monthly-income-band", "tier": "T2" }],
 		"entities": [
@@ -61,6 +61,8 @@
 		"merchant",
 		"bill",
 		"file-import",
-		"recurring-charge"
+		"recurring-charge",
+		"holding",
+		"security"
 	]
 }

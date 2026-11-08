@@ -14,7 +14,8 @@ use chrono::{DateTime, Utc};
 use serde_json::{json, Value};
 
 use super::provider::{
-    CardStatement, Institution, LinkStart, NewLink, ProviderAccount, ProviderTransaction,
+    CardStatement, Institution, InvestmentsResult, LinkStart, NewLink, ProviderAccount,
+    ProviderHolding, ProviderInvestmentTransaction, ProviderSecurity, ProviderTransaction,
     SyncResult,
 };
 use crate::db::secret_store::SecretStore;
@@ -49,6 +50,19 @@ const NEEDS_REAUTH: &[&str] = &[
     "INVALID_ACCESS_TOKEN",
 ];
 const MUTATION: &str = "TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION";
+/// The codes that say the Item has no such product to read: an investments-only Item asked for transactions, or an
+/// Item with no investment account asked for holdings. Neither is a failure.
+const NOT_OFFERED: &[&str] = &[
+    "PRODUCTS_NOT_SUPPORTED",
+    "ADDITIONAL_CONSENT_REQUIRED",
+    "INVALID_PRODUCT",
+    "NO_ACCOUNTS",
+    "NO_INVESTMENT_ACCOUNTS",
+];
+/// Investment transactions per `/investments/transactions/get` page, Plaid's most.
+const INVESTMENT_PAGE: u64 = 500;
+/// The most pages one read takes: 20,000 investment transactions.
+const INVESTMENT_PAGES: u64 = 40;
 
 /// The secret that holds a link's access token.
 pub fn item_secret(link_id: &str) -> String {
@@ -109,14 +123,17 @@ pub trait Transport: Send + Sync {
     fn post(&self, path: &str, body: Value) -> impl Future<Output = Result<(u16, Value)>> + Send;
 }
 
-/// What a link token is made for: a new Item, or the update mode of a link's own Item.
+/// What a link token is made for: a new Item (a bank, or a brokerage that may offer no transactions), or the update
+/// mode of a link's own Item.
 pub enum Mode<'a> {
-    Link,
+    Link { brokerage: bool },
     Update { access_token: &'a str },
 }
 
 /// The `/link/token/create` body, without the keys (AC1): read products only, 24 months of history, Hosted Link with
-/// the hand-back page. Update mode carries the link's own access token and no products, so Plaid keeps the same Item.
+/// the hand-back page. A brokerage asks for investments and takes transactions only where the institution has them,
+/// so an investments-only institution can link (D-197). Update mode carries the link's own access token and no
+/// products, so Plaid keeps the same Item.
 pub fn link_token_request(user_id: &str, mode: &Mode<'_>) -> Value {
     let mut body = json!({
         "client_name": "Eden",
@@ -129,9 +146,15 @@ pub fn link_token_request(user_id: &str, mode: &Mode<'_>) -> Value {
         },
     });
     match mode {
-        Mode::Link => {
+        Mode::Link { brokerage: false } => {
             body["products"] = json!(["transactions"]);
             body["additional_consented_products"] = json!(["liabilities", "investments"]);
+            body["transactions"] = json!({ "days_requested": DAYS_REQUESTED });
+        }
+        Mode::Link { brokerage: true } => {
+            body["products"] = json!(["investments"]);
+            body["required_if_supported_products"] = json!(["transactions"]);
+            body["additional_consented_products"] = json!(["liabilities"]);
             body["transactions"] = json!({ "days_requested": DAYS_REQUESTED });
         }
         Mode::Update { access_token } => body["access_token"] = json!(access_token),
@@ -241,6 +264,63 @@ fn transaction(value: &Value) -> ProviderTransaction {
         pending: value["pending"].as_bool().unwrap_or(false),
         pending_transaction_id: text(&value["pending_transaction_id"]),
         category: text(&value["personal_finance_category"]["detailed"]),
+    }
+}
+
+fn holding(value: &Value) -> ProviderHolding {
+    ProviderHolding {
+        provider_account_id: text(&value["account_id"]).unwrap_or_default(),
+        security_id: text(&value["security_id"]).unwrap_or_default(),
+        quantity: decimal(&value["quantity"]).unwrap_or_default(),
+        institution_price: decimal(&value["institution_price"]),
+        institution_price_as_of: text(&value["institution_price_as_of"]),
+        institution_value: decimal(&value["institution_value"]),
+        cost_basis: decimal(&value["cost_basis"]),
+        currency: text(&value["iso_currency_code"]),
+    }
+}
+
+fn security(value: &Value) -> ProviderSecurity {
+    ProviderSecurity {
+        security_id: text(&value["security_id"]).unwrap_or_default(),
+        name: text(&value["name"]).unwrap_or_default(),
+        ticker: text(&value["ticker_symbol"]),
+        kind: text(&value["type"]),
+        currency: text(&value["iso_currency_code"]),
+        close_price: decimal(&value["close_price"]),
+        close_price_as_of: text(&value["close_price_as_of"]),
+    }
+}
+
+fn investment_transaction(value: &Value) -> ProviderInvestmentTransaction {
+    ProviderInvestmentTransaction {
+        id: text(&value["investment_transaction_id"]).unwrap_or_default(),
+        provider_account_id: text(&value["account_id"]).unwrap_or_default(),
+        security_id: text(&value["security_id"]),
+        date: text(&value["date"]).unwrap_or_default(),
+        name: text(&value["name"]).unwrap_or_default(),
+        quantity: decimal(&value["quantity"]),
+        amount: decimal(&value["amount"]).unwrap_or_default(),
+        price: decimal(&value["price"]),
+        kind: text(&value["type"]).unwrap_or_default(),
+        subtype: text(&value["subtype"]),
+        currency: text(&value["iso_currency_code"]),
+    }
+}
+
+fn list<T>(answer: &Value, key: &str, read: impl Fn(&Value) -> T) -> Vec<T> {
+    answer[key]
+        .as_array()
+        .map(|items| items.iter().map(read).collect())
+        .unwrap_or_default()
+}
+
+/// Adds the securities of one answer to those already read, keeping the first of each `security_id`.
+fn merge_securities(into: &mut Vec<ProviderSecurity>, answer: &Value) {
+    for found in list(answer, "securities", security) {
+        if !into.iter().any(|s| s.security_id == found.security_id) {
+            into.push(found);
+        }
     }
 }
 
@@ -529,6 +609,20 @@ impl<T: Transport> Plaid<T> {
                         restarts += 1;
                         continue 'run;
                     }
+                    // An Item without the Transactions product: the accounts are the whole read (D-197).
+                    Err(failure) if NOT_OFFERED.contains(&failure.error_code.as_str()) => {
+                        return Ok(SyncResult {
+                            status: "ok".to_string(),
+                            consent_expires_at,
+                            accounts: accounts(&read),
+                            added: Vec::new(),
+                            modified: Vec::new(),
+                            removed: Vec::new(),
+                            cursor: cursor.unwrap_or_default(),
+                            // no Transactions product, no card statements to follow its pages
+                            statements: Vec::new(),
+                        });
+                    }
                     Err(failure) => return Err(failure.into_error()),
                 };
                 let list = |key: &str| page[key].as_array().cloned().unwrap_or_default();
@@ -557,6 +651,71 @@ impl<T: Transport> Plaid<T> {
                 statements,
             });
         }
+    }
+
+    /// One investments read for one link (D-197): the holdings with their securities, then the investment
+    /// transactions from `start` to `end` (`YYYY-MM-DD`, inclusive), `INVESTMENT_PAGE` at a time by offset, at most
+    /// `INVESTMENT_PAGES` pages. The securities of both calls are merged by `security_id`. An Item with no investments
+    /// answers `none` with nothing in it; an Item whose transactions aren't offered keeps its holdings. Only free calls:
+    /// never `/investments/refresh` (D-183).
+    pub async fn investments(
+        &self,
+        access_token: &str,
+        start: &str,
+        end: &str,
+    ) -> Result<InvestmentsResult> {
+        let held = match self
+            .raw(
+                "/investments/holdings/get",
+                json!({ "access_token": access_token }),
+            )
+            .await?
+        {
+            Ok(answer) => answer,
+            Err(failure) if NOT_OFFERED.contains(&failure.error_code.as_str()) => {
+                return Ok(InvestmentsResult {
+                    status: "none".to_string(),
+                    accounts: Vec::new(),
+                    holdings: Vec::new(),
+                    securities: Vec::new(),
+                    transactions: Vec::new(),
+                });
+            }
+            Err(failure) => return Err(failure.into_error()),
+        };
+        let mut securities = Vec::new();
+        merge_securities(&mut securities, &held);
+        let mut transactions = Vec::new();
+        for page in 0..INVESTMENT_PAGES {
+            let body = json!({
+                "access_token": access_token,
+                "start_date": start,
+                "end_date": end,
+                "options": { "count": INVESTMENT_PAGE, "offset": page * INVESTMENT_PAGE },
+            });
+            let answer = match self.raw("/investments/transactions/get", body).await? {
+                Ok(answer) => answer,
+                Err(failure) if NOT_OFFERED.contains(&failure.error_code.as_str()) => break,
+                Err(failure) => return Err(failure.into_error()),
+            };
+            merge_securities(&mut securities, &answer);
+            let read = list(&answer, "investment_transactions", investment_transaction);
+            let empty = read.is_empty();
+            transactions.extend(read);
+            let total = answer["total_investment_transactions"]
+                .as_u64()
+                .unwrap_or(0);
+            if empty || transactions.len() as u64 >= total {
+                break;
+            }
+        }
+        Ok(InvestmentsResult {
+            status: "ok".to_string(),
+            accounts: accounts(&held),
+            holdings: list(&held, "holdings", holding),
+            securities,
+            transactions,
+        })
     }
 
     /// Each credit card's latest statement, from `/liabilities/get`, once, and only for an item with a credit account
@@ -676,6 +835,13 @@ mod tests {
             "link_token_get_finished" => include_str!("fixtures/link_token_get_finished.json"),
             "link_token_get_exited" => include_str!("fixtures/link_token_get_exited.json"),
             "link_token_get_open" => include_str!("fixtures/link_token_get_open.json"),
+            "investments_holdings_get" => include_str!("fixtures/investments_holdings_get.json"),
+            "investments_transactions_get_1" => {
+                include_str!("fixtures/investments_transactions_get_1.json")
+            }
+            "investments_transactions_get_2" => {
+                include_str!("fixtures/investments_transactions_get_2.json")
+            }
             other => panic!("no fixture {other}"),
         };
         serde_json::from_str(text).expect("a JSON fixture")
@@ -748,7 +914,8 @@ mod tests {
 
     #[test]
     fn a_link_token_asks_for_read_products_and_24_months() {
-        let body = link_token_request("device-1", &Mode::Link);
+        let body = link_token_request("device-1", &Mode::Link { brokerage: false });
+        assert!(body.get("required_if_supported_products").is_none());
         assert_eq!(body["products"], json!(["transactions"]));
         assert_eq!(
             body["additional_consented_products"],
@@ -793,6 +960,261 @@ mod tests {
             Env::of("production").secret_name(),
             "plaid-secret-production"
         );
+    }
+
+    #[test]
+    fn a_brokerage_link_token_asks_for_investments() {
+        let body = link_token_request("device-1", &Mode::Link { brokerage: true });
+        assert_eq!(body["products"], json!(["investments"]));
+        assert_eq!(
+            body["required_if_supported_products"],
+            json!(["transactions"])
+        );
+        assert_eq!(
+            body["additional_consented_products"],
+            json!(["liabilities"])
+        );
+        assert_eq!(body["transactions"]["days_requested"], json!(730));
+        assert_eq!(
+            body["hosted_link"]["completion_redirect_uri"],
+            json!("https://eden.palekodama.studio/plaid/oauth")
+        );
+        assert!(body.get("access_token").is_none());
+        let text = body.to_string();
+        for never in ["\"auth\"", "\"transfer\"", "\"identity\"", "\"signal\""] {
+            assert!(!text.contains(never), "{never} is never asked for");
+        }
+    }
+
+    #[tokio::test]
+    async fn sync_without_the_transactions_product_reads_accounts() {
+        for code in [
+            "PRODUCTS_NOT_SUPPORTED",
+            "ADDITIONAL_CONSENT_REQUIRED",
+            "INVALID_PRODUCT",
+            "NO_ACCOUNTS",
+        ] {
+            let script = Script::new(vec![
+                ("/item/get", 200, fixture("item_get")),
+                ("/accounts/get", 200, fixture("accounts_get")),
+                ("/transactions/sync", 400, error("ITEM_ERROR", code)),
+            ]);
+            let result = plaid(Env::Sandbox, &script)
+                .sync("access-sandbox-1", Some("c7".to_string()), now())
+                .await
+                .unwrap();
+            assert_eq!(result.status, "ok", "{code}");
+            assert_eq!(result.accounts.len(), 2, "{code}");
+            assert!(result.added.is_empty() && result.modified.is_empty());
+            assert!(result.removed.is_empty());
+            assert_eq!(result.cursor, "c7", "{code}");
+        }
+        // Without a cursor yet, the cursor stays empty.
+        let script = Script::new(vec![
+            ("/item/get", 200, fixture("item_get")),
+            ("/accounts/get", 200, fixture("accounts_get")),
+            (
+                "/transactions/sync",
+                400,
+                error("INVALID_INPUT", "INVALID_PRODUCT"),
+            ),
+        ]);
+        let result = plaid(Env::Sandbox, &script)
+            .sync("access-sandbox-1", None, now())
+            .await
+            .unwrap();
+        assert_eq!(result.cursor, "");
+        // Any other refusal is still a failure.
+        let script = Script::new(vec![
+            ("/item/get", 200, fixture("item_get")),
+            ("/accounts/get", 200, fixture("accounts_get")),
+            (
+                "/transactions/sync",
+                400,
+                error("INVALID_REQUEST", "MISSING_FIELDS"),
+            ),
+        ]);
+        let failed = plaid(Env::Sandbox, &script)
+            .sync("access-sandbox-1", None, now())
+            .await
+            .unwrap_err();
+        assert_eq!(code_of(failed), "other");
+    }
+
+    #[tokio::test]
+    async fn investments_read_holdings_and_page_transactions() {
+        let script = Script::new(vec![
+            (
+                "/investments/holdings/get",
+                200,
+                fixture("investments_holdings_get"),
+            ),
+            (
+                "/investments/transactions/get",
+                200,
+                fixture("investments_transactions_get_1"),
+            ),
+            (
+                "/investments/transactions/get",
+                200,
+                fixture("investments_transactions_get_2"),
+            ),
+        ]);
+        let result = plaid(Env::Sandbox, &script)
+            .investments("access-sandbox-1", "2024-11-06", "2026-11-06")
+            .await
+            .unwrap();
+        assert_eq!(result.status, "ok");
+        assert_eq!(result.accounts.len(), 1);
+        assert_eq!(result.accounts[0].kind, "investment");
+        assert_eq!(result.holdings.len(), 3);
+        let vti = &result.holdings[0];
+        assert_eq!(vti.provider_account_id, "acc-brokerage");
+        assert_eq!(vti.security_id, "sec-vti");
+        assert_eq!(vti.quantity, "21.4");
+        assert_eq!(vti.institution_price.as_deref(), Some("286"));
+        assert_eq!(vti.institution_price_as_of.as_deref(), Some("2026-11-05"));
+        assert_eq!(vti.institution_value.as_deref(), Some("6120.35"));
+        assert_eq!(vti.cost_basis.as_deref(), Some("5210"));
+        assert_eq!(vti.currency.as_deref(), Some("USD"));
+        assert_eq!(result.holdings[1].cost_basis, None);
+        assert_eq!(result.holdings[2].quantity, "1110.09");
+
+        // The securities of both calls, merged by id, the first of each kept.
+        let ids: Vec<_> = result
+            .securities
+            .iter()
+            .map(|s| s.security_id.as_str())
+            .collect();
+        assert_eq!(ids, ["sec-vti", "sec-schd", "sec-cash", "sec-gone"]);
+        assert_eq!(result.securities[0].ticker.as_deref(), Some("VTI"));
+        assert_eq!(result.securities[0].kind.as_deref(), Some("etf"));
+        assert_eq!(result.securities[0].close_price.as_deref(), Some("286"));
+        assert_eq!(result.securities[3].ticker, None);
+        assert_eq!(result.securities[3].kind.as_deref(), Some("mutual fund"));
+        assert_eq!(
+            result.securities[3].close_price.as_deref(),
+            Some("0.12345678")
+        );
+
+        let ids: Vec<_> = result.transactions.iter().map(|t| t.id.as_str()).collect();
+        assert_eq!(ids, ["inv-t1", "inv-t2", "inv-t3"]);
+        let buy = &result.transactions[0];
+        assert_eq!(buy.amount, "572");
+        assert_eq!(buy.kind, "buy");
+        assert_eq!(buy.subtype.as_deref(), Some("buy"));
+        assert_eq!(buy.quantity.as_deref(), Some("2"));
+        assert_eq!(buy.security_id.as_deref(), Some("sec-vti"));
+        assert_eq!(result.transactions[1].amount, "-18.42");
+        assert_eq!(result.transactions[2].price.as_deref(), Some("12.345"));
+        assert_eq!(result.transactions[2].quantity.as_deref(), Some("-100"));
+
+        // Pages by offset, 500 at a time, over the asked window; no paid refresh.
+        let sent = script.sent();
+        let pages: Vec<_> = sent
+            .iter()
+            .filter(|(path, _)| path == "/investments/transactions/get")
+            .map(|(_, body)| body.clone())
+            .collect();
+        assert_eq!(pages.len(), 2);
+        assert_eq!(pages[0]["options"], json!({ "count": 500, "offset": 0 }));
+        assert_eq!(pages[1]["options"], json!({ "count": 500, "offset": 500 }));
+        assert_eq!(pages[0]["start_date"], json!("2024-11-06"));
+        assert_eq!(pages[0]["end_date"], json!("2026-11-06"));
+        assert!(sent.iter().all(|(path, _)| path != "/investments/refresh"));
+
+        // A total that never arrives stops at 40 pages.
+        let mut endless = fixture("investments_transactions_get_1");
+        endless["total_investment_transactions"] = json!(1_000_000);
+        let mut replies = vec![(
+            "/investments/holdings/get",
+            200,
+            fixture("investments_holdings_get"),
+        )];
+        for _ in 0..40 {
+            replies.push(("/investments/transactions/get", 200, endless.clone()));
+        }
+        let script = Script::new(replies);
+        let result = plaid(Env::Sandbox, &script)
+            .investments("access-sandbox-1", "2026-10-07", "2026-11-06")
+            .await
+            .unwrap();
+        assert_eq!(result.transactions.len(), 80);
+        assert_eq!(script.sent().len(), 41);
+    }
+
+    #[tokio::test]
+    async fn investments_not_offered_answer_none() {
+        for code in [
+            "PRODUCTS_NOT_SUPPORTED",
+            "NO_INVESTMENT_ACCOUNTS",
+            "ADDITIONAL_CONSENT_REQUIRED",
+            "INVALID_PRODUCT",
+        ] {
+            let script = Script::new(vec![(
+                "/investments/holdings/get",
+                400,
+                error("ITEM_ERROR", code),
+            )]);
+            let result = plaid(Env::Sandbox, &script)
+                .investments("access-sandbox-1", "2024-11-06", "2026-11-06")
+                .await
+                .unwrap();
+            assert_eq!(result.status, "none", "{code}");
+            assert!(result.accounts.is_empty() && result.holdings.is_empty());
+            assert!(result.securities.is_empty() && result.transactions.is_empty());
+
+            // The same code on the transactions call keeps the holdings.
+            let script = Script::new(vec![
+                (
+                    "/investments/holdings/get",
+                    200,
+                    fixture("investments_holdings_get"),
+                ),
+                (
+                    "/investments/transactions/get",
+                    400,
+                    error("ITEM_ERROR", code),
+                ),
+            ]);
+            let result = plaid(Env::Sandbox, &script)
+                .investments("access-sandbox-1", "2024-11-06", "2026-11-06")
+                .await
+                .unwrap();
+            assert_eq!(result.status, "ok", "{code}");
+            assert_eq!(result.holdings.len(), 3);
+            assert_eq!(result.securities.len(), 3);
+            assert!(result.transactions.is_empty());
+        }
+
+        // A sign-in wanted is a refusal, not an empty read.
+        let script = Script::new(vec![(
+            "/investments/holdings/get",
+            400,
+            error("ITEM_ERROR", "ITEM_LOGIN_REQUIRED"),
+        )]);
+        let failed = plaid(Env::Sandbox, &script)
+            .investments("access-sandbox-1", "2024-11-06", "2026-11-06")
+            .await
+            .unwrap_err();
+        assert_eq!(code_of(failed), "needs-reauth");
+
+        // The command's arguments: a link's ULID and two days.
+        assert!(super::super::investments_args(
+            "01JC8Z4Q5W6E7R8T9Y0A1B2C3D",
+            "2024-11-06",
+            "2026-11-06"
+        )
+        .is_ok());
+        for (link, start, end) in [
+            ("../plaid-client-id", "2024-11-06", "2026-11-06"),
+            ("01JC8Z4Q5W6E7R8T9Y0A1B2C3D", "2024-11-6", "2026-11-06"),
+            ("01JC8Z4Q5W6E7R8T9Y0A1B2C3D", "2024-11-06", "2026-13-06"),
+            ("01JC8Z4Q5W6E7R8T9Y0A1B2C3D", "2024-11-06", "today"),
+        ] {
+            let refused = super::super::investments_args(link, start, end).unwrap_err();
+            assert_eq!(code_of(refused), "other", "{link} {start} {end}");
+        }
     }
 
     #[tokio::test]

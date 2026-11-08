@@ -164,10 +164,13 @@ const PROVIDER_KEYS = [
 	'providerCategory',
 ] as const
 
-/** The keys a provider does not own, which a posted transaction takes from the pending one it replaces. */
-function ownKeys(payload: TransactionPayload): Record<string, unknown> {
+/**
+ * The keys a provider does not own, which a posted transaction takes from the pending one it replaces and an update
+ * keeps; `more` names further provider keys, as an investment row's `investment`.
+ */
+export function ownKeys(payload: TransactionPayload, more: readonly string[] = []): Record<string, unknown> {
 	const rest: Record<string, unknown> = { ...payload }
-	for (const key of [...PROVIDER_KEYS, 'accountId']) delete rest[key]
+	for (const key of [...PROVIDER_KEYS, 'accountId', ...more]) delete rest[key]
 	return rest
 }
 

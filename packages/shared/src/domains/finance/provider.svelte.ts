@@ -9,7 +9,8 @@ export interface FinanceProvider {
 	readonly name: string
 	/** A test environment: the page offers `resetLogin` on each link. */
 	readonly sandbox: boolean
-	link(): void
+	/** A bank's flow, or with `brokerage` one that asks for investments first, so an investments-only one links. */
+	link(kind?: 'bank' | 'brokerage'): void
 	reconnect(linkId: string): void
 	revoke(linkId: string): Promise<void>
 	credentials(): void
