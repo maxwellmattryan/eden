@@ -200,6 +200,39 @@ describe('finance classification', () => {
 			expect(of(id).transferId, id).toBeUndefined()
 	})
 
+	it('a row that paid a bill is a bill payment, and still spending', () => {
+		const card = 'LOAN_PAYMENTS_CREDIT_CARD_PAYMENT'
+		const { of } = pass([
+			row({
+				id: 'gas',
+				minor: -3810,
+				name: 'TXGAS SVC',
+				billId: 'bill-gas',
+				providerCategory: 'RENT_AND_UTILITIES_GAS_AND_ELECTRICITY',
+			}),
+			// a card charge that paid a utility bill is one too
+			row({ id: 'on-card', minor: -6400, accountId: 'card', name: 'CITY OF AUSTIN', billId: 'bill-water' }),
+			// a pair keeps its own kind, a bill or not
+			row({ id: 'pay-card', minor: -118000, day: '2026-10-05', billId: 'bill-card', providerCategory: card }),
+			row({ id: 'card-paid', minor: 118000, day: '2026-10-06', accountId: 'card', providerCategory: card }),
+			row({ id: 'to-savings', minor: -50000, billId: 'bill-x', providerCategory: 'TRANSFER_OUT_SAVINGS' }),
+			row({ id: 'at-savings', minor: 50000, accountId: 'sav', providerCategory: 'TRANSFER_IN_SAVINGS' }),
+			// money in is never a bill payment
+			row({ id: 'back', minor: 1200, billId: 'bill-gas' }),
+			// no bill: the provider's kind
+			row({ id: 'plain', minor: -3810, name: 'TXGAS SVC', providerCategory: 'RENT_AND_UTILITIES_GAS_AND_ELECTRICITY' }),
+		])
+		expect(of('gas')).toMatchObject({ kind: 'bill-payment', categoryId: 'cat-utilities' })
+		expect(spendingOf(of('gas'))).toEqual([
+			{ categoryId: 'cat-utilities', amount: usd(-3810), oneOff: false, pending: false },
+		])
+		expect(of('on-card').kind).toBe('bill-payment')
+		expect(of('pay-card')).toMatchObject({ kind: 'card-payment', transferId: 'card-paid' })
+		expect(of('to-savings')).toMatchObject({ kind: 'transfer', transferId: 'at-savings' })
+		expect(of('back').kind).toBe('refund')
+		expect(of('plain').kind).toBe('purchase')
+	})
+
 	it('vague merchants and unpaired transfers', () => {
 		const { of, merchants } = pass([
 			row({

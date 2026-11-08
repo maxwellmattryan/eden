@@ -10,7 +10,7 @@
 // through the pack's own gate and writer (D-148).
 import { get } from 'svelte/store'
 import { fetchPage, htmlToText, pageTitle, webErrorCode } from '../../api/index.js'
-import { newId, queryEvents, type Entity, type EventRow } from '../../data/index.js'
+import { getRow, newId, queryEvents, toUri, type Entity, type EventRow } from '../../data/index.js'
 import { t } from '../../i18n/index.js'
 import { checkGrant } from '../../grants/index.js'
 import {
@@ -22,9 +22,17 @@ import {
 	type FactProposal,
 } from '../../profile/index.js'
 import { isDay } from '../../recurrence/index.js'
-import { resource } from '../../registry/index.js'
+import { isEntityType, resource } from '../../registry/index.js'
 import { settings } from '../../settings/index.js'
-import { isTime, parseTarget, repeatOf, type DraftTask, type Task, type TaskEdit } from '../../tasks/index.js'
+import {
+	isTime,
+	parseAbout,
+	parseTarget,
+	repeatOf,
+	type DraftTask,
+	type Task,
+	type TaskEdit,
+} from '../../tasks/index.js'
 import { temperature, weather } from '../../weather/index.js'
 import { declarations, logic } from '../../domains/index.js'
 import { profile } from '../profile/index.js'
@@ -61,6 +69,29 @@ const USAGE_SPANS: readonly UsageGroup[] = ['day', 'week', 'month', 'year']
 const usd = (value: number) => Math.round(value * 10_000) / 10_000
 
 const failed = (error: string): ToolResult => ({ output: { error } })
+
+/** A row's name: its domain's `labels`, else a `name`, `title`, `label` or `payee` it holds. */
+async function labelOf(type: string, row: object): Promise<string | undefined> {
+	const own = logic.find((domain) => domain.labels?.[type])?.labels?.[type]
+	if (own) return (await own(row as Entity<object>)) || undefined
+	const fields = ('payload' in row ? row.payload : row) as Record<string, unknown>
+	for (const key of ['name', 'title', 'label', 'payee']) {
+		const value = fields[key]
+		if (typeof value === 'string' && value.trim()) return value.trim()
+	}
+	return undefined
+}
+
+/** What a drafted task's `about` names: a live row of an entity type in reach, with its name; or what is wrong. */
+async function aboutOf(value: unknown, reach: readonly string[]): Promise<DraftTask['about'] | { error: string }> {
+	const parsed = parseAbout(value, reach, isEntityType)
+	if ('error' in parsed) return parsed
+	const uri = toUri(parsed.type, parsed.id)
+	const row = await getRow(uri).catch(() => null)
+	if (!row || row.deletedAt) return { error: `no \`${parsed.type}\` row has the id ${parsed.id}.` }
+	const label = await labelOf(parsed.type, row).catch(() => undefined)
+	return { uri, ...(label ? { label } : {}) }
+}
 
 /** What a card says of one thing a call would do, in the owner's words. */
 const say = (key: 'change' | 'done' | 'reopen' | 'skip' | 'remove' | 'forget' | 'read', what: string) =>
@@ -176,8 +207,11 @@ export const substrateTools: Record<string, ToolHandler> = {
 					)
 				const priority = str(row, 'priority')
 				const notes = str(row, 'notes')
+				const about = row.about === undefined ? undefined : await aboutOf(row.about, ctx.reach)
+				if (about && 'error' in about) return failed(`${title}: ${about.error} Nothing was drafted.`)
 				// a habit is its target and nothing else; a routine starts on its day and has no due
 				drafts.push({
+					...(about ? { about } : {}),
 					title,
 					...(due && !recurrence && !target ? { due } : {}),
 					...(time && !target ? { timeOfDay: time } : {}),
@@ -204,6 +238,7 @@ export const substrateTools: Record<string, ToolHandler> = {
 						title: draft.title,
 						kind: draft.target ? 'habit' : draft.recurrence ? 'routine' : 'todo',
 						...(draft.target || draft.recurrence ? {} : { due: draft.due ?? 'today' }),
+						...(draft.about ? { about: draft.about.label ?? draft.about.uri } : {}),
 					})),
 					note: DRAFTED,
 				},

@@ -34,6 +34,7 @@ export {
 	estimateCost,
 	formatCost,
 	formatUsd,
+	modelLabel,
 	SEARCH_RESULT_TOKENS,
 	type Usage,
 } from './estimate.js'

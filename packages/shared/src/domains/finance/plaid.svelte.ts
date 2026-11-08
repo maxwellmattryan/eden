@@ -3,7 +3,7 @@
 // saves, and the sync: on launch, every hour (`finance.sync`), and on the retries after a failure (`finance.retry`),
 // one link after another and one run at a time. A removed link is revoked at Plaid two minutes after its tombstone
 // (`finance.revoke`), so the page's Undo stays true, and again at the start of every run until it is done. At the end
-// of a run, each link holding investments gets its one investments read of the day (D-195); there is no schedule of
+// of a run, each link holding investments gets its one investments read of the day (D-197); there is no schedule of
 // its own and never a paid refresh.
 //
 // Nothing here logs more than a code: no name, no amount, no token.
@@ -53,6 +53,7 @@ import {
 import {
 	FINANCE,
 	type Account,
+	type BillPayload,
 	type HoldingPayload,
 	type ProviderLink,
 	type ProviderLinkPayload,
@@ -79,7 +80,7 @@ export type SessionState = 'starting' | 'waiting' | 'reading' | 'linked' | 'canc
 
 export interface LinkSession {
 	mode: 'link' | 'reconnect'
-	/** A new link that asks for investments first (D-195). */
+	/** A new link that asks for investments first (D-197). */
 	brokerage?: boolean
 	/** The link a reconnect signs in again. */
 	linkId?: string
@@ -163,7 +164,7 @@ function update(session: LinkSession, change: Partial<LinkSession>) {
 /**
  * Opens the Link sheet on a session: the live one when there is one (closing the sheet never ends it), else a new
  * one, which makes a link token and opens Plaid's hosted page in the system browser. A brokerage's asks for
- * investments first (D-195).
+ * investments first (D-197).
  */
 export async function startSession(mode: 'link' | 'reconnect', linkId?: string, brokerage = false): Promise<void> {
 	plaid.sheet = 'link'
@@ -340,10 +341,12 @@ async function run() {
 		})
 		wrote ||= changed
 	}
-	// then the day's investments read, once a day for each link that holds investments (D-195)
+	// then the day's investments read, once a day for each link that holds investments (D-197)
 	const valued = await valueLinks()
-	// once every link is done, the rows that came get their kind, merchant and category (#75)
+	// once every link is done, the rows that came get their kind, merchant and category (#75), and then the bills
+	// their payments, their tasks and the card statements the run read (#78)
 	if (wrote || valued) await finance.classify()
+	if (done.size) await finance.billPass()
 }
 
 /**
@@ -436,10 +439,17 @@ async function syncLink(link: ProviderLink): Promise<boolean> {
 		const made: { out?: ReturnType<typeof syncOps> } = {}
 		// the read and the write in one queue job, so an owner's fix cannot land between them and be overwritten
 		const written = await finance.applySync(async () => {
-			const existing = await existingRows(idsToRead(result))
+			// the bills in the same job, so a card's statement bill is made once, and never again once deleted (#78)
+			const [existing, bills] = await Promise.all([
+				existingRows(idsToRead(result)),
+				result.statements?.length
+					? queryEntities<BillPayload>({ type: FINANCE.bill, includeDeleted: true })
+					: Promise.resolve([]),
+			])
 			const out = (made.out = syncOps({
 				link,
 				accounts: finance.data().accounts,
+				bills,
 				existing,
 				result,
 				nowIso: nowIso(),

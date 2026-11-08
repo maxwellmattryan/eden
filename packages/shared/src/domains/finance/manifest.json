@@ -2,7 +2,7 @@
 	"id": "finance",
 	"phase": "later",
 	"sidebar": { "group": "domains", "order": 50, "visible": true },
-	"tabs": ["accounts", "investments"],
+	"tabs": ["accounts", "bills", "investments"],
 	"resources": {
 		"facts": [{ "id": "monthly-income-band", "tier": "T2" }],
 		"entities": [
@@ -33,12 +33,20 @@
 	"widgets": [],
 	"quickActions": [],
 	"captureSources": [],
-	"tools": [],
-	"signals": ["finance.link-broken"],
-	"notificationKinds": [
-		{ "id": "link-needs-reconnecting", "channel": "in-app", "cadence": "when-found", "signal": "finance.link-broken" }
+	"tools": [
+		{ "id": "draft", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] },
+		{ "id": "read-statement", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] }
 	],
-	"schedules": [{ "id": "sync", "every": 3600 }],
+	"signals": ["finance.link-broken", "finance.bill-due", "finance.bill-overdue"],
+	"notificationKinds": [
+		{ "id": "link-needs-reconnecting", "channel": "in-app", "cadence": "when-found", "signal": "finance.link-broken" },
+		{ "id": "bill-due-soon", "channel": "in-app", "cadence": "when-found", "signal": "finance.bill-due" },
+		{ "id": "bill-overdue", "channel": "in-app", "cadence": "when-found", "signal": "finance.bill-overdue" }
+	],
+	"schedules": [
+		{ "id": "sync", "every": 3600 },
+		{ "id": "bills", "daily": "08:00" }
+	],
 	"intents": [],
 	"deviceCapabilities": [],
 	"palette": { "entries": [], "search": ["account"] },
@@ -50,6 +58,8 @@
 		"budget-category",
 		"category-rule",
 		"merchant",
+		"bill",
+		"file-import",
 		"holding",
 		"security"
 	]

@@ -1,6 +1,8 @@
 //! The Plaid client (docs/product/domains/finance.md §8). Every call is a JSON `POST` with the device's client id and
 //! secret in the body, over a `Transport`: `reqwest` in the app, a scripted fake in the tests. Only free calls are
 //! made (D-183): never `/accounts/balance/get` and never a paid refresh. The products asked for are read-only (D-8).
+//! The one exception is `/liabilities/get`, asked once a run and only of an item with a credit account, for its cards'
+//! statements (#78): in production its first call starts that item's Liabilities billing (D-196).
 //!
 //! A failure is `EdenError::Refused("plaid:<code>: <Plaid's error code>")`, with the code one of `needs-reauth`,
 //! `invalid-keys`, `rate-limited`, `institution-down`, `provider-down`, `network`, `other`, `no-keys`, `not-found` and
@@ -12,8 +14,9 @@ use chrono::{DateTime, Utc};
 use serde_json::{json, Value};
 
 use super::provider::{
-    Institution, InvestmentsResult, LinkStart, NewLink, ProviderAccount, ProviderHolding,
-    ProviderInvestmentTransaction, ProviderSecurity, ProviderTransaction, SyncResult,
+    CardStatement, Institution, InvestmentsResult, LinkStart, NewLink, ProviderAccount,
+    ProviderHolding, ProviderInvestmentTransaction, ProviderSecurity, ProviderTransaction,
+    SyncResult,
 };
 use crate::db::secret_store::SecretStore;
 use crate::error::{EdenError, Result};
@@ -129,7 +132,7 @@ pub enum Mode<'a> {
 
 /// The `/link/token/create` body, without the keys (AC1): read products only, 24 months of history, Hosted Link with
 /// the hand-back page. A brokerage asks for investments and takes transactions only where the institution has them,
-/// so an investments-only institution can link (D-195). Update mode carries the link's own access token and no
+/// so an investments-only institution can link (D-197). Update mode carries the link's own access token and no
 /// products, so Plaid keeps the same Item.
 pub fn link_token_request(user_id: &str, mode: &Mode<'_>) -> Value {
     let mut body = json!({
@@ -325,6 +328,32 @@ fn accounts(answer: &Value) -> Vec<ProviderAccount> {
     answer["accounts"]
         .as_array()
         .map(|list| list.iter().map(account).collect())
+        .unwrap_or_default()
+}
+
+/// The credit cards' statements in a `/liabilities/get` answer, each in its account's currency.
+fn card_statements(answer: &Value, accounts: &[ProviderAccount]) -> Vec<CardStatement> {
+    answer["liabilities"]["credit"]
+        .as_array()
+        .map(|list| {
+            list.iter()
+                .filter_map(|card| {
+                    let id = text(&card["account_id"])?;
+                    let currency = accounts
+                        .iter()
+                        .find(|account| account.provider_account_id == id)
+                        .and_then(|account| account.currency.clone());
+                    Some(CardStatement {
+                        provider_account_id: id,
+                        statement_balance: decimal(&card["last_statement_balance"]),
+                        minimum: decimal(&card["minimum_payment_amount"]),
+                        due_date: text(&card["next_payment_due_date"]),
+                        statement_date: text(&card["last_statement_issue_date"]),
+                        currency,
+                    })
+                })
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -556,6 +585,7 @@ impl<T: Transport> Plaid<T> {
                 modified: Vec::new(),
                 removed: Vec::new(),
                 cursor: cursor.unwrap_or_default(),
+                statements: Vec::new(),
             });
         }
         let read = self
@@ -579,7 +609,7 @@ impl<T: Transport> Plaid<T> {
                         restarts += 1;
                         continue 'run;
                     }
-                    // An Item without the Transactions product: the accounts are the whole read (D-195).
+                    // An Item without the Transactions product: the accounts are the whole read (D-197).
                     Err(failure) if NOT_OFFERED.contains(&failure.error_code.as_str()) => {
                         return Ok(SyncResult {
                             status: "ok".to_string(),
@@ -589,6 +619,8 @@ impl<T: Transport> Plaid<T> {
                             modified: Vec::new(),
                             removed: Vec::new(),
                             cursor: cursor.unwrap_or_default(),
+                            // no Transactions product, no card statements to follow its pages
+                            statements: Vec::new(),
                         });
                     }
                     Err(failure) => return Err(failure.into_error()),
@@ -606,19 +638,22 @@ impl<T: Transport> Plaid<T> {
                     break;
                 }
             }
+            let accounts = accounts(&read);
+            let statements = self.statements(access_token, &accounts).await;
             return Ok(SyncResult {
                 status: "ok".to_string(),
                 consent_expires_at,
-                accounts: accounts(&read),
+                accounts,
                 added,
                 modified,
                 removed,
                 cursor: next.unwrap_or_default(),
+                statements,
             });
         }
     }
 
-    /// One investments read for one link (D-195): the holdings with their securities, then the investment
+    /// One investments read for one link (D-197): the holdings with their securities, then the investment
     /// transactions from `start` to `end` (`YYYY-MM-DD`, inclusive), `INVESTMENT_PAGE` at a time by offset, at most
     /// `INVESTMENT_PAGES` pages. The securities of both calls are merged by `security_id`. An Item with no investments
     /// answers `none` with nothing in it; an Item whose transactions aren't offered keeps its holdings. Only free calls:
@@ -681,6 +716,32 @@ impl<T: Transport> Plaid<T> {
             securities,
             transactions,
         })
+    }
+
+    /// Each credit card's latest statement, from `/liabilities/get`, once, and only for an item with a credit account
+    /// (in production the first call starts the item's Liabilities billing). Whatever goes wrong (a product the item
+    /// lacks, a consent it never gave, a 500, no answer) leaves the statements out and never fails the run; it is
+    /// logged by its code alone.
+    async fn statements(
+        &self,
+        access_token: &str,
+        accounts: &[ProviderAccount],
+    ) -> Vec<CardStatement> {
+        if !accounts.iter().any(|account| account.kind == "credit") {
+            return Vec::new();
+        }
+        match self
+            .raw("/liabilities/get", json!({ "access_token": access_token }))
+            .await
+        {
+            Ok(Ok(answer)) => card_statements(&answer, accounts),
+            // `raw` logged the code
+            Ok(Err(_)) => Vec::new(),
+            Err(_) => {
+                log::warn!("Plaid /liabilities/get failed: network");
+                Vec::new()
+            }
+        }
     }
 
     /// Removes the link's Item at Plaid, then its token from the device. `ITEM_NOT_FOUND` counts as done; any other
@@ -770,6 +831,7 @@ mod tests {
             "accounts_get" => include_str!("fixtures/accounts_get.json"),
             "sync_page_1" => include_str!("fixtures/sync_page_1.json"),
             "sync_page_2" => include_str!("fixtures/sync_page_2.json"),
+            "liabilities_get" => include_str!("fixtures/liabilities_get.json"),
             "link_token_get_finished" => include_str!("fixtures/link_token_get_finished.json"),
             "link_token_get_exited" => include_str!("fixtures/link_token_get_exited.json"),
             "link_token_get_open" => include_str!("fixtures/link_token_get_open.json"),
@@ -1168,6 +1230,8 @@ mod tests {
             ),
             ("/transactions/sync", 200, fixture("sync_page_1")),
             ("/transactions/sync", 200, fixture("sync_page_2")),
+            // the item has a credit account: its statements follow the pages (#78)
+            ("/liabilities/get", 200, fixture("liabilities_get")),
         ]);
         let result = plaid(Env::Sandbox, &script)
             .sync("access-sandbox-1", Some("c0".to_string()), now())
@@ -1240,6 +1304,90 @@ mod tests {
         assert_eq!(result.status, "needs-reauth");
         assert_eq!(result.cursor, "c0");
         assert!(result.added.is_empty());
+        assert!(result.statements.is_empty());
+    }
+
+    #[tokio::test]
+    async fn sync_reads_card_statements_for_credit_items() {
+        let script = Script::new(vec![
+            ("/item/get", 200, fixture("item_get")),
+            ("/accounts/get", 200, fixture("accounts_get")),
+            ("/transactions/sync", 200, fixture("sync_page_2")),
+            ("/liabilities/get", 200, fixture("liabilities_get")),
+        ]);
+        let result = plaid(Env::Sandbox, &script)
+            .sync("access-sandbox-1", Some("c1".to_string()), now())
+            .await
+            .unwrap();
+        assert_eq!(
+            result.statements,
+            [CardStatement {
+                provider_account_id: "acc-credit".to_string(),
+                statement_balance: Some("1204.18".to_string()),
+                minimum: Some("35".to_string()),
+                due_date: Some("2026-10-12".to_string()),
+                statement_date: Some("2026-09-14".to_string()),
+                currency: Some("USD".to_string()),
+            }]
+        );
+        let sent = script.sent();
+        let liabilities: Vec<_> = sent
+            .iter()
+            .filter(|(path, _)| path == "/liabilities/get")
+            .collect();
+        assert_eq!(liabilities.len(), 1, "asked once a run");
+        assert_eq!(liabilities[0].1["access_token"], json!("access-sandbox-1"));
+        assert_eq!(liabilities[0].1["client_id"], json!("client"));
+
+        // an item with no credit account is never asked
+        let mut depository = fixture("accounts_get");
+        depository["accounts"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|account| account["type"] != "credit");
+        let script = Script::new(vec![
+            ("/item/get", 200, fixture("item_get")),
+            ("/accounts/get", 200, depository),
+            ("/transactions/sync", 200, fixture("sync_page_2")),
+        ]);
+        let result = plaid(Env::Sandbox, &script)
+            .sync("access-sandbox-1", Some("c1".to_string()), now())
+            .await
+            .unwrap();
+        assert!(result.statements.is_empty());
+        assert!(script
+            .sent()
+            .iter()
+            .all(|(path, _)| path != "/liabilities/get"));
+    }
+
+    #[tokio::test]
+    async fn sync_goes_on_when_liabilities_fail() {
+        for (status, answer) in [
+            (400, error("INVALID_PRODUCT", "PRODUCTS_NOT_SUPPORTED")),
+            (400, error("ITEM_ERROR", "ADDITIONAL_CONSENT_REQUIRED")),
+            (500, error("API_ERROR", "INTERNAL_SERVER_ERROR")),
+            (0, json!({})),
+        ] {
+            let script = Script::new(vec![
+                ("/item/get", 200, fixture("item_get")),
+                ("/accounts/get", 200, fixture("accounts_get")),
+                ("/transactions/sync", 200, fixture("sync_page_2")),
+                ("/liabilities/get", status, answer),
+            ]);
+            let result = plaid(Env::Sandbox, &script)
+                .sync("access-sandbox-1", Some("c1".to_string()), now())
+                .await
+                .unwrap();
+            assert_eq!(result.status, "ok", "{status}");
+            assert!(result.statements.is_empty(), "{status}");
+            assert_eq!(result.cursor, "c2", "{status}");
+            assert!(
+                !result.added.is_empty()
+                    || !result.modified.is_empty()
+                    || !result.removed.is_empty()
+            );
+        }
     }
 
     #[test]

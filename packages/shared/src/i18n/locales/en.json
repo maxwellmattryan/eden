@@ -1205,7 +1205,130 @@
 			"subtitle": "Money, budgets, assets",
 			"tabs": {
 				"accounts": "Accounts",
+				"bills": "Bills",
 				"investments": "Investments"
+			},
+			"tabsLabel": "Orchard sections",
+			"bills": {
+				"groups": {
+					"overdue": "Overdue",
+					"due-soon": "Due soon",
+					"upcoming": "Upcoming",
+					"expected": "Expected",
+					"paid": "Paid"
+				},
+				"cadence": {
+					"once": "One-off",
+					"m1": "Monthly",
+					"m2": "Every 2 months",
+					"m3": "Every 3 months",
+					"m6": "Every 6 months",
+					"m12": "Yearly"
+				},
+				"source": {
+					"letter": "From a letter",
+					"statement": "Card statement",
+					"repeating": "Repeating",
+					"manual": "Added by hand"
+				},
+				"line": {
+					"estimate": "Estimate",
+					"actual": "Actual",
+					"minimum": "minimum {amount}",
+					"interest": "interest {amount}",
+					"stillDue": "{amount} still due",
+					"over": "{amount} more than the bill",
+					"about": "about {amount}",
+					"paidFrom": "Paid {day} from {bank} ••{last4}",
+					"paidFromBank": "Paid {day} from {bank}",
+					"paidOn": "Paid {day}",
+					"markedPaid": "Marked paid {day}",
+					"minimumPaid": "Minimum paid · {amount} carried to the next statement"
+				},
+				"menu": {
+					"markPaid": "Mark paid",
+					"edit": "Edit",
+					"notThis": "Not this payment",
+					"stopRepeating": "Stop repeating",
+					"openSite": "Open payee’s site",
+					"delete": "Delete"
+				},
+				"empty": {
+					"title": "No bills yet",
+					"text": "Photograph or drop a letter and it is read on this device; the Gardener drafts the bill for you to confirm."
+				},
+				"ambiguous": {
+					"title": "Two payments could have paid this",
+					"detail": "{payee}, {amount} due {day}. Which one paid it?",
+					"group": "Payments that could have paid {payee}",
+					"candidate": "{day} · {name} · {amount}",
+					"neither": "Neither"
+				},
+				"taskTitle": "Pay {payee}",
+				"form": {
+					"titleNew": "Add a bill",
+					"titleEdit": "Edit bill",
+					"titleDraft": "Check the bill",
+					"updates": "Updates the {payee} bill for {month}",
+					"payee": "Payee",
+					"amount": "Amount",
+					"currency": "Currency",
+					"due": "Due day",
+					"dueHelp": "Leave it empty when there is no due day yet.",
+					"estimate": "This is an estimate",
+					"repeats": "Repeats",
+					"never": "Never",
+					"fixed": "The amount stays the same",
+					"card": "Card",
+					"noCard": "None",
+					"minimum": "Minimum due",
+					"url": "Payee’s site",
+					"drafting": "Drafting the bill…",
+					"byHand": "Enter it by hand"
+				},
+				"errors": {
+					"payee": "Enter a payee",
+					"positive": "Enter an amount more than zero",
+					"url": "Enter an address that starts with https://"
+				},
+				"pay": {
+					"title": "Mark {payee} paid",
+					"text": "Choose the payment that paid it. A part leaves the rest due.",
+					"choose": "Payments around the due day",
+					"none": "No payments around the due day.",
+					"another": "Paid another way",
+					"anotherText": "Records {amount} paid today, with no transaction."
+				},
+				"toasts": {
+					"added": "Bill added",
+					"saved": "Bill saved",
+					"deleted": "{payee} deleted",
+					"paid": "{payee} marked paid",
+					"stopped": "{payee} no longer repeats",
+					"unmatched": "Payment taken off {payee}",
+					"matched": "{payee} paid",
+					"dismissed": "Neither payment paid {payee}"
+				},
+				"capture": {
+					"confirm": "Draft the bill",
+					"next": "The Gardener drafts the bill from this text. You check it before anything is saved.",
+					"madeBill": "the {payee} bill for {month}",
+					"deletedBill": "a bill since deleted"
+				},
+				"failure": {
+					"busy": "The Gardener is busy with another request. Try again in a moment.",
+					"no-key": "Add an Anthropic key in Settings to draft bills.",
+					"unavailable": "The Gardener isn’t available here.",
+					"budget": "This month’s Gardener budget is spent.",
+					"limit": "The subscription’s usage limit is reached until it resets.",
+					"network": "Couldn’t reach the Gardener.",
+					"refusal": "The Gardener wouldn’t draft this bill.",
+					"max-tokens": "The answer ran too long.",
+					"cancelled": "Drafting was cancelled.",
+					"unreadable": "The Gardener couldn’t read this.",
+					"empty": "This doesn’t read as a bill.",
+					"no-files": "There was nothing to send."
+				}
 			},
 			"tabsLabel": "Orchard sections",
 			"categories": {
@@ -1238,6 +1361,10 @@
 				"addAccount": "Add an account",
 				"addAsset": "Add an asset",
 				"linkBank": "Link a bank",
+				"import": "Import",
+				"reconnect": "Reconnect",
+				"captureBill": "Capture a bill",
+				"addBill": "Add a bill",
 				"linkBrokerage": "Link a brokerage",
 				"reconnect": "Reconnect"
 			},
@@ -1338,6 +1465,7 @@
 				"edit": "Edit",
 				"updateBalance": "Update balance",
 				"replaces": "This replaces…",
+				"import": "Import a statement",
 				"close": "Close account",
 				"reopen": "Reopen",
 				"delete": "Delete",
@@ -1392,6 +1520,60 @@
 				"subject": "You",
 				"resource": "provider link"
 			},
+			"import": {
+				"title": "Import a statement",
+				"titleReading": "Finding the rows",
+				"titleImported": "Already imported",
+				"titleFailed": "Couldn't import",
+				"account": "Account",
+				"accountPlaceholder": "Choose an account",
+				"invite": "Drop a statement here",
+				"choose": "Choose a file",
+				"caption": "CSV, OFX or QFX up to 5 MB, a PDF up to 10 MB, or a picture.",
+				"needAccount": "Choose an account to continue",
+				"refusals": {
+					"several": "One file at a time.",
+					"unsupported": "This kind of file can't be imported. Use a CSV, OFX, QFX, PDF or a picture.",
+					"tooLarge": "This file is too large to import."
+				},
+				"reading": "Finding the rows…",
+				"findRows": "Find the rows",
+				"cost": "up to {cost}",
+				"next": "The rows found are checked against Orchard before anything is saved.",
+				"accountLabel": "Account",
+				"period": "Period",
+				"periodValue": "{from} to {to}",
+				"rows": "Rows",
+				"rowsValue": "{fresh, plural, one {# new row} other {# new rows}} · {matched} already in Orchard",
+				"moneyIn": "Money in",
+				"moneyOut": "Money out",
+				"skipped": "{count, plural, one {# line could not be read and is left out} other {# lines could not be read and are left out}}",
+				"otherAccount": "This file is for an account ending {last4}",
+				"flip": "Charges are positive in this file",
+				"more": "and {count} more",
+				"nothingNew": "Everything in this file is already in Orchard.",
+				"confirm": "{count, plural, one {Import # row} other {Import # rows}}",
+				"done": "Done",
+				"close": "Close",
+				"knownOn": "Imported on {day}",
+				"knownDetail": "{count, plural, one {# row} other {# rows}} into {account}",
+				"unknownAccount": "an account no longer here",
+				"failures": {
+					"no-columns": "Couldn't find the date, description and amount columns.",
+					"no-rows": "No transactions in this file.",
+					"too-many": "This file has more than 5,000 rows; export a shorter period.",
+					"currency": "This file is in another currency than the account.",
+					"several-accounts": "This file holds several accounts; export one at a time.",
+					"unreadable": "This file couldn't be read.",
+					"empty": "No transactions could be found in this statement.",
+					"failed": "The rows couldn't be found. Nothing was saved.",
+					"no-key": "Add your Anthropic key in Settings, under Gardener, and statements can be read.",
+					"unavailable": "No model you have set up can read this. Change models in Settings, under Gardener.",
+					"budget": "This would pass your monthly spending cap. Raise it in Settings, under Gardener.",
+					"limit": "Your Claude Code usage window is at its limit. Try again once it resets.",
+					"busy": "The Gardener is busy with another request. Try again in a moment."
+				}
+			},
 			"errors": {
 				"name": "Enter a name",
 				"amount": "Enter an amount",
@@ -1416,6 +1598,8 @@
 				"assetAdded": "Asset added",
 				"assetSaved": "Asset saved",
 				"linkRemoved": "{name} removed",
+				"imported": "Imported {count, plural, one {# row} other {# rows}} into {account}",
+				"nothingNew": "Nothing new from {name}",
 				"costBasisSet": "Cost basis set for {name}",
 				"costBasisCleared": "Cleared your cost basis for {name}",
 				"valueSet": "Value set for {name}"
@@ -1471,6 +1655,12 @@
 			"notifications": {
 				"linkNeedsReconnecting": {
 					"line": "{reason, select, expiring {{institution} asks you to sign in again by {byDay}} other {{institution} needs you to sign in again}}"
+				},
+				"billDueSoon": {
+					"line": "{payee} is due {dueDay}"
+				},
+				"billOverdue": {
+					"line": "{payee} was due {dueDay}"
 				}
 			}
 		},
@@ -2569,7 +2759,11 @@
 			"discarded": "Discarded",
 			"recipe": "Recipe: {name}",
 			"recipeText": "Open it in Recipes to check it over and save it.",
-			"openRecipe": "Open in Recipes"
+			"openRecipe": "Open in Recipes",
+			"bill": "A bill to check",
+			"billText": "Open it in Bills to check it over and save it.",
+			"openBill": "Open in Bills",
+			"about": "For {label}"
 		},
 		"resize": "Resize the Gardener",
 		"allowed": "{id} shared with the Gardener.",

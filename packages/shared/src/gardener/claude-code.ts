@@ -84,6 +84,8 @@ function cardOf(draft: DraftCard): string {
 			return `the capture of ${draft.rows.length} ${draft.rows.length === 1 ? 'item' : 'items'}`
 		case 'recipe':
 			return `the recipe${quoted(draft.recipe.name)}`
+		case 'bill':
+			return `the bill${quoted(draft.bill.payee)}`
 	}
 }
 

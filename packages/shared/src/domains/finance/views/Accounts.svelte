@@ -35,6 +35,8 @@
 		onedit: (account: Account) => void
 		onbalance: (account: Account) => void
 		onreplace: (account: Account) => void
+		/** Import a statement into this account (#74). */
+		onimport: (account: Account) => void
 		oneditasset: (asset: Asset) => void
 		onremovelink: (link: ProviderLink) => void
 		/** Signs a stale or expiring link in again; absent while no provider is bound. */
@@ -48,6 +50,7 @@
 		onedit,
 		onbalance,
 		onreplace,
+		onimport,
 		oneditasset,
 		onremovelink,
 		onreconnect,
@@ -73,18 +76,23 @@
 	}
 	const away = (currency: string) => (currency === home ? [] : [$t('domains.finance.row.notInTotals')])
 
+	const importItem = (): MenuItem => ({ id: 'import', label: $t('domains.finance.menu.import'), icon: 'file-up' })
+
 	function accountActions(account: Account): MenuItem[] {
 		const manual = !account.linkId
 		const items: MenuItem[] = []
 		if (account.closedOn) {
 			items.push({ id: 'reopen', label: $t('domains.finance.menu.reopen'), icon: 'undo-2' })
 			items.push({ id: 'replace', label: $t('domains.finance.menu.replaces'), icon: 'link' })
+			items.push(importItem())
 		} else {
 			if (manual) {
 				items.push({ id: 'edit', label: $t('domains.finance.menu.edit'), icon: 'pencil' })
 				items.push({ id: 'balance', label: $t('domains.finance.menu.updateBalance'), icon: 'refresh-cw' })
 			}
 			items.push({ id: 'replace', label: $t('domains.finance.menu.replaces'), icon: 'link' })
+			// a statement goes after the account's own actions and before closing it or deleting it (#74)
+			items.push(importItem())
 			items.push({ id: 'close', label: $t('domains.finance.menu.close'), icon: 'lock' })
 		}
 		if (manual) items.push({ id: 'delete', label: $t('domains.finance.menu.delete'), icon: 'trash', destructive: true })
@@ -240,6 +248,7 @@
 			if (id === 'edit') onedit(account)
 			else if (id === 'balance') onbalance(account)
 			else if (id === 'replace') onreplace(account)
+			else if (id === 'import') onimport(account)
 			else if (id === 'close') {
 				const undo = finance.closeAccount(account.id)
 				if (undo) undoToast($t('domains.finance.toasts.closed', { values: { name } }), undo)

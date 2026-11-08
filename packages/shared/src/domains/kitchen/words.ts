@@ -2,9 +2,6 @@
 // answer, why a file was not taken, and the glyphs and menus both apps' Stock draw. Each takes the translator, so
 // the caller's `$t` keeps them reactive.
 import type { IconName, MenuItem } from '@eden/ui-kit'
-import { formatCost } from '../../gardener/index.js'
-import type { DirectPreview } from '../../shell/gardener/types.js'
-import { modelLabel } from './staging.svelte.js'
 import type { GroceryRow } from './store.svelte.js'
 import { LOCATIONS, type StockItem, type StockLocation } from './types.js'
 
@@ -56,23 +53,7 @@ export const groceryLineOf = (item: StockItem): GroceryRow => ({
 })
 
 /** The provider line of a sheet: who reads, on which model, at about what cost; or why nothing can be read. */
-export function readerOf(
-	translate: Translate,
-	preview: DirectPreview | undefined
-): { provider: string; model?: string; cost?: string; blocked?: string } {
-	if (!preview) return { provider: '' }
-	if ('unavailable' in preview) {
-		return { provider: '', blocked: translate(`domains.kitchen.failure.${preview.unavailable}`) }
-	}
-	const key = `settings.privacy.destinations.${preview.provider}`
-	const provider = translate(key)
-	return {
-		provider: provider === key ? preview.provider : provider,
-		model: modelLabel(preview.model),
-		// the estimate is a ceiling (the whole answer the request may take), and the sheets say "up to"
-		cost: formatCost(preview.estimateUsd),
-	}
-}
+export { readerOf } from '../../shell/gardener/reader-line.js'
 
 /** Why a read did not answer, in the owner's words. */
 export function failureOf(translate: Translate, failure: string | undefined, fallback = 'network'): string {

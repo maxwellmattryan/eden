@@ -1205,7 +1205,130 @@
 			"subtitle": "お金、予算、資産",
 			"tabs": {
 				"accounts": "口座",
+				"bills": "請求",
 				"investments": "投資"
+			},
+			"tabsLabel": "果樹園のセクション",
+			"bills": {
+				"groups": {
+					"overdue": "期限切れ",
+					"due-soon": "まもなく期日",
+					"upcoming": "今後",
+					"expected": "見込み",
+					"paid": "支払済み"
+				},
+				"cadence": {
+					"once": "一回のみ",
+					"m1": "毎月",
+					"m2": "2か月ごと",
+					"m3": "3か月ごと",
+					"m6": "6か月ごと",
+					"m12": "毎年"
+				},
+				"source": {
+					"letter": "郵便物から",
+					"statement": "カードの明細",
+					"repeating": "繰り返し",
+					"manual": "手入力"
+				},
+				"line": {
+					"estimate": "見積もり",
+					"actual": "確定",
+					"minimum": "最低{amount}",
+					"interest": "利息{amount}",
+					"stillDue": "残り{amount}",
+					"over": "請求より{amount}多い",
+					"about": "約{amount}",
+					"paidFrom": "{day}に{bank} ••{last4}から支払い",
+					"paidFromBank": "{day}に{bank}から支払い",
+					"paidOn": "{day}に支払い",
+					"markedPaid": "{day}に支払済みにしました",
+					"minimumPaid": "最低額を支払い済み · {amount}は次回の明細へ"
+				},
+				"menu": {
+					"markPaid": "支払済みにする",
+					"edit": "編集",
+					"notThis": "この支払いではない",
+					"stopRepeating": "繰り返しをやめる",
+					"openSite": "支払先のサイトを開く",
+					"delete": "削除"
+				},
+				"empty": {
+					"title": "請求はまだありません",
+					"text": "郵便物を撮影するかドロップすると、この端末で読み取られ、庭師が請求の下書きを作ります。確認してから保存します。"
+				},
+				"ambiguous": {
+					"title": "どちらの支払いか分かりません",
+					"detail": "{payee}、{amount}、期日{day}。どちらで支払いましたか？",
+					"group": "{payee}を支払った可能性のある支払い",
+					"candidate": "{day} · {name} · {amount}",
+					"neither": "どちらでもない"
+				},
+				"taskTitle": "{payee}を支払う",
+				"form": {
+					"titleNew": "請求を追加",
+					"titleEdit": "請求を編集",
+					"titleDraft": "請求を確認",
+					"updates": "{month}の{payee}の請求を更新します",
+					"payee": "支払先",
+					"amount": "金額",
+					"currency": "通貨",
+					"due": "期日",
+					"dueHelp": "期日がまだない場合は空のままにします。",
+					"estimate": "見積もりです",
+					"repeats": "繰り返し",
+					"never": "しない",
+					"fixed": "金額は毎回同じ",
+					"card": "カード",
+					"noCard": "なし",
+					"minimum": "最低支払額",
+					"url": "支払先のサイト",
+					"drafting": "請求の下書きを作成中…",
+					"byHand": "手で入力する"
+				},
+				"errors": {
+					"payee": "支払先を入力してください",
+					"positive": "0より大きい金額を入力してください",
+					"url": "https://で始まるアドレスを入力してください"
+				},
+				"pay": {
+					"title": "{payee}を支払済みにする",
+					"text": "支払った取引を選んでください。一部の場合は残りが期日のまま残ります。",
+					"choose": "期日前後の支払い",
+					"none": "期日の前後に支払いはありません。",
+					"another": "別の方法で支払った",
+					"anotherText": "取引なしで、今日{amount}を支払ったと記録します。"
+				},
+				"toasts": {
+					"added": "請求を追加しました",
+					"saved": "請求を保存しました",
+					"deleted": "{payee}を削除しました",
+					"paid": "{payee}を支払済みにしました",
+					"stopped": "{payee}は繰り返さなくなりました",
+					"unmatched": "{payee}から支払いを外しました",
+					"matched": "{payee}を支払いました",
+					"dismissed": "どちらの支払いも{payee}ではありません"
+				},
+				"capture": {
+					"confirm": "請求の下書きを作る",
+					"next": "このテキストから庭師が請求の下書きを作ります。保存する前に確認できます。",
+					"madeBill": "{month}の{payee}の請求",
+					"deletedBill": "削除された請求"
+				},
+				"failure": {
+					"busy": "庭師は別の依頼を処理中です。少し待ってからもう一度お試しください。",
+					"no-key": "請求の下書きには、設定でAnthropicのキーを追加してください。",
+					"unavailable": "ここでは庭師を使えません。",
+					"budget": "今月の庭師の予算を使い切りました。",
+					"limit": "サブスクリプションの利用上限に達しています。リセットまでお待ちください。",
+					"network": "庭師に接続できませんでした。",
+					"refusal": "庭師はこの請求の下書きを作りませんでした。",
+					"max-tokens": "回答が長すぎました。",
+					"cancelled": "下書きを中止しました。",
+					"unreadable": "庭師はこれを読めませんでした。",
+					"empty": "これは請求には見えません。",
+					"no-files": "送るものがありませんでした。"
+				}
 			},
 			"tabsLabel": "果樹園のセクション",
 			"categories": {
@@ -1238,6 +1361,10 @@
 				"addAccount": "口座を追加",
 				"addAsset": "資産を追加",
 				"linkBank": "銀行を連携",
+				"import": "取り込む",
+				"reconnect": "再接続",
+				"captureBill": "請求書を読み取る",
+				"addBill": "請求を追加",
 				"linkBrokerage": "証券口座を連携",
 				"reconnect": "再接続"
 			},
@@ -1338,6 +1465,7 @@
 				"edit": "編集",
 				"updateBalance": "残高を更新",
 				"replaces": "この口座が置き換えるもの…",
+				"import": "明細を取り込む",
 				"close": "口座を解約",
 				"reopen": "再開",
 				"delete": "削除",
@@ -1392,6 +1520,60 @@
 				"subject": "あなた",
 				"resource": "金融機関の連携"
 			},
+			"import": {
+				"title": "明細を取り込む",
+				"titleReading": "取引を探しています",
+				"titleImported": "取り込み済み",
+				"titleFailed": "取り込めませんでした",
+				"account": "口座",
+				"accountPlaceholder": "口座を選択",
+				"invite": "ここに明細をドロップ",
+				"choose": "ファイルを選択",
+				"caption": "CSV・OFX・QFXは5 MBまで、PDFは10 MBまで、または画像。",
+				"needAccount": "続けるには口座を選択してください",
+				"refusals": {
+					"several": "ファイルは一度に1つです。",
+					"unsupported": "この種類のファイルは取り込めません。CSV・OFX・QFX・PDF・画像を使ってください。",
+					"tooLarge": "このファイルは大きすぎて取り込めません。"
+				},
+				"reading": "取引を探しています…",
+				"findRows": "取引を探す",
+				"cost": "最大{cost}",
+				"next": "見つかった取引は、保存する前にOrchardの記録と照合されます。",
+				"accountLabel": "口座",
+				"period": "期間",
+				"periodValue": "{from}〜{to}",
+				"rows": "件数",
+				"rowsValue": "新規{fresh}件 · Orchardに登録済み{matched}件",
+				"moneyIn": "入金",
+				"moneyOut": "出金",
+				"skipped": "{count}行は読み取れず、除外されます",
+				"otherAccount": "このファイルは末尾{last4}の口座のものです",
+				"flip": "このファイルでは請求額が正の数です",
+				"more": "ほか{count}件",
+				"nothingNew": "このファイルの取引はすべてOrchardに登録済みです。",
+				"confirm": "{count}件を取り込む",
+				"done": "完了",
+				"close": "閉じる",
+				"knownOn": "{day}に取り込み済み",
+				"knownDetail": "{count}件を{account}に",
+				"unknownAccount": "現在はない口座",
+				"failures": {
+					"no-columns": "日付・内容・金額の列が見つかりませんでした。",
+					"no-rows": "このファイルに取引がありません。",
+					"too-many": "このファイルは5,000行を超えています。期間を短くして書き出してください。",
+					"currency": "このファイルは口座と別の通貨です。",
+					"several-accounts": "このファイルには複数の口座があります。1つずつ書き出してください。",
+					"unreadable": "このファイルを読み取れませんでした。",
+					"empty": "この明細から取引が見つかりませんでした。",
+					"failed": "取引を見つけられませんでした。何も保存されていません。",
+					"no-key": "設定のGardenerでAnthropicのキーを追加すると、明細を読み取れます。",
+					"unavailable": "これを読み取れるモデルが設定されていません。設定のGardenerでモデルを変更してください。",
+					"budget": "月の利用上限を超えてしまいます。設定のGardenerで上限を上げてください。",
+					"limit": "Claude Codeの利用枠が上限に達しています。リセット後にもう一度お試しください。",
+					"busy": "Gardenerは別のリクエストを処理中です。少し待ってからお試しください。"
+				}
+			},
 			"errors": {
 				"name": "名前を入力してください",
 				"amount": "金額を入力してください",
@@ -1416,6 +1598,8 @@
 				"assetAdded": "資産を追加しました",
 				"assetSaved": "資産を保存しました",
 				"linkRemoved": "{name}を削除しました",
+				"imported": "{account}に{count}件を取り込みました",
+				"nothingNew": "{name}に新しい取引はありません",
 				"costBasisSet": "{name}の取得原価を設定しました",
 				"costBasisCleared": "{name}の取得原価を消去しました",
 				"valueSet": "{name}の評価額を設定しました"
@@ -1471,6 +1655,12 @@
 			"notifications": {
 				"linkNeedsReconnecting": {
 					"line": "{reason, select, expiring {{institution}は{byDay}までに再ログインが必要です} other {{institution}に再ログインが必要です}}"
+				},
+				"billDueSoon": {
+					"line": "{payee}の支払期日は{dueDay}です"
+				},
+				"billOverdue": {
+					"line": "{payee}の支払期日は{dueDay}でした"
 				}
 			}
 		},
@@ -2841,7 +3031,11 @@
 			"discarded": "破棄しました",
 			"recipe": "レシピ: {name}",
 			"recipeText": "レシピで開いて確認し、保存してください。",
-			"openRecipe": "レシピで開く"
+			"openRecipe": "レシピで開く",
+			"bill": "確認する請求",
+			"billText": "請求で開いて確認し、保存してください。",
+			"openBill": "請求で開く",
+			"about": "{label}のため"
 		},
 		"resize": "庭師の幅を変える",
 		"allowed": "{id} を庭師と共有しました。",

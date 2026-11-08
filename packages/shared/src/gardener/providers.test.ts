@@ -147,6 +147,7 @@ describe('the declared tools on the seed', () => {
 		expect(
 			Object.fromEntries(tools.map(({ domain, tool }) => [`${domain}.${tool.id}`, [tool.grade, tool.needs]]))
 		).toEqual({
+			'finance.read-statement': ['light', ['vision']],
 			'kitchen.suggest-recipes': ['standard', []],
 			'kitchen.storage-tip': ['light', []],
 			'kitchen.capture-haul': ['light', ['vision']],
@@ -174,6 +175,7 @@ describe('the declared tools on the seed', () => {
 			'places.import-places': ['standard', []],
 			'places.add-to-calendar': [null, []],
 			'places.update-places': [null, []],
+			'finance.draft': ['light', ['vision']],
 		})
 	})
 

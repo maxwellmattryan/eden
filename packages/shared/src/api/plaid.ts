@@ -56,6 +56,18 @@ export interface SyncResult {
 	modified: ProviderTransaction[]
 	removed: string[]
 	cursor: string
+	/** Each credit card's latest statement (#78); empty for an item with no card, or when Plaid would not say. */
+	statements?: CardStatement[]
+}
+
+/** A credit card's latest statement, from Plaid's liabilities: decimal strings and `YYYY-MM-DD` days. */
+export interface CardStatement {
+	providerAccountId: string
+	statementBalance?: string | null
+	minimum?: string | null
+	dueDate?: string | null
+	statementDate?: string | null
+	currency?: string | null
 }
 
 /** A holding as Plaid lists it; every number is a decimal string as Plaid stated it. */

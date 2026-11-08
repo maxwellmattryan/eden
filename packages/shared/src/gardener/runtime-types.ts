@@ -4,6 +4,7 @@
 // edits live in. Rows cross the IPC as camelCase JSON, stamped like any row and ended by a tombstone.
 import type { GrantAccess } from '../grants/types.js'
 import type { FactProposal } from '../profile/types.js'
+import type { BillDraft } from '../domains/finance/bills.js'
 import type { DraftTask } from '../tasks/draft.js'
 import type { ModelOverrides, ProviderEdits } from './types.js'
 
@@ -422,6 +423,8 @@ export type DraftCard =
 				imageUrl?: string
 			}
 	  }
+	/** A bill to check (#78): it opens on Orchard's Bills tab in the bill form, and settles when it is saved there. */
+	| { kind: 'bill'; bill: BillDraft }
 
 /**
  * A file the owner attached to their message (D-82, D-83): the Attachment row by id, with what the panel and the pack

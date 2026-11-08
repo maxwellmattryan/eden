@@ -196,7 +196,7 @@ function logQuick(actions: readonly string[]): { description: string; schema: Js
 export const SCHEMAS: Readonly<Record<string, { description: string; schema: JsonSchema }>> = {
 	'draft-tasks': {
 		description:
-			'Drafts tasks as a card in the thread, which the owner keeps or discards; nothing is saved until they keep it. Put every task in one call: one task is a card of its own, several are one card kept together. A task is a todo unless it repeats: with `repeat` it is a routine, which comes round on its days and is done each time, and with `timesPer` it is a habit, counted against a target ("run three times a week"); never pass both. Use it when the owner asks to be reminded of something, to add something to do, or to start doing something regularly. Work out a relative day ("Friday", "tomorrow") from today’s date in the system prompt and pass it as `due`; a todo with no `due` lands on today when kept. Returns the drafted tasks, each with its kind. To change, finish or delete a task that exists, use `update-tasks`.',
+			'Drafts tasks as a card in the thread, which the owner keeps or discards; nothing is saved until they keep it. Put every task in one call: one task is a card of its own, several are one card kept together. A task is a todo unless it repeats: with `repeat` it is a routine, which comes round on its days and is done each time, and with `timesPer` it is a habit, counted against a target ("run three times a week"); never pass both. Use it when the owner asks to be reminded of something, to add something to do, or to start doing something regularly. Work out a relative day ("Friday", "tomorrow") from today’s date in the system prompt and pass it as `due`; a todo with no `due` lands on today when kept. When a task is for a row you read (paying a `bill`), pass it as `about`: the task links to it, and a bill’s task is done once the bill is paid. Returns the drafted tasks, each with its kind. To change, finish or delete a task that exists, use `update-tasks`.',
 		schema: object(
 			{
 				tasks: {
@@ -234,6 +234,16 @@ export const SCHEMAS: Readonly<Record<string, { description: string; schema: Jso
 									['count', 'per']
 								),
 								description: 'A target to count against, which makes it a habit: 3 per week.',
+							},
+							about: {
+								...object(
+									{
+										type: text('The row’s type, as `read-rows` names it: `bill`.'),
+										id: text('The row’s `id`, from `read-rows`.'),
+									},
+									['type', 'id']
+								),
+								description: 'The row the task is for, when it is for one: paying a bill, using up an item.',
 							},
 						},
 						['title']
@@ -765,6 +775,16 @@ export const SCHEMAS: Readonly<Record<string, { description: string; schema: Jso
 			['description']
 		),
 	},
+	'finance.read-statement': {
+		description: `${SEPARATE} that finds the transaction lines in a bank or card statement the owner is importing. It is run by Orchard’s Import on the Accounts page with the text the owner confirmed, or the picture they chose to send, and refuses when called in a conversation: there, tell the owner to use Import on Orchard’s Accounts page. Returns the lines found; nothing is saved until the owner imports them.`,
+		schema: object(
+			{
+				text: text('The statement’s text as the owner confirmed it; empty when the picture is sent.'),
+				currency: text('The account’s currency, ISO 4217.'),
+			},
+			['text', 'currency']
+		),
+	},
 	'weather.forecast': {
 		description:
 			'Returns the forecast Eden holds for the owner’s home area: the `current` conditions, up to seven `days` from `day` on (each with its condition, the high and low in `unit`, the chance of rain in percent, the rainfall in mm and the UV), and the weather `alerts` in force now, the most severe first. An alert marked `dismissed` was put away by the owner in Sky and is still in force. `alertsCovered: false` means no alert service covers the place, which is not the same as no alerts. Use it for any question about the weather or about alerts, warnings and watches. It covers the home area only, and a day the forecast does not reach is an error that names the days it holds.',
@@ -791,6 +811,12 @@ export const SCHEMAS: Readonly<Record<string, { description: string; schema: Jso
 				enum: ['new', 'first-quarter', 'full', 'last-quarter'],
 				description: 'Find the next time the moon reaches this phase, from that day on.',
 			},
+		}),
+	},
+	'finance.draft': {
+		description: `${SEPARATE} that drafts one bill from a letter, a statement or an estimate of benefits, as a card the owner checks on Orchard’s Bills tab before anything is saved: the payee, the amount, the due day, a card statement’s minimum, and whether it repeats. Pass the letter’s words as \`text\` when the owner pasted or typed them. In a conversation it never reads an attached file: the owner captures a letter on the Bills tab, where it is read on their device first. Returns whether a bill was drafted.`,
+		schema: object({
+			text: text('The letter’s words as the owner gave them in this conversation.'),
 		}),
 	},
 }
@@ -883,6 +909,7 @@ export const LOOSE: ReadonlySet<string> = new Set([
 	'kitchen.save-recipe',
 	'kitchen.change-recipe',
 	'places.update-places',
+	'finance.draft',
 ])
 
 /** Whether a tool's input is held to its schema by the API: the ones that write or draft, where a stray field or a
