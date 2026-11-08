@@ -1418,6 +1418,9 @@
 			"notifications": {
 				"linkNeedsReconnecting": {
 					"line": "{reason, select, expiring {{institution} asks you to sign in again by {byDay}} other {{institution} needs you to sign in again}}"
+				},
+				"priceRise": {
+					"line": "{merchant} costs more than last time"
 				}
 			}
 		},

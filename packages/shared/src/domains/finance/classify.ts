@@ -41,7 +41,7 @@ const signOf = (amount: Money) => Math.sign(amount.minor)
 const size = (amount: Money) => Math.abs(amount.minor)
 const DAY_MS = 24 * 60 * 60 * 1000
 /** Whole days between two `YYYY-MM-DD`. */
-const daysApart = (a: string, b: string) =>
+export const daysApart = (a: string, b: string) =>
 	Math.round(Math.abs(Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / DAY_MS)
 const byText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
 

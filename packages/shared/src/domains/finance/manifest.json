@@ -34,13 +34,23 @@
 	"quickActions": [],
 	"captureSources": [],
 	"tools": [],
-	"signals": ["finance.link-broken"],
+	"signals": ["finance.link-broken", "finance.price-rise"],
 	"notificationKinds": [
-		{ "id": "link-needs-reconnecting", "channel": "in-app", "cadence": "when-found", "signal": "finance.link-broken" }
+		{ "id": "link-needs-reconnecting", "channel": "in-app", "cadence": "when-found", "signal": "finance.link-broken" },
+		{ "id": "price-rise", "channel": "in-app", "cadence": "when-found", "signal": "finance.price-rise" }
 	],
 	"schedules": [{ "id": "sync", "every": 3600 }],
 	"intents": [],
 	"deviceCapabilities": [],
 	"palette": { "entries": [], "search": ["account"] },
-	"export": ["account", "balance-snapshot", "asset", "transaction", "budget-category", "category-rule", "merchant"]
+	"export": [
+		"account",
+		"balance-snapshot",
+		"asset",
+		"transaction",
+		"budget-category",
+		"category-rule",
+		"merchant",
+		"recurring-charge"
+	]
 }

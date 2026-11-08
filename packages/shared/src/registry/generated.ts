@@ -2441,7 +2441,8 @@ export const DECLARATIONS = {
 		"captureSources": [],
 		"tools": [],
 		"signals": [
-			"finance.link-broken"
+			"finance.link-broken",
+			"finance.price-rise"
 		],
 		"notificationKinds": [
 			{
@@ -2450,6 +2451,14 @@ export const DECLARATIONS = {
 				"cadence": "when-found",
 				"default": true,
 				"signal": "finance.link-broken",
+				"when": null
+			},
+			{
+				"id": "price-rise",
+				"channel": "in-app",
+				"cadence": "when-found",
+				"default": true,
+				"signal": "finance.price-rise",
 				"when": null
 			}
 		],
@@ -2476,7 +2485,8 @@ export const DECLARATIONS = {
 			"transaction",
 			"budget-category",
 			"category-rule",
-			"merchant"
+			"merchant",
+			"recurring-charge"
 		]
 	}
 } as const

@@ -1418,6 +1418,9 @@
 			"notifications": {
 				"linkNeedsReconnecting": {
 					"line": "{reason, select, expiring {{institution}は{byDay}までに再ログインが必要です} other {{institution}に再ログインが必要です}}"
+				},
+				"priceRise": {
+					"line": "{merchant}の料金が前回より上がりました"
 				}
 			}
 		},

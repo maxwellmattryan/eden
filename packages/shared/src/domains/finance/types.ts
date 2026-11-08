@@ -13,6 +13,7 @@ export const FINANCE = {
 	category: 'budget-category',
 	rule: 'category-rule',
 	merchant: 'merchant',
+	recurring: 'recurring-charge',
 } as const
 
 /**
@@ -193,6 +194,64 @@ export interface TransactionPayload {
 	review?: 'vague'
 	/** The sync's: the pending row this posted row took over. */
 	replaced?: string
+
+	// ---- #79's key: the recurring pass (`recurring.ts`) derives it
+
+	/** The recurring pass's: the `recurring-charge` row whose series this charge is in. */
+	recurringId?: string
+}
+
+/** How often a recurring charge comes (finance.md §3). */
+export const CADENCES = ['weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'] as const
+export type Cadence = (typeof CADENCES)[number]
+
+/** Two consecutive charges of a fixed series whose amounts differ; `day` is the later charge's. */
+export interface PriceChange {
+	day: string
+	from: Money
+	to: Money
+}
+
+/** What the owner said about a recurring charge. */
+export type RecurringState = 'kept' | 'cancelled' | 'dismissed'
+
+/**
+ * A `recurring-charge` (#79): one series of charges at one merchant (and person, for a vague one) in one currency.
+ * The recurring pass derives every field but the owner's four, which it keeps; none depends on today, so the pass is
+ * idempotent and the status is computed (`statusOf`). Amounts keep the charges' sign, so they are negative.
+ */
+export interface RecurringPayload {
+	merchantId: string
+	counterparty?: string
+	currency: string
+	cadence: Cadence
+	/** More than half of the recent intervals join two charges of different amounts. */
+	variable?: true
+	/** The last amount (fixed), or the median by size of the last three (variable). */
+	expected: Money
+	firstDay: string
+	lastDay: string
+	lastAmount: Money
+	/** The day the next charge is expected. */
+	nextDay: string
+	/** The last charge's account. */
+	accountId: string
+	/** The last charge's category (`categoryOfRow`). */
+	categoryId?: string
+	/** The charges in the series. */
+	count: number
+	/** A fixed series' changes, the newest 12, oldest first; a variable series has none. */
+	priceChanges: PriceChange[]
+
+	// ---- the owner's: the pass keeps them
+
+	state?: RecurringState
+	/** `YYYY-MM-DD`, the day the owner set `state`. */
+	stateOn?: string
+	/** The owner turned down tracking it as a bill. */
+	billOffer?: 'declined'
+	/** The `bill` row that tracks it (#78). */
+	billId?: string
 }
 
 /** A `budget-category`. A default one keeps its `key`, so the provider mapping finds it after a rename. */
@@ -226,6 +285,7 @@ export interface MerchantPayload {
 export type Category = CategoryPayload & { id: string }
 export type Rule = RulePayload & { id: string; updatedAt: string }
 export type Merchant = MerchantPayload & { id: string }
+export type RecurringCharge = RecurringPayload & { id: string }
 
 export type ProviderLink = ProviderLinkPayload & { id: string }
 export type Account = AccountPayload & { id: string }

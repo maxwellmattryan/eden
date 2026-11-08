@@ -25,6 +25,7 @@ import { nowIso, todayIso } from '../../dates/index.js'
 import { t } from '../../i18n/index.js'
 import type { Money } from '../../money/index.js'
 import { settings } from '../../settings/index.js'
+import { emit } from '../../signals/runtime.js'
 import {
 	accountGroups,
 	accountTotals,
@@ -57,6 +58,14 @@ import {
 	type SplitError,
 } from './edits.js'
 import { provider } from './provider.svelte.js'
+import {
+	billOfferOps,
+	linkBillOps,
+	recurringOps,
+	recurringStateOps,
+	withUpdates,
+	type RecurringEdit,
+} from './recurring.js'
 import { financeFromRows, financeRows, financeUris } from './rows.js'
 import { seedData } from './seed.js'
 import { chunked } from './sync.js'
@@ -73,6 +82,9 @@ import {
 	type MerchantPayload,
 	type ProviderLink,
 	type ProviderLinkPayload,
+	type RecurringCharge,
+	type RecurringPayload,
+	type RecurringState,
 	type Rule,
 	type RulePayload,
 	type TransactionPayload,
@@ -123,6 +135,8 @@ export class FinanceStore {
 	categories = $state<Category[]>([])
 	merchants = $state<Merchant[]>([])
 	rules = $state<Rule[]>([])
+	/** The live recurring charges (#79), as the recurring pass left them. */
+	recurring = $state<RecurringCharge[]>([])
 	/** The minute, while a page is watching: a link goes stale as it moves. */
 	clock = $state(Date.now())
 
@@ -168,18 +182,20 @@ export class FinanceStore {
 
 	async #read() {
 		try {
-			const [links, accounts, assets, categories, merchants, rules] = await Promise.all([
+			const [links, accounts, assets, categories, merchants, rules, recurring] = await Promise.all([
 				queryEntities<ProviderLinkPayload>({ type: FINANCE.link }),
 				queryEntities<AccountPayload>({ type: FINANCE.account }),
 				queryEntities<AssetPayload>({ type: FINANCE.asset }),
 				queryEntities<CategoryPayload>({ type: FINANCE.category }),
 				queryEntities<MerchantPayload>({ type: FINANCE.merchant }),
 				queryEntities<RulePayload>({ type: FINANCE.rule }),
+				queryEntities<RecurringPayload>({ type: FINANCE.recurring }),
 			])
 			this.#show(financeFromRows({ links, accounts, assets }))
 			this.categories = categories.map(withId)
 			this.merchants = merchants.map(withId)
 			this.rules = rules.map(ruleOf)
+			this.recurring = recurring.map(withId)
 			this.saveFailed = this.#queue.failed
 		} catch (error) {
 			// nothing was read: say so, and let the retry read again
@@ -499,6 +515,7 @@ export class FinanceStore {
 		await this.load()
 		// a queue stopped on a failed write would hold the pass behind it: the next sync runs it instead
 		if (this.#queue.failed) return
+		let rises: { id: string; day: string }[] = []
 		await this.#exclusive(async () => {
 			try {
 				const translate = get(t)
@@ -521,10 +538,31 @@ export class FinanceStore {
 				this.categories = out.categories
 				this.rules = out.rules
 				this.merchants = out.merchants
+				// the recurring pass (#79) over the rows as the classification left them, in the same job
+				try {
+					const charges = await queryEntities<RecurringPayload>({ type: FINANCE.recurring })
+					const found = recurringOps({ rows: withUpdates(transactions, out.ops), charges, newId })
+					for (const ops of chunked(found.ops)) await applyBatch(ops)
+					this.recurring = found.charges
+					rises = found.rises
+				} catch (error) {
+					await logError('data', 'The Orchard recurring pass failed', code(error)).catch(() => null)
+				}
 			} catch (error) {
 				await logError('data', 'The Orchard classification pass failed', code(error)).catch(() => null)
 			}
 		})
+		for (const rise of rises) await this.#signalRise(rise)
+	}
+
+	/** Tells the owner a recurring charge got dearer; once for each dearer charge, by its key. No amount is said. */
+	async #signalRise(rise: { id: string; day: string }) {
+		const charge = this.recurringById(rise.id)
+		const merchant = this.merchants.find((entry) => entry.id === charge?.merchantId)?.name ?? charge?.counterparty ?? ''
+		const payload = { uris: [toUri(FINANCE.recurring, rise.id)], merchant }
+		await emit('finance.price-rise', payload, { dedupeKey: `${rise.id}:${rise.day}` }).catch(
+			(error: unknown) => void logError('data', 'The price-rise signal was not emitted', code(error)).catch(() => null)
+		)
 	}
 
 	/**
@@ -713,6 +751,40 @@ export class FinanceStore {
 			}
 		})) as Undo | undefined
 		return undo && category ? { category, undo } : undefined
+	}
+
+	// ---- Recurring charges (#79) ---------------------------------------------------------------------------------
+
+	recurringById(id?: string): RecurringCharge | undefined {
+		return id ? this.recurring.find((charge) => charge.id === id) : undefined
+	}
+
+	/** Kept, cancelled or not a subscription, as of today; none clears it. */
+	setRecurringState(id: string, state: RecurringState | undefined): Promise<Undo | undefined> {
+		return this.#recurringEdit(id, (charge) => recurringStateOps(charge, state, todayIso()))
+	}
+
+	/** Turns down tracking the charge as a bill, or takes that back. */
+	declineBillOffer(id: string, declined = true): Promise<Undo | undefined> {
+		return this.#recurringEdit(id, (charge) => billOfferOps(charge, declined))
+	}
+
+	/** The `bill` that tracks the charge (#78); none lets it go. */
+	linkBill(id: string, billId: string | undefined): Promise<Undo | undefined> {
+		return this.#recurringEdit(id, (charge) => linkBillOps(charge, billId))
+	}
+
+	/** An owner's answer on a recurring charge: read, written and shown in one job; the undo swaps the row back. */
+	#recurringEdit(id: string, make: (charge: RecurringCharge) => RecurringEdit | undefined): Promise<Undo | undefined> {
+		return this.#edit(async () => {
+			const [row] = await queryEntities<RecurringPayload>({ type: FINANCE.recurring, ids: [id] })
+			const was = row ? withId(row) : undefined
+			const made = was ? make(was) : undefined
+			if (!was || !made) return undefined
+			const swap = (charge: RecurringCharge) =>
+				(this.recurring = this.recurring.map((entry) => (entry.id === id ? charge : entry)))
+			return { ...made, apply: () => swap(made.charge), revert: () => swap(was) }
+		}) as Promise<Undo | undefined>
 	}
 
 	// ---- Sample data ---------------------------------------------------------------------------------------------
