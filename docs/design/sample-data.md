@@ -4,7 +4,7 @@ status: draft
 summary: One consistent fictional dataset for every mockup: an owner, facts, stock by location, a captured haul, recipes, a grocery list, ideas and projects, a calendar week with layers, a weather week, workouts and a weight series, places and listings, accounts, transactions, bills and a budget, daily lines, notifications, feed and audit entries.
 read-this-if: You are drawing a mockup or seeding an empty state with sample data.
 depends-on: [product/domains/README]
-updated: 2026-11-06
+updated: 2026-11-08
 ---
 
 ## The owner
@@ -174,6 +174,18 @@ Accounts (`orchardAccounts`):
 | M1 Brokerage | 5501 | 9,640.55 USD |
 | Fidelity 401(k) | 0912 | 21,388.40 USD |
 | Japan Post Bank Yucho savings (entered by hand) | 7731 | ¥84,000, left out of totals |
+
+Holdings (#76, the app's seed `packages/shared/src/domains/finance/seed.ts`; no mock yet), each account's adding up to its balance:
+
+| account | holding | quantity | value | cost basis |
+|---|---|---|---|---|
+| M1 Brokerage | Vanguard Total Stock Market ETF (VTI, ETF; closes 284.10, 285.42, 286.00 over the last three days) | 21.4 | 6,120.35 USD | 5,210.00 (Plaid's) |
+| M1 Brokerage | Schwab U.S. Dividend Equity ETF (SCHD, ETF) | 88.25 | 2,410.11 USD | none |
+| M1 Brokerage | U.S. Dollar (cash) | 1,110.09 | 1,110.09 USD | 1,110.09 (Plaid's) |
+| Fidelity 401(k) | Fidelity 500 Index Fund (FXAIX, mutual fund) | 102.5 | 19,388.40 USD | 14,902.18 (Plaid's) |
+| Fidelity 401(k) | Fidelity Stable Value (other; no Plaid price) | 1,850.0412 | 2,000.00 USD typed 120 days ago, out of date | 1,850.00 (Plaid's) |
+
+The Investments tab reads Value 31,028.95, Cost basis 23,072.27, Gain +5,546.57 and "1 holding without a cost basis"; the allocation is funds 90.0 %, other 6.4 %, cash 3.6 %.
 
 Assets entered by hand (`orchardAssets`): the 2019 Subaru Outback at 14,200.00 USD, valued Tue 09-01; Bitcoin in cold storage, 0.0412 BTC at 63,000.00 USD, 2,595.60 USD. Assets come to 64,036.73 USD and debts to 11,016.18, so net worth is **53,020.55 USD** (`orchardNetWorthNow`), up 1,104.20 this month (`orchardNetWorthChange`). Net worth by month (`orchardNetWorth` over `orchardNetWorthMonths`), Oct 2025 to Sep 2026: 46,210.40, 46,880.12, 47,102.77, 47,950.30, 48,420.15, 48,190.60, 49,005.85, 49,870.20, 50,412.90, 51,203.44, 51,916.35, 53,020.55.
 
