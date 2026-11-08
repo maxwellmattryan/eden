@@ -7,7 +7,7 @@ import { parseUri, type BatchOp, type Entity } from '../../data/index.js'
 import { addDays, weekStartOf } from '../../dates/index.js'
 import { money, parseMoney, type Money } from '../../money/index.js'
 import type { WeekStart } from '../../types/index.js'
-import { spendingOf } from './classify.js'
+import { insideAccount, spendingOf } from './classify.js'
 import {
 	FINANCE,
 	type Account,
@@ -64,6 +64,8 @@ export interface LedgerEntry {
 	refundOf?: string
 	repays?: string
 	notes?: string
+	/** A buy, a sell or a reinvested dividend: money moving inside one account, in no measure (D-195). */
+	insideAccount?: true
 	/** A single row's parts (or the row), or a pair's out side then its in side. */
 	lines: LedgerLine[]
 }
@@ -254,6 +256,7 @@ function entryOf(id: string, row: TransactionPayload, merchants: ReadonlyMap<str
 	if (row.refundOf) entry.refundOf = row.refundOf
 	if (row.repays) entry.repays = row.repays
 	if (row.notes) entry.notes = row.notes
+	if (insideAccount(row)) entry.insideAccount = true
 	return entry
 }
 
@@ -342,10 +345,13 @@ class Tally {
 
 	constructor(readonly home: string) {}
 
-	/** One entry with the lines it adds here; a pair with both sides here is a move inside the owner's money. */
+	/**
+	 * One entry with the lines it adds here; a pair with both sides here, or a move inside one investment account, is
+	 * a move inside the owner's money.
+	 */
 	add(entry: LedgerEntry, lines: readonly LedgerLine[]) {
 		this.count += 1
-		const inside = entry.pairId !== undefined && lines.length === 2
+		const inside = entry.insideAccount === true || (entry.pairId !== undefined && lines.length === 2)
 		let plain = false
 		for (const line of lines) {
 			const { minor, currency } = line.amount

@@ -1,10 +1,22 @@
 // The sample accounts, matching #70's mocked Accounts page so the mock and the build agree: Chase asking to be signed
 // in again three days after its last good sync, Ally, M1 and Fidelity synced this morning, a Japan Post savings account
 // in yen entered by hand, the car valued on the first of the month and a little Bitcoin. One snapshot per account for
-// today. Times are relative to `now`, so the freshness reads the same whenever the seed runs.
+// today. M1 holds VTI (three days of closes), SCHD with no cost basis and cash; the Fidelity 401(k) holds FXAIX and a
+// stable value fund Plaid gives no price for, its value typed 120 days ago so it reads out of date (D-195). Each
+// account's holdings add up to its balance. Times are relative to `now`, so the freshness reads the same whenever the
+// seed runs.
 import { dateIn, instantAt } from '../../dates/index.js'
 import { money } from '../../money/index.js'
-import { WHOLE, type Account, type AccountKind, type FinanceData, type ProviderLink, type Snapshot } from './types.js'
+import {
+	WHOLE,
+	type Account,
+	type AccountKind,
+	type FinanceData,
+	type Holding,
+	type ProviderLink,
+	type Security,
+	type Snapshot,
+} from './types.js'
 
 const DAY = 24 * 60 * 60 * 1000
 
@@ -69,10 +81,72 @@ export function seedData(now: number = Date.now()): FinanceData {
 		balance: account.balance!,
 	}))
 
+	const daysAgo = (days: number) => dateIn(undefined, now - days * DAY)
+	const securities: Security[] = [
+		{
+			id: 'sec-vti',
+			name: 'Vanguard Total Stock Market ETF',
+			ticker: 'VTI',
+			type: 'etf',
+			currency: 'USD',
+			prices: [
+				{ day: daysAgo(2), price: '284.10' },
+				{ day: daysAgo(1), price: '285.42' },
+				{ day: today, price: '286.00' },
+			],
+		},
+		{
+			id: 'sec-schd',
+			name: 'Schwab U.S. Dividend Equity ETF',
+			ticker: 'SCHD',
+			type: 'etf',
+			currency: 'USD',
+			prices: [{ day: today, price: '27.31' }],
+		},
+		{ id: 'sec-usd', name: 'U.S. Dollar', type: 'cash', currency: 'USD', prices: [{ day: today, price: '1' }] },
+		{
+			id: 'sec-fxaix',
+			name: 'Fidelity 500 Index Fund',
+			ticker: 'FXAIX',
+			type: 'mutual-fund',
+			currency: 'USD',
+			prices: [{ day: today, price: '189.155' }],
+		},
+		{ id: 'sec-stable', name: 'Fidelity Stable Value', type: 'other', currency: 'USD', prices: [] },
+	]
+	const held = (
+		id: string,
+		accountId: string,
+		securityId: string,
+		quantity: string,
+		value: number | undefined,
+		basis: number | undefined
+	): Holding => ({
+		id,
+		accountId,
+		securityId,
+		quantity,
+		currency: 'USD',
+		...(value === undefined ? {} : { value: usd(value), pricedOn: today }),
+		...(basis === undefined ? {} : { costBasis: usd(basis), costBasisBy: 'provider' as const }),
+	})
+	const holdings: Holding[] = [
+		held('h-vti', 'a-m1', 'sec-vti', '21.4', 612035, 521000),
+		held('h-schd', 'a-m1', 'sec-schd', '88.25', 241011, undefined),
+		held('h-usd', 'a-m1', 'sec-usd', '1110.09', 111009, 111009),
+		held('h-fxaix', 'a-401k', 'sec-fxaix', '102.5', 1938840, 1490218),
+		{
+			...held('h-stable', 'a-401k', 'sec-stable', '1850.0412', undefined, 185000),
+			typedValue: { value: usd(200000), on: daysAgo(120) },
+		},
+	]
+
 	return {
 		links,
 		accounts,
 		snapshots,
+		securities,
+		holdings,
 		assets: [
 			{
 				id: 'as-subaru',

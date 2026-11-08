@@ -32,12 +32,20 @@ export function freshnessLine(
 	return tr('domains.finance.groups.updatedOn', { values: { day } })
 }
 
-/** "1 account in JPY is left out of totals", "2 accounts in JPY and EUR are left out of totals". */
-export function leftOutLine(left: readonly { currency: string; count: number }[], tr: Translate, lang: string) {
+/**
+ * "1 account in JPY is left out of totals", "2 accounts in JPY and EUR are left out of totals"; with `key`, the same
+ * line in other words ("1 holding in JPY…").
+ */
+export function leftOutLine(
+	left: readonly { currency: string; count: number }[],
+	tr: Translate,
+	lang: string,
+	key = 'domains.finance.totals.leftOut'
+) {
 	if (!left.length) return undefined
 	const count = left.reduce((sum, entry) => sum + entry.count, 0)
 	const currencies = new Intl.ListFormat(lang, { type: 'conjunction' }).format(left.map((entry) => entry.currency))
-	return tr('domains.finance.totals.leftOut', { values: { count, currencies } })
+	return tr(key, { values: { count, currencies } })
 }
 
 /** A share in basis points as the owner writes it, a percent with at most two decimals: "50", "33.33". */

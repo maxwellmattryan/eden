@@ -1204,8 +1204,10 @@
 			"name": "Orchard",
 			"subtitle": "Money, budgets, assets",
 			"tabs": {
-				"accounts": "Accounts"
+				"accounts": "Accounts",
+				"investments": "Investments"
 			},
+			"tabsLabel": "Orchard sections",
 			"categories": {
 				"rent": "Rent",
 				"utilities": "Utilities",
@@ -1236,7 +1238,49 @@
 				"addAccount": "Add an account",
 				"addAsset": "Add an asset",
 				"linkBank": "Link a bank",
+				"linkBrokerage": "Link a brokerage",
 				"reconnect": "Reconnect"
+			},
+			"investments": {
+				"label": "Investment totals",
+				"value": "Value",
+				"costBasis": "Cost basis",
+				"gain": "Gain",
+				"withoutBasis": "{count, plural, one {# holding without a cost basis} other {# holdings without a cost basis}}",
+				"leftOut": "{count, plural, one {# holding in {currencies} is left out of totals} other {# holdings in {currencies} are left out of totals}}",
+				"unpricedCount": "{count, plural, one {# unpriced holding is not counted} other {# unpriced holdings are not counted}}",
+				"allocation": "Allocation",
+				"columns": {
+					"class": "Class",
+					"value": "Value",
+					"share": "Share"
+				},
+				"classes": {
+					"stocks": "Stocks",
+					"funds": "Funds",
+					"bonds": "Bonds",
+					"cash": "Cash",
+					"crypto": "Crypto",
+					"other": "Other"
+				},
+				"empty": {
+					"title": "No investments yet",
+					"bound": "Link a brokerage to see what you hold.",
+					"unbound": "Holdings come from a brokerage linked on the desktop."
+				},
+				"noHoldings": "Holdings arrive with the next sync.",
+				"unpriced": "Unpriced",
+				"asOf": "as of {day}",
+				"outOfDate": "out of date",
+				"carried": "Carried",
+				"cost": "Cost {amount}",
+				"costBasisTitleNew": "Add cost basis",
+				"costBasisTitle": "Cost basis",
+				"costBasisLede": "The total you paid for {name}, not per share.",
+				"valueTitleNew": "Add value",
+				"valueTitle": "Update value",
+				"valueLede": "What {name} is worth, and the day you looked.",
+				"valuedOn": "Valued on"
 			},
 			"totals": {
 				"label": "Totals",
@@ -1296,7 +1340,12 @@
 				"replaces": "This replaces…",
 				"close": "Close account",
 				"reopen": "Reopen",
-				"delete": "Delete"
+				"delete": "Delete",
+				"updateValue": "Update value",
+				"addValue": "Add value",
+				"addCostBasis": "Add cost basis",
+				"editCostBasis": "Edit cost basis",
+				"clearCostBasis": "Clear my cost basis"
 			},
 			"empty": {
 				"title": "Nothing here yet",
@@ -1353,7 +1402,8 @@
 				"share": "Between 0.01 and 100",
 				"day": "Enter a day",
 				"quantity": "Enter a number",
-				"unit": "Enter a unit"
+				"unit": "Enter a unit",
+				"futureDay": "Pick today or an earlier day"
 			},
 			"toasts": {
 				"accountAdded": "Account added",
@@ -1365,7 +1415,10 @@
 				"replaced": "{name} replaced",
 				"assetAdded": "Asset added",
 				"assetSaved": "Asset saved",
-				"linkRemoved": "{name} removed"
+				"linkRemoved": "{name} removed",
+				"costBasisSet": "Cost basis set for {name}",
+				"costBasisCleared": "Cleared your cost basis for {name}",
+				"valueSet": "Value set for {name}"
 			},
 			"plaid": {
 				"keysButton": "Plaid keys",

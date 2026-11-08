@@ -2,7 +2,7 @@
 	"id": "finance",
 	"phase": "later",
 	"sidebar": { "group": "domains", "order": 50, "visible": true },
-	"tabs": ["accounts"],
+	"tabs": ["accounts", "investments"],
 	"resources": {
 		"facts": [{ "id": "monthly-income-band", "tier": "T2" }],
 		"entities": [
@@ -42,5 +42,15 @@
 	"intents": [],
 	"deviceCapabilities": [],
 	"palette": { "entries": [], "search": ["account"] },
-	"export": ["account", "balance-snapshot", "asset", "transaction", "budget-category", "category-rule", "merchant"]
+	"export": [
+		"account",
+		"balance-snapshot",
+		"asset",
+		"transaction",
+		"budget-category",
+		"category-rule",
+		"merchant",
+		"holding",
+		"security"
+	]
 }

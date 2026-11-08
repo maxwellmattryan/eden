@@ -90,6 +90,36 @@ export function providerCategoryOf(detailed: string | undefined): ProviderMeanin
 	return found ? found[1] : { transferLike: false }
 }
 
+const MOVE: ProviderMeaning = { kind: 'transfer', transferLike: true }
+/** Cash subtypes that move money in or out of the account, so they pair with the other side (D-193). */
+const CASH_MOVES = new Set(['deposit', 'withdrawal', 'contribution', 'distribution'])
+
+/**
+ * What an investment transaction's type and subtype mean (D-195): a buy or a sell, a dividend or capital gain, interest,
+ * a fee, or a move of cash in or out; anything else is a transfer that pairs with nothing.
+ */
+export function investmentMeaningOf(type: string, subtype: string | undefined): ProviderMeaning {
+	const sub = (subtype ?? '').toLowerCase()
+	switch (type.toLowerCase()) {
+		case 'buy':
+			return { kind: 'investment-buy', transferLike: false }
+		case 'sell':
+			return { kind: 'investment-sell', transferLike: false }
+		case 'fee':
+			return { kind: 'fee', key: 'fees', transferLike: false }
+		case 'transfer':
+			return MOVE
+		case 'cash':
+			if (sub.includes('dividend') || sub.includes('capital gain'))
+				return { kind: 'dividend', key: 'income', transferLike: false }
+			if (sub === 'interest') return { kind: 'interest-earned', key: 'income', transferLike: false }
+			if (CASH_MOVES.has(sub)) return MOVE
+			return { kind: 'transfer', transferLike: false }
+		default:
+			return { kind: 'transfer', transferLike: false }
+	}
+}
+
 /**
  * The default categories as writes when none has ever existed, named in the current language; nothing otherwise.
  */

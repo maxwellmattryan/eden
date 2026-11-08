@@ -13,10 +13,13 @@ export const FINANCE = {
 	category: 'budget-category',
 	rule: 'category-rule',
 	merchant: 'merchant',
+	holding: 'holding',
+	security: 'security',
 } as const
 
 /**
- * What a transaction is (finance.md §6). #75 derives all but `bill-payment` (#78) and the investment kinds (#76).
+ * What a transaction is (finance.md §6). #75 derives all but `bill-payment` (#78); #76 derives the investment kinds
+ * from a `plaid-investments` row's type (D-195).
  */
 export const TX_KINDS = [
 	'purchase',
@@ -93,6 +96,8 @@ export interface ProviderLinkPayload {
 	failures?: number
 	/** The code of the last failure, never a message. */
 	lastErrorCode?: string
+	/** The local day of the last good investments read (D-195); one read a day. */
+	investmentsReadOn?: string
 }
 
 export interface AccountPayload {
@@ -195,7 +200,69 @@ export interface TransactionPayload {
 	replaced?: string
 	/** The owner's (#83's detail); searched by the ledger. */
 	notes?: string
+
+	// ---- #76's: an investment transaction's own detail, a provider key, and the pass's reinvestment pointer
+
+	/** The provider's: set only on a `plaid-investments` row. */
+	investment?: { type: string; subtype?: string; securityId?: string; quantity?: string; price?: string }
+	/** The pass's: the reinvestment buy that put this dividend or interest straight back in. */
+	reinvested?: string
 }
+
+/** A security's type, from Plaid's (`fixed income` → `fixed-income`; `loan` and anything unknown → `other`). */
+export const SECURITY_TYPES = [
+	'equity',
+	'etf',
+	'mutual-fund',
+	'fixed-income',
+	'cash',
+	'cryptocurrency',
+	'derivative',
+	'other',
+] as const
+export type SecurityType = (typeof SECURITY_TYPES)[number]
+
+/** The allocation's classes, in the order the owner reads them (D-195). */
+export const ALLOCATION_CLASSES = ['stocks', 'funds', 'bonds', 'cash', 'crypto', 'other'] as const
+export type AllocationClass = (typeof ALLOCATION_CLASSES)[number]
+
+/** A `security`, upserted by the provider's `security_id`; one closing price per day, the newest last. */
+export interface SecurityPayload {
+	name: string
+	ticker?: string
+	type: SecurityType
+	currency?: string
+	prices: { day: string; price: string }[]
+}
+
+/** Who set a holding's cost basis: the provider, the owner, or a move from a replaced account. */
+export type CostBasisBy = 'provider' | 'owner' | 'carried'
+
+/** A `holding`: what one account holds of one security, upserted by `${providerAccountId}:${securityId}`. */
+export interface HoldingPayload {
+	/** The Eden account's id. */
+	accountId: string
+	/** The Eden security's id. */
+	securityId: string
+	/** A decimal string, exact. */
+	quantity: string
+	/** ISO 4217. */
+	currency: string
+	/** The provider's `institution_value`. */
+	value?: Money
+	/** The provider's `institution_price`, a decimal string. */
+	price?: string
+	/** `YYYY-MM-DD` the price is as of. */
+	pricedOn?: string
+	/** The total paid, not per share. */
+	costBasis?: Money
+	costBasisBy?: CostBasisBy
+	/** The owner's value for a holding the provider gives no price for, with the day it was set. */
+	typedValue?: { value: Money; on: string }
+}
+
+export type Security = SecurityPayload & { id: string }
+export type Holding = HoldingPayload & { id: string }
 
 /** A `budget-category`. A default one keeps its `key`, so the provider mapping finds it after a rename. */
 export interface CategoryPayload {
@@ -240,4 +307,6 @@ export interface FinanceData {
 	accounts: Account[]
 	assets: Asset[]
 	snapshots?: Snapshot[]
+	holdings?: Holding[]
+	securities?: Security[]
 }

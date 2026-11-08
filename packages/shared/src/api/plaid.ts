@@ -1,5 +1,5 @@
-// Orchard's Plaid commands (src-tauri/src/domains/finance): the device's keys, a hosted Link session, a sync run, a
-// revoke and the Sandbox's reset. The crate holds the keys and every token and makes every call; the webview gets a
+// Orchard's Plaid commands (src-tauri/src/domains/finance): the device's keys, a hosted Link session, a sync run, an
+// investments read, a revoke and the Sandbox's reset. The crate holds the keys and every token and makes every call; the webview gets a
 // link token, the hosted page's URL and whether keys exist. Outside Tauri there is no crate: the status answers
 // `undefined` and nothing binds. A refusal reads `plaid:<code>: …`; `plaidErrorCode` takes the code.
 import { invoke } from '@tauri-apps/api/core'
@@ -56,6 +56,58 @@ export interface SyncResult {
 	modified: ProviderTransaction[]
 	removed: string[]
 	cursor: string
+}
+
+/** A holding as Plaid lists it; every number is a decimal string as Plaid stated it. */
+export interface ProviderHolding {
+	providerAccountId: string
+	securityId: string
+	quantity: string
+	institutionPrice?: string | null
+	/** `YYYY-MM-DD`. */
+	institutionPriceAsOf?: string | null
+	institutionValue?: string | null
+	/** The total paid, not per share. */
+	costBasis?: string | null
+	currency?: string | null
+}
+
+export interface ProviderSecurity {
+	securityId: string
+	name: string
+	ticker?: string | null
+	/** Plaid's type: `equity`, `etf`, `mutual fund`, `fixed income`, `cash`, `cryptocurrency`, … */
+	kind?: string | null
+	currency?: string | null
+	closePrice?: string | null
+	/** `YYYY-MM-DD`. */
+	closePriceAsOf?: string | null
+}
+
+/** An investment transaction as Plaid reports it: a positive amount is money out of the account. */
+export interface ProviderInvestmentTransaction {
+	id: string
+	providerAccountId: string
+	securityId?: string | null
+	/** `YYYY-MM-DD`. */
+	date: string
+	name: string
+	quantity?: string | null
+	amount: string
+	price?: string | null
+	/** Plaid's type: `buy`, `sell`, `cash`, `fee`, `transfer`, `cancel`. */
+	kind: string
+	subtype?: string | null
+	currency?: string | null
+}
+
+/** One investments read (D-195); `none` when the Item has no investments. */
+export interface InvestmentsResult {
+	status: 'ok' | 'none'
+	accounts: ProviderAccount[]
+	holdings: ProviderHolding[]
+	securities: ProviderSecurity[]
+	transactions: ProviderInvestmentTransaction[]
 }
 
 export interface NewLink {
@@ -117,9 +169,12 @@ export function plaidClearKeys(): Promise<void> {
 	return invoke('plaid_clear_keys')
 }
 
-/** A hosted Link session; with a link id, the update mode of that link's own Item. */
-export function plaidLinkStart(linkId?: string): Promise<LinkStart> {
-	return invoke<LinkStart>('plaid_link_start', { linkId: linkId ?? null })
+/**
+ * A hosted Link session; with a link id, the update mode of that link's own Item. `brokerage` asks for investments
+ * first, so an investments-only institution can link (D-195).
+ */
+export function plaidLinkStart(linkId?: string, brokerage?: boolean): Promise<LinkStart> {
+	return invoke<LinkStart>('plaid_link_start', { linkId: linkId ?? null, brokerage: brokerage ?? null })
 }
 
 export function plaidLinkPoll(linkToken: string, linkId?: string): Promise<LinkPoll> {
@@ -128,6 +183,11 @@ export function plaidLinkPoll(linkToken: string, linkId?: string): Promise<LinkP
 
 export function plaidSync(linkId: string, cursor?: string): Promise<SyncResult> {
 	return invoke<SyncResult>('plaid_sync', { linkId, cursor: cursor ?? null })
+}
+
+/** One investments read: holdings, securities with their closes, and the investment transactions between two days. */
+export function plaidInvestments(linkId: string, startDay: string, endDay: string): Promise<InvestmentsResult> {
+	return invoke<InvestmentsResult>('plaid_investments', { linkId, startDay, endDay })
 }
 
 /** Removes the link's Item at Plaid and its token here; answers whether there was a token. */
