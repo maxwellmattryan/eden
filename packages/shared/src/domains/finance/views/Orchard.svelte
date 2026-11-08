@@ -1,42 +1,65 @@
 <script lang="ts">
-	// Orchard's page (product/domains/finance.md, "Surfaces"): the header with its actions, the page's error with Retry
-	// when a write failed or the rows could not be read, and the Accounts tab, the one tab so far, so there is no
-	// Segmented. The sheets are the page's, so a header action and a row's menu open the same one. While a provider is
-	// bound (the desktop's Plaid), "Link a bank" leads the header, a stale link raises a notice beside it, a quiet key
-	// opens the provider's keys, and its keys and Link sheets are mounted; on the phone and in a plain browser none of
-	// them shows. Both apps mount this page; the phone reaches it from More, its sheets rising from the foot.
+	// Orchard's page (product/domains/finance.md, "Surfaces"): the header with the tab's actions, the tabs (Accounts and
+	// Bills, #78), the page's error with Retry when a write failed or the rows could not be read, and the tab's view.
+	// The tab lives in the address; a pick goes back through the navigation seam. The sheets are the page's, so a header
+	// action and a row's menu open the same one. While a provider is bound (the desktop's Plaid), "Link a bank" leads
+	// Accounts' header, a stale link raises a notice beside it on every tab, a quiet key opens the provider's keys, and
+	// its keys and Link sheets are mounted; on the phone and in a plain browser none of them shows. Bills' header
+	// captures a bill (the document reader, `DocumentSheet`, bound to its session field for field) or adds one; the bill
+	// form that a capture or a Gardener's card opens is the capture session's. Both apps mount this page; the phone
+	// reaches it from More, its sheets rising from the foot.
 	import {
 		ConfirmSheet,
+		DocumentSheet,
 		IconButton,
 		InlineError,
 		Notice,
 		PageHeader,
+		Segmented,
 		domainGlyph,
 		type PageHeaderAction,
 	} from '@eden/ui-kit'
 	import { onMount } from 'svelte'
 	import { t } from '../../../i18n/index.js'
+	import { navigation } from '../../../navigation/index.js'
 	import { settings } from '../../../settings/index.js'
 	import { undoToast } from '../../../shell/index.js'
+	import { readerOf } from '../../../shell/gardener/reader-line.js'
 	import { staleDay } from '../accounts.js'
+	import { billCapture } from '../capture.svelte.js'
 	import { plaid } from '../plaid.svelte.js'
 	import { provider } from '../provider.svelte.js'
+	import { documentRead } from '../reader.svelte.js'
 	import { finance } from '../store.svelte.js'
-	import type { Account, Asset, ProviderLink } from '../types.js'
+	import { FINANCE_TABS, financeTab, type FinanceTab } from '../tabs.js'
+	import type { Account, Asset, Bill, ProviderLink } from '../types.js'
 	import { dayLine } from '../words.js'
 	import AccountSheet from './AccountSheet.svelte'
 	import Accounts from './Accounts.svelte'
 	import AssetSheet from './AssetSheet.svelte'
 	import BalanceSheet from './BalanceSheet.svelte'
+	import BillSheet from './BillSheet.svelte'
+	import Bills from './Bills.svelte'
 	import LinkSheet from './LinkSheet.svelte'
+	import PaySheet from './PaySheet.svelte'
 	import PlaidKeysSheet from './PlaidKeysSheet.svelte'
 	import ReplaceSheet from './ReplaceSheet.svelte'
 
 	type Props = {
-		/** The route's `tab` parameter; every value shows Accounts, the one tab so far. */
+		/** The route's `tab` parameter as the address has it; anything that is not a tab is Accounts. */
 		tab?: string
 	}
-	let { tab: _tab }: Props = $props()
+	let { tab: requested }: Props = $props()
+
+	const tab = $derived<FinanceTab>(financeTab(requested))
+	const tabItems = $derived(FINANCE_TABS.map((id) => $t(`domains.finance.tabs.${id}`)))
+	function selectTab(index: number) {
+		void navigation.open({ place: 'finance', tab: FINANCE_TABS[index] }, { replace: true, noScroll: true })
+	}
+	const capture = () => void billCapture.start()
+
+	/** The reader's provider line: who drafts the bill, on which model, at about what cost, or why none can. */
+	const reader = $derived(readerOf($t, documentRead.options?.preview, 'domains.finance.bills.failure'))
 
 	// the minute moves while the page is open, so a link goes stale without a reload
 	onMount(() => finance.watch())
@@ -48,6 +71,8 @@
 		| { sheet: 'balance'; account: Account }
 		| { sheet: 'replace'; account: Account }
 		| { sheet: 'remove'; link: ProviderLink }
+		| { sheet: 'bill'; bill?: Bill }
+		| { sheet: 'pay'; bill: Bill }
 	let current = $state<Open>()
 	let shown = $state(false)
 	let opened = $state(0)
@@ -67,6 +92,23 @@
 
 	const bound = $derived(provider.bound)
 	const actions = $derived.by<PageHeaderAction[]>(() => {
+		if (tab === 'bills')
+			return [
+				{
+					id: 'capture-bill',
+					label: $t('domains.finance.actions.captureBill'),
+					icon: 'scan-text',
+					variant: 'primary',
+					onclick: capture,
+				},
+				{
+					id: 'add-bill',
+					label: $t('domains.finance.actions.addBill'),
+					icon: 'plus',
+					variant: 'secondary',
+					onclick: () => show({ sheet: 'bill' }),
+				},
+			]
 		const addAccount: PageHeaderAction = {
 			id: 'add-account',
 			label: $t('domains.finance.actions.addAccount'),
@@ -109,6 +151,14 @@
 		icon={domainGlyph('finance')}
 		{actions}
 	>
+		{#snippet filters()}
+			<Segmented
+				items={tabItems}
+				selected={FINANCE_TABS.indexOf(tab)}
+				label={$t('domains.finance.tabsLabel')}
+				onchange={selectTab}
+			/>
+		{/snippet}
 		{#snippet aside()}
 			{#if stale && bound}
 				<Notice
@@ -138,18 +188,64 @@
 		</div>
 	{/if}
 
-	<Accounts
-		onaddaccount={() => show({ sheet: 'account' })}
-		onedit={(account) => show({ sheet: 'account', account })}
-		onbalance={(account) => show({ sheet: 'balance', account })}
-		onreplace={(account) => show({ sheet: 'replace', account })}
-		oneditasset={(asset) => show({ sheet: 'asset', asset })}
-		onremovelink={(link) => show({ sheet: 'remove', link })}
-		onreconnect={bound ? (link) => bound.reconnect(link.id) : undefined}
-		onresetlogin={bound?.sandbox ? (link) => void bound.resetLogin(link.id) : undefined}
-		onsample={seed}
-	/>
+	{#if tab === 'bills'}
+		<!-- nothing is drawn until the rows are read, as on Accounts -->
+		{#if finance.ready}
+			<Bills
+				oncapture={capture}
+				onedit={(bill) => show({ sheet: 'bill', bill })}
+				onmarkpaid={(bill) => show({ sheet: 'pay', bill })}
+			/>
+		{/if}
+	{:else}
+		<Accounts
+			onaddaccount={() => show({ sheet: 'account' })}
+			onedit={(account) => show({ sheet: 'account', account })}
+			onbalance={(account) => show({ sheet: 'balance', account })}
+			onreplace={(account) => show({ sheet: 'replace', account })}
+			oneditasset={(asset) => show({ sheet: 'asset', asset })}
+			onremovelink={(link) => show({ sheet: 'remove', link })}
+			onreconnect={bound ? (link) => bound.reconnect(link.id) : undefined}
+			onresetlogin={bound?.sandbox ? (link) => void bound.resetLogin(link.id) : undefined}
+			onsample={seed}
+		/>
+	{/if}
 </div>
+
+<!-- The document reader's sheet, bound to its session field for field (finance.md §6, "Mounting it"). -->
+<DocumentSheet
+	bind:open={
+		() => documentRead.open,
+		(open) => {
+			if (!open && documentRead.open) documentRead.cancel()
+		}
+	}
+	phase={documentRead.phase}
+	quality={documentRead.quality}
+	failure={documentRead.failure}
+	file={documentRead.file}
+	bind:text={documentRead.text}
+	masked={documentRead.masked}
+	pages={documentRead.pages}
+	imported={documentRead.imported}
+	confirmLabel={documentRead.options?.confirmLabel ?? ''}
+	next={documentRead.options?.next}
+	provider={reader.blocked ?? reader.provider}
+	model={reader.model}
+	cost={reader.cost}
+	onfiles={(files) => void documentRead.take(files)}
+	onconfirm={(text) => documentRead.confirm(text)}
+	onsendpicture={() => documentRead.sendPicture()}
+	oncancel={() => documentRead.cancel()}
+	onclose={() => documentRead.cancel()}
+/>
+
+<!-- The bill form a capture or a Gardener's card opens: made afresh as its draft arrives. -->
+{#key billCapture.opened}
+	{#if billCapture.open}
+		<BillSheet bind:open={billCapture.open} capture />
+	{/if}
+{/key}
 
 <!-- The provider's own sheets, while one is bound (the desktop's Plaid): its keys, and its Link session. -->
 {#if bound}
@@ -180,6 +276,10 @@
 		<BalanceSheet bind:open={shown} account={current.account} />
 	{:else if current?.sheet === 'replace'}
 		<ReplaceSheet bind:open={shown} account={current.account} />
+	{:else if current?.sheet === 'bill'}
+		<BillSheet bind:open={shown} bill={current.bill} />
+	{:else if current?.sheet === 'pay'}
+		<PaySheet bind:open={shown} bill={current.bill} />
 	{:else if current?.sheet === 'remove'}
 		{@const link = current.link}
 		<ConfirmSheet

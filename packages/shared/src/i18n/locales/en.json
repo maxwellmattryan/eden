@@ -1293,6 +1293,7 @@
 				"pay": {
 					"title": "Mark {payee} paid",
 					"text": "Choose the payment that paid it. A part leaves the rest due.",
+					"choose": "Payments around the due day",
 					"none": "No payments around the due day.",
 					"another": "Paid another way",
 					"anotherText": "Records {amount} paid today, with no transaction."
