@@ -1,42 +1,54 @@
 <script lang="ts">
-	// Orchard's page (product/domains/finance.md, "Surfaces"): the header with its actions, the page's error with Retry
-	// when a write failed or the rows could not be read, and the Accounts tab, the one tab so far, so there is no
-	// Segmented. The sheets are the page's, so a header action and a row's menu open the same one. While a provider is
-	// bound (the desktop's Plaid), "Link a bank" leads the header, a stale link raises a notice beside it, a quiet key
-	// opens the provider's keys, and its keys and Link sheets are mounted; on the phone and in a plain browser none of
-	// them shows. Both apps mount this page; the phone reaches it from More, its sheets rising from the foot.
+	// Orchard's page (product/domains/finance.md, "Surfaces"): the header with its tabs and the tab's actions, the page's
+	// error with Retry when a write failed or the rows could not be read, and the tab: Accounts or Investments (D-195).
+	// The tab lives in the address; a pick goes back through the navigation seam. The sheets are the page's, so a
+	// header action and a row's menu open the same one. While a provider is bound (the desktop's Plaid), "Link a bank"
+	// leads the Accounts header and "Link a brokerage" the Investments one, a stale link raises a notice beside it, a
+	// quiet key opens the provider's keys, and its keys and Link sheets are mounted; on the phone and in a plain browser
+	// none of them shows. Both apps mount this page; the phone reaches it from More, its sheets rising from the foot.
 	import {
 		ConfirmSheet,
 		IconButton,
 		InlineError,
 		Notice,
 		PageHeader,
+		Segmented,
 		domainGlyph,
 		type PageHeaderAction,
 	} from '@eden/ui-kit'
 	import { onMount } from 'svelte'
 	import { t } from '../../../i18n/index.js'
+	import { navigation } from '../../../navigation/index.js'
 	import { settings } from '../../../settings/index.js'
 	import { undoToast } from '../../../shell/index.js'
 	import { staleDay } from '../accounts.js'
 	import { plaid } from '../plaid.svelte.js'
 	import { provider } from '../provider.svelte.js'
 	import { finance } from '../store.svelte.js'
-	import type { Account, Asset, ProviderLink } from '../types.js'
+	import { FINANCE_TABS, financeTab, type FinanceTab } from '../tabs.js'
+	import type { Account, Asset, Holding, ProviderLink } from '../types.js'
 	import { dayLine } from '../words.js'
 	import AccountSheet from './AccountSheet.svelte'
 	import Accounts from './Accounts.svelte'
 	import AssetSheet from './AssetSheet.svelte'
 	import BalanceSheet from './BalanceSheet.svelte'
+	import HoldingSheet from './HoldingSheet.svelte'
+	import Investments from './Investments.svelte'
 	import LinkSheet from './LinkSheet.svelte'
 	import PlaidKeysSheet from './PlaidKeysSheet.svelte'
 	import ReplaceSheet from './ReplaceSheet.svelte'
 
 	type Props = {
-		/** The route's `tab` parameter; every value shows Accounts, the one tab so far. */
+		/** The route's `tab` parameter as the address has it; anything that is not a tab is Accounts. */
 		tab?: string
 	}
-	let { tab: _tab }: Props = $props()
+	let { tab: requested }: Props = $props()
+
+	const tab = $derived<FinanceTab>(financeTab(requested))
+	const tabItems = $derived(FINANCE_TABS.map((id) => $t(`domains.finance.tabs.${id}`)))
+	function selectTab(index: number) {
+		void navigation.open({ place: 'finance', tab: FINANCE_TABS[index] }, { replace: true, noScroll: true })
+	}
 
 	// the minute moves while the page is open, so a link goes stale without a reload
 	onMount(() => finance.watch())
@@ -48,6 +60,7 @@
 		| { sheet: 'balance'; account: Account }
 		| { sheet: 'replace'; account: Account }
 		| { sheet: 'remove'; link: ProviderLink }
+		| { sheet: 'holding'; holding: Holding; field: 'cost-basis' | 'value' }
 	let current = $state<Open>()
 	let shown = $state(false)
 	let opened = $state(0)
@@ -66,7 +79,20 @@
 	}
 
 	const bound = $derived(provider.bound)
+	const linkBrokerage = $derived(bound ? () => bound.link('brokerage') : undefined)
 	const actions = $derived.by<PageHeaderAction[]>(() => {
+		if (tab === 'investments')
+			return linkBrokerage
+				? [
+						{
+							id: 'link-brokerage',
+							label: $t('domains.finance.actions.linkBrokerage'),
+							icon: 'landmark',
+							variant: 'primary',
+							onclick: linkBrokerage,
+						},
+					]
+				: []
 		const addAccount: PageHeaderAction = {
 			id: 'add-account',
 			label: $t('domains.finance.actions.addAccount'),
@@ -87,7 +113,7 @@
 			label: $t('domains.finance.actions.linkBank'),
 			icon: 'landmark',
 			variant: 'primary',
-			onclick: () => bound.link(),
+			onclick: () => bound.link('bank'),
 		}
 		return [link, addAccount, addAsset]
 	})
@@ -109,6 +135,14 @@
 		icon={domainGlyph('finance')}
 		{actions}
 	>
+		{#snippet filters()}
+			<Segmented
+				items={tabItems}
+				selected={FINANCE_TABS.indexOf(tab)}
+				label={$t('domains.finance.tabsLabel')}
+				onchange={selectTab}
+			/>
+		{/snippet}
 		{#snippet aside()}
 			{#if stale && bound}
 				<Notice
@@ -138,17 +172,25 @@
 		</div>
 	{/if}
 
-	<Accounts
-		onaddaccount={() => show({ sheet: 'account' })}
-		onedit={(account) => show({ sheet: 'account', account })}
-		onbalance={(account) => show({ sheet: 'balance', account })}
-		onreplace={(account) => show({ sheet: 'replace', account })}
-		oneditasset={(asset) => show({ sheet: 'asset', asset })}
-		onremovelink={(link) => show({ sheet: 'remove', link })}
-		onreconnect={bound ? (link) => bound.reconnect(link.id) : undefined}
-		onresetlogin={bound?.sandbox ? (link) => void bound.resetLogin(link.id) : undefined}
-		onsample={seed}
-	/>
+	{#if tab === 'investments'}
+		<Investments
+			onlink={linkBrokerage}
+			oncostbasis={(holding) => show({ sheet: 'holding', holding, field: 'cost-basis' })}
+			onvalue={(holding) => show({ sheet: 'holding', holding, field: 'value' })}
+		/>
+	{:else}
+		<Accounts
+			onaddaccount={() => show({ sheet: 'account' })}
+			onedit={(account) => show({ sheet: 'account', account })}
+			onbalance={(account) => show({ sheet: 'balance', account })}
+			onreplace={(account) => show({ sheet: 'replace', account })}
+			oneditasset={(asset) => show({ sheet: 'asset', asset })}
+			onremovelink={(link) => show({ sheet: 'remove', link })}
+			onreconnect={bound ? (link) => bound.reconnect(link.id) : undefined}
+			onresetlogin={bound?.sandbox ? (link) => void bound.resetLogin(link.id) : undefined}
+			onsample={seed}
+		/>
+	{/if}
 </div>
 
 <!-- The provider's own sheets, while one is bound (the desktop's Plaid): its keys, and its Link session. -->
@@ -180,6 +222,8 @@
 		<BalanceSheet bind:open={shown} account={current.account} />
 	{:else if current?.sheet === 'replace'}
 		<ReplaceSheet bind:open={shown} account={current.account} />
+	{:else if current?.sheet === 'holding'}
+		<HoldingSheet bind:open={shown} holding={current.holding} field={current.field} />
 	{:else if current?.sheet === 'remove'}
 		{@const link = current.link}
 		<ConfirmSheet
