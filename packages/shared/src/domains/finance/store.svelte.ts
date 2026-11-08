@@ -714,7 +714,7 @@ export class FinanceStore {
 					newId,
 					nowIso()
 				)
-				for (const ops of chunks) if (ops.length) await applyBatch(ops)
+				for (const ops of chunks) if (ops.length) await this.#write(ops)
 				return { created: fresh.length, matched, inverse }
 			})
 		} catch {
@@ -727,7 +727,7 @@ export class FinanceStore {
 			matched: made.matched,
 			undo: () => {
 				this.#queue.enqueue(async () => {
-					for (const ops of made.inverse) if (ops.length) await applyBatch(ops)
+					for (const ops of made.inverse) if (ops.length) await this.#write(ops)
 				})
 				void this.classify()
 			},
