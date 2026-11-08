@@ -1,4 +1,4 @@
-// The income pass (product/domains/finance.md §3, §4, D-196): from the live transactions, the paychecks by employer and
+// The income pass (product/domains/finance.md §3, §4, D-198): from the live transactions, the paychecks by employer and
 // cadence, the other repeating income and the yearly tax refund or payment, kept as one `income-source` row each. It
 // says when an expected paycheck is late, when an employer paid extra and when a new paycheck starts, and it works out
 // the monthly equivalents, the trailing income average #84 reads and the `monthly-income-band` fact's value. Pure: no

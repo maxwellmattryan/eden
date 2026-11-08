@@ -253,12 +253,12 @@ export interface MerchantPayload {
 	rawNames: string[]
 }
 
-/** How often an income source pays (#80, D-196): `yearly` is a tax refund's or payment's. */
+/** How often an income source pays (#80, D-198): `yearly` is a tax refund's or payment's. */
 export const INCOME_CADENCES = ['weekly', 'biweekly', 'semimonthly', 'monthly', 'irregular', 'yearly'] as const
 export type IncomeCadence = (typeof INCOME_CADENCES)[number]
 
 /**
- * An `income-source` (#80, D-196): a paycheck, other repeating income, or the yearly tax refund or payment, found by
+ * An `income-source` (#80, D-198): a paycheck, other repeating income, or the yearly tax refund or payment, found by
  * the income pass (`income.ts`) from the live transactions. Its identity across passes is `kind` with `merchantId`
  * and `counterparty`, or `nameKey`. The pass writes the detected keys; the owner's keys are only ever the owner's.
  */

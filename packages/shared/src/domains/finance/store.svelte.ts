@@ -217,7 +217,7 @@ export class FinanceStore {
 	/** The owner's calendar day, which moves with the minute only when the day turns. */
 	readonly #today = $derived(dateIn(undefined, this.clock))
 	/**
-	 * What the page shows of income (#80, D-196), once the ledger is ready: each source with its merchant's current
+	 * What the page shows of income (#80, D-198), once the ledger is ready: each source with its merchant's current
 	 * name, the rows the Income section draws, the questions most urgent first, the monthly income and the trailing
 	 * average (#84 reads it), and lean mode's runway, essentials and what to pause while it is on.
 	 */
@@ -728,7 +728,7 @@ export class FinanceStore {
 		await this.detectIncome()
 	}
 
-	// ---- Income (#80, D-196) ---------------------------------------------------------------------------------------
+	// ---- Income (#80, D-198) ---------------------------------------------------------------------------------------
 
 	/**
 	 * The income pass over every live transaction: after each classification pass, after a sync that wrote nothing

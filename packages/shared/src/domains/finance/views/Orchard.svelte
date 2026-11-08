@@ -2,7 +2,8 @@
 	// Orchard's page (product/domains/finance.md, "Surfaces"): the header with its actions, the page's error with Retry
 	// when a write failed or the rows could not be read, and the Accounts tab, the one tab so far, so there is no
 	// Segmented. The sheets are the page's, so a header action and a row's menu open the same one. While a provider is
-	// bound (the desktop's Plaid), "Link a bank" leads the header, a stale link raises a notice beside it, a quiet key
+	// bound (the desktop's Plaid), "Link a bank" leads the header, a stale link raises a notice beside it (then the most
+	// urgent income question, #80, has the one notice after it, on every platform), a quiet key
 	// opens the provider's keys, and its keys and Link sheets are mounted; on the phone and in a plain browser none of
 	// them shows. Both apps mount this page; the phone reaches it from More, its sheets rising from the foot.
 	import {
@@ -26,14 +27,19 @@
 	import { documentRead } from '../reader.svelte.js'
 	import { statementImport } from '../statement.svelte.js'
 	import { finance } from '../store.svelte.js'
-	import type { Account, Asset, ProviderLink } from '../types.js'
+	import type { IncomeQuestion } from '../income.js'
+	import type { Account, Asset, IncomeSource, ProviderLink } from '../types.js'
 	import { dayLine } from '../words.js'
 	import AccountSheet from './AccountSheet.svelte'
 	import Accounts from './Accounts.svelte'
 	import AssetSheet from './AssetSheet.svelte'
 	import BalanceSheet from './BalanceSheet.svelte'
+	import BonusSheet from './BonusSheet.svelte'
 	import ImportSheet from './ImportSheet.svelte'
+	import Income from './Income.svelte'
+	import Lean from './Lean.svelte'
 	import LinkSheet from './LinkSheet.svelte'
+	import PaycheckSheet from './PaycheckSheet.svelte'
 	import PlaidKeysSheet from './PlaidKeysSheet.svelte'
 	import ReplaceSheet from './ReplaceSheet.svelte'
 
@@ -43,8 +49,12 @@
 	}
 	let { tab: _tab }: Props = $props()
 
-	// the minute moves while the page is open, so a link goes stale without a reload
-	onMount(() => finance.watch())
+	// the minute moves while the page is open, so a link goes stale without a reload; the income pass runs on each
+	// visit, so a paycheck that did not come is noticed with no new rows (#80)
+	onMount(() => {
+		void finance.detectIncome()
+		return finance.watch()
+	})
 
 	// One sheet at a time, made afresh each time it opens (`opened` keys it), so its form starts from what it is given
 	type Open =
@@ -53,6 +63,8 @@
 		| { sheet: 'balance'; account: Account }
 		| { sheet: 'replace'; account: Account }
 		| { sheet: 'remove'; link: ProviderLink }
+		| { sheet: 'paycheck'; source: IncomeSource; day: string }
+		| { sheet: 'bonus'; source: IncomeSource; question: Extract<IncomeQuestion, { kind: 'bonus' }> }
 	let current = $state<Open>()
 	let shown = $state(false)
 	let opened = $state(0)
@@ -131,6 +143,50 @@
 		const day = group.accounts.map((account) => staleDay(account, finance.links, finance.clock)).find(Boolean)
 		return { link: group.link, day: day ? dayLine(day, settings.language) : undefined }
 	})
+
+	/** The most urgent income question (#80), as the header's one notice: the whole sentence and its one action. */
+	const asked = $derived.by(() => {
+		const question = finance.income?.questions[0]
+		const source = question ? finance.incomeById(question.sourceId) : undefined
+		if (!question || !source) return undefined
+		const employer = source.name
+		if (question.kind === 'late') {
+			const day = dayLine(question.day, settings.language)
+			return {
+				id: `late:${source.id}`,
+				tone: 'warning' as const,
+				title: $t('domains.finance.income.questions.late', { values: { employer, day } }),
+				action: {
+					label: $t('domains.finance.income.questions.answer'),
+					onclick: () => show({ sheet: 'paycheck', source, day: question.day }),
+				},
+			}
+		}
+		if (question.kind === 'bonus')
+			return {
+				id: `bonus:${question.rowId}`,
+				tone: 'info' as const,
+				title: $t('domains.finance.income.questions.bonus', { values: { employer } }),
+				action: {
+					label: $t('domains.finance.income.questions.choose'),
+					onclick: () => show({ sheet: 'bonus', source, question }),
+				},
+			}
+		return {
+			id: `new:${source.id}`,
+			tone: 'info' as const,
+			title: $t('domains.finance.income.questions.new', { values: { employer } }),
+			action: { label: $t('domains.finance.income.questions.leaveLean'), onclick: () => leaveLean(source.id) },
+			// dismissing it says the owner has seen it, as Leave lean mode does
+			dismiss: () => void finance.seenNewIncome(source.id),
+		}
+	})
+
+	/** "Leave lean mode" on a new paycheck: lean mode ends and the new source is seen, with one Undo. */
+	function leaveLean(id: string) {
+		const undos = [finance.endLean(), finance.seenNewIncome(id)].filter((undo) => undo !== undefined)
+		if (undos.length) undoToast($t('domains.finance.toasts.leanOff'), () => undos.forEach((undo) => undo()))
+	}
 </script>
 
 <div class="page">
@@ -148,6 +204,19 @@
 					detail={stale.day ? $t('domains.finance.stale.detail', { values: { day: stale.day } }) : undefined}
 					action={{ label: $t('domains.finance.actions.reconnect'), onclick: () => bound.reconnect(stale.link.id) }}
 				/>
+			{/if}
+			{#if asked}
+				{#key asked.id}
+					<!-- page content, never announced: `note` replaces the tone's live role -->
+					<Notice
+						role="note"
+						tone={asked.tone}
+						title={asked.title}
+						action={asked.action}
+						ondismiss={asked.dismiss}
+						breeze={false}
+					/>
+				{/key}
 			{/if}
 			{#if bound}
 				<span class="keys">
@@ -169,6 +238,8 @@
 		</div>
 	{/if}
 
+	<Lean />
+
 	<Accounts
 		onaddaccount={() => show({ sheet: 'account' })}
 		onedit={(account) => show({ sheet: 'account', account })}
@@ -181,6 +252,8 @@
 		onresetlogin={bound?.sandbox ? (link) => void bound.resetLogin(link.id) : undefined}
 		onsample={seed}
 	/>
+
+	<Income />
 </div>
 
 <!-- The provider's own sheets, while one is bound (the desktop's Plaid): its keys, and its Link session. -->
@@ -236,6 +309,10 @@
 		<BalanceSheet bind:open={shown} account={current.account} />
 	{:else if current?.sheet === 'replace'}
 		<ReplaceSheet bind:open={shown} account={current.account} />
+	{:else if current?.sheet === 'paycheck'}
+		<PaycheckSheet bind:open={shown} source={current.source} day={current.day} />
+	{:else if current?.sheet === 'bonus'}
+		<BonusSheet bind:open={shown} source={current.source} question={current.question} />
 	{:else if current?.sheet === 'remove'}
 		{@const link = current.link}
 		<ConfirmSheet
