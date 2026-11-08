@@ -57,6 +57,7 @@
 	],
 	"schedules": [
 		{ "id": "sync", "every": 3600 },
+		{ "id": "crypto", "every": 3600 },
 		{ "id": "bills", "daily": "08:00" }
 	],
 	"intents": [],

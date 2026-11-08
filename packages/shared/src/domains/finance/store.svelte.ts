@@ -69,6 +69,7 @@ import {
 	type AccountDraft,
 } from './accounts.js'
 import { classifyPass } from './classify.js'
+import { crypto, readSoon } from './crypto.svelte.js'
 import {
 	mergeMerchantOps,
 	oneOffOps,
@@ -199,6 +200,8 @@ export interface SyncChange {
 	holdings?: Holding[]
 	removedHoldings?: string[]
 	securities?: Security[]
+	/** The assets a crypto run read or priced (D-201). */
+	assets?: Asset[]
 }
 
 /** A fix as the store makes it: the ops, and what the store's sets show of it and of its undo. */
@@ -718,11 +721,20 @@ export class FinanceStore {
 
 	saveAsset(draft: AssetDraft): { asset: Asset; created: boolean; undo: Undo } {
 		const was = $state.snapshot(this.assetById(draft.id)) as Asset | undefined
-		const asset: Asset = { ...draft, id: was?.id ?? newId(), name: draft.name.trim() }
-		if (!asset.quantity) {
+		const asset: Asset = { ...draft, id: draft.id ?? was?.id ?? newId(), name: draft.name.trim() }
+		// a watch not read yet has its unit and no quantity (D-201)
+		if (!asset.quantity && !asset.watch) {
 			delete asset.quantity
 			delete asset.unit
 		}
+		if (!asset.quantity) delete asset.quantity
+		if (!asset.watch) {
+			delete asset.watch
+			delete asset.readOn
+		}
+		// the owner's save: the value pass prices it again from the price held
+		const repriced = asset.kind === 'crypto'
+		if (repriced) delete asset.valuedBy
 		const before = this.assets
 		const undo = this.#commit({
 			apply: () =>
@@ -740,6 +752,7 @@ export class FinanceStore {
 					? { op: 'updateEntity', id: was.id, payload: payloadOf(was) }
 					: { op: 'delete', uri: toUri(FINANCE.asset, asset.id) },
 			],
+			after: repriced && crypto.bound ? async () => readSoon() : undefined,
 		})
 		return { asset, created: !was, undo }
 	}
@@ -768,7 +781,8 @@ export class FinanceStore {
 		if (!link) return undefined
 		const set = removeLinkOps(link, $state.snapshot(this.accounts) as Account[], todayIso())
 		const before = { links: this.links, accounts: this.accounts }
-		const revoke = provider.bound
+		// Coinbase has nothing to revoke: its key leaves the device once the undo has passed (D-201)
+		const revoke = link.provider === 'plaid' ? provider.bound : undefined
 		return this.#commit({
 			apply: () => {
 				this.links = this.links.filter((entry) => entry.id !== id)
@@ -836,6 +850,9 @@ export class FinanceStore {
 					...links.filter((link) => !this.links.some((entry) => entry.id === link.id)),
 				]
 				this.#withAccounts(...(change.accounts ?? []))
+				// an asset the owner deleted while the run read it stays deleted
+				const assetOf = (id: string) => change.assets?.find((asset) => asset.id === id)
+				if (change.assets?.length) this.assets = this.assets.map((asset) => assetOf(asset.id) ?? asset)
 				this.#withInvestments(change)
 				resolve(true)
 			})

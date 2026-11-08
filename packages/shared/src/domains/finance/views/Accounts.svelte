@@ -5,7 +5,9 @@
 	// accounts. A bank's heading carries its colour, how fresh it is and its menu. Rows do not act (D-118); their menus
 	// do, offering only what applies: a linked account is read from its bank, so it cannot be edited, given a balance or
 	// deleted here. Every figure is the account's own currency, through `formatMoney` in the app's language. An asset
-	// valued more than 90 days ago says it is out of date and its menu leads with Update value (D-197).
+	// valued more than 90 days ago says it is out of date and its menu leads with Update value (D-197); a crypto asset
+	// priced daily or watched on the chain reads through `assetLine` and is never updated by hand (D-201). Coinbase's
+	// group menu offers Replace key where a bank's offers the Sandbox's reset.
 	import {
 		Button,
 		EmptyState,
@@ -25,6 +27,7 @@
 	import { settings } from '../../../settings/index.js'
 	import { undoToast } from '../../../shell/index.js'
 	import { INSTITUTION_COLOUR, INSTITUTION_LOGO, dayOfInstant, type AccountGroup } from '../accounts.js'
+	import { assetLine } from '../crypto.js'
 	import { aged } from '../investments.js'
 	import { finance } from '../store.svelte.js'
 	import { isDebt, type Account, type Asset, type ProviderLink } from '../types.js'
@@ -43,6 +46,8 @@
 		onreconnect?: (link: ProviderLink) => void
 		/** A Sandbox provider's "Ask to sign in again", which proves the reconnect path; absent elsewhere. */
 		onresetlogin?: (link: ProviderLink) => void
+		/** Coinbase's Replace key (D-201), while crypto is bound; absent elsewhere. */
+		onreplacekey?: (link: ProviderLink) => void
 		onsample: () => void
 	}
 	let {
@@ -55,6 +60,7 @@
 		onremovelink,
 		onreconnect,
 		onresetlogin,
+		onreplacekey,
 		onsample,
 	}: Props = $props()
 
@@ -99,10 +105,13 @@
 		return items
 	}
 	const today = $derived(dateIn(undefined, finance.clock))
-	/** An asset's menu: an out-of-date one leads with Update value, which opens the same sheet as Edit (D-197). */
-	function assetActions(asset: Asset): MenuItem[] {
+	/**
+	 * An asset's menu: an out-of-date one the owner values leads with Update value, which opens the same sheet as Edit
+	 * (D-197); a priced or watched one is never updated by hand (D-201).
+	 */
+	function assetActions(asset: Asset, ownerValued: boolean): MenuItem[] {
 		return [
-			...(aged(asset.valuedOn, today)
+			...(ownerValued && aged(asset.valuedOn, today)
 				? [{ id: 'update-value', label: $t('domains.finance.menu.updateValue'), icon: 'refresh-cw' as const }]
 				: []),
 			{ id: 'edit', label: $t('domains.finance.menu.edit'), icon: 'pencil' },
@@ -130,19 +139,15 @@
 		}
 	}
 	function assetRow(asset: Asset): ListRowData {
-		const amount = money(asset.value)
-		const quantity = asset.quantity ? `${asset.quantity} ${asset.unit ?? ''}`.trim() : undefined
-		const valued = $t('domains.finance.row.valued', { values: { day: day(asset.valuedOn) } })
 		// out of date: the words say so, and the meta rises to primary ink
-		const old = aged(asset.valuedOn, today)
-		const when = old ? [valued, $t('domains.finance.investments.outOfDate')] : quantity ? [] : [valued]
+		const line = assetLine(asset, today, $t, lang, home)
 		return {
 			id: asset.id,
 			primary: asset.name,
-			secondary: [...(quantity ? [quantity] : []), ...when, ...away(asset.value.currency)].join(' · '),
-			meta: quantity ? $t('domains.finance.row.approx', { values: { amount } }) : amount,
-			metaWarn: old,
-			actions: assetActions(asset),
+			secondary: line.secondary,
+			meta: line.meta,
+			metaWarn: line.warn,
+			actions: assetActions(asset, line.ownerValued),
 		}
 	}
 
@@ -231,13 +236,19 @@
 	let menuFor = $state<string>()
 	let menuOpen = $state(false)
 	const anchors: Record<string, HTMLElement | undefined> = $state({})
-	// the Sandbox's reset sits above Remove link, which stays last
-	const linkItems = $derived<MenuItem[]>([
-		...(onresetlogin
-			? [{ id: 'reset-login', label: $t('domains.finance.plaid.resetLogin'), icon: 'rotate-ccw' as const }]
-			: []),
-		{ id: 'remove', label: $t('domains.finance.groups.removeLink'), icon: 'trash', destructive: true },
-	])
+	// a bank's Sandbox reset, or Coinbase's Replace key, sits above Remove link, which stays last
+	const linkItems = $derived.by<MenuItem[]>(() => {
+		const coinbase = finance.linkById(menuFor)?.provider === 'coinbase'
+		return [
+			...(coinbase && onreplacekey
+				? [{ id: 'replace-key', label: $t('domains.finance.crypto.replaceKey'), icon: 'key-round' as const }]
+				: []),
+			...(!coinbase && onresetlogin
+				? [{ id: 'reset-login', label: $t('domains.finance.plaid.resetLogin'), icon: 'rotate-ccw' as const }]
+				: []),
+			{ id: 'remove', label: $t('domains.finance.groups.removeLink'), icon: 'trash', destructive: true },
+		]
+	})
 
 	function act(id: string | undefined, rowId: string) {
 		const account = finance.accountById(rowId)
@@ -373,6 +384,7 @@
 			const link = finance.linkById(menuFor)
 			if (item.id === 'remove' && link) onremovelink(link)
 			else if (item.id === 'reset-login' && link) onresetlogin?.(link)
+			else if (item.id === 'replace-key' && link) onreplacekey?.(link)
 		}}
 	/>
 {/if}

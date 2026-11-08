@@ -149,7 +149,8 @@ export type LinkStatus = 'ok' | 'needs-reauth' | 'error'
 export type LinkState = 'ok' | 'stale' | 'expiring'
 
 export interface ProviderLinkPayload {
-	provider: 'plaid'
+	/** Plaid's bank links, or Coinbase's one read-only key on this device (D-201). */
+	provider: 'plaid' | 'coinbase'
 	institution: {
 		/** The provider's institution id (`ins_56`). */
 		id?: string
@@ -218,10 +219,26 @@ export interface AssetPayload {
 	valuedOn: string
 	/** A decimal string, "0.0412". */
 	quantity?: string
-	/** "BTC"; set whenever a quantity is. */
+	/** "BTC"; set whenever a quantity is, and on a watch that has not been read yet. */
 	unit?: string
 	/** Basis points, 1 to 10000. */
 	share: number
+	/** `price`: the value is the quantity × the coin's daily price (D-201); absent, it is the owner's. */
+	valuedBy?: 'price'
+	/**
+	 * What a crypto asset watches on the chain (D-201): one address, or an extended public key held in the device's
+	 * secure store under the asset's id (`xpub: true`, never the key), with the script its addresses use.
+	 */
+	watch?: AssetWatch
+	/** `YYYY-MM-DD` of the watch's last good read. */
+	readOn?: string
+}
+
+export interface AssetWatch {
+	chain: 'bitcoin' | 'ethereum'
+	address?: string
+	xpub?: true
+	script?: 'p2pkh' | 'p2sh-p2wpkh' | 'p2wpkh'
 }
 
 /**

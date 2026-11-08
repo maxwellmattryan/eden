@@ -2550,6 +2550,12 @@ export const DECLARATIONS = {
 				"every": 3600
 			},
 			{
+				"id": "crypto",
+				"name": "finance.crypto",
+				"daily": null,
+				"every": 3600
+			},
+			{
 				"id": "bills",
 				"name": "finance.bills",
 				"daily": "08:00",

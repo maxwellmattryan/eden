@@ -7,7 +7,9 @@
  * gave the address of (`fetchPage` in `@eden/shared/api`) and `web-image` a picture (`fetchImage`): the crate fetches
  * each and records it, so neither has a CSP entry. `openfreemap` is the map's tiles and label glyphs, counted in
  * batches; `photon` finds a place by name and `overpass` reads its hours (D-131). `plaid` is every call Orchard's bank
- * links make; the crate makes them, so it has no CSP entry either. */
+ * links make; the crate makes them, so it has no CSP entry either. `coinbase` is Orchard's read-only Coinbase key and
+ * the daily spot prices, `blockstream` a watched Bitcoin address or extended key's balances and `blockscout` a watched
+ * Ether address's (D-201); the crate makes those calls too, so none has a CSP entry. */
 export const DESTINATIONS = [
 	'open-meteo',
 	'open-meteo-air-quality',
@@ -22,6 +24,9 @@ export const DESTINATIONS = [
 	'photon',
 	'overpass',
 	'plaid',
+	'coinbase',
+	'blockstream',
+	'blockscout',
 ] as const
 export type Destination = (typeof DESTINATIONS)[number]
 

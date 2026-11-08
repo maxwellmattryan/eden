@@ -8,6 +8,7 @@ import { toUri, type BatchOp, type Entity } from '../../data/index.js'
 import { addDays } from '../../dates/index.js'
 import { addMoney, decimalsOf, money, negate, shareOf, type Money } from '../../money/index.js'
 import { accountGroups, payloadOf } from './accounts.js'
+import { priceAged } from './crypto.js'
 import { chunked, ownKeys, same, type Skipped } from './sync.js'
 import {
 	ALLOCATION_CLASSES,
@@ -265,7 +266,8 @@ const INVESTMENT_KEYS = ['investment'] as const
 const holdingKey = (providerAccountId: string, securityId: string) => `${providerAccountId}:${securityId}`
 const withId = <T>(row: Entity<T>): T & { id: string } => ({ ...row.payload, id: row.id })
 
-function priced(prices: SecurityPayload['prices'], day: string, price: string): SecurityPayload['prices'] {
+/** The closes with the day's price in place of any that day had, oldest first, at most `PRICE_DAYS`. */
+export function priced(prices: SecurityPayload['prices'], day: string, price: string): SecurityPayload['prices'] {
 	const kept = prices.filter((entry) => entry.day !== day)
 	kept.push({ day, price })
 	kept.sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0))
@@ -601,7 +603,7 @@ export interface HoldingRow {
 	value?: HoldingValue
 	/** The value minus the cost basis, both the holding's own, when both are there in one currency. */
 	gain?: Money
-	/** An owner's typed value set more than `AGED_DAYS` ago. */
+	/** An owner's typed value set more than `AGED_DAYS` ago, or a coin's close more than `PRICE_AGED_DAYS` old (D-201). */
 	aged: boolean
 	/** The provider gives no value or price for it, so the owner may type one. */
 	ownerValued: boolean
@@ -681,7 +683,9 @@ export function investmentSummary(input: {
 				...(security ? { security } : {}),
 				...(found ? { value: found } : {}),
 				...(gain ? { gain } : {}),
-				aged: found?.by === 'owner' && aged(found.on, today),
+				aged:
+					(found?.by === 'owner' && aged(found.on, today)) ||
+					(found?.by === 'price' && security?.type === 'cryptocurrency' && priceAged(found.on, today)),
 				ownerValued: !found || found.by === 'owner',
 				away,
 			}

@@ -1596,7 +1596,12 @@
 				"noBalance": "No balance yet",
 				"valued": "Valued {day}",
 				"approx": "≈ {amount}",
-				"closedOn": "Closed {day}"
+				"closedOn": "Closed {day}",
+				"priced": "Priced {day}",
+				"read": "Read {day}",
+				"notReadYet": "Not read yet",
+				"notPriced": "Not priced yet",
+				"extendedKey": "Extended key"
 			},
 			"menu": {
 				"edit": "Edit",
@@ -1638,7 +1643,39 @@
 				"value": "Value",
 				"valuedOn": "Valued on",
 				"quantity": "Quantity",
-				"unit": "Unit"
+				"unit": "Unit",
+				"countedBy": "Counted by",
+				"modes": {
+					"quantity": "Quantity",
+					"address": "Address",
+					"xpub": "Extended key"
+				},
+				"chain": "Chain",
+				"chains": {
+					"bitcoin": "Bitcoin",
+					"ethereum": "Ethereum"
+				},
+				"address": "Address",
+				"xpub": "Extended public key",
+				"xpubHelp": "Kept in this device's secure store. Once a day Eden asks Blockstream for the balances of the addresses this key makes; Blockstream can see they belong together.",
+				"script": "Address type",
+				"scripts": {
+					"p2wpkh": "Native SegWit (bc1q…)",
+					"p2sh-p2wpkh": "Nested SegWit (3…)",
+					"p2pkh": "Legacy (1…)"
+				},
+				"watching": "Watching {address}",
+				"watchingKey": "Watching an extended key · {type}",
+				"errors": {
+					"address": "Enter an address",
+					"xpub": "Enter an extended public key",
+					"bitcoin": "This isn't a Bitcoin address.",
+					"ethereum": "This isn't an Ethereum address.",
+					"privateKey": "This is a private key. Never paste it into anything; use the extended public key.",
+					"invalidXpub": "This isn't an extended public key.",
+					"unsupported": "Eden reads mainnet xpub, ypub and zpub keys only.",
+					"other": "Eden couldn't check this. Try again."
+				}
 			},
 			"balanceForm": {
 				"title": "Update balance",
@@ -1824,6 +1861,25 @@
 				"costBasisSet": "Cost basis set for {name}",
 				"costBasisCleared": "Cleared your cost basis for {name}",
 				"valueSet": "Value set for {name}"
+			},
+			"crypto": {
+				"connect": "Connect Coinbase",
+				"connected": "Coinbase connected",
+				"removed": "Coinbase removed. Delete the key at Coinbase too.",
+				"replaceKey": "Replace key",
+				"key": {
+					"title": "Coinbase key",
+					"name": "Key name",
+					"privateKey": "Private key",
+					"help": "Make a key at Coinbase with View permission only. Eden refuses a key that can trade or transfer. Kept in this device's secure store.",
+					"invalid": "That isn't a Coinbase API key. Paste the key name and the private key from the file Coinbase gave you.",
+					"refused": "Coinbase didn't accept this key.",
+					"notReadOnly": "This key can trade or transfer money. Make one with View permission only.",
+					"unreachable": "Couldn't reach Coinbase. Try again in a moment.",
+					"held": "Key saved on this device.",
+					"replace": "Replace key",
+					"save": "Save"
+				}
 			},
 			"plaid": {
 				"keysButton": "Plaid keys",
@@ -2670,7 +2726,10 @@
 				"openfreemap": "OpenFreeMap (map tiles)",
 				"photon": "Photon (finding a place by name)",
 				"overpass": "Overpass (opening hours)",
-				"plaid": "Plaid"
+				"plaid": "Plaid",
+				"coinbase": "Coinbase",
+				"blockstream": "Blockstream (Bitcoin balances)",
+				"blockscout": "Blockscout (Ether balances)"
 			},
 			"never": {
 				"label": "Never automated",
