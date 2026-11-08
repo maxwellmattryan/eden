@@ -2474,7 +2474,8 @@ export const DECLARATIONS = {
 		"signals": [
 			"finance.link-broken",
 			"finance.bill-due",
-			"finance.bill-overdue"
+			"finance.bill-overdue",
+			"finance.price-rise"
 		],
 		"notificationKinds": [
 			{
@@ -2499,6 +2500,14 @@ export const DECLARATIONS = {
 				"cadence": "when-found",
 				"default": true,
 				"signal": "finance.bill-overdue",
+				"when": null
+			},
+			{
+				"id": "price-rise",
+				"channel": "in-app",
+				"cadence": "when-found",
+				"default": true,
+				"signal": "finance.price-rise",
 				"when": null
 			}
 		],
@@ -2534,6 +2543,7 @@ export const DECLARATIONS = {
 			"merchant",
 			"bill",
 			"file-import",
+			"recurring-charge",
 			"holding",
 			"security"
 		]

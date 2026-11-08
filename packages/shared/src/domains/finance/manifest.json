@@ -37,11 +37,12 @@
 		{ "id": "draft", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] },
 		{ "id": "read-statement", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] }
 	],
-	"signals": ["finance.link-broken", "finance.bill-due", "finance.bill-overdue"],
+	"signals": ["finance.link-broken", "finance.bill-due", "finance.bill-overdue", "finance.price-rise"],
 	"notificationKinds": [
 		{ "id": "link-needs-reconnecting", "channel": "in-app", "cadence": "when-found", "signal": "finance.link-broken" },
 		{ "id": "bill-due-soon", "channel": "in-app", "cadence": "when-found", "signal": "finance.bill-due" },
-		{ "id": "bill-overdue", "channel": "in-app", "cadence": "when-found", "signal": "finance.bill-overdue" }
+		{ "id": "bill-overdue", "channel": "in-app", "cadence": "when-found", "signal": "finance.bill-overdue" },
+		{ "id": "price-rise", "channel": "in-app", "cadence": "when-found", "signal": "finance.price-rise" }
 	],
 	"schedules": [
 		{ "id": "sync", "every": 3600 },
@@ -60,6 +61,7 @@
 		"merchant",
 		"bill",
 		"file-import",
+		"recurring-charge",
 		"holding",
 		"security"
 	]
