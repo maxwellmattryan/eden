@@ -1,6 +1,8 @@
 <script lang="ts">
 	// Orchard's page (product/domains/finance.md, "Surfaces"): the header with the tab's actions, the tabs (Activity,
-	// #83, D-199, which has none; Accounts; Bills, #78; and Investments, #76, D-197), the page's error with Retry when a write failed or the rows could not be read, and the tab's view.
+	// #83, D-199, which has none; Accounts; Bills, #78; Budget, #84, D-201; and Investments, #76, D-197), the page's error with Retry when a write failed or the rows could not be read, and the tab's view.
+	// Budget's view holds the month it shows and tells the page through `onmonth`, so its header's Draft from history
+	// and Add line act on that month; both show for the current month and the next only.
 	// The tab lives in the address; a pick goes back through the navigation seam. The sheets are the page's, so a header
 	// action and a row's menu open the same one. While a provider is bound (the desktop's Plaid), "Link a bank" leads
 	// Accounts' header, "Link a brokerage" the Investments one, a stale link raises a notice beside it on every tab (then the most urgent income question, #80, has the one notice after it), a quiet key opens the provider's keys, and
@@ -17,15 +19,18 @@
 		PageHeader,
 		Segmented,
 		domainGlyph,
+		toast,
 		type PageHeaderAction,
 	} from '@eden/ui-kit'
 	import { onMount } from 'svelte'
+	import { dateIn } from '../../../dates/index.js'
 	import { t } from '../../../i18n/index.js'
 	import { navigation } from '../../../navigation/index.js'
 	import { settings } from '../../../settings/index.js'
 	import { undoToast } from '../../../shell/index.js'
 	import { readerOf } from '../../../shell/gardener/reader-line.js'
 	import { staleDay } from '../accounts.js'
+	import { linesOf } from '../budget.js'
 	import { billCapture } from '../capture.svelte.js'
 	import { plaid } from '../plaid.svelte.js'
 	import { provider } from '../provider.svelte.js'
@@ -35,8 +40,8 @@
 	import { FINANCE_TABS, financeTab, type FinanceTab } from '../tabs.js'
 	import type { IncomeQuestion } from '../income.js'
 	import type { Account, Asset, Bill, Holding, IncomeSource, ProviderLink } from '../types.js'
-	import type { LedgerRow } from '../ledger.js'
-	import { dayLine } from '../words.js'
+	import { addMonths, type LedgerRow } from '../ledger.js'
+	import { dayLine, monthYearLine } from '../words.js'
 	import AccountSheet from './AccountSheet.svelte'
 	import Accounts from './Accounts.svelte'
 	import Activity from './Activity.svelte'
@@ -44,6 +49,8 @@
 	import BalanceSheet from './BalanceSheet.svelte'
 	import BillSheet from './BillSheet.svelte'
 	import Bills from './Bills.svelte'
+	import Budget from './Budget.svelte'
+	import BudgetLineSheet from './BudgetLineSheet.svelte'
 	import BonusSheet from './BonusSheet.svelte'
 	import CategorySheet from './CategorySheet.svelte'
 	import HoldingSheet from './HoldingSheet.svelte'
@@ -101,6 +108,7 @@
 		| { sheet: 'holding'; holding: Holding; field: 'cost-basis' | 'value' }
 		| { sheet: 'category'; row: LedgerRow }
 		| { sheet: 'reimbursable'; row: LedgerRow }
+		| { sheet: 'budget-line'; month: string; categoryId?: string }
 	let current = $state<Open>()
 	let shown = $state(false)
 	let opened = $state(0)
@@ -118,10 +126,56 @@
 		if (undo) undoToast($t('domains.finance.toasts.linkRemoved', { values: { name: link.institution.name } }), undo)
 	}
 
+	// ---- Budget (#84): the month its view shows, and its draft
+	const thisMonth = $derived(dateIn(undefined, finance.clock).slice(0, 7))
+	let budgetMonth = $state<string>()
+	const shownMonth = $derived(budgetMonth ?? thisMonth)
+	/** Some category that is not income has no line in the month shown. */
+	const canAdd = $derived.by(() => {
+		const lined = linesOf(finance.budgets, shownMonth).map((row) => row.categoryId)
+		return finance.categories.some((category) => category.group !== 'income' && !lined.includes(category.id))
+	})
+	async function draftBudget(month: string) {
+		const answer = await finance.draftBudget(month)
+		if (answer === 'empty') toast({ message: $t('domains.finance.budget.toasts.nothing') })
+		else if (answer) {
+			const message = $t('domains.finance.budget.toasts.drafted', {
+				values: { count: answer.count, month: monthYearLine(`${month}-01`, settings.language, true) },
+			})
+			if (answer.undo) undoToast(message, answer.undo)
+			else toast({ message })
+		}
+	}
+
 	const bound = $derived(provider.bound)
 	const linkBrokerage = $derived(bound ? () => bound.link('brokerage') : undefined)
 	const actions = $derived.by<PageHeaderAction[]>(() => {
 		if (tab === 'activity') return []
+		if (tab === 'budget') {
+			// a past month is read-only; forward stops at the next month
+			if (shownMonth < thisMonth || shownMonth > addMonths(thisMonth, 1)) return []
+			const month = shownMonth
+			return [
+				{
+					id: 'draft-budget',
+					label: $t('domains.finance.budget.draft'),
+					icon: 'clipboard-list',
+					variant: 'primary',
+					onclick: () => void draftBudget(month),
+				},
+				...(canAdd
+					? [
+							{
+								id: 'add-budget-line',
+								label: $t('domains.finance.budget.addLine'),
+								icon: 'plus' as const,
+								variant: 'secondary' as const,
+								onclick: () => show({ sheet: 'budget-line', month }),
+							},
+						]
+					: []),
+			]
+		}
 		if (tab === 'bills')
 			return [
 				{
@@ -320,6 +374,14 @@
 				onmarkpaid={(bill) => show({ sheet: 'pay', bill })}
 			/>
 		{/if}
+	{:else if tab === 'budget'}
+		{#if finance.ready}
+			<Budget
+				onmonth={(month) => (budgetMonth = month)}
+				ondraft={(month) => void draftBudget(month)}
+				onedit={(month, categoryId) => show({ sheet: 'budget-line', month, categoryId })}
+			/>
+		{/if}
 	{:else if tab === 'investments'}
 		<Investments
 			onlink={linkBrokerage}
@@ -424,6 +486,8 @@
 		<CategorySheet bind:open={shown} row={current.row} />
 	{:else if current?.sheet === 'reimbursable'}
 		<ReimbursableSheet bind:open={shown} row={current.row} />
+	{:else if current?.sheet === 'budget-line'}
+		<BudgetLineSheet bind:open={shown} month={current.month} categoryId={current.categoryId} />
 	{:else if current?.sheet === 'holding'}
 		<HoldingSheet bind:open={shown} holding={current.holding} field={current.field} />
 	{:else if current?.sheet === 'remove'}

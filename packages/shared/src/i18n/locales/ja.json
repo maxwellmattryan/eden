@@ -1841,6 +1841,7 @@
 					"editTitle": "{category}を編集",
 					"addTitle": "項目を追加",
 					"category": "カテゴリ",
+					"choose": "カテゴリを選ぶ",
 					"amount": "金額",
 					"rollover": "残りを繰り越す",
 					"sinking": "請求に向けて積み立てる",

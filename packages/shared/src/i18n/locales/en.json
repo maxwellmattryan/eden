@@ -1841,6 +1841,7 @@
 					"editTitle": "Edit {category}",
 					"addTitle": "Add a line",
 					"category": "Category",
+					"choose": "Choose a category",
 					"amount": "Amount",
 					"rollover": "Roll over what's left",
 					"sinking": "Save toward a bill",
