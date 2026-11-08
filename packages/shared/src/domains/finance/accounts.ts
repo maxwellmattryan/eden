@@ -22,6 +22,11 @@ export const STALE_AFTER = 24 * HOUR
 /** A consent ending within this is expiring: the window Plaid warns in. */
 export const EXPIRING_WITHIN = 7 * 24 * HOUR
 
+/** A link's institution colour the page draws as a swatch: `#RRGGBB` only. */
+export const INSTITUTION_COLOUR = /^#[0-9a-fA-F]{6}$/
+/** A link's institution logo the page draws: a base64 PNG data URL only. */
+export const INSTITUTION_LOGO = /^data:image\/png;base64,[A-Za-z0-9+/=]+$/
+
 /** The local calendar day of an instant. */
 export const dayOfInstant = (iso: string) => dateIn(undefined, Date.parse(iso))
 

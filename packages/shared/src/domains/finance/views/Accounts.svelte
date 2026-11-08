@@ -24,7 +24,7 @@
 	import { formatMoney, type Money } from '../../../money/index.js'
 	import { settings } from '../../../settings/index.js'
 	import { undoToast } from '../../../shell/index.js'
-	import { dayOfInstant, type AccountGroup } from '../accounts.js'
+	import { INSTITUTION_COLOUR, INSTITUTION_LOGO, dayOfInstant, type AccountGroup } from '../accounts.js'
 	import { aged } from '../investments.js'
 	import { finance } from '../store.svelte.js'
 	import { isDebt, type Account, type Asset, type ProviderLink } from '../types.js'
@@ -161,8 +161,6 @@
 		quiet: boolean
 		rows: ListRowData[]
 	}
-	const COLOUR = /^#[0-9a-fA-F]{6}$/
-	const LOGO = /^data:image\/png;base64,[A-Za-z0-9+/=]+$/
 	/** The groups whose logo would not draw: they show the swatch. */
 	const broken: Record<string, boolean> = $state({})
 
@@ -176,8 +174,8 @@
 					...base,
 					id: group.id,
 					title: link.institution.name,
-					colour: colour && COLOUR.test(colour) ? colour : undefined,
-					logo: logo && LOGO.test(logo) ? logo : undefined,
+					colour: colour && INSTITUTION_COLOUR.test(colour) ? colour : undefined,
+					logo: logo && INSTITUTION_LOGO.test(logo) ? logo : undefined,
 					freshness: freshnessLine(link, state, finance.clock, $t, format),
 					link,
 					expiring:
