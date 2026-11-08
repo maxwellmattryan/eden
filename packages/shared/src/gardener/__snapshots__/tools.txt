@@ -1571,5 +1571,28 @@
 			"required": [],
 			"additionalProperties": false
 		}
+	},
+	{
+		"name": "finance_read-statement",
+		"description": "Runs a separate model request that finds the transaction lines in a bank or card statement the owner is importing. It is run by Orchard’s Import on the Accounts page with the text the owner confirmed, or the picture they chose to send, and refuses when called in a conversation: there, tell the owner to use Import on Orchard’s Accounts page. Returns the lines found; nothing is saved until the owner imports them.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"text": {
+					"type": "string",
+					"description": "The statement’s text as the owner confirmed it; empty when the picture is sent."
+				},
+				"currency": {
+					"type": "string",
+					"description": "The account’s currency, ISO 4217."
+				}
+			},
+			"required": [
+				"text",
+				"currency"
+			],
+			"additionalProperties": false
+		},
+		"strict": true
 	}
 ]

@@ -30,6 +30,7 @@ import {
 	accountTotals,
 	balanceOps,
 	closeOps,
+	dayOfInstant,
 	payloadOf,
 	removeLinkOps,
 	reopenOps,
@@ -59,9 +60,12 @@ import {
 import { provider } from './provider.svelte.js'
 import { financeFromRows, financeRows, financeUris } from './rows.js'
 import { seedData } from './seed.js'
+import { FILE_SOURCE, importOps, matchRows, type ParsedStatement, type StatementRow } from './statement.js'
 import { chunked } from './sync.js'
+import { dayLine, importDetail } from './words.js'
 import {
 	FINANCE,
+	type FileImportPayload,
 	type Account,
 	type AccountPayload,
 	type Asset,
@@ -542,6 +546,90 @@ export class FinanceStore {
 				}
 			})
 		})
+	}
+
+	// ---- Statement import (#74, D-194) --------------------------------------------------------------------------
+
+	/**
+	 * Whether a file was imported before, by its fingerprint: the day it was and what it made, both in the owner's
+	 * words; nothing for a file never imported, or one whose import was undone. An arrow, so it is passed as it is.
+	 */
+	knownImport = async (fingerprint: string): Promise<{ day: string; detail: string } | undefined> => {
+		await this.load()
+		const [row] = await queryEntities<FileImportPayload>({
+			type: FINANCE.fileImport,
+			source: FILE_SOURCE,
+			externalIds: [fingerprint],
+		})
+		if (!row) return undefined
+		return {
+			day: dayLine(dayOfInstant(row.payload.at), settings.language),
+			detail: importDetail(row.payload, this.accounts, get(t)),
+		}
+	}
+
+	/** The statement against the account's live rows: what would be new and how many are already here. */
+	async previewImport(
+		accountId: string,
+		parsed: ParsedStatement,
+		flip: boolean
+	): Promise<{ fresh: StatementRow[]; matched: number }> {
+		await this.load()
+		return matchRows(parsed.rows, await this.#transactions(), accountId, { flip })
+	}
+
+	/**
+	 * Imports a statement in one queue job: the rows are read and matched again, so nothing landed since the review
+	 * is written twice, then the new rows and the file's record go in their batches, the record last, and the pass
+	 * runs. The undo deletes every row it made and the record, then runs the pass again. A write that fails stops the
+	 * queue (`saveFailed`) and answers nothing; the retry runs the whole job again.
+	 */
+	async importStatement(input: {
+		accountId: string
+		parsed: ParsedStatement
+		flip: boolean
+		fingerprint: string
+	}): Promise<{ created: number; matched: number; undo: Undo } | undefined> {
+		await this.load()
+		let made: { created: number; matched: number; inverse: BatchOp[][] }
+		try {
+			made = await this.#exclusive(async () => {
+				const { parsed } = input
+				const { fresh, matched } = matchRows(parsed.rows, await this.#transactions(), input.accountId, {
+					flip: input.flip,
+				})
+				const { chunks, inverse } = importOps(
+					{
+						accountId: input.accountId,
+						kind: parsed.kind,
+						fingerprint: input.fingerprint,
+						fresh,
+						matched,
+						skipped: parsed.skipped,
+						from: parsed.from,
+						to: parsed.to,
+					},
+					newId,
+					nowIso()
+				)
+				for (const ops of chunks) if (ops.length) await applyBatch(ops)
+				return { created: fresh.length, matched, inverse }
+			})
+		} catch {
+			// the queue logged the code and holds the job for the retry
+			return undefined
+		}
+		void this.classify()
+		return {
+			created: made.created,
+			matched: made.matched,
+			undo: () => {
+				this.#queue.enqueue(async () => {
+					for (const ops of made.inverse) if (ops.length) await applyBatch(ops)
+				})
+				void this.classify()
+			},
+		}
 	}
 
 	#transactions(): Promise<Entity<TransactionPayload>[]> {
