@@ -1208,7 +1208,8 @@
 				"accounts": "口座",
 				"bills": "請求",
 				"budget": "予算",
-				"investments": "投資"
+				"investments": "投資",
+				"goals": "目標"
 			},
 			"tabsLabel": "果樹園のセクション",
 			"txKinds": {
@@ -1860,6 +1861,118 @@
 					"removed": "{category}を予算から外しました",
 					"updated": "{category}を更新しました",
 					"added": "{category}を追加しました"
+				}
+			},
+			"goals": {
+				"add": "目標を追加",
+				"readFailed": "取引を読み込めませんでした",
+				"emptyTitle": "まだ目標がありません",
+				"emptyNoAccount": "目標は口座の中でお金を取り分けます。まず口座を追加してください。",
+				"emptyText": "何かのために貯めるか、緊急資金をつくりましょう。",
+				"rate": {
+					"title": "貯蓄率",
+					"percent": "{rate}%",
+					"sentence": "直近{months}か月で収入の{rate}%を貯蓄しました",
+					"month": "{month}: {rate}%",
+					"target": "目標 {rate}%",
+					"ofGoal": "目標の{percent}%",
+					"noIncome": "貯蓄率を測るには収入のある月が必要です",
+					"actions": "貯蓄率の操作",
+					"set": "目標を設定",
+					"edit": "目標を編集",
+					"remove": "目標を外す"
+				},
+				"totals": {
+					"saved": "貯めた額",
+					"toGo": "残り",
+					"monthly": "月に必要な額",
+					"otherCurrencies": "ほかの通貨の目標は合計に含めていません"
+				},
+				"of": "{target}のうち{saved}",
+				"savedPercent": "{percent}%達成",
+				"reached": "達成",
+				"past": "期日を過ぎています",
+				"byMonthly": "{month}まで · 月{amount}",
+				"about": "今のペースで{month}ごろ",
+				"aboutAfter": "· 今のペースで{month}ごろ",
+				"behind": "· 今のペースでは間に合いません",
+				"covers": "生活必需費の{months}か月分",
+				"accountClosed": "{account}は解約済みです",
+				"accountGone": "口座がなくなっています",
+				"goneTitle": "なくなった口座",
+				"dip": "{day}の{high}から{amount}減っています",
+				"rebuild": "{month}までに戻す: 月{amount}",
+				"notEarmarked": "{amount}は取り分けていません",
+				"shared": "月{amount}でこれらに間に合います",
+				"actions": "{name}の操作",
+				"menu": {
+					"edit": "編集",
+					"up": "上へ移動",
+					"down": "下へ移動",
+					"rebuild": "戻す計画を立てる",
+					"fromHere": "ここから始める",
+					"bought": "購入済みにする",
+					"close": "目標を閉じる",
+					"delete": "削除",
+					"reopen": "再開",
+					"asset": "資産として追加",
+					"loan": "ローンを追加"
+				},
+				"done": {
+					"title": "完了",
+					"bought": "{month}に購入",
+					"closed": "{month}に終了"
+				},
+				"loanName": "{name}のローン",
+				"sheet": {
+					"addTitle": "目標を追加",
+					"editTitle": "目標を編集",
+					"kind": "目標の種類",
+					"target": "何かのために貯める",
+					"emergency": "緊急資金",
+					"name": "名前",
+					"emergencyName": "緊急資金",
+					"account": "口座",
+					"chooseAccount": "口座を選ぶ",
+					"amount": "目標額",
+					"months": "生活必需費の月数",
+					"monthsOption": "{months}か月",
+					"sized": "生活必需費の{months}か月分は{amount}です",
+					"noEssentials": "目安を出すにはまる1か月分の支出が必要です",
+					"by": "期日",
+					"noDate": "期日なし",
+					"live": "月{amount}で{month}までに達成します"
+				},
+				"rebuildSheet": {
+					"title": "戻す計画を立てる",
+					"down": "{high}から{amount}減っています",
+					"by": "戻す期日",
+					"live": "月{amount}で{month}までに戻せます"
+				},
+				"rateSheet": {
+					"title": "貯蓄率の目標",
+					"field": "目標の貯蓄率 (%)"
+				},
+				"errors": {
+					"goal:name": "60文字以内で名前を入力してください",
+					"goal:account": "負債ではない、開いている口座を選んでください",
+					"goal:target": "0より大きい目標額を入力してください",
+					"goal:months": "1〜12か月を選んでください",
+					"goal:rate": "1〜99の整数で入力してください",
+					"goal:emergency": "緊急資金はすでにあります"
+				},
+				"toasts": {
+					"added": "{name}を追加しました",
+					"saved": "{name}を保存しました",
+					"moved": "{name}を移動しました",
+					"closed": "{name}を閉じました",
+					"bought": "{name}を購入済みにしました",
+					"reopened": "{name}を再開しました",
+					"deleted": "{name}を削除しました",
+					"rebuild": "{name}を戻す計画を立てました",
+					"fromHere": "{name}をここから始めます",
+					"rateSet": "貯蓄率の目標を設定しました",
+					"rateRemoved": "貯蓄率の目標を外しました"
 				}
 			},
 			"toasts": {

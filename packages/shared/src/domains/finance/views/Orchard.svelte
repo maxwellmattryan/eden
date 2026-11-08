@@ -1,6 +1,8 @@
 <script lang="ts">
 	// Orchard's page (product/domains/finance.md, "Surfaces"): the header with the tab's actions, the tabs (Activity,
-	// #83, D-199, which has none; Accounts; Bills, #78; Budget, #84, D-201; and Investments, #76, D-197), the page's error with Retry when a write failed or the rows could not be read, and the tab's view.
+	// #83, D-199, which has none; Accounts; Bills, #78; Budget, #84, D-201; Investments, #76, D-197; and Goals, #88, D-202), the page's error with Retry when a write failed or the rows could not be read, and the tab's view.
+	// Goals' header adds a goal while an account can hold one; a bought goal's Done row opens the asset and account
+	// sheets with a preset.
 	// Budget's view holds the month it shows and tells the page through `onmonth`, so its header's Draft from history
 	// and Add line act on that month; both show for the current month and the next only.
 	// The tab lives in the address; a pick goes back through the navigation seam. The sheets are the page's, so a header
@@ -32,6 +34,7 @@
 	import { staleDay } from '../accounts.js'
 	import { linesOf } from '../budget.js'
 	import { billCapture } from '../capture.svelte.js'
+	import { canEarmark } from '../goals.js'
 	import { plaid } from '../plaid.svelte.js'
 	import { provider } from '../provider.svelte.js'
 	import { documentRead } from '../reader.svelte.js'
@@ -39,7 +42,18 @@
 	import { finance } from '../store.svelte.js'
 	import { FINANCE_TABS, financeTab, type FinanceTab } from '../tabs.js'
 	import type { IncomeQuestion } from '../income.js'
-	import type { Account, Asset, Bill, Holding, IncomeSource, ProviderLink } from '../types.js'
+	import type {
+		Account,
+		AccountKind,
+		Asset,
+		AssetKind,
+		Bill,
+		Holding,
+		IncomeSource,
+		ProviderLink,
+		SavingsGoal,
+	} from '../types.js'
+	import type { Money } from '../../../money/index.js'
 	import { addMonths, type LedgerRow } from '../ledger.js'
 	import { dayLine, monthYearLine } from '../words.js'
 	import AccountSheet from './AccountSheet.svelte'
@@ -53,6 +67,8 @@
 	import BudgetLineSheet from './BudgetLineSheet.svelte'
 	import BonusSheet from './BonusSheet.svelte'
 	import CategorySheet from './CategorySheet.svelte'
+	import Goals from './Goals.svelte'
+	import GoalSheet from './GoalSheet.svelte'
 	import HoldingSheet from './HoldingSheet.svelte'
 	import ImportSheet from './ImportSheet.svelte'
 	import Income from './Income.svelte'
@@ -62,6 +78,8 @@
 	import PaycheckSheet from './PaycheckSheet.svelte'
 	import PaySheet from './PaySheet.svelte'
 	import PlaidKeysSheet from './PlaidKeysSheet.svelte'
+	import RateSheet from './RateSheet.svelte'
+	import RebuildSheet from './RebuildSheet.svelte'
 	import ReimbursableSheet from './ReimbursableSheet.svelte'
 	import ReplaceSheet from './ReplaceSheet.svelte'
 
@@ -96,8 +114,8 @@
 
 	// One sheet at a time, made afresh each time it opens (`opened` keys it), so its form starts from what it is given
 	type Open =
-		| { sheet: 'account'; account?: Account }
-		| { sheet: 'asset'; asset?: Asset }
+		| { sheet: 'account'; account?: Account; preset?: { name: string; kind: AccountKind } }
+		| { sheet: 'asset'; asset?: Asset; preset?: { name: string; kind: AssetKind; value?: Money } }
 		| { sheet: 'balance'; account: Account }
 		| { sheet: 'replace'; account: Account }
 		| { sheet: 'remove'; link: ProviderLink }
@@ -109,6 +127,9 @@
 		| { sheet: 'category'; row: LedgerRow }
 		| { sheet: 'reimbursable'; row: LedgerRow }
 		| { sheet: 'budget-line'; month: string; categoryId?: string }
+		| { sheet: 'goal'; goal?: SavingsGoal }
+		| { sheet: 'rebuild'; goal: SavingsGoal }
+		| { sheet: 'rate' }
 	let current = $state<Open>()
 	let shown = $state(false)
 	let opened = $state(0)
@@ -193,6 +214,18 @@
 					onclick: () => show({ sheet: 'bill' }),
 				},
 			]
+		if (tab === 'goals')
+			return finance.accounts.some(canEarmark)
+				? [
+						{
+							id: 'add-goal',
+							label: $t('domains.finance.goals.add'),
+							icon: 'plus',
+							variant: 'primary',
+							onclick: () => show({ sheet: 'goal' }),
+						},
+					]
+				: []
 		if (tab === 'investments')
 			return linkBrokerage
 				? [
@@ -382,6 +415,27 @@
 				onedit={(month, categoryId) => show({ sheet: 'budget-line', month, categoryId })}
 			/>
 		{/if}
+	{:else if tab === 'goals'}
+		<!-- nothing is drawn until the rows are read, as on Budget -->
+		{#if finance.ready}
+			<Goals
+				onadd={() => show({ sheet: 'goal' })}
+				onedit={(goal) => show({ sheet: 'goal', goal })}
+				onrebuild={(goal) => show({ sheet: 'rebuild', goal })}
+				onrate={() => show({ sheet: 'rate' })}
+				onasset={(goal) =>
+					show({ sheet: 'asset', preset: { name: goal.name ?? '', kind: 'vehicle', value: goal.target } })}
+				onloan={(goal) =>
+					show({
+						sheet: 'account',
+						preset: {
+							name: $t('domains.finance.goals.loanName', { values: { name: goal.name ?? '' } }),
+							kind: 'loan',
+						},
+					})}
+				onaccount={() => show({ sheet: 'account' })}
+			/>
+		{/if}
 	{:else if tab === 'investments'}
 		<Investments
 			onlink={linkBrokerage}
@@ -467,9 +521,15 @@
 <ImportSheet bind:open={statementImport.open} />
 {#key opened}
 	{#if current?.sheet === 'account'}
-		<AccountSheet bind:open={shown} account={current.account} />
+		<AccountSheet bind:open={shown} account={current.account} preset={current.preset} />
 	{:else if current?.sheet === 'asset'}
-		<AssetSheet bind:open={shown} asset={current.asset} />
+		<AssetSheet bind:open={shown} asset={current.asset} preset={current.preset} />
+	{:else if current?.sheet === 'goal'}
+		<GoalSheet bind:open={shown} goal={current.goal} />
+	{:else if current?.sheet === 'rebuild'}
+		<RebuildSheet bind:open={shown} goal={current.goal} />
+	{:else if current?.sheet === 'rate'}
+		<RateSheet bind:open={shown} />
 	{:else if current?.sheet === 'balance'}
 		<BalanceSheet bind:open={shown} account={current.account} />
 	{:else if current?.sheet === 'replace'}
