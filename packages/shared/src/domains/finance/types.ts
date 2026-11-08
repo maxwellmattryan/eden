@@ -193,6 +193,8 @@ export interface TransactionPayload {
 	review?: 'vague'
 	/** The sync's: the pending row this posted row took over. */
 	replaced?: string
+	/** The owner's (#83's detail); searched by the ledger. */
+	notes?: string
 }
 
 /** A `budget-category`. A default one keeps its `key`, so the provider mapping finds it after a rename. */
