@@ -38,7 +38,7 @@ Every doc in one table per layer: path, status, one-liner, size (S under 120 lin
 | product/substrate/primitives.md | draft | Task, Event, Place, Attachment: ids, kinds, mirrors and overlays, links, lifecycle | S | any shared entity |
 | product/substrate/domain-manifest.md | draft | What a domain declares, isolation rules, entity URIs, intents, plugin path | S | adding or changing a domain |
 | product/substrate/data.md | draft | Storage, Vault, export/import, backup, end-to-end sync, purge, retention | S | data ownership, sync, export |
-| product/substrate/tasks.md | draft | Task detail: recurrence, routines, habits, Today view | S | to-dos, routines, reminders |
+| product/substrate/tasks.md | draft | Task detail: recurrence, routines, habits, Today view, a drafted task's `about` | S | to-dos, routines, reminders |
 | product/substrate/signals-notifications.md | draft | Signals, rules, scheduler, channels, digests, inbox, activity feed (scheduler, signals, rules and the plain inbox built on both apps) | S | notifications or automation |
 | product/substrate/integrations.md | draft | Connector lifecycle, catalog, secrets, per-device connections | S | any external service |
 | product/substrate/ai.md | draft | The Gardener: providers (the desktop on Claude Code, the phone on keys), model grades, context packs, tools, Council, budgets and usage windows, audit | S | any AI feature |
@@ -59,7 +59,7 @@ Every doc in one table per layer: path, status, one-liner, size (S under 120 lin
 | product/domains/fitness.md | draft | Vigor: workouts, gyms, body metrics, supplements, weight trend; what is built on both apps (D-177) and its handoffs | M | fitness work |
 | product/domains/spirit.md | draft | Sanctuary: traditions, readings, values, the daily line, optional astrology | S | reflection features |
 | product/domains/places.md | draft | Meadow: places and listings on a map, vibes, favorites, outings | M | places or events near you |
-| product/domains/finance.md | draft | Orchard: accounts by Plaid per device (desktop Hosted Link and hourly cursor sync built; categories, rules, transfers and the index built; CSV, OFX and PDF statement import built), Activity, bills, budgets, debt, investments, goals, the Gardener for money | L | finance work |
+| product/domains/finance.md | draft | Orchard: accounts by Plaid per device (desktop Hosted Link and hourly cursor sync built; categories, rules, transfers and the index built; CSV, OFX and PDF statement import built; bills built: capture, repeating, card statements, matching, Today tasks), Activity, budgets, debt, investments, goals, the Gardener for money | L | finance work |
 | product/domains/health.md | stub | Wellspring stub: medical notes, meds, care, insurance | S | health scope |
 | product/domains/people.md | candidate | Companions candidate: relationships, birthdays, gift ideas | S | considering a People domain |
 | product/domains/journal.md | candidate | Rings candidate: daily reflection and mood | S | considering a Journal domain |

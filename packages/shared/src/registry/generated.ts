@@ -2409,6 +2409,10 @@ export const DECLARATIONS = {
 			{
 				"id": "accounts",
 				"label": "domains.finance.tabs.accounts"
+			},
+			{
+				"id": "bills",
+				"label": "domains.finance.tabs.bills"
 			}
 		],
 		"resources": [
@@ -2441,6 +2445,17 @@ export const DECLARATIONS = {
 		"captureSources": [],
 		"tools": [
 			{
+				"id": "draft",
+				"access": "write-draft",
+				"confirm": false,
+				"reads": [],
+				"grade": "light",
+				"needs": [
+					"vision"
+				],
+				"minContext": null
+			},
+			{
 				"id": "read-statement",
 				"access": "write-draft",
 				"confirm": false,
@@ -2453,7 +2468,9 @@ export const DECLARATIONS = {
 			}
 		],
 		"signals": [
-			"finance.link-broken"
+			"finance.link-broken",
+			"finance.bill-due",
+			"finance.bill-overdue"
 		],
 		"notificationKinds": [
 			{
@@ -2463,6 +2480,22 @@ export const DECLARATIONS = {
 				"default": true,
 				"signal": "finance.link-broken",
 				"when": null
+			},
+			{
+				"id": "bill-due-soon",
+				"channel": "in-app",
+				"cadence": "when-found",
+				"default": true,
+				"signal": "finance.bill-due",
+				"when": null
+			},
+			{
+				"id": "bill-overdue",
+				"channel": "in-app",
+				"cadence": "when-found",
+				"default": true,
+				"signal": "finance.bill-overdue",
+				"when": null
 			}
 		],
 		"schedules": [
@@ -2471,6 +2504,12 @@ export const DECLARATIONS = {
 				"name": "finance.sync",
 				"daily": null,
 				"every": 3600
+			},
+			{
+				"id": "bills",
+				"name": "finance.bills",
+				"daily": "08:00",
+				"every": null
 			}
 		],
 		"intents": [],
@@ -2488,7 +2527,9 @@ export const DECLARATIONS = {
 			"transaction",
 			"budget-category",
 			"category-rule",
-			"merchant"
+			"merchant",
+			"bill",
+			"file-import"
 		]
 	}
 } as const

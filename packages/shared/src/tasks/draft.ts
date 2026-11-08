@@ -3,6 +3,7 @@
 // keeps it. The kind follows what the draft holds, as a line added on Today does (`parse.ts`): a target makes a
 // habit, a recurrence a routine, and anything else a todo.
 import type { TaskInput } from '../data/types.js'
+import { isUlid } from '../data/ulid.js'
 import { instantAt } from '../dates/days.js'
 import { isDay, parseRecurrence, type Frequency, type Recurrence } from '../recurrence/index.js'
 import { isTime, type HabitTarget } from './types.js'
@@ -19,6 +20,26 @@ export interface DraftTask {
 	recurrence?: Recurrence
 	/** With it the draft is a habit. */
 	target?: HabitTarget
+	/** The row the task is for (#78): kept, the task links to it `about`, under the row's name when it has one. */
+	about?: { uri: string; label?: string }
+}
+
+/** What a tool's `about` names: a live entity type in the conversation's reach, and a row id. */
+export function parseAbout(
+	value: unknown,
+	reach: readonly string[],
+	isEntityType: (type: string) => boolean
+): { type: string; id: string } | { error: string } {
+	if (typeof value !== 'object' || value === null || Array.isArray(value))
+		return { error: '`about` is {"type": a row type, "id": the row’s `id`}.' }
+	const { type, id } = value as Record<string, unknown>
+	if (typeof type !== 'string' || !type || typeof id !== 'string' || !isUlid(id))
+		return { error: '`about` is {"type": a row type, "id": the row’s `id` from `read-rows`}.' }
+	if (!isEntityType(type))
+		return { error: `\`about.type\` ${JSON.stringify(type)} is not a type of row a task can be for.` }
+	if (!reach.includes(type))
+		return { error: `\`about.type\` ${JSON.stringify(type)} is not one this conversation may read.` }
+	return { type, id }
 }
 
 /** How often a drafted routine repeats, in the words a tool's input uses. */
@@ -56,7 +77,18 @@ export function repeatOf(input: unknown, start: string): Recurrence | null {
 export function taskFromDraft(draft: DraftTask, today: string, zone: string | undefined): TaskInput {
 	const time = isTime(draft.timeOfDay) ? draft.timeOfDay : undefined
 	const notes = draft.notes ? { notes: draft.notes } : {}
-	if (draft.target) return { kind: 'habit', title: draft.title, target: draft.target, ...notes }
+	const links = draft.about
+		? {
+				links: [
+					{
+						uri: draft.about.uri,
+						relation: 'about' as const,
+						...(draft.about.label ? { label: draft.about.label } : {}),
+					},
+				],
+			}
+		: {}
+	if (draft.target) return { kind: 'habit', title: draft.title, target: draft.target, ...notes, ...links }
 	if (draft.recurrence)
 		return {
 			kind: 'routine',
@@ -64,6 +96,7 @@ export function taskFromDraft(draft: DraftTask, today: string, zone: string | un
 			recurrence: draft.recurrence,
 			...(time ? { timeOfDay: time } : {}),
 			...notes,
+			...links,
 		}
 	const day = isDay(draft.due) ? draft.due : today
 	return {
@@ -72,5 +105,6 @@ export function taskFromDraft(draft: DraftTask, today: string, zone: string | un
 		due: time ? new Date(instantAt(day, time, zone)).toISOString() : day,
 		priority: draft.priority ?? 'none',
 		...notes,
+		...links,
 	}
 }

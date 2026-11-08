@@ -175,6 +175,7 @@ describe('the declared tools on the seed', () => {
 			'places.import-places': ['standard', []],
 			'places.add-to-calendar': [null, []],
 			'places.update-places': [null, []],
+			'finance.draft': ['light', ['vision']],
 		})
 	})
 

@@ -1,13 +1,22 @@
 // What a bank provider's sync run writes (product/domains/finance.md §8), pure so it is tested here: the account kind
 // a provider's type means, the accounts a run creates and updates with their balances through `balanceOps`, the
 // transactions it creates, updates and tombstones, and the link after a run, good or failed, with the retry and the
-// signal that follow. A transaction is upserted by its provider id, so replaying a run changes nothing; the link's new
-// cursor goes in the last batch, so a run cut short replays from the old one.
-import type { ProviderAccount, ProviderTransaction, SyncResult } from '../../api/plaid.js'
+// signal that follow, and each credit card's statement bill (#78). A transaction is upserted by its provider id, so
+// replaying a run changes nothing; the link's new cursor goes in the last batch, so a run cut short replays from the old
+// one.
+import type { CardStatement, ProviderAccount, ProviderTransaction, SyncResult } from '../../api/plaid.js'
 import { toUri, type BatchOp, type Entity } from '../../data/index.js'
 import { negate, parseMoney, type Money } from '../../money/index.js'
 import { balanceOps, dayOfInstant, EXPIRING_WITHIN, payloadOf } from './accounts.js'
-import { FINANCE, WHOLE, type Account, type AccountKind, type ProviderLink, type TransactionPayload } from './types.js'
+import {
+	FINANCE,
+	WHOLE,
+	type Account,
+	type AccountKind,
+	type BillPayload,
+	type ProviderLink,
+	type TransactionPayload,
+} from './types.js'
 
 /** The source every provider row carries. */
 export const PLAID_SOURCE = 'plaid'
@@ -332,10 +341,61 @@ export function linkSignal(link: ProviderLink, now: number): LinkSignal | undefi
 	return undefined
 }
 
+/**
+ * A card statement bill per credit card and statement day (#78): the balance is the amount, with the minimum and the
+ * due day, and the payee is the card's name. A zero or negative balance makes none; a bill already made for the day
+ * is updated only when the figures moved, so a replay changes nothing; and one the owner deleted is never made again
+ * (`bills` holds the tombstones too). The owner's own keys on a bill (payments, task, …) are kept.
+ */
+export function statementOps(input: {
+	statements: readonly CardStatement[]
+	accountsByProviderId: ReadonlyMap<string, Account>
+	bills: readonly Entity<BillPayload>[]
+	newId: () => string
+}): BatchOp[] {
+	const ops: BatchOp[] = []
+	for (const statement of input.statements) {
+		const account = input.accountsByProviderId.get(statement.providerAccountId)
+		if (!account || account.kind !== 'credit-card' || account.closedOn) continue
+		const day = statement.statementDate ?? ''
+		if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) continue
+		const currency = statement.currency ?? account.currency
+		const amount = moneyOf(statement.statementBalance, currency)
+		if (!amount || amount.minor <= 0) continue
+		const minimum = moneyOf(statement.minimum, currency)
+		const due = statement.dueDate && /^\d{4}-\d{2}-\d{2}$/.test(statement.dueDate) ? statement.dueDate : undefined
+		const held = input.bills.find((row) => row.payload.accountId === account.id && row.payload.statementDay === day)
+		if (held?.deletedAt) continue
+		const figures = {
+			amount,
+			...(minimum && minimum.minor > 0 ? { minimum } : {}),
+			...(due ? { due } : {}),
+		}
+		if (held) {
+			const { minimum: _minimum, due: _due, ...rest } = held.payload
+			const payload: BillPayload = { ...rest, ...figures }
+			if (!same(payload, held.payload)) ops.push({ op: 'updateEntity', id: held.id, payload })
+			continue
+		}
+		const payload: BillPayload = {
+			payee: account.name,
+			period: day.slice(0, 7),
+			source: 'statement',
+			accountId: account.id,
+			statementDay: day,
+			...figures,
+		}
+		ops.push({ op: 'createEntity', input: { id: input.newId(), type: FINANCE.bill, payload } })
+	}
+	return ops
+}
+
 export interface SyncInput {
 	link: ProviderLink
 	/** Every account the store holds. */
 	accounts: readonly Account[]
+	/** Every bill row, the tombstones too, for the card statements (#78). */
+	bills?: readonly Entity<BillPayload>[]
 	/** The live provider rows by provider id: every one the result names, and the pending ones they replace. */
 	existing: Map<string, Entity<TransactionPayload>>
 	result: SyncResult
@@ -366,6 +426,12 @@ export function syncOps(input: SyncInput): {
 	const { link, result, nowIso, day, newId } = input
 	const accounts = accountOps(link, input.accounts, result.accounts, nowIso, day, newId)
 	const transactions = transactionOps(accounts.byProviderId, input.existing, result, newId)
+	const statements = statementOps({
+		statements: result.statements ?? [],
+		accountsByProviderId: accounts.byProviderId,
+		bills: input.bills ?? [],
+		newId,
+	})
 	const next = linkAfterSync(link, result, nowIso)
 	// the link is written whenever it moved; `lastSyncedAt` moves on every live run (freshness is stored), so only a
 	// replay at the same instant writes nothing
@@ -373,7 +439,7 @@ export function syncOps(input: SyncInput): {
 		? undefined
 		: { op: 'updateEntity', id: next.id, payload: payloadOf(next) }
 	return {
-		chunks: chunked([...accounts.ops, ...transactions.ops], write),
+		chunks: chunked([...accounts.ops, ...transactions.ops, ...statements], write),
 		link: next,
 		accounts: accounts.accounts,
 		skipped: [...accounts.skipped, ...transactions.skipped],
