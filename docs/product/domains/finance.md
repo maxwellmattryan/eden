@@ -37,13 +37,13 @@ Everything is T2 unless marked. T3 is stored only on the device, and no tool eve
 | `file-import` | one per file read: its fingerprint, what it was (statement, letter, CSV), the account and period, how many rows it made, when; the file is not kept (D-189) | T2 | `account` |
 | `balance-snapshot` | one per account per day, the history behind net worth | T2 | `account` |
 | `transaction` | amount, raw and cleaned merchant, day and time where given, pending, category, kind, split parts, transfer pair, bill link, notes, flags | T2 | `account`, `merchant`, `budget-category`, `bill` |
-| `budget-category` | name, fixed or variable (D-16), essential or not, sinking fund | T1 | |
+| `budget-category` | name, fixed, variable or income (D-16), essential or not | T1 | |
 | `category-rule` | a pattern and the category it maps to, learned from the owner's fixes | T2 | `budget-category` |
 | `merchant` | the cleaned name and the raw names merged into it | T2 | |
 | `money-rollup` | sums by month × category, merchant and account, daily totals; rebuilt from transactions in memory, never stored as rows, never edited, never exported (D-194) | T2 | |
 | `bill` | payee, period (`YYYY-MM`), due day (none is Expected), amount, estimate or actual, source (a letter, a card statement, a series, by hand), how often it repeats and whether its amount is fixed, its series, a card statement's card, minimum, statement day and interest, the payee's site (`https://` only), its payments (each a matched transaction with its account, or one paid another way), the payments it asks about and the ones dismissed, and the Orchard task for its due day; the state is derived, never stored (D-196); a policy number is T3 | T2 | `transaction` (`billId`), `account`, Task (`about`, #78) |
 | `recurring-charge` | cadence, expected amount, last seen, price changes, kept or cancelled | T2 | `merchant` |
-| `budget` | per month and category: amount, rollover, sinking-fund target | T2 | `budget-category` |
+| `budget` | a category's line from a month on (D-201): amount in the home currency, rollover, a sinking fund (target, due month, every), `off`, and who wrote it (draft or owner); balances are read, never stored | T2 | `budget-category` |
 | `liability` | APRs with promo end dates, statement balance, minimum due, due date, credit limit, loan terms | T2 | `account` |
 | `holding` | quantity, cost basis, value | T2 | `account`, `security` |
 | `security` | a ticker or coin and its daily price history, in its own currency | T0 | |
@@ -143,7 +143,7 @@ The weekly digest, from the same tools on a schedule, and the flag signals as th
 
 **Sheets**: the Link sheet (#73), Plaid Link in Eden's colours; the read-and-confirm sheet (#72), a letter, statement or pay stub as text to check (D-190). **Garden widgets** come in #87, which sets their sizes. **The phone lock and privacy cover** (#68, D-185), with the hide-amounts toggle on both apps.
 
-**Mocks** (#70, D-54): `Domains/Orchard/{Overview,Activity,Accounts,Bills,Budget,ReadConfirm}` in `packages/ui-kit/src/stories/domains/finance/`, over Orchard's sample data (`design/sample-data.md`, Orchard). They are the reference the later issues build against. The tabs are the five mocked pages; Debt, Investments and Goals take their place when #86, #76 and #88 mock them. What the mocks leave to others: grouped in/out bars for Overview's Cash flow (#87; `BarChart` only stacks, so Overview shows Out as bars and In, Out and Net as Stats); a kit progress meter for budget lines (#84; the mock's meter is story-local); the transaction detail (#83; rows in the mock have only a menu); the header motif (D-123); the tab list growing to eight when Debt, Investments and Goals land.
+**Mocks** (#70, D-54): `Domains/Orchard/{Overview,Activity,Accounts,Bills,Budget,ReadConfirm}` in `packages/ui-kit/src/stories/domains/finance/`, over Orchard's sample data (`design/sample-data.md`, Orchard). They are the reference the later issues build against. The tabs are the five mocked pages; Debt, Investments and Goals take their place when #86, #76 and #88 mock them. What the mocks leave to others: grouped in/out bars for Overview's Cash flow (#87; `BarChart` only stacks, so Overview shows Out as bars and In, Out and Net as Stats); the transaction detail (#83; rows in the mock have only a menu); the header motif (D-123); the tab list growing to eight when Debt, Investments and Goals land.
 
 ### Investments (#76)
 
@@ -230,6 +230,18 @@ D-200. The views are `views/Income.svelte`, `Lean.svelte`, `PaycheckSheet.svelte
 - **The Income section** follows the accounts, only once the ledger is ready and a source is not hidden, with no empty state. Its line is "About {monthly} a month · {n}-month average {average}". A row is the merchant's live name, then the cadence, "into {account}", a biweekly source's months with three paychecks, and its state ("Next about {day}", "Late, due {day}", "Ended {day}", "Irregular", "Tax refund · around {Month}" or "Tax payment · around {Month}"), with the expected amount as the meta. Paychecks come first, ended ones next and tax sources last. A late row is never coloured. Rows do not act (D-118). Their menus offer **This job ended**, **Still paid here**, **Start lean mode** while lean mode is off, and **Not income** (**Not a tax payment**), each with an Undo.
 - **Lean mode** is on while a live source carries `leanSince`. A card above the accounts shows the runway, "{months} months on essentials" until about a month, and "{months} months at your usual spending"; when other income covers the essentials it says so instead. Under it come the essential categories with their monthly means and a total, then **What to pause**: up to 8 merchants outside the essentials seen in each of the last 3 complete months. With no complete month of spending, only the heading and "Orchard needs a full month of spending to work out a runway." show. **End lean mode** clears `leanSince` on every source. Every figure goes through `formatMoney`; the month counts are not money.
 - Only the browser builds have run it (desktop and phone frontends, CSV imports); Plaid rows with provider categories, the tax sources and the fact write have been proven in tests only.
+
+### Budget (#84)
+
+Built in #84 (D-201). The rules are `budget.ts` (`linesOf`, `budgetMonth`, `budgetIncome`, `draftBudget`, `draftOps`, `lineOps`); the views are `views/Budget.svelte` and `BudgetLineSheet.svelte`, mounted by `views/Orchard.svelte` on both apps at `/finance/budget`, between Bills and Investments. The bar is the kit's `Meter`, which replaced the mock's story-local one.
+
+- **The month** opens on the current one, with Previous and Next beside its label, announced politely. Back stops at the earliest month with a `budget` row, Forward at the month after the current one; a button at its end is disabled, never hidden. The month is the view's own: each visit starts on the current month, and the view tells the page through `onmonth`, for the header's actions.
+- **States**, in order: three `Skeleton` rows until the transactions are read; "Couldn't read your transactions" with Retry; "No budget yet" with **Draft from history** (none for a past month); then the budget.
+- **Totals**: Planned, Spent, Left, and with a basis Income ("From your paychecks", or "{n}-month average, since your income varies") and To plan, which says "{x} not planned yet" or, in the danger tone, "Planned {x} more than you earn". Captions follow when they apply: a stale link's "Spent includes {institution} as of {day}", "{x} spent outside the budget" (uncategorised spending included), "Spending in other currencies is left out" and lean mode's "a new draft keeps the essentials only".
+- **Groups**: Fixed, Variable, then Sinking funds (`piggy-bank`), each largest first and left out when empty. A line reads "{spent} of {available}" (a fund's "{saved} of {target}") over its `Meter`, with "Over by {x}" in the danger tone, "{±x} rolled over" or "Rolls over", and for a fund "Due {Month YYYY} · {monthly} a month". With Hide amounts on, every figure is masked and a meter reads "{percent}% of plan" or "{percent}% saved", so no money is in `aria-valuetext`.
+- **Actions**: **Draft from history** (primary, `clipboard-list`) and **Add line** (`plus`, while some category that is not income has no line) lead the header for the current and next month only; past months are read-only. A line's menu offers **Edit line** and **Remove line** (writes `off`), each with an Undo. The draft is one write with one Undo, "Drafted {n} lines for {Month}", or "Nothing to draft yet: …" when it makes none.
+- **The line sheet** edits a line (or adds one, with a Category first): Amount, Roll over what's left, and Save toward a bill with its Target and Due (24 months). A fund always rolls over, so turning it on holds Roll over on, disabled, with "A sinking fund always rolls over." Errors sit under their field and the first takes focus.
+- Only the browser builds have run it (desktop and phone frontends, rows written through the data layer); never against Plaid rows or in the installed app.
 
 ## 7. Kinds, signals, notifications, intents
 
@@ -325,7 +337,7 @@ Open: none.
 
 ## Registry rows
 
-Under Orchard, live since #71 added the manifest (`packages/shared/src/domains/finance/manifest.json`), built ahead of its phase like Meadow (D-130), except the kind `bill-due`, whose row carries Phase 2 and waits on Almanac (D-186). Its export carries `account`, `balance-snapshot`, `asset`, `transaction` (#73), `budget-category`, `category-rule` and `merchant` (#75), `bill` and `file-import` (#78), `holding` and `security` (#76), `recurring-charge` (#79), never `provider-link`, which is this device's (D-184, D-191). The rows: fact `monthly-income-band` T2; entities `provider-link` T2, `account` T2, `file-import` T2, `balance-snapshot` T2, `transaction` T2, `budget-category` T1, `category-rule` T2, `merchant` T2, `money-rollup` T2, `bill` T2, `recurring-charge` T2, `budget` T2, `liability` T2, `holding` T2, `security` T0, `asset` T2, `income-source` T2, `savings-goal` T2, `contribution-limit` T0, `spending-watch` T2; kind `bill-due` (event, T2). The stub's `savings-goal` fact is now an entity and its attachment kind is gone (D-189).
+Under Orchard, live since #71 added the manifest (`packages/shared/src/domains/finance/manifest.json`), built ahead of its phase like Meadow (D-130), except the kind `bill-due`, whose row carries Phase 2 and waits on Almanac (D-186). Its export carries `account`, `balance-snapshot`, `asset`, `transaction` (#73), `budget-category`, `category-rule` and `merchant` (#75), `bill` and `file-import` (#78), `holding` and `security` (#76), `recurring-charge` (#79), `budget` (#84), never `provider-link`, which is this device's (D-184, D-191). The rows: fact `monthly-income-band` T2; entities `provider-link` T2, `account` T2, `file-import` T2, `balance-snapshot` T2, `transaction` T2, `budget-category` T1, `category-rule` T2, `merchant` T2, `money-rollup` T2, `bill` T2, `recurring-charge` T2, `budget` T2, `liability` T2, `holding` T2, `security` T0, `asset` T2, `income-source` T2, `savings-goal` T2, `contribution-limit` T0, `spending-watch` T2; kind `bill-due` (event, T2). The stub's `savings-goal` fact is now an entity and its attachment kind is gone (D-189).
 
 ## Handoffs
 
@@ -362,7 +374,7 @@ Critical path: #67, #69, #70, #71, #72, #73, #75, #77, #78, #79, #83. The Garden
 - `substrate/ai.md` and `engineering/gardener.md` update their tool counts (#90).
 - `design/sample-data.md` gains Orchard's data (#70); done, with the mocks in §6.
 - Grouped in/out bars for Overview's Cash flow (#87): the kit's `BarChart` only stacks.
-- A kit progress meter for budget lines (#84): the Budget mock draws its own `role="meter"`.
+- A kit progress meter for budget lines (#84): done, the kit's `Meter`, which the Budget mock now uses.
 - The transaction detail (#83): built in part (category, one-off, reimbursable); the rest is in "From #83".
 - The header motif for Orchard's pages (D-123).
 - The tab list grows from five to eight when Debt (#86), Investments (#76) and Goals (#88) are mocked.
@@ -399,7 +411,7 @@ From #75:
 - #74 calls `finance.classify()` after an import.
 - #90 asks about rows with `review: 'vague'` and drafts rules as `RulePayload` (`merchantId`, `counterparty` or both, and the `categoryId`).
 - #78 sets `bill-payment`; #76 sets the investment kinds. The pass sets `kind` on every row it sees, so each teaches `kindOf` in `classify.ts` its own rather than writing the key beside it.
-- #84 manages categories (the default set is seeded once; budget fields beyond name, group and essential are its own).
+- Managing categories (the default set is seeded once) was left out of #84 and stays open ("From #84"); the budget fields live on `budget`, not on the category.
 - A non-card `LOAN_PAYMENTS_*` row with no partner stays a `transfer`, so the `debt` default is only reached by a rule or the owner; #86 decides whether an unlinked loan's payment counts as spending.
 - The Hearth receipt split ("a Hearth haul with a receipt can split it for you") needs a cross-domain path, since no domain hears another's signals yet, and a currency on Hearth's prices, which are cents with none. The owner files it as its own issue.
 
@@ -407,7 +419,7 @@ From #79:
 
 - Done in #83: Activity's `recurring` filter reads `recurringId` and leaves out a dismissed charge's rows. The subscriptions view moves to "From #83".
 - #78: Bills offers a bill where `offersBill(charge, categories, today)` holds, maps `billDraftOf(charge, merchants)` onto its `bill` payload, then calls `linkBill(id, billId)`; "Not a bill" calls `declineBillOffer(id)`.
-- #84: a fixed budget line from a recurring charge takes `monthlyCostOf(charge)`.
+- Done in #84: a budget line from a recurring charge takes `monthlyCostOf(charge)`.
 - #87: the forecast reads each active row's `nextDay` and `expected` (negative, the charges' sign).
 - #90: `finance_recurring` reads the same helpers; overlaps between different merchants (two music services) are the Gardener's to find.
 - The pass runs only at a sync's classification: an owner's fix (one-off, merge) is picked up at the next sync.
@@ -431,7 +443,7 @@ From #78:
 
 - Done in #83: Activity's "Part of a bill" filter reads a transaction's `billId`. Mark paid from a row moves to "From #83"; an Open bill action from a Today row is not built.
 - #79 offers to make a bill from a detected rent or subscription through `finance.saveBill(draft)` with `repeat` (and `fixed` for rent).
-- #84 reads `repeat` and `fixed` for fixed budget lines and the sinking funds of six-monthly bills.
+- Done in #84: the draft reads `repeat` and `fixed` for its bill lines and the sinking funds of bills repeating every 3 months or more.
 - #85 reads `expected` (no due day) and `estimate` for an EOB, and `sameBill` replaces the estimate when the actual bill arrives.
 - #86 extends `/liabilities/get` (`card_statements` in `plaid.rs`, `CardStatement` in `provider.rs`) to the APRs, promo ends and `liability` rows; a card statement's `interest` is the `interest-charged` rows on the card since its previous statement.
 - #90 widens `finance_draft` to its batch and gives it reads, adds `finance_bills`, and may let the Gardener's `draft-tasks` name a bill (`about: { type: 'bill', id }`, labelled by its payee through `financeLogic.labels`).
@@ -466,3 +478,12 @@ From #80:
 - #78 may make a `tax-payment` source a yearly bill.
 - The domain's export still leaves `income-source` out (D-184); if sync (#40) ever carries the owner's answers, they move with it.
 - The stale-link notice keeps the kit's `alert` role; the income question uses `role="note"` so it is not announced. Whether the stale one should follow is the owner's call.
+
+From #84:
+
+- #90: `finance_draft` gains a budget kind over `draftBudget` and `draftOps` (the draft stays arithmetic in Eden; the model only proposes it), and the brief's budget status reads `finance.budget(month)` (planned, spent, left, the lines over).
+- #90: an over-budget signal or notification and spending watches; nothing is emitted when a line goes over today.
+- #87: Overview's budget widget and its Garden tile read `finance.budget(month)` and `finance.budgetIncome`.
+- Managing categories (rename, add, delete, change group or essential) is still open: the "From #83" `saveCategory` item. The Add line Select lists the live categories as they are.
+- The view does not show which bills or charges a drafted line came from; no sample budgets are seeded.
+- `draftBudget` returns its count beside the undo (`{ undo?, count } | 'empty'`), so a redraft that changes nothing still says how many lines it drafted.

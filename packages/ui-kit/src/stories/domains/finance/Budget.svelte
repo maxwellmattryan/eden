@@ -2,9 +2,8 @@
 	// Orchard's Budget (product/domains/finance.md §2, design/screens.md `orchard-budget`): September 2026, with
 	// Planned, Spent and Left at the top, then the fixed lines (D-16), the variable ones and the sinking funds. Each
 	// line reads what was spent of what was planned over a meter, with any rollover; a line over budget says by how
-	// much in the danger tone, so colour is never the only sign. The meter is story-local: a kit progress meter is a
-	// handoff to #84. Story-only.
-	import { EmptyState, Icon, IconButton, Menu, Stat, type MenuItem, type PageHeaderAction } from '$lib/index.js'
+	// much in the danger tone, so colour is never the only sign. The meter is the kit's `Meter` (#84). Story-only.
+	import { EmptyState, Icon, IconButton, Menu, Meter, Stat, type MenuItem, type PageHeaderAction } from '$lib/index.js'
 	import OrchardPage, { STALE_AS_OF, formatMoney, majorOf, usdOf, type Money } from './OrchardPage.svelte'
 	import { orchardBudget, orchardSinkingFunds } from '../../sample-data.js'
 
@@ -124,18 +123,12 @@
 											/>
 										</span>
 									</div>
-									<div
-										class={['meter', { 'meter-over': over > 0 }]}
-										role="meter"
-										aria-label={line.name}
-										aria-valuemin={0}
-										aria-valuemax={majorOf(line.of)}
-										aria-valuenow={majorOf(line.used)}
-										aria-valuetext="{formatMoney(line.used)} of {formatMoney(line.of)}"
-										style:--fill="{Math.min(100, (line.used.minor / line.of.minor) * 100)}%"
-									>
-										<span class="meter-fill"></span>
-									</div>
+									<Meter
+										value={majorOf(line.used)}
+										max={majorOf(line.of)}
+										label={line.name}
+										valuetext="{formatMoney(line.used)} of {formatMoney(line.of)}"
+									/>
 									{#if over > 0 || line.rollover || line.detail}
 										<p class="line-foot">
 											{#if over > 0}<span class="cost">Over by {formatMoney(usdOf(over))}</span>{/if}
@@ -262,22 +255,6 @@
 	}
 	.menu {
 		display: inline-flex;
-	}
-	.meter {
-		overflow: hidden;
-		height: 6px;
-		border-radius: var(--radius-full);
-		background: var(--ed-meter-track);
-	}
-	.meter-fill {
-		display: block;
-		width: var(--fill);
-		height: 100%;
-		border-radius: inherit;
-		background: var(--brand-primary);
-	}
-	.meter-over .meter-fill {
-		background: var(--danger);
 	}
 	.line-foot {
 		display: flex;
