@@ -18,6 +18,8 @@
 // emits the task signals and asks Today to reload, as `substrate/tasks.md` says a domain does.
 // The holdings and securities (#76, D-197) are held whole, like the accounts; a daily investments read writes them
 // through `applySync`, and the owner's cost basis and typed value go through `#commit` with an undo.
+// The budget rows (#84, D-201) are held whole too; a month, its carries and its draft are read from them and the ledger
+// in `budget.ts`, and each write re-reads them in the queue's turn.
 import { get } from 'svelte/store'
 import { logError } from '../../api/index.js'
 import {
@@ -54,6 +56,16 @@ import {
 	remainingOf,
 	type BillDraft,
 } from './bills.js'
+import {
+	budgetIncome,
+	budgetMonth,
+	draftBudget,
+	draftOps,
+	lineOps,
+	type BudgetEdit,
+	type BudgetLineError,
+	type LineChange,
+} from './budget.js'
 import { paidWith, paymentChoices as choicesFor } from './match.js'
 import {
 	accountGroups,
@@ -130,6 +142,8 @@ import {
 	type AssetPayload,
 	type Bill,
 	type BillPayload,
+	type Budget,
+	type BudgetPayload,
 	type Category,
 	type CategoryPayload,
 	type FileImportPayload,
@@ -284,6 +298,8 @@ export class FinanceStore {
 	/** The live bills (#78), and the payments an asking bill's Notice offers, by transaction id. */
 	bills = $state<Bill[]>([])
 	asked = $state<Record<string, AskedPayment>>({})
+	/** The live `budget` rows (#84, D-201): each holds its category's line from its month on. */
+	budgets = $state<Budget[]>([])
 	/** The minute, while a page is watching: a link goes stale as it moves. */
 	clock = $state(Date.now())
 
@@ -405,6 +421,12 @@ export class FinanceStore {
 		}
 	})
 
+	/** The income a budget month is planned against (#84, D-201): the paychecks, else the trailing average. */
+	readonly budgetIncome = $derived.by(() => {
+		const income = this.income
+		return income ? budgetIncome({ sources: income.sources, income, home: settings.homeCurrency }) : undefined
+	})
+
 	accountById(id?: string): Account | undefined {
 		return id ? this.accounts.find((account) => account.id === id) : undefined
 	}
@@ -432,20 +454,33 @@ export class FinanceStore {
 
 	async #read() {
 		try {
-			const [links, accounts, assets, categories, merchants, rules, bills, recurring, holdings, securities, sources] =
-				await Promise.all([
-					queryEntities<ProviderLinkPayload>({ type: FINANCE.link }),
-					queryEntities<AccountPayload>({ type: FINANCE.account }),
-					queryEntities<AssetPayload>({ type: FINANCE.asset }),
-					queryEntities<CategoryPayload>({ type: FINANCE.category }),
-					queryEntities<MerchantPayload>({ type: FINANCE.merchant }),
-					queryEntities<RulePayload>({ type: FINANCE.rule }),
-					queryEntities<BillPayload>({ type: FINANCE.bill }),
-					queryEntities<RecurringPayload>({ type: FINANCE.recurring }),
-					queryEntities<HoldingPayload>({ type: FINANCE.holding }),
-					queryEntities<SecurityPayload>({ type: FINANCE.security }),
-					queryEntities<IncomeSourcePayload>({ type: FINANCE.income }),
-				])
+			const [
+				links,
+				accounts,
+				assets,
+				categories,
+				merchants,
+				rules,
+				bills,
+				recurring,
+				holdings,
+				securities,
+				sources,
+				budgets,
+			] = await Promise.all([
+				queryEntities<ProviderLinkPayload>({ type: FINANCE.link }),
+				queryEntities<AccountPayload>({ type: FINANCE.account }),
+				queryEntities<AssetPayload>({ type: FINANCE.asset }),
+				queryEntities<CategoryPayload>({ type: FINANCE.category }),
+				queryEntities<MerchantPayload>({ type: FINANCE.merchant }),
+				queryEntities<RulePayload>({ type: FINANCE.rule }),
+				queryEntities<BillPayload>({ type: FINANCE.bill }),
+				queryEntities<RecurringPayload>({ type: FINANCE.recurring }),
+				queryEntities<HoldingPayload>({ type: FINANCE.holding }),
+				queryEntities<SecurityPayload>({ type: FINANCE.security }),
+				queryEntities<IncomeSourcePayload>({ type: FINANCE.income }),
+				queryEntities<BudgetPayload>({ type: FINANCE.budget }),
+			])
 			this.#show(financeFromRows({ links, accounts, assets, holdings, securities }))
 			this.categories = categories.map(withId)
 			this.merchants = merchants.map(withId)
@@ -453,6 +488,7 @@ export class FinanceStore {
 			this.bills = bills.map(withId)
 			this.recurring = recurring.map(withId)
 			this.incomeSources = sources.map(withId)
+			this.budgets = budgets.map(withId)
 			this.saveFailed = this.#queue.failed
 		} catch (error) {
 			// nothing was read: say so, and let the retry read again
@@ -1430,6 +1466,71 @@ export class FinanceStore {
 				(this.recurring = this.recurring.map((entry) => (entry.id === id ? charge : entry)))
 			return { ...made, apply: () => swap(made.charge), revert: () => swap(was) }
 		}) as Promise<Undo | undefined>
+	}
+
+	// ---- Budget (#84) --------------------------------------------------------------------------------------------
+
+	/** A month of the budget as the Budget tab shows it, read on call (D-201): call it inside a `$derived`. */
+	budget(month: string) {
+		return budgetMonth({ rows: this.budgets, ledger: this.ledger, categories: this.categories, month })
+	}
+
+	/**
+	 * Drafts a month from the bills, the recurring charges and the history, in Eden and with no model (D-201), as one
+	 * write with one undo. Answers `empty` when there is nothing to draft, and the count of lines drafted.
+	 */
+	async draftBudget(month: string): Promise<{ undo?: Undo; count: number } | 'empty' | undefined> {
+		let count = 0
+		const undo = await this.#budgetEdit<never>(async (rows) => {
+			await this.#ensureRows()
+			const drafted = draftBudget({
+				ledger: this.ledger,
+				categories: $state.snapshot(this.categories) as Category[],
+				bills: $state.snapshot(this.bills) as Bill[],
+				recurring: $state.snapshot(this.recurring) as RecurringCharge[],
+				month,
+				today: todayIso(),
+				lean: leanSinceOf(this.incomeSources) !== undefined,
+			})
+			count = drafted.length
+			return count ? draftOps(rows, month, drafted, newId) : undefined
+		})
+		if (!count) return this.saveFailed ? undefined : 'empty'
+		// nothing changed is still a draft; a failed write is not
+		if (!undo && this.saveFailed) return undefined
+		return { ...(undo ? { undo: undo as Undo } : {}), count }
+	}
+
+	/** The owner's line for a month, new or changed (D-201); a refusal answers its code and writes nothing. */
+	saveBudgetLine(month: string, change: Extract<LineChange, { kind: 'save' }>): Promise<EditAnswer<BudgetLineError>> {
+		return this.#budgetEdit((rows) => Promise.resolve(lineOps(rows, month, change, newId)))
+	}
+
+	/** Takes a category's line out from the month on (`off`). */
+	removeBudgetLine(month: string, categoryId: string): Promise<Undo | undefined> {
+		return this.#budgetEdit((rows) =>
+			Promise.resolve(lineOps(rows, month, { kind: 'remove', categoryId }, newId))
+		) as Promise<Undo | undefined>
+	}
+
+	/** A budget write: the rows re-read in the queue's turn, the change made over them and shown, the undo swapping back. */
+	#budgetEdit<C extends string>(
+		make: (rows: Budget[]) => Promise<BudgetEdit | Refused<C> | undefined>
+	): Promise<EditAnswer<C>> {
+		return this.#edit(async () => {
+			const rows = (await queryEntities<BudgetPayload>({ type: FINANCE.budget })).map(withId)
+			const made = await make(rows)
+			if (!made) return undefined
+			if ('error' in made) return made
+			if (!made.ops.length) return undefined
+			const before = this.budgets
+			const saved = made.saved.map((row) => row.id)
+			return {
+				...made,
+				apply: () => (this.budgets = [...rows.filter((row) => !saved.includes(row.id)), ...made.saved]),
+				revert: () => (this.budgets = before),
+			}
+		})
 	}
 
 	// ---- Bills (#78) ---------------------------------------------------------------------------------------------
