@@ -1,6 +1,7 @@
 <script lang="ts">
 	// A draft the Gardener left for the owner to commit (product/substrate/ai.md, "Surfaces"; D-74): a task, a plan
-	// of tasks and events, a grocery list, code to copy, a capture to verify, or a recipe to check. Nothing is stored
+	// of tasks and events, a grocery list, code to copy, a capture to verify, a recipe or a bill to check (a task drafted
+	// for a row says which, "For Texas Gas Service"). Nothing is stored
 	// before the owner commits; a commit is an ordinary store write with an undo toast (D-12) and settles the card on
 	// its message. The substrate's parts (tasks, events) are written here; a domain's parts go to the domain that
 	// drafted them, and a draft the domain checks on a surface of its own (a haul on Hearth's capture sheet, a recipe
@@ -14,6 +15,9 @@
 	import { settings } from '../../settings/index.js'
 	import { describeRecurrence, taskFromDraft, type DraftTask } from '../../tasks/index.js'
 	import { copyText } from '../../api/index.js'
+	import type { BillDraft } from '../../domains/finance/bills.js'
+	import { formatMoney } from '../../money/index.js'
+	import { amountText } from '../../settings/index.js'
 	import { logicFor } from '../../domains/registry.js'
 	import { formatDayWord, formatRepeat, formatWallTime, type Words } from '../today/index.js'
 	import { tasks } from '../today/index.js'
@@ -37,6 +41,7 @@
 		if (draft.kind === 'grocery') return $t('gardener.draft.grocery', { values: { count: draft.items.length } })
 		if (draft.kind === 'code') return draft.title ?? $t('gardener.draft.code')
 		if (draft.kind === 'recipe') return $t('gardener.draft.recipe', { values: { name: draft.recipe.name } })
+		if (draft.kind === 'bill') return $t('gardener.draft.bill')
 		return $t('gardener.draft.capture', { values: { count: draft.rows.length } })
 	})
 	const settled = $derived(status !== 'pending')
@@ -63,6 +68,18 @@
 				? [formatRepeat(describeRecurrence(task.recurrence), words), time]
 				: [task.due ? formatDayWord(task.due, words) : undefined, time]
 		return [task.title, parts.filter(Boolean).join(' ')].filter(Boolean).join(' · ')
+	}
+
+	/** A drafted bill as one line: the payee, the amount (about it, for an estimate) and the due day. */
+	function billLine(bill: BillDraft): string {
+		const amount = amountText(formatMoney(bill.amount, words.format.lang), settings.hideAmounts)
+		return [
+			bill.payee,
+			bill.estimate ? $t('domains.finance.bills.line.about', { values: { amount } }) : amount,
+			bill.due ? formatDayWord(bill.due, words) : undefined,
+		]
+			.filter(Boolean)
+			.join(' · ')
 	}
 
 	/** The domain's part of a commit, when it has one. */
@@ -132,10 +149,15 @@
 			? 'camera'
 			: draft.kind === 'recipe'
 				? 'cooking-pot'
-				: 'sparkles'}
+				: draft.kind === 'bill'
+					? 'receipt'
+					: 'sparkles'}
 >
 	{#if draft.kind === 'task'}
 		<p class="draft-line">{taskLine(draft)}</p>
+		{#if draft.about?.label}
+			<p class="draft-quiet">{$t('gardener.draft.about', { values: { label: draft.about.label } })}</p>
+		{/if}
 		{#if draft.notes}<p class="draft-quiet">{draft.notes}</p>{/if}
 	{:else if draft.kind === 'plan'}
 		{#if draft.meals?.length}
@@ -148,7 +170,11 @@
 		{#if draft.tasks.length}
 			<ul class="draft-list">
 				{#each draft.tasks as task, i (i)}
-					<li>{taskLine(task)}</li>
+					<li>
+						{taskLine(task)}{#if task.about?.label}<span class="draft-quiet">
+								· {$t('gardener.draft.about', { values: { label: task.about.label } })}</span
+							>{/if}
+					</li>
 				{/each}
 			</ul>
 		{/if}
@@ -173,6 +199,9 @@
 		<p class="draft-quiet">
 			{draft.recipe.ingredients.map((line) => line.name).join(', ')}
 		</p>
+	{:else if draft.kind === 'bill'}
+		<p class="draft-line">{billLine(draft.bill)}</p>
+		<p class="draft-quiet">{$t('gardener.draft.billText')}</p>
 	{/if}
 
 	{#if !settled}
@@ -196,7 +225,9 @@
 								? $t('gardener.draft.addToList')
 								: draft.kind === 'recipe'
 									? $t('gardener.draft.openRecipe')
-									: $t('gardener.draft.verify')}
+									: draft.kind === 'bill'
+										? $t('gardener.draft.openBill')
+										: $t('gardener.draft.verify')}
 					disabled={busy}
 					onclick={commit}
 				/>

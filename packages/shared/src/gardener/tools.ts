@@ -196,7 +196,7 @@ function logQuick(actions: readonly string[]): { description: string; schema: Js
 export const SCHEMAS: Readonly<Record<string, { description: string; schema: JsonSchema }>> = {
 	'draft-tasks': {
 		description:
-			'Drafts tasks as a card in the thread, which the owner keeps or discards; nothing is saved until they keep it. Put every task in one call: one task is a card of its own, several are one card kept together. A task is a todo unless it repeats: with `repeat` it is a routine, which comes round on its days and is done each time, and with `timesPer` it is a habit, counted against a target ("run three times a week"); never pass both. Use it when the owner asks to be reminded of something, to add something to do, or to start doing something regularly. Work out a relative day ("Friday", "tomorrow") from today’s date in the system prompt and pass it as `due`; a todo with no `due` lands on today when kept. Returns the drafted tasks, each with its kind. To change, finish or delete a task that exists, use `update-tasks`.',
+			'Drafts tasks as a card in the thread, which the owner keeps or discards; nothing is saved until they keep it. Put every task in one call: one task is a card of its own, several are one card kept together. A task is a todo unless it repeats: with `repeat` it is a routine, which comes round on its days and is done each time, and with `timesPer` it is a habit, counted against a target ("run three times a week"); never pass both. Use it when the owner asks to be reminded of something, to add something to do, or to start doing something regularly. Work out a relative day ("Friday", "tomorrow") from today’s date in the system prompt and pass it as `due`; a todo with no `due` lands on today when kept. When a task is for a row you read (paying a `bill`), pass it as `about`: the task links to it, and a bill’s task is done once the bill is paid. Returns the drafted tasks, each with its kind. To change, finish or delete a task that exists, use `update-tasks`.',
 		schema: object(
 			{
 				tasks: {
@@ -234,6 +234,16 @@ export const SCHEMAS: Readonly<Record<string, { description: string; schema: Jso
 									['count', 'per']
 								),
 								description: 'A target to count against, which makes it a habit: 3 per week.',
+							},
+							about: {
+								...object(
+									{
+										type: text('The row’s type, as `read-rows` names it: `bill`.'),
+										id: text('The row’s `id`, from `read-rows`.'),
+									},
+									['type', 'id']
+								),
+								description: 'The row the task is for, when it is for one: paying a bill, using up an item.',
 							},
 						},
 						['title']
