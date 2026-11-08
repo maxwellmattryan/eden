@@ -16,7 +16,13 @@ import {
 import vectors from './money.vectors.json'
 
 type ParseCase = { text: string; locale: string; currency: string; minor?: number; error?: MoneyParseError }
-type FormatCase = { minor: number; currency: string; locale: string; sign?: 'auto' | 'never' | 'exceptZero'; formatted: string }
+type FormatCase = {
+	minor: number
+	currency: string
+	locale: string
+	sign?: 'auto' | 'never' | 'exceptZero'
+	formatted: string
+}
 
 describe('money vectors', () => {
 	it.each(vectors.decimals)('$currency has $decimals decimals', ({ currency, decimals }) => {

@@ -103,15 +103,7 @@ export interface LedgerInput {
 }
 
 export type RowFlag =
-	| 'pending'
-	| 'split'
-	| 'one-off'
-	| 'reimbursable'
-	| 'refund'
-	| 'recurring'
-	| 'bill'
-	| 'review'
-	| 'other-currency'
+	'pending' | 'split' | 'one-off' | 'reimbursable' | 'refund' | 'recurring' | 'bill' | 'review' | 'other-currency'
 const FLAG_ORDER: readonly RowFlag[] = [
 	'pending',
 	'split',
