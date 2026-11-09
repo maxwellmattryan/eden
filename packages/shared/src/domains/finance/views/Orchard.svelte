@@ -1,6 +1,6 @@
 <script lang="ts">
 	// Orchard's page (product/domains/finance.md, "Surfaces"): the header with the tab's actions, the tabs (Activity,
-	// #83, D-199, which has none; Accounts; Bills, #78; Budget, #84, D-201; Investments, #76, D-197; and Goals, #88, D-203), the page's error with Retry when a write failed or the rows could not be read, and the tab's view.
+	// #83, D-199, which has none; Accounts; Bills, #78; Budget, #84, D-201; Debt, #86, D-205, which adds a loan; Investments, #76, D-197; and Goals, #88, D-203), the page's error with Retry when a write failed or the rows could not be read, and the tab's view.
 	// Goals' header adds a goal while an account can hold one; a bought goal's Done row opens the asset and account
 	// sheets with a preset.
 	// Budget's view holds the month it shows and tells the page through `onmonth`, so its header's Draft from history
@@ -75,6 +75,8 @@
 	import CoinbaseKeySheet from './CoinbaseKeySheet.svelte'
 	import Goals from './Goals.svelte'
 	import GoalSheet from './GoalSheet.svelte'
+	import Debt from './Debt.svelte'
+	import DebtSheet, { type DebtSheetMode } from './DebtSheet.svelte'
 	import HoldingSheet from './HoldingSheet.svelte'
 	import ImportSheet from './ImportSheet.svelte'
 	import Income from './Income.svelte'
@@ -141,6 +143,7 @@
 		| { sheet: 'goal'; goal?: SavingsGoal }
 		| { sheet: 'rebuild'; goal: SavingsGoal }
 		| { sheet: 'rate' }
+		| { sheet: 'terms'; account?: Account; mode: DebtSheetMode }
 	let current = $state<Open>()
 	let shown = $state(false)
 	let opened = $state(0)
@@ -184,6 +187,7 @@
 		}
 	}
 
+	const addLoan = () => show({ sheet: 'terms', mode: 'new-loan' })
 	const bound = $derived(provider.bound)
 	const linkBrokerage = $derived(bound ? () => bound.link('brokerage') : undefined)
 	/** Signs a link in again: Coinbase's through its key sheet, a bank's through the provider. */
@@ -234,6 +238,16 @@
 					icon: 'plus',
 					variant: 'secondary',
 					onclick: () => show({ sheet: 'bill' }),
+				},
+			]
+		if (tab === 'debt')
+			return [
+				{
+					id: 'add-loan',
+					label: $t('domains.finance.actions.addLoan'),
+					icon: 'plus',
+					variant: 'primary',
+					onclick: addLoan,
 				},
 			]
 		if (tab === 'goals')
@@ -451,6 +465,12 @@
 				onedit={(month, categoryId) => show({ sheet: 'budget-line', month, categoryId })}
 			/>
 		{/if}
+	{:else if tab === 'debt'}
+		<Debt
+			onterms={(account) => show({ sheet: 'terms', account, mode: account.kind === 'loan' ? 'loan' : 'card' })}
+			onpromo={(account) => show({ sheet: 'terms', account, mode: 'promo' })}
+			onaddloan={addLoan}
+		/>
 	{:else if tab === 'goals'}
 		<!-- nothing is drawn until the rows are read, as on Budget -->
 		{#if finance.ready}
@@ -606,6 +626,8 @@
 		<BudgetLineSheet bind:open={shown} month={current.month} categoryId={current.categoryId} />
 	{:else if current?.sheet === 'holding'}
 		<HoldingSheet bind:open={shown} holding={current.holding} field={current.field} />
+	{:else if current?.sheet === 'terms'}
+		<DebtSheet bind:open={shown} account={current.account} mode={current.mode} />
 	{:else if current?.sheet === 'remove'}
 		{@const link = current.link}
 		<ConfirmSheet

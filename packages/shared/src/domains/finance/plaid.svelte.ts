@@ -54,6 +54,7 @@ import {
 	FINANCE,
 	type Account,
 	type BillPayload,
+	type LiabilityPayload,
 	type HoldingPayload,
 	type ProviderLink,
 	type ProviderLinkPayload,
@@ -349,6 +350,8 @@ async function run() {
 	if (wrote || valued) await finance.classify()
 	else await finance.detectIncome()
 	if (done.size) await finance.billPass()
+	// then the hand-entered loans step on and an intro rate's end is said (#86)
+	if (done.size) await finance.debtPass()
 }
 
 /**
@@ -441,24 +444,27 @@ async function syncLink(link: ProviderLink): Promise<boolean> {
 		const made: { out?: ReturnType<typeof syncOps> } = {}
 		// the read and the write in one queue job, so an owner's fix cannot land between them and be overwritten
 		const written = await finance.applySync(async () => {
-			// the bills in the same job, so a card's statement bill is made once, and never again once deleted (#78)
-			const [existing, bills] = await Promise.all([
+			// the bills in the same job, so a card's statement bill is made once, and never again once deleted (#78); the
+			// live liabilities always, since every account read brings a card's limit (#86)
+			const [existing, bills, liabilities] = await Promise.all([
 				existingRows(idsToRead(result)),
 				result.statements?.length
 					? queryEntities<BillPayload>({ type: FINANCE.bill, includeDeleted: true })
 					: Promise.resolve([]),
+				queryEntities<LiabilityPayload>({ type: FINANCE.liability }),
 			])
 			const out = (made.out = syncOps({
 				link,
 				accounts: finance.data().accounts,
 				bills,
+				liabilities: liabilities.map((row) => ({ ...row.payload, id: row.id })),
 				existing,
 				result,
 				nowIso: nowIso(),
 				day: todayIso(),
 				newId,
 			}))
-			return { chunks: out.chunks, links: [out.link], accounts: out.accounts }
+			return { chunks: out.chunks, links: [out.link], accounts: out.accounts, liabilities: out.liabilities }
 		})
 		if (made.out) {
 			logSkipped(made.out.skipped)

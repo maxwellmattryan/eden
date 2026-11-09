@@ -209,6 +209,7 @@ describe('paletteIndex', () => {
 			'go.finance.accounts',
 			'go.finance.bills',
 			'go.finance.budget',
+			'go.finance.debt',
 			'go.finance.investments',
 			'go.finance.goals',
 		])

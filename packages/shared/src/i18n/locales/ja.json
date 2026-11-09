@@ -1208,6 +1208,7 @@
 				"accounts": "口座",
 				"bills": "請求",
 				"budget": "予算",
+				"debt": "負債",
 				"investments": "投資",
 				"goals": "目標"
 			},
@@ -1572,7 +1573,93 @@
 				"captureBill": "請求書を読み取る",
 				"addBill": "請求を追加",
 				"linkBrokerage": "証券口座を連携",
-				"reconnect": "再接続"
+				"reconnect": "再接続",
+				"addLoan": "ローンを追加"
+			},
+			"debt": {
+				"label": "負債の合計",
+				"owed": "残高",
+				"usage": "カードの利用率",
+				"ofLimit": "限度額 {limit}",
+				"leftOut": "{currencies}の負債{count}件は合計に含まれません",
+				"cards": "カード",
+				"loans": "ローン",
+				"apr": "年率 {rate}",
+				"introUntil": "{day}まで優遇金利 {intro}、その後 {rate}",
+				"introUntilNoRate": "{day}まで優遇金利 {intro}",
+				"introEnds": "優遇金利 {intro} は{day}に終了",
+				"addRate": "金利を追加してください",
+				"used": "限度額 {limit} の {percent} を利用",
+				"addLimit": "限度額を追加してください",
+				"minimumDue": "{day}までに最低 {amount}",
+				"minimum": "最低 {amount}",
+				"payment": "毎月 {amount}・{day}日払い",
+				"paymentLastDay": "毎月 {amount}・月末払い",
+				"paymentOnly": "毎月 {amount}",
+				"paidOffAround": "{month}ごろ完済",
+				"notPaidOff": "この返済額では完済しません",
+				"empty": {
+					"title": "負債はありません",
+					"text": "連携または追加したカードとローンがここに表示されます。"
+				},
+				"menu": {
+					"editTerms": "条件を編集",
+					"addIntro": "優遇金利を追加",
+					"editIntro": "優遇金利を編集",
+					"clearIntro": "優遇金利を消去"
+				},
+				"plan": {
+					"title": "返済計画",
+					"strategyLabel": "返済の順番",
+					"interest": "金利の高い順",
+					"balance": "残高の少ない順",
+					"extra": "毎月の追加返済",
+					"debtFree": "完済",
+					"never": "この返済額では50年以内に完済しません",
+					"interestTotal": "利息",
+					"interestSaves": "金利の高い順なら利息が {amount} 少なくなります",
+					"balanceSaves": "残高の少ない順なら利息が {amount} 少なくなります",
+					"same": "どちらの順番でも同じです",
+					"order": "完済する順の負債",
+					"paidOff": "{month}に完済",
+					"notPaid": "50年以内に完済しません",
+					"notInPlan": "計画に含まれないもの",
+					"needRate": "計画に入れるには金利を追加してください",
+					"needMinimum": "計画に入れるには最低返済額を追加してください"
+				},
+				"sheet": {
+					"termsTitle": "条件を編集",
+					"introTitle": "優遇金利",
+					"newLoanTitle": "ローンを追加",
+					"apr": "年率",
+					"limit": "利用限度額",
+					"introRate": "優遇金利",
+					"ends": "終了日",
+					"payment": "毎月の返済額",
+					"minimum": "最低返済額",
+					"minimumHelp": "明細に最低額が載るまで計画に使います",
+					"dueDay": "毎月の支払日",
+					"dueDayHelp": "31は月末を意味します",
+					"name": "名前",
+					"lender": "借入先",
+					"currency": "通貨",
+					"balance": "借入残高",
+					"fromBank": "{bank}の値: {value}。空欄ならこの値を使います",
+					"bankNone": "{bank}からの値はありません"
+				},
+				"errors": {
+					"rate": "0〜999.99%の金利を入力してください",
+					"ends": "今日以降の日を入力してください",
+					"dueDay": "1〜31の日を入力してください",
+					"payment": "毎月の返済額を入力してください",
+					"balance": "借入残高を入力してください"
+				},
+				"toasts": {
+					"termsSaved": "{name}の条件を保存しました",
+					"introSaved": "{name}の優遇金利を保存しました",
+					"introCleared": "{name}の優遇金利を消去しました",
+					"loanAdded": "{name}を追加しました"
+				}
 			},
 			"investments": {
 				"label": "投資の合計",
@@ -2198,6 +2285,9 @@
 				},
 				"newIncome": {
 					"line": "{employer}から新しい給与"
+				},
+				"promoEnding": {
+					"line": "{card}の優遇金利は{endsDay}に終わります"
 				}
 			}
 		},

@@ -21,6 +21,7 @@ export const FINANCE = {
 	income: 'income-source',
 	budget: 'budget',
 	goal: 'savings-goal',
+	liability: 'liability',
 } as const
 
 /** Where a bill came from (#78): a letter read on the device, a card's statement, a series, or the owner's hand. */
@@ -633,6 +634,58 @@ export interface SavingsGoalPayload {
 	high?: { amount: Money; day: string }
 }
 export type SavingsGoal = SavingsGoalPayload & { id: string }
+/** A card APR's kind, from Plaid's `purchase_apr`, `balance_transfer_apr`, `cash_apr`, `special`; anything else is `other`. */
+export const APR_KINDS = ['purchase', 'balance-transfer', 'cash', 'special', 'other'] as const
+export type AprKind = (typeof APR_KINDS)[number]
+
+/** One of a card's APRs, as the provider states it. */
+export interface Apr {
+	kind: AprKind
+	/** Basis points: 1524 is 15.24 %. */
+	rate: number
+	/** The balance subject to it. */
+	balance?: Money
+	/** The interest it charged. */
+	interest?: Money
+}
+
+/**
+ * A `liability` (#86, D-205): what a debt account costs. At most one live row per `credit-card` or `loan` account,
+ * found by `accountId`. A sync overwrites the provider's keys and keeps the owner's; the owner's win on read
+ * (`effectiveTerms` in `debt.ts`). Rates are in basis points.
+ */
+export interface LiabilityPayload {
+	accountId: string
+
+	// ---- the provider's: a sync overwrites them
+
+	aprs?: Apr[]
+	limit?: Money
+	loan?: {
+		rate?: number
+		minimum?: Money
+		/** `YYYY-MM-DD`, the next payment's. */
+		due?: string
+		/** `YYYY-MM-DD`, the expected payoff or maturity day. */
+		payoffDay?: string
+		original?: Money
+	}
+
+	// ---- the owner's: a sync keeps them
+
+	rate?: number
+	ownerLimit?: Money
+	/** The monthly payment. */
+	payment?: Money
+	/** 1–31; 31 is the month's last day. */
+	dueDay?: number
+	/** An intro rate, for the days before `ends` (`YYYY-MM-DD`). */
+	promo?: { rate: number; ends: string }
+	/** The loan payment series' first bill (`seriesId`), for a hand-entered loan. */
+	billId?: string
+}
+
+export type Liability = LiabilityPayload & { id: string }
 
 export type Category = CategoryPayload & { id: string }
 export type Rule = RulePayload & { id: string; updatedAt: string }
@@ -653,4 +706,5 @@ export interface FinanceData {
 	snapshots?: Snapshot[]
 	holdings?: Holding[]
 	securities?: Security[]
+	liabilities?: Liability[]
 }

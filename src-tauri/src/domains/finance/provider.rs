@@ -55,6 +55,8 @@ pub struct ProviderAccount {
     pub currency: Option<String>,
     pub current: Option<String>,
     pub available: Option<String>,
+    /// A card's credit limit (#86), when the provider states one.
+    pub limit: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -90,10 +92,13 @@ pub struct SyncResult {
     /// Each credit card's latest statement (#78), read when the item has a credit account; empty when it has none
     /// or the provider would not answer.
     pub statements: Vec<CardStatement>,
+    /// Each student loan's and mortgage's terms (#86), read with the statements when the item has a loan account;
+    /// empty when it has none or the provider would not answer.
+    pub loans: Vec<ProviderLoan>,
 }
 
-/// A credit card's latest statement, as the provider's liabilities state it (#78): decimal strings, and days as
-/// `YYYY-MM-DD`. #86 reads the rest of a liability.
+/// A credit card's latest statement, as the provider's liabilities state it (#78), with its APRs (#86): decimal
+/// strings, and days as `YYYY-MM-DD`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CardStatement {
@@ -102,6 +107,39 @@ pub struct CardStatement {
     pub minimum: Option<String>,
     pub due_date: Option<String>,
     pub statement_date: Option<String>,
+    /// The account's ISO 4217 code.
+    pub currency: Option<String>,
+    pub aprs: Vec<ProviderApr>,
+}
+
+/// One of a card's APRs, as the provider states it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProviderApr {
+    /// The provider's type (`purchase_apr`, `balance_transfer_apr`, `cash_apr`, `special`); TypeScript maps it.
+    pub kind: String,
+    /// The rate in percent, `15.24` for 15.24 %.
+    pub percentage: Option<String>,
+    pub balance: Option<String>,
+    pub interest: Option<String>,
+}
+
+/// A student loan's or a mortgage's terms (#86), as the provider's liabilities state them.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProviderLoan {
+    pub provider_account_id: String,
+    /// `student` or `mortgage`.
+    pub kind: String,
+    /// The rate in percent.
+    pub rate: Option<String>,
+    /// The minimum (student) or next monthly (mortgage) payment.
+    pub minimum: Option<String>,
+    /// `YYYY-MM-DD`.
+    pub due_date: Option<String>,
+    /// The expected payoff (student) or maturity (mortgage) day, `YYYY-MM-DD`.
+    pub payoff_date: Option<String>,
+    pub original: Option<String>,
     /// The account's ISO 4217 code.
     pub currency: Option<String>,
 }
