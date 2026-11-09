@@ -130,21 +130,45 @@ pub enum Mode<'a> {
     Update { access_token: &'a str },
 }
 
-/// The `/link/token/create` body, without the keys (AC1): read products only, 24 months of history, Hosted Link with
-/// the hand-back page. A brokerage asks for investments and takes transactions only where the institution has them,
-/// so an investments-only institution can link (D-197). Update mode carries the link's own access token and no
-/// products, so Plaid keeps the same Item.
-pub fn link_token_request(user_id: &str, mode: &Mode<'_>) -> Value {
+/// Where Link runs (D-203), chosen by the build and never by the webview: Hosted Link in the system browser on
+/// desktop (D-192), Plaid's native sheet (LinkKit) on iOS. Android binds nothing, so it never makes a link token.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Surface {
+    Hosted,
+    Sheet,
+}
+
+impl Surface {
+    pub fn current() -> Self {
+        if cfg!(target_os = "ios") {
+            Surface::Sheet
+        } else {
+            Surface::Hosted
+        }
+    }
+}
+
+/// The `/link/token/create` body, without the keys (AC1): read products only, 24 months of history. On the hosted
+/// surface it asks for Hosted Link with the hand-back page; on the sheet surface it names the Universal Link as the
+/// `redirect_uri`, so a bank's OAuth returns to the app. A brokerage asks for investments and takes transactions only
+/// where the institution has them, so an investments-only institution can link (D-197). Update mode carries the
+/// link's own access token and no products, so Plaid keeps the same Item.
+pub fn link_token_request(user_id: &str, mode: &Mode<'_>, surface: Surface) -> Value {
     let mut body = json!({
         "client_name": "Eden",
         "language": "en",
         "country_codes": ["US"],
         "user": { "client_user_id": user_id },
-        "hosted_link": {
-            "completion_redirect_uri": PLAID_REDIRECT_URI,
-            "url_lifespan_seconds": URL_LIFESPAN_SECONDS,
-        },
     });
+    match surface {
+        Surface::Hosted => {
+            body["hosted_link"] = json!({
+                "completion_redirect_uri": PLAID_REDIRECT_URI,
+                "url_lifespan_seconds": URL_LIFESPAN_SECONDS,
+            });
+        }
+        Surface::Sheet => body["redirect_uri"] = json!(PLAID_REDIRECT_URI),
+    }
     match mode {
         Mode::Link { brokerage: false } => {
             body["products"] = json!(["transactions"]);
@@ -200,7 +224,8 @@ impl Failure {
     }
 }
 
-/// A Hosted Link session as `/link/token/get` reports it.
+/// A Link session: a hosted one as `/link/token/get` reports it, or a sheet as the Swift bridge reported it to the
+/// sheet registry (`link_sheet`).
 #[derive(Debug, PartialEq)]
 pub enum Session {
     Waiting,
@@ -414,16 +439,29 @@ impl<T: Transport> Plaid<T> {
         .map(|_| ())
     }
 
-    /// A link token and its hosted page.
-    pub async fn start_link(&self, user_id: &str, mode: &Mode<'_>) -> Result<LinkStart> {
+    /// A link token, with its hosted page on the hosted surface. The sheet surface needs no page.
+    pub async fn start_link(
+        &self,
+        user_id: &str,
+        mode: &Mode<'_>,
+        surface: Surface,
+    ) -> Result<LinkStart> {
         let answer = self
-            .call("/link/token/create", link_token_request(user_id, mode))
+            .call(
+                "/link/token/create",
+                link_token_request(user_id, mode, surface),
+            )
             .await?;
-        let (Some(link_token), Some(url)) = (
-            text(&answer["link_token"]),
-            text(&answer["hosted_link_url"]),
-        ) else {
+        let Some(link_token) = text(&answer["link_token"]) else {
+            return Err(refused("other", "no link token in the answer"));
+        };
+        let url = text(&answer["hosted_link_url"]);
+        if surface == Surface::Hosted && url.is_none() {
             return Err(refused("other", "no hosted link in the answer"));
+        }
+        let url = match surface {
+            Surface::Hosted => url,
+            Surface::Sheet => None,
         };
         Ok(LinkStart {
             link_token,
@@ -914,7 +952,11 @@ mod tests {
 
     #[test]
     fn a_link_token_asks_for_read_products_and_24_months() {
-        let body = link_token_request("device-1", &Mode::Link { brokerage: false });
+        let body = link_token_request(
+            "device-1",
+            &Mode::Link { brokerage: false },
+            Surface::Hosted,
+        );
         assert!(body.get("required_if_supported_products").is_none());
         assert_eq!(body["products"], json!(["transactions"]));
         assert_eq!(
@@ -940,11 +982,13 @@ mod tests {
             &Mode::Update {
                 access_token: "access-sandbox-1",
             },
+            Surface::Hosted,
         );
         assert_eq!(update["access_token"], json!("access-sandbox-1"));
         assert!(update.get("products").is_none());
         assert!(update.get("additional_consented_products").is_none());
         assert!(update["hosted_link"].is_object());
+        assert!(update.get("redirect_uri").is_none());
 
         assert_eq!(
             Env::of("development").base_url(),
@@ -964,7 +1008,7 @@ mod tests {
 
     #[test]
     fn a_brokerage_link_token_asks_for_investments() {
-        let body = link_token_request("device-1", &Mode::Link { brokerage: true });
+        let body = link_token_request("device-1", &Mode::Link { brokerage: true }, Surface::Hosted);
         assert_eq!(body["products"], json!(["investments"]));
         assert_eq!(
             body["required_if_supported_products"],
@@ -980,10 +1024,96 @@ mod tests {
             json!("https://eden.palekodama.studio/plaid/oauth")
         );
         assert!(body.get("access_token").is_none());
+        assert!(body.get("redirect_uri").is_none());
         let text = body.to_string();
         for never in ["\"auth\"", "\"transfer\"", "\"identity\"", "\"signal\""] {
             assert!(!text.contains(never), "{never} is never asked for");
         }
+    }
+
+    #[test]
+    fn a_sheet_link_token_carries_the_redirect_uri() {
+        let modes = [
+            Mode::Link { brokerage: false },
+            Mode::Link { brokerage: true },
+            Mode::Update {
+                access_token: "access-sandbox-1",
+            },
+        ];
+        for mode in &modes {
+            let hosted = link_token_request("device-1", mode, Surface::Hosted);
+            let sheet = link_token_request("device-1", mode, Surface::Sheet);
+            assert!(sheet.get("hosted_link").is_none());
+            assert_eq!(
+                sheet["redirect_uri"],
+                json!("https://eden.palekodama.studio/plaid/oauth")
+            );
+            assert!(hosted.get("redirect_uri").is_none());
+            for key in [
+                "products",
+                "additional_consented_products",
+                "required_if_supported_products",
+                "transactions",
+                "access_token",
+                "user",
+                "country_codes",
+            ] {
+                assert_eq!(sheet.get(key), hosted.get(key), "{key}");
+            }
+        }
+        let bank = link_token_request("device-1", &modes[0], Surface::Sheet);
+        assert_eq!(bank["transactions"]["days_requested"], json!(730));
+    }
+
+    #[tokio::test]
+    async fn a_sheet_session_needs_no_hosted_url() {
+        let answer =
+            json!({ "link_token": "link-sandbox-1", "expiration": "2026-11-06T12:30:00Z" });
+        let script = Script::new(vec![("/link/token/create", 200, answer.clone())]);
+        let started = plaid(Env::Sandbox, &script)
+            .start_link("device-1", &Mode::Link { brokerage: false }, Surface::Sheet)
+            .await
+            .unwrap();
+        assert_eq!(
+            started,
+            LinkStart {
+                link_token: "link-sandbox-1".to_string(),
+                url: None,
+                expires_at: Some("2026-11-06T12:30:00Z".to_string()),
+            }
+        );
+        let (_, sent) = &script.sent()[0];
+        assert!(sent.get("hosted_link").is_none());
+        assert_eq!(sent["redirect_uri"], json!(PLAID_REDIRECT_URI));
+
+        // The hosted surface still needs its page.
+        let script = Script::new(vec![("/link/token/create", 200, answer)]);
+        let failed = plaid(Env::Sandbox, &script)
+            .start_link(
+                "device-1",
+                &Mode::Link { brokerage: false },
+                Surface::Hosted,
+            )
+            .await
+            .unwrap_err();
+        assert_eq!(code_of(failed), "other");
+        let script = Script::new(vec![(
+            "/link/token/create",
+            200,
+            json!({ "link_token": "link-sandbox-2", "hosted_link_url": "https://hosted.plaid.com/link/x" }),
+        )]);
+        let started = plaid(Env::Sandbox, &script)
+            .start_link(
+                "device-1",
+                &Mode::Link { brokerage: false },
+                Surface::Hosted,
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            started.url.as_deref(),
+            Some("https://hosted.plaid.com/link/x")
+        );
     }
 
     #[tokio::test]

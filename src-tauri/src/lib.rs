@@ -227,6 +227,7 @@ pub fn run() {
             domains::finance::plaid_set_keys,
             domains::finance::plaid_clear_keys,
             domains::finance::plaid_link_start,
+            domains::finance::plaid_link_open,
             domains::finance::plaid_link_poll,
             domains::finance::plaid_sync,
             domains::finance::plaid_investments,

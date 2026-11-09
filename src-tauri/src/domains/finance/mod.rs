@@ -16,12 +16,13 @@ use tauri::State;
 use crate::db::secret_store::SecretStore;
 use crate::error::{EdenError, Result};
 use crate::substrate::{egress, ids, usage, Workspace};
-use plaid::{refused, Env, Keys, Mode, Plaid, Session, Transport};
+use plaid::{refused, Env, Keys, Mode, Plaid, Session, Surface, Transport};
 use provider::{InvestmentsResult, LinkPoll, LinkStart, PlaidStatus, SyncResult};
 
 pub mod plaid;
 pub mod provider;
 
+mod link_sheet;
 mod mask;
 mod pdf_text;
 
@@ -477,12 +478,22 @@ fn user_id(secrets: &dyn SecretStore) -> Result<String> {
     Ok(id)
 }
 
+/// How this build links (D-203): Hosted Link in the system browser on desktop, Plaid's native sheet on iOS, and
+/// nothing on Android, where Plaid never binds.
+#[cfg(target_os = "ios")]
+const LINK_SURFACE: &str = "sheet";
+#[cfg(target_os = "android")]
+const LINK_SURFACE: &str = "none";
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
+const LINK_SURFACE: &str = "hosted";
+
 #[tauri::command]
 pub async fn plaid_status(secrets: State<'_, Box<dyn SecretStore>>) -> Result<PlaidStatus> {
     let env = Env::current();
     Ok(PlaidStatus {
         environment: env.name(),
         has_keys: keys(secrets.inner().as_ref(), env)?.is_some(),
+        link: LINK_SURFACE,
     })
 }
 
@@ -521,8 +532,9 @@ pub async fn plaid_clear_keys(secrets: State<'_, Box<dyn SecretStore>>) -> Resul
     Ok(())
 }
 
-/// A hosted Link session: a new Item (a brokerage's with `brokerage`), or with `link_id` the update mode of that
-/// link's own Item.
+/// A Link session: a new Item (a brokerage's with `brokerage`), or with `link_id` the update mode of that link's own
+/// Item. On desktop it is a hosted page; on iOS a token for Plaid's sheet, which `plaid_link_open` presents. Android
+/// has no Link (D-203).
 #[tauri::command]
 pub async fn plaid_link_start(
     workspace: State<'_, Workspace>,
@@ -530,10 +542,14 @@ pub async fn plaid_link_start(
     link_id: Option<String>,
     brokerage: Option<bool>,
 ) -> Result<LinkStart> {
+    if LINK_SURFACE == "none" {
+        return Err(refused("other", "no Link on this device"));
+    }
+    let surface = Surface::current();
     let secrets = secrets.inner().as_ref();
     let plaid = client(&workspace, secrets)?;
     let user = user_id(secrets)?;
-    match link_id {
+    let started = match link_id {
         Some(link_id) => {
             let access_token = token(secrets, &link_id)?;
             plaid
@@ -542,20 +558,33 @@ pub async fn plaid_link_start(
                     &Mode::Update {
                         access_token: &access_token,
                     },
+                    surface,
                 )
-                .await
+                .await?
         }
         None => {
             let mode = Mode::Link {
                 brokerage: brokerage.unwrap_or(false),
             };
-            plaid.start_link(&user, &mode).await
+            plaid.start_link(&user, &mode, surface).await?
         }
+    };
+    if surface == Surface::Sheet {
+        link_sheet::begin(&started.link_token);
     }
+    Ok(started)
 }
 
-/// Where a session is. A finished new one exchanges its public token here, stores the access token under a new link
-/// id and reads the institution, the item and the accounts; the public token never leaves the crate.
+/// Presents Plaid's sheet (iOS) on a link token this run made for it, again after the owner closed it. Any other token,
+/// or no window to present over, is `plaid:other`.
+#[tauri::command]
+pub async fn plaid_link_open(link_token: String) -> Result<()> {
+    link_sheet::present(&link_token)
+}
+
+/// Where a session is: a sheet's from the sheet registry with no request, a hosted one from Plaid. A finished new one
+/// exchanges its public token here, stores the access token under a new link id and reads the institution, the item
+/// and the accounts; the public token never leaves the crate.
 #[tauri::command]
 pub async fn plaid_link_poll(
     workspace: State<'_, Workspace>,
@@ -568,9 +597,17 @@ pub async fn plaid_link_poll(
     if let Some(answer) = done.get(&link_token) {
         return Ok(answer.clone());
     }
+    let sheet = link_sheet::session_of(&link_token);
+    if sheet == Some(Session::Waiting) {
+        return Ok(LinkPoll::Waiting);
+    }
     let secrets = secrets.inner().as_ref();
     let plaid = client(&workspace, secrets)?;
-    let answer = match plaid.poll_link(&link_token, chrono::Utc::now()).await? {
+    let session = match sheet {
+        Some(session) => session,
+        None => plaid.poll_link(&link_token, chrono::Utc::now()).await?,
+    };
+    let answer = match session {
         Session::Waiting => return Ok(LinkPoll::Waiting),
         Session::Expired => LinkPoll::Expired,
         Session::Exited { reason } => LinkPoll::Exited { reason },
@@ -586,6 +623,7 @@ pub async fn plaid_link_poll(
             return Err(refused("other", "a finished session with no public token"))
         }
     };
+    link_sheet::forget(&link_token);
     done.insert(link_token, answer.clone());
     Ok(answer)
 }
@@ -988,5 +1026,18 @@ mod tests {
             ]
         );
         assert_eq!((found.pages, found.pages_read), (3, 2));
+    }
+
+    #[test]
+    fn the_status_names_the_link_surface() {
+        assert_eq!(LINK_SURFACE, "hosted");
+        assert_eq!(Surface::current(), Surface::Hosted);
+        let status = serde_json::to_value(PlaidStatus {
+            environment: "sandbox",
+            has_keys: false,
+            link: LINK_SURFACE,
+        })
+        .unwrap();
+        assert_eq!(status["link"], "hosted");
     }
 }

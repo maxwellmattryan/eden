@@ -5,7 +5,17 @@ fn main() {
     link_weatherkit();
     link_text_reader();
     link_privacy_cover();
+    allow_plaid_link_bridge();
     tauri_build::build()
+}
+
+/// The Plaid Link bridge (`swift/EdenPlaidLink`, D-203) is compiled into the iOS app target by Xcode, not by cargo:
+/// LinkKit is a binary framework only the app can embed. The staticlib leaves `eden_plaid_link_open` for the app's
+/// final link; the cdylib cargo also builds for iOS is told the symbol may stay undefined, so it still links.
+fn allow_plaid_link_bridge() {
+    if std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default() == "ios" {
+        println!("cargo:rustc-cdylib-link-arg=-Wl,-U,_eden_plaid_link_open");
+    }
 }
 
 /// Builds and links the app switcher's privacy cover (`swift/EdenPrivacyCover`) when the target is iOS. macOS has no
