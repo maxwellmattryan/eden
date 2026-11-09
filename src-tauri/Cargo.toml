@@ -62,7 +62,7 @@ sysinfo = "0.37"
 thiserror = "2.0"
 # The workspace database (docs/engineering/data-layer.md): SQLCipher built from source with its own OpenSSL, so every
 # target links the same encrypted SQLite and nothing depends on a system library.
-rusqlite = { version = "0.38.0", features = ["bundled-sqlcipher-vendored-openssl"] }
+rusqlite = { version = "0.41.1", features = ["bundled-sqlcipher-vendored-openssl"] }
 # Entity ids (D-24): sortable by creation time, generated monotonically within the process.
 ulid = "1"
 # The hash of an attachment's bytes, and of each file in an export bundle; already in the tree.

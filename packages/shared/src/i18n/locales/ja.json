@@ -2261,7 +2261,14 @@
 					"invalidKeys": "Plaidがこのデバイスのキーを受け付けませんでした。",
 					"network": "Plaidに接続できませんでした。",
 					"failed": "Plaidはこの銀行を連携できませんでした。",
-					"changeKeys": "キーを変更"
+					"changeKeys": "キーを変更",
+					"sheet": {
+						"starting": "Plaidを開いています…",
+						"waitingTitle": "Plaidで続けてください",
+						"waiting": "Plaidの画面で銀行にログインしてください。終わるとEdenが受け取ります。",
+						"openAgain": "Plaidをもう一度開く",
+						"expired": "Plaidのセッションの有効期限が切れました。"
+					}
 				}
 			},
 			"notifications": {

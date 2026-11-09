@@ -51,6 +51,7 @@
 	import { quickLogUi } from '@eden/shared/shell/quick-log'
 	import QuickLogHost from '@eden/shared/shell/quick-log/QuickLogHost.svelte'
 	import { startSignals } from '@eden/shared/signals'
+	import { bindPlaid } from '@eden/shared/domains/finance'
 	import { FORECAST_RESOURCE, weather } from '@eden/shared/weather'
 	import { dismissSplash, splashVisible } from '@eden/shared/stores'
 	import CrashScreen from '@eden/shared/components/CrashScreen.svelte'
@@ -233,6 +234,10 @@
 			declarations,
 			bind: manifests.flatMap((manifest) => (manifest.subscribe ? [manifest.subscribe] : [])),
 		})
+		// Orchard's bank links (finance.md §8, D-206): Plaid binds where the crate links, through Plaid's own sheet on
+		// iOS, and syncs every link once now; the hourly run and the retries come through the scheduler. Android and a
+		// plain browser bind nothing.
+		const unbindPlaid = bindPlaid()
 		// Sky's tab glyph and the offline banner read the forecast for as long as the shell is up, which is what
 		// keeps it fresh while the app is in front (the refresh coordinator; D-73).
 		const releaseSky = coordinator.watch(FORECAST_RESOURCE)
@@ -243,6 +248,7 @@
 			if (devLock) delete devLock.__edenLock
 			stopBack()
 			releaseSky()
+			unbindPlaid()
 			stopSignals()
 			cleanupErrors()
 			settings.dispose()

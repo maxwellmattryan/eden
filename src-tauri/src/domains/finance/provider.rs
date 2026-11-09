@@ -206,12 +206,14 @@ pub struct InvestmentsResult {
     pub transactions: Vec<ProviderInvestmentTransaction>,
 }
 
-/// What a new Link session hands the webview: the token it polls with and the page to open.
+/// What a new Link session hands the webview: the token it polls with, and on the hosted surface the page to open. On
+/// the sheet surface (iOS, #89) there is no page: the webview asks the crate to present Plaid's sheet instead.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LinkStart {
     pub link_token: String,
-    pub url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
     pub expires_at: Option<String>,
 }
 
@@ -221,4 +223,7 @@ pub struct PlaidStatus {
     /// `sandbox` or `production`, from the build.
     pub environment: &'static str,
     pub has_keys: bool,
+    /// How this build links (D-206): `hosted` (desktop, the system browser), `sheet` (iOS, Plaid's native sheet) or
+    /// `none` (Android, nothing binds).
+    pub link: &'static str,
 }

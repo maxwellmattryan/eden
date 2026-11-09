@@ -9,12 +9,14 @@
 /* Begin PBXBuildFile section */
 		1162F274A4BB81F7DBBC06FF /* libapp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 904327EBC855ACB999349854 /* libapp.a */; };
 		28FDC7AF356DC126C0B5F330 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 68F4F3D21C10C644308740BD /* UIKit.framework */; };
+		2A9BFA383C11A8A2820B82A3 /* PlaidLinkBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C2D5EA6F2BABEBDBAEF4C88 /* PlaidLinkBridge.swift */; };
 		3BC4F2C96494C9593BFB3AB5 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0A9F19F42A4B965E1BD6640C /* Security.framework */; };
 		5E1F364F8E10A7E06ECA555F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 82D8248B9708568BA4040FBE /* LaunchScreen.storyboard */; };
 		626929CFD068B17C6F425396 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 929162ABFFF65AFC4066E59B /* QuartzCore.framework */; };
 		72B78E2157D09356E163A832 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 941D3B0E74159470A7A97B3A /* Assets.xcassets */; };
 		831E177E796357E0790440E8 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 16D3512C89A8EABF2DB64A19 /* CoreGraphics.framework */; };
 		93D3065B1015E48739DD3C59 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = DE5A5CDA0EE555DBABA8586C /* main.mm */; };
+		BD12110CCF89391174BA59BE /* LinkKit in Frameworks */ = {isa = PBXBuildFile; productRef = 3D658875B8BB6D7291072443 /* LinkKit */; };
 		D25036F82F7FA15D7AE05D9C /* assets in Resources */ = {isa = PBXBuildFile; fileRef = CC3821C6FB045A4789FC390F /* assets */; };
 		D3994F99FAE4C87E14C9EC4C /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E78C804F6284C28F304FABBE /* WebKit.framework */; };
 		DD9CC06E1A4FF16C3857DCE8 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EB92070D6B090B4CB21E0FD1 /* MetalKit.framework */; };
@@ -40,6 +42,7 @@
 		929162ABFFF65AFC4066E59B /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		941D3B0E74159470A7A97B3A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		99F7B52B688EB13BBCD148F2 /* app.rs */ = {isa = PBXFileReference; path = app.rs; sourceTree = "<group>"; };
+		9C2D5EA6F2BABEBDBAEF4C88 /* PlaidLinkBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaidLinkBridge.swift; sourceTree = "<group>"; };
 		A96242E0A00841C3DA80B9CF /* error.rs */ = {isa = PBXFileReference; path = error.rs; sourceTree = "<group>"; };
 		B26DE9DA10416834C229453B /* eden-app_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "eden-app_iOS.entitlements"; sourceTree = "<group>"; };
 		C55ACE5B1E23B84B390B638C /* main.rs */ = {isa = PBXFileReference; path = main.rs; sourceTree = "<group>"; };
@@ -64,6 +67,7 @@
 				3BC4F2C96494C9593BFB3AB5 /* Security.framework in Frameworks */,
 				28FDC7AF356DC126C0B5F330 /* UIKit.framework in Frameworks */,
 				D3994F99FAE4C87E14C9EC4C /* WebKit.framework in Frameworks */,
+				BD12110CCF89391174BA59BE /* LinkKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -87,6 +91,15 @@
 			path = bindings;
 			sourceTree = "<group>";
 		};
+		60CF69A74A6E47443D3D0F90 /* EdenPlaidLink */ = {
+			isa = PBXGroup;
+			children = (
+				9C2D5EA6F2BABEBDBAEF4C88 /* PlaidLinkBridge.swift */,
+			);
+			name = EdenPlaidLink;
+			path = ../../swift/EdenPlaidLink;
+			sourceTree = "<group>";
+		};
 		6E18A727B29C89E793417585 /* Externals */ = {
 			isa = PBXGroup;
 			children = (
@@ -100,6 +113,7 @@
 				CC3821C6FB045A4789FC390F /* assets */,
 				941D3B0E74159470A7A97B3A /* Assets.xcassets */,
 				82D8248B9708568BA4040FBE /* LaunchScreen.storyboard */,
+				60CF69A74A6E47443D3D0F90 /* EdenPlaidLink */,
 				B740CA52834822DE669BF456 /* eden-app_iOS */,
 				6E18A727B29C89E793417585 /* Externals */,
 				F8EF56884C72BEBC32120CFA /* Sources */,
@@ -210,6 +224,7 @@
 			);
 			name = "eden-app_iOS";
 			packageProductDependencies = (
+				3D658875B8BB6D7291072443 /* LinkKit */,
 			);
 			productName = "eden-app_iOS";
 			productReference = 19CA876B859FEFF2FE95E86A /* eden-app_iOS.app */;
@@ -238,6 +253,9 @@
 			);
 			mainGroup = 97D252AE48E53C0B02A92527;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				C930CB98A55BB42B33F2D109 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B78B4E1B227EC2744A57C202 /* Products */;
 			projectDirPath = "";
@@ -291,6 +309,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				93D3065B1015E48739DD3C59 /* main.mm in Sources */,
+				2A9BFA383C11A8A2820B82A3 /* PlaidLinkBridge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -324,6 +343,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.palekodama.eden.dev;
 				PRODUCT_NAME = "Eden Dev";
 				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = arm64;
 			};
@@ -356,6 +376,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.palekodama.eden.dev;
 				PRODUCT_NAME = "Eden Dev";
 				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = arm64;
 			};
@@ -502,6 +523,25 @@
 			defaultConfigurationName = debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		C930CB98A55BB42B33F2D109 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/plaid/plaid-link-ios-spm";
+			requirement = {
+				kind = exactVersion;
+				version = 6.5.7;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		3D658875B8BB6D7291072443 /* LinkKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C930CB98A55BB42B33F2D109 /* XCRemoteSwiftPackageReference "plaid-link-ios-spm" */;
+			productName = LinkKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 25302DAD1F6B19691213E8D3 /* Project object */;
 }
