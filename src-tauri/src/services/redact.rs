@@ -4,7 +4,7 @@
 //!
 //! It replaces, in this order:
 //!
-//! 0. key material, wherever it stands (D-201): a PEM private-key block, a JWT, a Coinbase CDP key name, and a
+//! 0. key material, wherever it stands (D-204): a PEM private-key block, a JWT, a Coinbase CDP key name, and a
 //!    mainnet or testnet extended key, public or private: `[key]`;
 //! 1. the value under a sensitive key (`amount`, `merchant`, `access_token`, …), quoted or not, after `:` or `=`, as in
 //!    JSON, Rust `Debug` and `key=value`: the value becomes `"[redacted]"`;
@@ -229,7 +229,7 @@ mod tests {
             ("42 rows in 1234567 ms, total_amount 9", ""),
             ("", ""),
         ];
-        // Key material (D-201), built at run time so no key-shaped text sits in the source.
+        // Key material (D-204), built at run time so no key-shaped text sits in the source.
         let body = format!("MHcCAQEEI{}\n{}==", "A".repeat(55), "B".repeat(40));
         let zpub = crate::domains::finance::xpub::vectors::zpub();
         let built = [

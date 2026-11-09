@@ -1,4 +1,4 @@
-//! The Coinbase client (docs/product/domains/finance.md §8, D-201). One read-only CDP API key per device: an ECDSA
+//! The Coinbase client (docs/product/domains/finance.md §8, D-204). One read-only CDP API key per device: an ECDSA
 //! P-256 key whose name and private key are T3 in the secret store. Every signed request carries a fresh ES256 JWT
 //! for its method and path; the price feed is public and carries none. The key is refused unless Coinbase reports
 //! that it can view and can neither trade nor transfer (D-8). Nothing here can move money.

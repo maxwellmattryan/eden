@@ -1,4 +1,4 @@
-// Orchard's crypto commands (src-tauri/src/domains/finance, D-201): Coinbase's read-only key and its wallets, the
+// Orchard's crypto commands (src-tauri/src/domains/finance, D-204): Coinbase's read-only key and its wallets, the
 // public spot price feed, and the watched addresses and extended public keys read from the chain. The crate holds the
 // key and every extended key and makes every call; the webview gets whether a key exists, the wallets, the prices and
 // each watch's quantity. Outside Tauri there is no crate: the status answers `undefined` and nothing binds. A refusal

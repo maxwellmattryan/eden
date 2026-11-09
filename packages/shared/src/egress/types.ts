@@ -9,7 +9,7 @@
  * batches; `photon` finds a place by name and `overpass` reads its hours (D-131). `plaid` is every call Orchard's bank
  * links make; the crate makes them, so it has no CSP entry either. `coinbase` is Orchard's read-only Coinbase key and
  * the daily spot prices, `blockstream` a watched Bitcoin address or extended key's balances and `blockscout` a watched
- * Ether address's (D-201); the crate makes those calls too, so none has a CSP entry. */
+ * Ether address's (D-204); the crate makes those calls too, so none has a CSP entry. */
 export const DESTINATIONS = [
 	'open-meteo',
 	'open-meteo-air-quality',

@@ -1,4 +1,4 @@
-// Orchard's crypto on the desktop (product/domains/finance.md §8, D-201). The crate holds the Coinbase key and every
+// Orchard's crypto on the desktop (product/domains/finance.md §8, D-204). The crate holds the Coinbase key and every
 // extended key and makes every call (`api/crypto.ts`); this module is the key sheet's save and the run: at launch and
 // every hour (`finance.crypto`), one at a time. A run clears the secrets a removal left once its undo has passed, reads
 // the Coinbase wallets, prices the coins held once a local day, reads each watched asset once a local day, and values

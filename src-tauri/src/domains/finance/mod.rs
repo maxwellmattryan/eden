@@ -662,7 +662,7 @@ pub async fn plaid_sandbox_reset_login(
     plaid.sandbox_reset_login(&token(secrets, &link_id)?).await
 }
 
-// Orchard's crypto (D-201): Coinbase's read-only key, the price feed, and watched addresses and extended keys.
+// Orchard's crypto (D-204): Coinbase's read-only key, the price feed, and watched addresses and extended keys.
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]

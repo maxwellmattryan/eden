@@ -1,4 +1,4 @@
-// Orchard's crypto (product/domains/finance.md §8, D-201), pure so it is tested here: the Coinbase link and its one
+// Orchard's crypto (product/domains/finance.md §8, D-204), pure so it is tested here: the Coinbase link and its one
 // account, the writes one read of the wallets makes, which coins want a price today and the writes the prices make,
 // the value pass over the crypto assets, which watched assets want a read and what a read writes, the watched asset a
 // form makes, the secrets a removal leaves to clear, how old a price may be, a private key's refusal and an asset
@@ -27,7 +27,7 @@ import { dayLine, type Translate } from './words.js'
 
 /** The source of a Coinbase holding's row (its external id the wallet's id) and of a coin's security (the code). */
 export const COINBASE_SOURCE = 'coinbase'
-/** A coin's price or a watch's read older than this many days is out of date (D-201). */
+/** A coin's price or a watch's read older than this many days is out of date (D-204). */
 export const PRICE_AGED_DAYS = 7
 /** Coinbase's blue, the link's swatch. */
 export const COINBASE_COLOUR = '#0052FF'
@@ -143,7 +143,7 @@ export function coinbaseBalanceOps(input: {
 }
 
 /**
- * One read of the Coinbase wallets as writes (D-201): a security per code (`cryptocurrency`, or `cash` for fiat), a
+ * One read of the Coinbase wallets as writes (D-204): a security per code (`cryptocurrency`, or `cash` for fiat), a
  * holding per wallet with a non-zero balance on the link's open account (a fiat one carries its value), the holding
  * of a wallet gone or at zero tombstoned, the owner's cost basis kept, the account's balance from the holdings, and
  * the link fresh. A replay writes only the link's freshness.
@@ -311,7 +311,7 @@ function lastPrice(row: Entity<SecurityPayload> | undefined, home: string) {
 }
 
 /**
- * The coins that want a price today (D-201), in the order met: the unit of every live `crypto` asset with a quantity,
+ * The coins that want a price today (D-204), in the order met: the unit of every live `crypto` asset with a quantity,
  * then the code of every `cryptocurrency` holding on an open Coinbase account. One whose security already has today's
  * price in the home currency is left out, and so is anything that is not a coin's code.
  */
@@ -389,7 +389,7 @@ export function priceOps(input: {
 }
 
 /**
- * The value pass (D-201): each live `crypto` asset with a quantity, a unit and a price in the home currency is worth
+ * The value pass (D-204): each live `crypto` asset with a quantity, a unit and a price in the home currency is worth
  * quantity × that price, as of the price's day, `valuedBy: 'price'`. An unpriced coin keeps the owner's value, a new
  * watch keeps 0 with no day, and an asset whose value did not move is not written.
  */
@@ -506,7 +506,7 @@ export interface AssetLine {
 }
 
 /**
- * An asset row's lines on Accounts (D-197, D-201): a priced coin's quantity and the price's day, a watch's address or
+ * An asset row's lines on Accounts (D-197, D-204): a priced coin's quantity and the price's day, a watch's address or
  * "Extended key", "Not read yet" before its first read, "out of date" for a price or read past `PRICE_AGED_DAYS` and
  * an owner's value past `AGED_DAYS`, and "Not in totals" when its value is in another currency than `home`. Any
  * other asset reads as before.

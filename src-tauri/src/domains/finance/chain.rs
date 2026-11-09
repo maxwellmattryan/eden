@@ -1,4 +1,4 @@
-//! Watched cold wallets (D-201): one Bitcoin or Ethereum address, or a Bitcoin extended public key, read from a
+//! Watched cold wallets (D-204): one Bitcoin or Ethereum address, or a Bitcoin extended public key, read from a
 //! public explorer once a local day. Bitcoin is Blockstream's Esplora, confirmed balance only; Ether is Blockscout,
 //! the coin alone, no tokens. Requests run one after another and a 429 stops the read. Quantities are made from the
 //! explorers' integers with string arithmetic (sats to 8 places, wei to 18), never a float.

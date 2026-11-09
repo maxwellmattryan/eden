@@ -92,7 +92,7 @@ futures-util = "0.3"
 # these features through reqwest; direct so the crate can name it. The desktop Gardener (D-178, D-179) adds the
 # Claude Code process (`process`, `io-util`) and the MCP bridge's waiting calls (`sync`); all already in the tree.
 tokio = { version = "1", features = ["net", "time", "process", "io-util", "sync"] }
-# Orchard's crypto (D-201). Coinbase's read-only CDP key is ECDSA P-256 and every request carries an ES256 JWT signed
+# Orchard's crypto (D-204). Coinbase's read-only CDP key is ECDSA P-256 and every request carries an ES256 JWT signed
 # with it: p256 parses the PEM (SEC1 or PKCS#8) and signs.
 p256 = { version = "0.13", features = ["ecdsa", "pem", "pkcs8"] }
 # An extended public key's children are derived on secp256k1 (BIP-32's CKDpub, point addition only).

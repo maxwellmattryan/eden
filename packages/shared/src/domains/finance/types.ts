@@ -211,7 +211,7 @@ export type LinkStatus = 'ok' | 'needs-reauth' | 'error'
 export type LinkState = 'ok' | 'stale' | 'expiring'
 
 export interface ProviderLinkPayload {
-	/** Plaid's bank links, or Coinbase's one read-only key on this device (D-201). */
+	/** Plaid's bank links, or Coinbase's one read-only key on this device (D-204). */
 	provider: 'plaid' | 'coinbase'
 	institution: {
 		/** The provider's institution id (`ins_56`). */
@@ -285,10 +285,10 @@ export interface AssetPayload {
 	unit?: string
 	/** Basis points, 1 to 10000. */
 	share: number
-	/** `price`: the value is the quantity × the coin's daily price (D-201); absent, it is the owner's. */
+	/** `price`: the value is the quantity × the coin's daily price (D-204); absent, it is the owner's. */
 	valuedBy?: 'price'
 	/**
-	 * What a crypto asset watches on the chain (D-201): one address, or an extended public key held in the device's
+	 * What a crypto asset watches on the chain (D-204): one address, or an extended public key held in the device's
 	 * secure store under the asset's id (`xpub: true`, never the key), with the script its addresses use.
 	 */
 	watch?: AssetWatch

@@ -1,4 +1,4 @@
-//! Extended public keys (D-201): a Bitcoin account's `xpub`, `ypub` or `zpub`, as a hardware wallet shows it, read
+//! Extended public keys (D-204): a Bitcoin account's `xpub`, `ypub` or `zpub`, as a hardware wallet shows it, read
 //! by the addresses it makes. Only public derivation happens here (BIP-32's CKDpub on `m/0/i` and `m/1/i` from the
 //! account key): no private key is ever parsed, and one pasted is refused before anything else. The key is T3: it
 //! lives in the secret store, and the crate never logs or answers it.

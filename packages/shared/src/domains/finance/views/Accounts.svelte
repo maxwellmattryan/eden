@@ -6,7 +6,7 @@
 	// do, offering only what applies: a linked account is read from its bank, so it cannot be edited, given a balance or
 	// deleted here. Every figure is the account's own currency, through `formatMoney` in the app's language. An asset
 	// valued more than 90 days ago says it is out of date and its menu leads with Update value (D-197); a crypto asset
-	// priced daily or watched on the chain reads through `assetLine` and is never updated by hand (D-201). Coinbase's
+	// priced daily or watched on the chain reads through `assetLine` and is never updated by hand (D-204). Coinbase's
 	// group menu offers Replace key where a bank's offers the Sandbox's reset.
 	import {
 		Button,
@@ -46,7 +46,7 @@
 		onreconnect?: (link: ProviderLink) => void
 		/** A Sandbox provider's "Ask to sign in again", which proves the reconnect path; absent elsewhere. */
 		onresetlogin?: (link: ProviderLink) => void
-		/** Coinbase's Replace key (D-201), while crypto is bound; absent elsewhere. */
+		/** Coinbase's Replace key (D-204), while crypto is bound; absent elsewhere. */
 		onreplacekey?: (link: ProviderLink) => void
 		onsample: () => void
 	}
@@ -107,7 +107,7 @@
 	const today = $derived(dateIn(undefined, finance.clock))
 	/**
 	 * An asset's menu: an out-of-date one the owner values leads with Update value, which opens the same sheet as Edit
-	 * (D-197); a priced or watched one is never updated by hand (D-201).
+	 * (D-197); a priced or watched one is never updated by hand (D-204).
 	 */
 	function assetActions(asset: Asset, ownerValued: boolean): MenuItem[] {
 		return [

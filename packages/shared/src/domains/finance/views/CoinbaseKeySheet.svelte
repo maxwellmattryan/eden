@@ -1,5 +1,5 @@
 <script lang="ts">
-	// The device's Coinbase key (product/domains/finance.md §8, D-201): the key's name and its private key, tried
+	// The device's Coinbase key (product/domains/finance.md §8, D-204): the key's name and its private key, tried
 	// against Coinbase and stored in the device's secure store only once Coinbase says the key can view and can neither
 	// trade nor transfer. Once saved they are never shown again: the webview can only ask whether a key exists. Replace
 	// key and Reconnect open straight on the empty fields. What was typed is cleared whenever the sheet closes.

@@ -659,7 +659,7 @@ describe('schedule and aging', () => {
 })
 
 describe('investmentSummary', () => {
-	it("ages a coin priced from a close more than 7 days old, and keeps 90 days for an owner's value (D-201)", () => {
+	it("ages a coin priced from a close more than 7 days old, and keeps 90 days for an owner's value (D-204)", () => {
 		const link: ProviderLink = { id: 'l', provider: 'coinbase', institution: { name: 'Coinbase' }, status: 'ok' }
 		const account: Account = {
 			id: 'a',

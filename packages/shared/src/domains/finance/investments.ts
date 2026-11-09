@@ -603,7 +603,7 @@ export interface HoldingRow {
 	value?: HoldingValue
 	/** The value minus the cost basis, both the holding's own, when both are there in one currency. */
 	gain?: Money
-	/** An owner's typed value set more than `AGED_DAYS` ago, or a coin's close more than `PRICE_AGED_DAYS` old (D-201). */
+	/** An owner's typed value set more than `AGED_DAYS` ago, or a coin's close more than `PRICE_AGED_DAYS` old (D-204). */
 	aged: boolean
 	/** The provider gives no value or price for it, so the owner may type one. */
 	ownerValued: boolean

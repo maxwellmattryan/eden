@@ -41,9 +41,9 @@ updated: 2026-11-08
 | grocery export (HEB, Instacart) | Hearth | file or deep link | export only; ordering would be `act-external` | later |
 | Gmail, label-scoped | Trails, Hearth | OAuth | read on chosen labels only | later |
 | Plaid: Link, Transactions, Liabilities, Investments; Chase and the others through it (D-183, D-187) | Orchard | token, T3, per device (D-184) | read | after (built ahead, D-182) |
-| Coinbase: the wallets, through a View-only CDP key refused if it can trade or transfer (D-201) | Orchard | read-only API key, T3, per device | read | after (built ahead in #81, D-182, D-201) |
-| a price feed: Plaid securities (#76), Coinbase's public spot price for each coin held, once a day (D-201) | Orchard | none for the spot price | read | after (built ahead in #76 and #81, D-182, D-201) |
-| blockchain explorers, public balances for watched addresses: Blockstream's Esplora (Bitcoin, extended keys scanned to a gap of 20) and Blockscout (Ether), once a day (D-201) | Orchard | none; an extended key is T3, per device | read | after (built ahead in #81, D-182, D-201) |
+| Coinbase: the wallets, through a View-only CDP key refused if it can trade or transfer (D-204) | Orchard | read-only API key, T3, per device | read | after (built ahead in #81, D-182, D-204) |
+| a price feed: Plaid securities (#76), Coinbase's public spot price for each coin held, once a day (D-204) | Orchard | none for the spot price | read | after (built ahead in #76 and #81, D-182, D-204) |
+| blockchain explorers, public balances for watched addresses: Blockstream's Esplora (Bitcoin, extended keys scanned to a gap of 20) and Blockscout (Ether), once a day (D-204) | Orchard | none; an extended key is T3, per device | read | after (built ahead in #81, D-182, D-204) |
 | SimpleFIN | Orchard | token | read | later |
 | Oura | Wellspring | OAuth | read | later |
 | sync backend (Crate's vendor-agnostic trait, Firebase first) | substrate | Google or Apple sign-in | n/a | 3 |

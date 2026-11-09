@@ -358,7 +358,7 @@
 		// Orchard's bank links (finance.md §8): Plaid binds where the crate is, and syncs every link once now; the
 		// hourly run and the retries come through the scheduler. A plain browser binds nothing.
 		const unbindPlaid = bindPlaid()
-		// Orchard's crypto (D-201): Coinbase's read-only key, the daily prices and the watched addresses, read at launch
+		// Orchard's crypto (D-204): Coinbase's read-only key, the daily prices and the watched addresses, read at launch
 		// and every hour where the crate is; a plain browser binds nothing.
 		const unbindCrypto = bindCrypto()
 		// The sidebar's glyph and the offline banner read the forecast for as long as the shell is up, which is what

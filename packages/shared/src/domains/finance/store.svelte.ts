@@ -240,7 +240,7 @@ export interface SyncChange {
 	holdings?: Holding[]
 	removedHoldings?: string[]
 	securities?: Security[]
-	/** The assets a crypto run read or priced (D-201). */
+	/** The assets a crypto run read or priced (D-204). */
 	assets?: Asset[]
 }
 
@@ -811,7 +811,7 @@ export class FinanceStore {
 	saveAsset(draft: AssetDraft): { asset: Asset; created: boolean; undo: Undo } {
 		const was = $state.snapshot(this.assetById(draft.id)) as Asset | undefined
 		const asset: Asset = { ...draft, id: draft.id ?? was?.id ?? newId(), name: draft.name.trim() }
-		// a watch not read yet has its unit and no quantity (D-201)
+		// a watch not read yet has its unit and no quantity (D-204)
 		if (!asset.quantity && !asset.watch) {
 			delete asset.quantity
 			delete asset.unit
@@ -870,7 +870,7 @@ export class FinanceStore {
 		if (!link) return undefined
 		const set = removeLinkOps(link, $state.snapshot(this.accounts) as Account[], todayIso())
 		const before = { links: this.links, accounts: this.accounts }
-		// Coinbase has nothing to revoke: its key leaves the device once the undo has passed (D-201)
+		// Coinbase has nothing to revoke: its key leaves the device once the undo has passed (D-204)
 		const revoke = link.provider === 'plaid' ? provider.bound : undefined
 		return this.#commit({
 			apply: () => {
@@ -1590,7 +1590,7 @@ export class FinanceStore {
 	}
 
 	/**
-	 * Drafts a month from the bills, the recurring charges and the history, in Eden and with no model (D-201), as one
+	 * Drafts a month from the bills, the recurring charges and the history, in Eden and with no model (D-204), as one
 	 * write with one undo. Answers `empty` when there is nothing to draft, and the count of lines drafted.
 	 */
 	async draftBudget(month: string): Promise<{ undo?: Undo; count: number } | 'empty' | undefined> {
@@ -1615,7 +1615,7 @@ export class FinanceStore {
 		return { ...(undo ? { undo: undo as Undo } : {}), count }
 	}
 
-	/** The owner's line for a month, new or changed (D-201); a refusal answers its code and writes nothing. */
+	/** The owner's line for a month, new or changed (D-204); a refusal answers its code and writes nothing. */
 	saveBudgetLine(month: string, change: Extract<LineChange, { kind: 'save' }>): Promise<EditAnswer<BudgetLineError>> {
 		return this.#budgetEdit((rows) => Promise.resolve(lineOps(rows, month, change, newId)))
 	}
