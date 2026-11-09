@@ -9,7 +9,7 @@ fn main() {
     tauri_build::build()
 }
 
-/// The Plaid Link bridge (`swift/EdenPlaidLink`, D-203) is compiled into the iOS app target by Xcode, not by cargo:
+/// The Plaid Link bridge (`swift/EdenPlaidLink`, D-206) is compiled into the iOS app target by Xcode, not by cargo:
 /// LinkKit is a binary framework only the app can embed. The staticlib leaves `eden_plaid_link_open` for the app's
 /// final link; the cdylib cargo also builds for iOS is told the symbol may stay undefined, so it still links.
 fn allow_plaid_link_bridge() {

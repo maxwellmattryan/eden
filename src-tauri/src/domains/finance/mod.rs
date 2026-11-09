@@ -19,8 +19,12 @@ use crate::substrate::{egress, ids, usage, Workspace};
 use plaid::{refused, Env, Keys, Mode, Plaid, Session, Surface, Transport};
 use provider::{InvestmentsResult, LinkPoll, LinkStart, PlaidStatus, SyncResult};
 
+pub mod chain;
+pub mod coinbase;
+pub mod fetch;
 pub mod plaid;
 pub mod provider;
+pub mod xpub;
 
 mod link_sheet;
 mod mask;
@@ -478,7 +482,7 @@ fn user_id(secrets: &dyn SecretStore) -> Result<String> {
     Ok(id)
 }
 
-/// How this build links (D-203): Hosted Link in the system browser on desktop, Plaid's native sheet on iOS, and
+/// How this build links (D-206): Hosted Link in the system browser on desktop, Plaid's native sheet on iOS, and
 /// nothing on Android, where Plaid never binds.
 #[cfg(target_os = "ios")]
 const LINK_SURFACE: &str = "sheet";
@@ -534,7 +538,7 @@ pub async fn plaid_clear_keys(secrets: State<'_, Box<dyn SecretStore>>) -> Resul
 
 /// A Link session: a new Item (a brokerage's with `brokerage`), or with `link_id` the update mode of that link's own
 /// Item. On desktop it is a hosted page; on iOS a token for Plaid's sheet, which `plaid_link_open` presents. Android
-/// has no Link (D-203).
+/// has no Link (D-206).
 #[tauri::command]
 pub async fn plaid_link_start(
     workspace: State<'_, Workspace>,
@@ -694,6 +698,148 @@ pub async fn plaid_sandbox_reset_login(
     let secrets = secrets.inner().as_ref();
     let plaid = client(&workspace, secrets)?;
     plaid.sandbox_reset_login(&token(secrets, &link_id)?).await
+}
+
+// Orchard's crypto (D-204): Coinbase's read-only key, the price feed, and watched addresses and extended keys.
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CoinbaseStatus {
+    pub has_key: bool,
+}
+
+#[tauri::command]
+pub async fn coinbase_status(secrets: State<'_, Box<dyn SecretStore>>) -> Result<CoinbaseStatus> {
+    let secrets = secrets.inner().as_ref();
+    Ok(CoinbaseStatus {
+        has_key: secrets.get(coinbase::KEY_NAME_SECRET)?.is_some()
+            && secrets.get(coinbase::KEY_SECRET)?.is_some(),
+    })
+}
+
+/// Stores the key once Coinbase has said it can only view: `coinbase:invalid-key`, `coinbase:refused` or
+/// `coinbase:not-read-only` otherwise, and nothing is stored on any failure.
+#[tauri::command]
+pub async fn coinbase_set_key(
+    workspace: State<'_, Workspace>,
+    secrets: State<'_, Box<dyn SecretStore>>,
+    name: String,
+    private_key: String,
+) -> Result<()> {
+    let fetch = fetch::HttpGet::new(&workspace, "coinbase")?;
+    coinbase::set_key(
+        secrets.inner().as_ref(),
+        &fetch,
+        &name,
+        &private_key,
+        chrono::Utc::now().timestamp(),
+    )
+    .await
+}
+
+/// Removes the key from the device. Eden cannot revoke it at Coinbase.
+#[tauri::command]
+pub async fn coinbase_clear_key(secrets: State<'_, Box<dyn SecretStore>>) -> Result<()> {
+    secrets.delete(coinbase::KEY_NAME_SECRET)?;
+    secrets.delete(coinbase::KEY_SECRET)?;
+    Ok(())
+}
+
+/// Every wallet on the account, with its exact amount.
+#[tauri::command]
+pub async fn coinbase_balances(
+    workspace: State<'_, Workspace>,
+    secrets: State<'_, Box<dyn SecretStore>>,
+) -> Result<coinbase::Balances> {
+    let key = coinbase::stored_key(secrets.inner().as_ref())?;
+    let fetch = fetch::HttpGet::new(&workspace, "coinbase")?;
+    coinbase::balances(&fetch, &key, chrono::Utc::now().timestamp()).await
+}
+
+/// One spot price per coin in the home currency, from Coinbase's public feed.
+#[tauri::command]
+pub async fn crypto_prices(
+    workspace: State<'_, Workspace>,
+    codes: Vec<String>,
+    quote: String,
+) -> Result<coinbase::Prices> {
+    let fetch = fetch::HttpGet::new(&workspace, "coinbase")?;
+    coinbase::prices(&fetch, &codes, &quote).await
+}
+
+/// The address in its normal form, or `chain:invalid-address`. Makes no request.
+#[tauri::command]
+pub async fn watch_address_check(chain: String, address: String) -> Result<String> {
+    chain::check_address(chain::Chain::of(&chain)?, &address)
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct XpubSet {
+    pub script: &'static str,
+}
+
+/// Checks an extended public key and stores it under the asset's id; answers the script its addresses use. A private
+/// key is refused before anything is stored.
+#[tauri::command]
+pub async fn watch_xpub_set(
+    secrets: State<'_, Box<dyn SecretStore>>,
+    asset_id: String,
+    key: String,
+    script: Option<String>,
+) -> Result<XpubSet> {
+    let name = chain::xpub_secret(&asset_id)?;
+    let given = match script.as_deref() {
+        Some(text) => {
+            Some(xpub::Script::of(text).ok_or_else(|| chain::refused("other", "not a script"))?)
+        }
+        None => None,
+    };
+    let key = key.trim();
+    let account = xpub::parse(key)?;
+    secrets.set(&name, key)?;
+    Ok(XpubSet {
+        script: account.script(given).name(),
+    })
+}
+
+/// Removes an asset's extended key. Idempotent.
+#[tauri::command]
+pub async fn watch_xpub_clear(
+    secrets: State<'_, Box<dyn SecretStore>>,
+    asset_id: String,
+) -> Result<()> {
+    secrets.delete(&chain::xpub_secret(&asset_id)?)?;
+    Ok(())
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WatchRead {
+    pub quantity: String,
+}
+
+/// One watched asset's quantity: its address's, or with no address its extended key's, read from the secret store.
+#[tauri::command]
+pub async fn watch_read(
+    workspace: State<'_, Workspace>,
+    secrets: State<'_, Box<dyn SecretStore>>,
+    asset_id: String,
+    chain: String,
+    address: Option<String>,
+    script: Option<String>,
+) -> Result<WatchRead> {
+    let chain = chain::Chain::of(&chain)?;
+    let fetch = fetch::HttpGet::new(&workspace, "chain")?;
+    let quantity = match address {
+        Some(address) => chain::read_address(&fetch, chain, &address).await?,
+        None if chain == chain::Chain::Bitcoin => {
+            let key = chain::stored_xpub(secrets.inner().as_ref(), &asset_id)?;
+            chain::read_xpub(&fetch, &key, script.as_deref().and_then(xpub::Script::of)).await?
+        }
+        None => return Err(chain::refused("other", "an Ether watch needs an address")),
+    };
+    Ok(WatchRead { quantity })
 }
 
 #[cfg(test)]

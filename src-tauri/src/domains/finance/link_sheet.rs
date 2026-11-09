@@ -1,4 +1,4 @@
-//! Plaid's native Link sheet on iOS (docs/product/domains/finance.md §8, "Plaid on the phone", D-203). The crate
+//! Plaid's native Link sheet on iOS (docs/product/domains/finance.md §8, "Plaid on the phone", D-206). The crate
 //! presents LinkKit's sheet through the Swift bridge (`swift/EdenPlaidLink`), and the bridge hands the outcome straight
 //! back through `on_outcome`, a C callback with no Tauri state, so the outcomes live here in a process-wide registry
 //! keyed by link token. The webview's poll (`plaid_link_poll`) reads it, so a public token never reaches the webview,

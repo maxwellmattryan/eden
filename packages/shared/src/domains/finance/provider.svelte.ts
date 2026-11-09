@@ -1,4 +1,4 @@
-// The seam a bank provider plugs into: the desktop and iOS bind Plaid here (`plaid.svelte.ts`, D-203); Android and a
+// The seam a bank provider plugs into: the desktop and iOS bind Plaid here (`plaid.svelte.ts`, D-206); Android and a
 // plain browser bind nothing, so their page offers neither "Link a bank" nor "Reconnect". `link()` opens the provider's own flow
 // and writes the `provider-link` row it makes; `reconnect()` signs a stale link in again and updates that same row,
 // never a new one; `revoke()` tells the provider a link is gone, after the page has tombstoned it; `credentials()`

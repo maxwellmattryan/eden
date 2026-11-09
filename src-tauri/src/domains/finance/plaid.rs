@@ -1,8 +1,9 @@
 //! The Plaid client (docs/product/domains/finance.md §8). Every call is a JSON `POST` with the device's client id and
 //! secret in the body, over a `Transport`: `reqwest` in the app, a scripted fake in the tests. Only free calls are
 //! made (D-183): never `/accounts/balance/get` and never a paid refresh. The products asked for are read-only (D-8).
-//! The one exception is `/liabilities/get`, asked once a run and only of an item with a credit account, for its cards'
-//! statements (#78): in production its first call starts that item's Liabilities billing (D-196).
+//! The one exception is `/liabilities/get`, asked once a run and only of an item with a credit or a loan account, for
+//! its cards' statements and APRs (#78, #86) and its loans' terms (#86): in production its first call starts that
+//! item's Liabilities billing (D-196, D-205).
 //!
 //! A failure is `EdenError::Refused("plaid:<code>: <Plaid's error code>")`, with the code one of `needs-reauth`,
 //! `invalid-keys`, `rate-limited`, `institution-down`, `provider-down`, `network`, `other`, `no-keys`, `not-found` and
@@ -15,8 +16,8 @@ use serde_json::{json, Value};
 
 use super::provider::{
     CardStatement, Institution, InvestmentsResult, LinkStart, NewLink, ProviderAccount,
-    ProviderHolding, ProviderInvestmentTransaction, ProviderSecurity, ProviderTransaction,
-    SyncResult,
+    ProviderApr, ProviderHolding, ProviderInvestmentTransaction, ProviderLoan, ProviderSecurity,
+    ProviderTransaction, SyncResult,
 };
 use crate::db::secret_store::SecretStore;
 use crate::error::{EdenError, Result};
@@ -130,7 +131,7 @@ pub enum Mode<'a> {
     Update { access_token: &'a str },
 }
 
-/// Where Link runs (D-203), chosen by the build and never by the webview: Hosted Link in the system browser on
+/// Where Link runs (D-206), chosen by the build and never by the webview: Hosted Link in the system browser on
 /// desktop (D-192), Plaid's native sheet (LinkKit) on iOS. Android binds nothing, so it never makes a link token.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Surface {
@@ -272,6 +273,7 @@ fn account(value: &Value) -> ProviderAccount {
         currency: text(&balances["iso_currency_code"]),
         current: decimal(&balances["current"]),
         available: decimal(&balances["available"]),
+        limit: decimal(&balances["limit"]),
     }
 }
 
@@ -356,30 +358,89 @@ fn accounts(answer: &Value) -> Vec<ProviderAccount> {
         .unwrap_or_default()
 }
 
-/// The credit cards' statements in a `/liabilities/get` answer, each in its account's currency.
+/// The currency of the provider account `id`, as `/accounts/get` stated it.
+fn currency_of(accounts: &[ProviderAccount], id: &str) -> Option<String> {
+    accounts
+        .iter()
+        .find(|account| account.provider_account_id == id)
+        .and_then(|account| account.currency.clone())
+}
+
+fn apr(value: &Value) -> ProviderApr {
+    ProviderApr {
+        kind: text(&value["apr_type"]).unwrap_or_default(),
+        percentage: decimal(&value["apr_percentage"]),
+        balance: decimal(&value["balance_subject_to_apr"]),
+        interest: decimal(&value["interest_charge_amount"]),
+    }
+}
+
+/// The credit cards' statements and APRs in a `/liabilities/get` answer, each in its account's currency.
 fn card_statements(answer: &Value, accounts: &[ProviderAccount]) -> Vec<CardStatement> {
     answer["liabilities"]["credit"]
         .as_array()
-        .map(|list| {
-            list.iter()
+        .map(|cards| {
+            cards
+                .iter()
                 .filter_map(|card| {
                     let id = text(&card["account_id"])?;
-                    let currency = accounts
-                        .iter()
-                        .find(|account| account.provider_account_id == id)
-                        .and_then(|account| account.currency.clone());
                     Some(CardStatement {
+                        currency: currency_of(accounts, &id),
                         provider_account_id: id,
                         statement_balance: decimal(&card["last_statement_balance"]),
                         minimum: decimal(&card["minimum_payment_amount"]),
                         due_date: text(&card["next_payment_due_date"]),
                         statement_date: text(&card["last_statement_issue_date"]),
-                        currency,
+                        aprs: list(card, "aprs", apr),
                     })
                 })
                 .collect()
         })
         .unwrap_or_default()
+}
+
+/// The student loans' and mortgages' terms in a `/liabilities/get` answer (#86), each in its account's currency.
+fn loans(answer: &Value, accounts: &[ProviderAccount]) -> Vec<ProviderLoan> {
+    let liabilities = &answer["liabilities"];
+    let read = |kind: &str, entry: &Value| -> Option<ProviderLoan> {
+        let id = text(&entry["account_id"])?;
+        let mortgage = kind == "mortgage";
+        Some(ProviderLoan {
+            currency: currency_of(accounts, &id),
+            provider_account_id: id,
+            kind: kind.to_string(),
+            rate: if mortgage {
+                decimal(&entry["interest_rate"]["percentage"])
+            } else {
+                decimal(&entry["interest_rate_percentage"])
+            },
+            minimum: decimal(if mortgage {
+                &entry["next_monthly_payment"]
+            } else {
+                &entry["minimum_payment_amount"]
+            }),
+            due_date: text(&entry["next_payment_due_date"]),
+            payoff_date: text(if mortgage {
+                &entry["maturity_date"]
+            } else {
+                &entry["expected_payoff_date"]
+            }),
+            original: decimal(&entry["origination_principal_amount"]),
+        })
+    };
+    ["student", "mortgage"]
+        .iter()
+        .flat_map(|kind| {
+            liabilities[*kind]
+                .as_array()
+                .map(|list| {
+                    list.iter()
+                        .filter_map(|entry| read(kind, entry))
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default()
+        })
+        .collect()
 }
 
 /// Whether the item wants the owner to sign in again: its error says so, or its consent has ended.
@@ -624,6 +685,7 @@ impl<T: Transport> Plaid<T> {
                 removed: Vec::new(),
                 cursor: cursor.unwrap_or_default(),
                 statements: Vec::new(),
+                loans: Vec::new(),
             });
         }
         let read = self
@@ -659,6 +721,7 @@ impl<T: Transport> Plaid<T> {
                             cursor: cursor.unwrap_or_default(),
                             // no Transactions product, no card statements to follow its pages
                             statements: Vec::new(),
+                            loans: Vec::new(),
                         });
                     }
                     Err(failure) => return Err(failure.into_error()),
@@ -677,7 +740,7 @@ impl<T: Transport> Plaid<T> {
                 }
             }
             let accounts = accounts(&read);
-            let statements = self.statements(access_token, &accounts).await;
+            let (statements, loans) = self.liabilities(access_token, &accounts).await;
             return Ok(SyncResult {
                 status: "ok".to_string(),
                 consent_expires_at,
@@ -687,6 +750,7 @@ impl<T: Transport> Plaid<T> {
                 removed,
                 cursor: next.unwrap_or_default(),
                 statements,
+                loans,
             });
         }
     }
@@ -756,28 +820,31 @@ impl<T: Transport> Plaid<T> {
         })
     }
 
-    /// Each credit card's latest statement, from `/liabilities/get`, once, and only for an item with a credit account
-    /// (in production the first call starts the item's Liabilities billing). Whatever goes wrong (a product the item
-    /// lacks, a consent it never gave, a 500, no answer) leaves the statements out and never fails the run; it is
-    /// logged by its code alone.
-    async fn statements(
+    /// Each credit card's latest statement with its APRs, and each student loan's and mortgage's terms, from
+    /// `/liabilities/get`, once, and only for an item with a credit or a loan account (in production the first call
+    /// starts the item's Liabilities billing, D-205). Whatever goes wrong (a product the item lacks, a consent it never
+    /// gave, a 500, no answer) leaves both out and never fails the run; it is logged by its code alone.
+    async fn liabilities(
         &self,
         access_token: &str,
         accounts: &[ProviderAccount],
-    ) -> Vec<CardStatement> {
-        if !accounts.iter().any(|account| account.kind == "credit") {
-            return Vec::new();
+    ) -> (Vec<CardStatement>, Vec<ProviderLoan>) {
+        if !accounts
+            .iter()
+            .any(|account| account.kind == "credit" || account.kind == "loan")
+        {
+            return (Vec::new(), Vec::new());
         }
         match self
             .raw("/liabilities/get", json!({ "access_token": access_token }))
             .await
         {
-            Ok(Ok(answer)) => card_statements(&answer, accounts),
+            Ok(Ok(answer)) => (card_statements(&answer, accounts), loans(&answer, accounts)),
             // `raw` logged the code
-            Ok(Err(_)) => Vec::new(),
+            Ok(Err(_)) => (Vec::new(), Vec::new()),
             Err(_) => {
                 log::warn!("Plaid /liabilities/get failed: network");
-                Vec::new()
+                (Vec::new(), Vec::new())
             }
         }
     }
@@ -1458,8 +1525,20 @@ mod tests {
                 due_date: Some("2026-10-12".to_string()),
                 statement_date: Some("2026-09-14".to_string()),
                 currency: Some("USD".to_string()),
+                aprs: vec![ProviderApr {
+                    kind: "balance_transfer_apr".to_string(),
+                    percentage: Some("15.24".to_string()),
+                    balance: Some("1562.32".to_string()),
+                    interest: Some("130.22".to_string()),
+                }],
             }]
         );
+        let limits: Vec<_> = result
+            .accounts
+            .iter()
+            .map(|account| account.limit.clone())
+            .collect();
+        assert_eq!(limits, [None, Some("2000".to_string())]);
         let sent = script.sent();
         let liabilities: Vec<_> = sent
             .iter()
@@ -1492,6 +1571,68 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn sync_reads_loans_for_loan_items() {
+        let mut loan_only = fixture("accounts_get");
+        let list = loan_only["accounts"].as_array_mut().unwrap();
+        list.retain(|account| account["type"] != "credit");
+        for (id, subtype) in [("acc-student", "student"), ("acc-mortgage", "mortgage")] {
+            list.push(json!({
+                "account_id": id,
+                "balances": { "available": null, "current": 1000, "iso_currency_code": "USD", "limit": null },
+                "mask": "1234",
+                "name": "Loan",
+                "subtype": subtype,
+                "type": "loan",
+            }));
+        }
+        let script = Script::new(vec![
+            ("/item/get", 200, fixture("item_get")),
+            ("/accounts/get", 200, loan_only),
+            ("/transactions/sync", 200, fixture("sync_page_2")),
+            ("/liabilities/get", 200, fixture("liabilities_get")),
+        ]);
+        let result = plaid(Env::Sandbox, &script)
+            .sync("access-sandbox-1", Some("c1".to_string()), now())
+            .await
+            .unwrap();
+        let usd = || Some("USD".to_string());
+        assert_eq!(
+            result.loans,
+            [
+                ProviderLoan {
+                    provider_account_id: "acc-student".to_string(),
+                    kind: "student".to_string(),
+                    rate: Some("5.25".to_string()),
+                    minimum: Some("25".to_string()),
+                    due_date: Some("2026-11-01".to_string()),
+                    payoff_date: Some("2032-07-28".to_string()),
+                    original: Some("25000".to_string()),
+                    currency: usd(),
+                },
+                ProviderLoan {
+                    provider_account_id: "acc-mortgage".to_string(),
+                    kind: "mortgage".to_string(),
+                    rate: Some("3.99".to_string()),
+                    minimum: Some("3141.54".to_string()),
+                    due_date: Some("2026-11-15".to_string()),
+                    payoff_date: Some("2045-07-31".to_string()),
+                    original: Some("425000".to_string()),
+                    currency: usd(),
+                },
+            ]
+        );
+        assert_eq!(
+            script
+                .sent()
+                .iter()
+                .filter(|(path, _)| path == "/liabilities/get")
+                .count(),
+            1,
+            "a loan-only item is asked once a run"
+        );
+    }
+
+    #[tokio::test]
     async fn sync_goes_on_when_liabilities_fail() {
         for (status, answer) in [
             (400, error("INVALID_PRODUCT", "PRODUCTS_NOT_SUPPORTED")),
@@ -1511,6 +1652,7 @@ mod tests {
                 .unwrap();
             assert_eq!(result.status, "ok", "{status}");
             assert!(result.statements.is_empty(), "{status}");
+            assert!(result.loans.is_empty(), "{status}");
             assert_eq!(result.cursor, "c2", "{status}");
             assert!(
                 !result.added.is_empty()

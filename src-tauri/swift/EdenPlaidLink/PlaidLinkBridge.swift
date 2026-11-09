@@ -1,4 +1,4 @@
-// Plaid's native Link sheet on iOS (docs/product/domains/finance.md §8, "Plaid on the phone", D-203). The crate's
+// Plaid's native Link sheet on iOS (docs/product/domains/finance.md §8, "Plaid on the phone", D-206). The crate's
 // `link_sheet::present` calls `eden_plaid_link_open` with a link token it made for the sheet and its C callback; this
 // presents LinkKit's sheet over the app and hands the outcome straight back to the crate as JSON, so the public token
 // never reaches the webview. Compiled into the iOS app target by Xcode (gen/apple/project.yml), not by cargo: LinkKit

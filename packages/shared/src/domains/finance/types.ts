@@ -20,6 +20,8 @@ export const FINANCE = {
 	security: 'security',
 	income: 'income-source',
 	budget: 'budget',
+	goal: 'savings-goal',
+	liability: 'liability',
 } as const
 
 /** Where a bill came from (#78): a letter read on the device, a card's statement, a series, or the owner's hand. */
@@ -210,7 +212,8 @@ export type LinkStatus = 'ok' | 'needs-reauth' | 'error'
 export type LinkState = 'ok' | 'stale' | 'expiring'
 
 export interface ProviderLinkPayload {
-	provider: 'plaid'
+	/** Plaid's bank links, or Coinbase's one read-only key on this device (D-204). */
+	provider: 'plaid' | 'coinbase'
 	institution: {
 		/** The provider's institution id (`ins_56`). */
 		id?: string
@@ -279,10 +282,26 @@ export interface AssetPayload {
 	valuedOn: string
 	/** A decimal string, "0.0412". */
 	quantity?: string
-	/** "BTC"; set whenever a quantity is. */
+	/** "BTC"; set whenever a quantity is, and on a watch that has not been read yet. */
 	unit?: string
 	/** Basis points, 1 to 10000. */
 	share: number
+	/** `price`: the value is the quantity × the coin's daily price (D-204); absent, it is the owner's. */
+	valuedBy?: 'price'
+	/**
+	 * What a crypto asset watches on the chain (D-204): one address, or an extended public key held in the device's
+	 * secure store under the asset's id (`xpub: true`, never the key), with the script its addresses use.
+	 */
+	watch?: AssetWatch
+	/** `YYYY-MM-DD` of the watch's last good read. */
+	readOn?: string
+}
+
+export interface AssetWatch {
+	chain: 'bitcoin' | 'ethereum'
+	address?: string
+	xpub?: true
+	script?: 'p2pkh' | 'p2sh-p2wpkh' | 'p2wpkh'
 }
 
 /**
@@ -587,6 +606,87 @@ export interface BudgetPayload {
 
 export type Budget = BudgetPayload & { id: string }
 
+/**
+ * A `savings-goal` row (#88, D-203): a target saved toward in an account, an emergency fund sized in months of
+ * essentials, or the one savings-rate target. The goals in one account fill its balance in `order`; what each holds is
+ * read, never stored. `high` is the goal pass's key; every other key is the owner's.
+ */
+export interface SavingsGoalPayload {
+	kind: 'target' | 'emergency' | 'rate'
+	/** target, emergency */
+	name?: string
+	accountId?: string
+	/** Positive, the account's currency. */
+	target?: Money
+	/** emergency: the months of essentials it was sized at, 1–12. */
+	months?: number
+	/** `YYYY-MM`. */
+	by?: string
+	/** rate: basis points, 100–9900. */
+	rate?: number
+	/** Fill order within its account, 0 first. */
+	order?: number
+	closedOn?: string
+	closedAs?: 'bought' | 'closed'
+	/** `YYYY-MM`; the owner's rebuild plan. */
+	rebuildBy?: string
+	/** The pass's key: the most this goal has held and the day. */
+	high?: { amount: Money; day: string }
+}
+export type SavingsGoal = SavingsGoalPayload & { id: string }
+/** A card APR's kind, from Plaid's `purchase_apr`, `balance_transfer_apr`, `cash_apr`, `special`; anything else is `other`. */
+export const APR_KINDS = ['purchase', 'balance-transfer', 'cash', 'special', 'other'] as const
+export type AprKind = (typeof APR_KINDS)[number]
+
+/** One of a card's APRs, as the provider states it. */
+export interface Apr {
+	kind: AprKind
+	/** Basis points: 1524 is 15.24 %. */
+	rate: number
+	/** The balance subject to it. */
+	balance?: Money
+	/** The interest it charged. */
+	interest?: Money
+}
+
+/**
+ * A `liability` (#86, D-205): what a debt account costs. At most one live row per `credit-card` or `loan` account,
+ * found by `accountId`. A sync overwrites the provider's keys and keeps the owner's; the owner's win on read
+ * (`effectiveTerms` in `debt.ts`). Rates are in basis points.
+ */
+export interface LiabilityPayload {
+	accountId: string
+
+	// ---- the provider's: a sync overwrites them
+
+	aprs?: Apr[]
+	limit?: Money
+	loan?: {
+		rate?: number
+		minimum?: Money
+		/** `YYYY-MM-DD`, the next payment's. */
+		due?: string
+		/** `YYYY-MM-DD`, the expected payoff or maturity day. */
+		payoffDay?: string
+		original?: Money
+	}
+
+	// ---- the owner's: a sync keeps them
+
+	rate?: number
+	ownerLimit?: Money
+	/** The monthly payment. */
+	payment?: Money
+	/** 1–31; 31 is the month's last day. */
+	dueDay?: number
+	/** An intro rate, for the days before `ends` (`YYYY-MM-DD`). */
+	promo?: { rate: number; ends: string }
+	/** The loan payment series' first bill (`seriesId`), for a hand-entered loan. */
+	billId?: string
+}
+
+export type Liability = LiabilityPayload & { id: string }
+
 export type Category = CategoryPayload & { id: string }
 export type Rule = RulePayload & { id: string; updatedAt: string }
 export type Merchant = MerchantPayload & { id: string }
@@ -606,4 +706,5 @@ export interface FinanceData {
 	snapshots?: Snapshot[]
 	holdings?: Holding[]
 	securities?: Security[]
+	liabilities?: Liability[]
 }

@@ -1,5 +1,5 @@
 // Orchard's Plaid commands (src-tauri/src/domains/finance): the device's keys, a Link session (a hosted page on desktop,
-// Plaid's native sheet on iOS, D-203), a sync run, an investments read, a revoke and the Sandbox's reset. The crate
+// Plaid's native sheet on iOS, D-206), a sync run, an investments read, a revoke and the Sandbox's reset. The crate
 // holds the keys and every token and makes every call; the webview gets a link token, the hosted page's URL where there
 // is one, how the build links and whether keys exist. Outside Tauri there is no crate: the status answers `undefined`
 // and nothing binds. A refusal reads `plaid:<code>: …`; `plaidErrorCode` takes the code.
@@ -9,7 +9,7 @@ import { isTauri } from './tauri.js'
 export interface PlaidStatus {
 	environment: 'sandbox' | 'production'
 	hasKeys: boolean
-	/** How this build links (D-203): the system browser on desktop, Plaid's sheet on iOS, nothing on Android. */
+	/** How this build links (D-206): the system browser on desktop, Plaid's sheet on iOS, nothing on Android. */
 	link: 'hosted' | 'sheet' | 'none'
 }
 
@@ -32,6 +32,8 @@ export interface ProviderAccount {
 	currency?: string | null
 	current?: string | null
 	available?: string | null
+	/** A card's credit limit (#86), when Plaid states one. */
+	limit?: string | null
 }
 
 /** A transaction as Plaid reports it: a positive amount is money out of the account. */
@@ -61,6 +63,8 @@ export interface SyncResult {
 	cursor: string
 	/** Each credit card's latest statement (#78); empty for an item with no card, or when Plaid would not say. */
 	statements?: CardStatement[]
+	/** Each student loan's and mortgage's terms (#86); empty for an item with no loan, or when Plaid would not say. */
+	loans?: ProviderLoan[]
 }
 
 /** A credit card's latest statement, from Plaid's liabilities: decimal strings and `YYYY-MM-DD` days. */
@@ -70,6 +74,30 @@ export interface CardStatement {
 	minimum?: string | null
 	dueDate?: string | null
 	statementDate?: string | null
+	currency?: string | null
+	/** The card's APRs (#86). */
+	aprs?: ProviderApr[]
+}
+
+/** One of a card's APRs as Plaid states it: `percentage` is `"15.24"` for 15.24 %. */
+export interface ProviderApr {
+	/** Plaid's type: `purchase_apr`, `balance_transfer_apr`, `cash_apr`, `special`, … */
+	kind: string
+	percentage?: string | null
+	balance?: string | null
+	interest?: string | null
+}
+
+/** A student loan's or a mortgage's terms from Plaid's liabilities (#86): decimal strings and `YYYY-MM-DD` days. */
+export interface ProviderLoan {
+	providerAccountId: string
+	kind: 'student' | 'mortgage'
+	/** In percent. */
+	rate?: string | null
+	minimum?: string | null
+	dueDate?: string | null
+	payoffDate?: string | null
+	original?: string | null
 	currency?: string | null
 }
 

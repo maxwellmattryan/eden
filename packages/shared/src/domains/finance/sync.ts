@@ -1,19 +1,24 @@
 // What a bank provider's sync run writes (product/domains/finance.md §8), pure so it is tested here: the account kind
 // a provider's type means, the accounts a run creates and updates with their balances through `balanceOps`, the
 // transactions it creates, updates and tombstones, and the link after a run, good or failed, with the retry and the
-// signal that follow, and each credit card's statement bill (#78). A transaction is upserted by its provider id, so
+// signal that follow, each credit card's statement bill (#78), and each debt's liability (#86). A transaction is upserted by its provider id, so
 // replaying a run changes nothing; the link's new cursor goes in the last batch, so a run cut short replays from the old
 // one.
-import type { CardStatement, ProviderAccount, ProviderTransaction, SyncResult } from '../../api/plaid.js'
+import type { CardStatement, ProviderAccount, ProviderLoan, ProviderTransaction, SyncResult } from '../../api/plaid.js'
 import { toUri, type BatchOp, type Entity } from '../../data/index.js'
 import { negate, parseMoney, type Money } from '../../money/index.js'
 import { balanceOps, dayOfInstant, EXPIRING_WITHIN, payloadOf } from './accounts.js'
+import { rateOf } from './debt.js'
 import {
 	FINANCE,
+	isDebt,
 	WHOLE,
 	type Account,
 	type AccountKind,
+	type Apr,
+	type AprKind,
 	type BillPayload,
+	type Liability,
 	type ProviderLink,
 	type TransactionPayload,
 } from './types.js'
@@ -393,12 +398,102 @@ export function statementOps(input: {
 	return ops
 }
 
+const APR_KIND: Record<string, AprKind> = {
+	purchase_apr: 'purchase',
+	balance_transfer_apr: 'balance-transfer',
+	cash_apr: 'cash',
+	special: 'special',
+}
+
+/** A card's APRs as Orchard keeps them; one whose rate does not parse is left out. */
+function aprsOf(statement: CardStatement, currency: string): Apr[] {
+	const out: Apr[] = []
+	for (const found of statement.aprs ?? []) {
+		const rate = rateOf(found.percentage)
+		if (rate === undefined) continue
+		const balance = moneyOf(found.balance, currency)
+		const interest = moneyOf(found.interest, currency)
+		out.push({
+			kind: APR_KIND[found.kind] ?? 'other',
+			rate,
+			...(balance ? { balance } : {}),
+			...(interest ? { interest } : {}),
+		})
+	}
+	return out
+}
+
+/** The provider's keys of a liability: a sync overwrites them. */
+const PROVIDER_TERMS = ['aprs', 'limit', 'loan'] as const
+
+/**
+ * The provider's terms for each open debt account the run reported (#86, D-205): one live `liability` per account,
+ * found by `accountId`, made when the provider gave something and updated when its terms moved, so a replay writes
+ * nothing. The limit comes with every account read; the APRs and the loan's terms only when Liabilities answered for
+ * that account, so a Liabilities failure leaves the last ones. The owner's keys are kept. A closed account, one that
+ * is not a debt, and a rate or amount that does not parse are skipped.
+ */
+export function liabilityOps(input: {
+	accountsByProviderId: ReadonlyMap<string, Account>
+	reported: readonly ProviderAccount[]
+	statements: readonly CardStatement[]
+	loans: readonly ProviderLoan[]
+	liabilities: readonly Liability[]
+	newId: () => string
+}): { ops: BatchOp[]; liabilities: Liability[] } {
+	const ops: BatchOp[] = []
+	const changed: Liability[] = []
+	for (const found of input.reported) {
+		const account = input.accountsByProviderId.get(found.providerAccountId)
+		if (!account || account.closedOn || !isDebt(account.kind)) continue
+		const held = input.liabilities.find((entry) => entry.accountId === account.id)
+		const next: Liability = held ? { ...held } : { id: input.newId(), accountId: account.id }
+		const limit = moneyOf(found.limit, account.currency)
+		if (limit && limit.minor > 0) next.limit = limit
+		else delete next.limit
+		const statement = input.statements.find((entry) => entry.providerAccountId === found.providerAccountId)
+		if (statement && account.kind === 'credit-card') {
+			const aprs = aprsOf(statement, account.currency)
+			if (aprs.length) next.aprs = aprs
+			else delete next.aprs
+		}
+		const loan = input.loans.find((entry) => entry.providerAccountId === found.providerAccountId)
+		if (loan && account.kind === 'loan') {
+			const currency = loan.currency ?? account.currency
+			const rate = rateOf(loan.rate)
+			const minimum = moneyOf(loan.minimum, currency)
+			const original = moneyOf(loan.original, currency)
+			const day = (value?: string | null) => (value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined)
+			const terms: NonNullable<Liability['loan']> = {
+				...(rate !== undefined ? { rate } : {}),
+				...(minimum && minimum.minor > 0 ? { minimum } : {}),
+				...(day(loan.dueDate) ? { due: day(loan.dueDate) } : {}),
+				...(day(loan.payoffDate) ? { payoffDay: day(loan.payoffDate) } : {}),
+				...(original && original.minor > 0 ? { original } : {}),
+			}
+			if (Object.keys(terms).length) next.loan = terms
+			else delete next.loan
+		}
+		if (held) {
+			if (same(payloadOf(next), payloadOf(held))) continue
+			ops.push({ op: 'updateEntity', id: next.id, payload: payloadOf(next) })
+		} else {
+			if (!PROVIDER_TERMS.some((key) => next[key] !== undefined)) continue
+			ops.push({ op: 'createEntity', input: { id: next.id, type: FINANCE.liability, payload: payloadOf(next) } })
+		}
+		changed.push(next)
+	}
+	return { ops, liabilities: changed }
+}
+
 export interface SyncInput {
 	link: ProviderLink
 	/** Every account the store holds. */
 	accounts: readonly Account[]
 	/** Every bill row, the tombstones too, for the card statements (#78). */
 	bills?: readonly Entity<BillPayload>[]
+	/** The live `liability` rows (#86). */
+	liabilities?: readonly Liability[]
 	/** The live provider rows by provider id: every one the result names, and the pending ones they replace. */
 	existing: Map<string, Entity<TransactionPayload>>
 	result: SyncResult
@@ -419,11 +514,15 @@ export function idsToRead(result: Pick<SyncResult, 'added' | 'modified' | 'remov
 	return [...ids]
 }
 
-/** A whole good run as batches: the accounts, the transactions, and the link with its cursor in the last. */
+/**
+ * A whole good run as batches: the accounts, the transactions, the card statements, the liabilities, and the link with
+ * its cursor in the last.
+ */
 export function syncOps(input: SyncInput): {
 	chunks: BatchOp[][]
 	link: ProviderLink
 	accounts: Account[]
+	liabilities: Liability[]
 	skipped: Skipped[]
 } {
 	const { link, result, nowIso, day, newId } = input
@@ -435,6 +534,14 @@ export function syncOps(input: SyncInput): {
 		bills: input.bills ?? [],
 		newId,
 	})
+	const liabilities = liabilityOps({
+		accountsByProviderId: accounts.byProviderId,
+		reported: result.accounts,
+		statements: result.statements ?? [],
+		loans: result.loans ?? [],
+		liabilities: input.liabilities ?? [],
+		newId,
+	})
 	const next = linkAfterSync(link, result, nowIso)
 	// the link is written whenever it moved; `lastSyncedAt` moves on every live run (freshness is stored), so only a
 	// replay at the same instant writes nothing
@@ -442,9 +549,10 @@ export function syncOps(input: SyncInput): {
 		? undefined
 		: { op: 'updateEntity', id: next.id, payload: payloadOf(next) }
 	return {
-		chunks: chunked([...accounts.ops, ...transactions.ops, ...statements], write),
+		chunks: chunked([...accounts.ops, ...transactions.ops, ...statements, ...liabilities.ops], write),
 		link: next,
 		accounts: accounts.accounts,
+		liabilities: liabilities.liabilities,
 		skipped: [...accounts.skipped, ...transactions.skipped],
 	}
 }

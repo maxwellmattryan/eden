@@ -234,7 +234,7 @@
 			declarations,
 			bind: manifests.flatMap((manifest) => (manifest.subscribe ? [manifest.subscribe] : [])),
 		})
-		// Orchard's bank links (finance.md §8, D-203): Plaid binds where the crate links, through Plaid's own sheet on
+		// Orchard's bank links (finance.md §8, D-206): Plaid binds where the crate links, through Plaid's own sheet on
 		// iOS, and syncs every link once now; the hourly run and the retries come through the scheduler. Android and a
 		// plain browser bind nothing.
 		const unbindPlaid = bindPlaid()

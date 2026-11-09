@@ -1208,7 +1208,9 @@
 				"accounts": "口座",
 				"bills": "請求",
 				"budget": "予算",
-				"investments": "投資"
+				"debt": "負債",
+				"investments": "投資",
+				"goals": "目標"
 			},
 			"tabsLabel": "果樹園のセクション",
 			"txKinds": {
@@ -1571,7 +1573,93 @@
 				"captureBill": "請求書を読み取る",
 				"addBill": "請求を追加",
 				"linkBrokerage": "証券口座を連携",
-				"reconnect": "再接続"
+				"reconnect": "再接続",
+				"addLoan": "ローンを追加"
+			},
+			"debt": {
+				"label": "負債の合計",
+				"owed": "残高",
+				"usage": "カードの利用率",
+				"ofLimit": "限度額 {limit}",
+				"leftOut": "{currencies}の負債{count}件は合計に含まれません",
+				"cards": "カード",
+				"loans": "ローン",
+				"apr": "年率 {rate}",
+				"introUntil": "{day}まで優遇金利 {intro}、その後 {rate}",
+				"introUntilNoRate": "{day}まで優遇金利 {intro}",
+				"introEnds": "優遇金利 {intro} は{day}に終了",
+				"addRate": "金利を追加してください",
+				"used": "限度額 {limit} の {percent} を利用",
+				"addLimit": "限度額を追加してください",
+				"minimumDue": "{day}までに最低 {amount}",
+				"minimum": "最低 {amount}",
+				"payment": "毎月 {amount}・{day}日払い",
+				"paymentLastDay": "毎月 {amount}・月末払い",
+				"paymentOnly": "毎月 {amount}",
+				"paidOffAround": "{month}ごろ完済",
+				"notPaidOff": "この返済額では完済しません",
+				"empty": {
+					"title": "負債はありません",
+					"text": "連携または追加したカードとローンがここに表示されます。"
+				},
+				"menu": {
+					"editTerms": "条件を編集",
+					"addIntro": "優遇金利を追加",
+					"editIntro": "優遇金利を編集",
+					"clearIntro": "優遇金利を消去"
+				},
+				"plan": {
+					"title": "返済計画",
+					"strategyLabel": "返済の順番",
+					"interest": "金利の高い順",
+					"balance": "残高の少ない順",
+					"extra": "毎月の追加返済",
+					"debtFree": "完済",
+					"never": "この返済額では50年以内に完済しません",
+					"interestTotal": "利息",
+					"interestSaves": "金利の高い順なら利息が {amount} 少なくなります",
+					"balanceSaves": "残高の少ない順なら利息が {amount} 少なくなります",
+					"same": "どちらの順番でも同じです",
+					"order": "完済する順の負債",
+					"paidOff": "{month}に完済",
+					"notPaid": "50年以内に完済しません",
+					"notInPlan": "計画に含まれないもの",
+					"needRate": "計画に入れるには金利を追加してください",
+					"needMinimum": "計画に入れるには最低返済額を追加してください"
+				},
+				"sheet": {
+					"termsTitle": "条件を編集",
+					"introTitle": "優遇金利",
+					"newLoanTitle": "ローンを追加",
+					"apr": "年率",
+					"limit": "利用限度額",
+					"introRate": "優遇金利",
+					"ends": "終了日",
+					"payment": "毎月の返済額",
+					"minimum": "最低返済額",
+					"minimumHelp": "明細に最低額が載るまで計画に使います",
+					"dueDay": "毎月の支払日",
+					"dueDayHelp": "31は月末を意味します",
+					"name": "名前",
+					"lender": "借入先",
+					"currency": "通貨",
+					"balance": "借入残高",
+					"fromBank": "{bank}の値: {value}。空欄ならこの値を使います",
+					"bankNone": "{bank}からの値はありません"
+				},
+				"errors": {
+					"rate": "0〜999.99%の金利を入力してください",
+					"ends": "今日以降の日を入力してください",
+					"dueDay": "1〜31の日を入力してください",
+					"payment": "毎月の返済額を入力してください",
+					"balance": "借入残高を入力してください"
+				},
+				"toasts": {
+					"termsSaved": "{name}の条件を保存しました",
+					"introSaved": "{name}の優遇金利を保存しました",
+					"introCleared": "{name}の優遇金利を消去しました",
+					"loanAdded": "{name}を追加しました"
+				}
 			},
 			"investments": {
 				"label": "投資の合計",
@@ -1664,7 +1752,12 @@
 				"noBalance": "残高なし",
 				"valued": "{day}に評価",
 				"approx": "≈ {amount}",
-				"closedOn": "{day}に解約"
+				"closedOn": "{day}に解約",
+				"priced": "{day}の価格",
+				"read": "{day}に読み取り",
+				"notReadYet": "未読み取り",
+				"notPriced": "価格なし",
+				"extendedKey": "拡張公開鍵"
 			},
 			"menu": {
 				"edit": "編集",
@@ -1706,7 +1799,39 @@
 				"value": "評価額",
 				"valuedOn": "評価日",
 				"quantity": "数量",
-				"unit": "単位"
+				"unit": "単位",
+				"countedBy": "数え方",
+				"modes": {
+					"quantity": "数量",
+					"address": "アドレス",
+					"xpub": "拡張公開鍵"
+				},
+				"chain": "チェーン",
+				"chains": {
+					"bitcoin": "ビットコイン",
+					"ethereum": "イーサリアム"
+				},
+				"address": "アドレス",
+				"xpub": "拡張公開鍵",
+				"xpubHelp": "このデバイスの安全な保管庫に保存されます。Edenは1日に1回、この鍵から作られるアドレスの残高をBlockstreamに問い合わせます。Blockstreamにはそれらが同じ持ち主のものだとわかります。",
+				"script": "アドレスの種類",
+				"scripts": {
+					"p2wpkh": "ネイティブSegWit(bc1q…)",
+					"p2sh-p2wpkh": "ネストSegWit(3…)",
+					"p2pkh": "レガシー(1…)"
+				},
+				"watching": "{address}を監視中",
+				"watchingKey": "拡張公開鍵を監視中 · {type}",
+				"errors": {
+					"address": "アドレスを入力してください",
+					"xpub": "拡張公開鍵を入力してください",
+					"bitcoin": "ビットコインのアドレスではありません。",
+					"ethereum": "イーサリアムのアドレスではありません。",
+					"privateKey": "これは秘密鍵です。どこにも貼り付けないでください。拡張公開鍵を使ってください。",
+					"invalidXpub": "拡張公開鍵ではありません。",
+					"unsupported": "Edenが読み取れるのはメインネットのxpub、ypub、zpubだけです。",
+					"other": "確認できませんでした。もう一度お試しください。"
+				}
 			},
 			"balanceForm": {
 				"title": "残高を更新",
@@ -1932,6 +2057,118 @@
 					"added": "{category}を追加しました"
 				}
 			},
+			"goals": {
+				"add": "目標を追加",
+				"readFailed": "取引を読み込めませんでした",
+				"emptyTitle": "まだ目標がありません",
+				"emptyNoAccount": "目標は口座の中でお金を取り分けます。まず口座を追加してください。",
+				"emptyText": "何かのために貯めるか、緊急資金をつくりましょう。",
+				"rate": {
+					"title": "貯蓄率",
+					"percent": "{rate}%",
+					"sentence": "直近{months}か月で収入の{rate}%を貯蓄しました",
+					"month": "{month}: {rate}%",
+					"target": "目標 {rate}%",
+					"ofGoal": "目標の{percent}%",
+					"noIncome": "貯蓄率を測るには収入のある月が必要です",
+					"actions": "貯蓄率の操作",
+					"set": "目標を設定",
+					"edit": "目標を編集",
+					"remove": "目標を外す"
+				},
+				"totals": {
+					"saved": "貯めた額",
+					"toGo": "残り",
+					"monthly": "月に必要な額",
+					"otherCurrencies": "ほかの通貨の目標は合計に含めていません"
+				},
+				"of": "{target}のうち{saved}",
+				"savedPercent": "{percent}%達成",
+				"reached": "達成",
+				"past": "期日を過ぎています",
+				"byMonthly": "{month}まで · 月{amount}",
+				"about": "今のペースで{month}ごろ",
+				"aboutAfter": "· 今のペースで{month}ごろ",
+				"behind": "· 今のペースでは間に合いません",
+				"covers": "生活必需費の{months}か月分",
+				"accountClosed": "{account}は解約済みです",
+				"accountGone": "口座がなくなっています",
+				"goneTitle": "なくなった口座",
+				"dip": "{day}の{high}から{amount}減っています",
+				"rebuild": "{month}までに戻す: 月{amount}",
+				"notEarmarked": "{amount}は取り分けていません",
+				"shared": "月{amount}でこれらに間に合います",
+				"actions": "{name}の操作",
+				"menu": {
+					"edit": "編集",
+					"up": "上へ移動",
+					"down": "下へ移動",
+					"rebuild": "戻す計画を立てる",
+					"fromHere": "ここから始める",
+					"bought": "購入済みにする",
+					"close": "目標を閉じる",
+					"delete": "削除",
+					"reopen": "再開",
+					"asset": "資産として追加",
+					"loan": "ローンを追加"
+				},
+				"done": {
+					"title": "完了",
+					"bought": "{month}に購入",
+					"closed": "{month}に終了"
+				},
+				"loanName": "{name}のローン",
+				"sheet": {
+					"addTitle": "目標を追加",
+					"editTitle": "目標を編集",
+					"kind": "目標の種類",
+					"target": "何かのために貯める",
+					"emergency": "緊急資金",
+					"name": "名前",
+					"emergencyName": "緊急資金",
+					"account": "口座",
+					"chooseAccount": "口座を選ぶ",
+					"amount": "目標額",
+					"months": "生活必需費の月数",
+					"monthsOption": "{months}か月",
+					"sized": "生活必需費の{months}か月分は{amount}です",
+					"noEssentials": "目安を出すにはまる1か月分の支出が必要です",
+					"by": "期日",
+					"noDate": "期日なし",
+					"live": "月{amount}で{month}までに達成します"
+				},
+				"rebuildSheet": {
+					"title": "戻す計画を立てる",
+					"down": "{high}から{amount}減っています",
+					"by": "戻す期日",
+					"live": "月{amount}で{month}までに戻せます"
+				},
+				"rateSheet": {
+					"title": "貯蓄率の目標",
+					"field": "目標の貯蓄率 (%)"
+				},
+				"errors": {
+					"goal:name": "60文字以内で名前を入力してください",
+					"goal:account": "負債ではない、開いている口座を選んでください",
+					"goal:target": "0より大きい目標額を入力してください",
+					"goal:months": "1〜12か月を選んでください",
+					"goal:rate": "1〜99の整数で入力してください",
+					"goal:emergency": "緊急資金はすでにあります"
+				},
+				"toasts": {
+					"added": "{name}を追加しました",
+					"saved": "{name}を保存しました",
+					"moved": "{name}を移動しました",
+					"closed": "{name}を閉じました",
+					"bought": "{name}を購入済みにしました",
+					"reopened": "{name}を再開しました",
+					"deleted": "{name}を削除しました",
+					"rebuild": "{name}を戻す計画を立てました",
+					"fromHere": "{name}をここから始めます",
+					"rateSet": "貯蓄率の目標を設定しました",
+					"rateRemoved": "貯蓄率の目標を外しました"
+				}
+			},
 			"toasts": {
 				"incomeEnded": "{employer}を終了にしました",
 				"justLate": "{day}予定として記録しました",
@@ -1959,6 +2196,25 @@
 				"valueSet": "{name}の評価額を設定しました",
 				"payStubSaved": "{employer}の控除を保存しました",
 				"payStubCleared": "{employer}の控除を消去しました"
+			},
+			"crypto": {
+				"connect": "Coinbaseを接続",
+				"connected": "Coinbaseを接続しました",
+				"removed": "Coinbaseを削除しました。Coinbaseでもキーを削除してください。",
+				"replaceKey": "キーを交換",
+				"key": {
+					"title": "Coinbaseのキー",
+					"name": "キー名",
+					"privateKey": "秘密鍵",
+					"help": "Coinbaseで「閲覧」権限だけのキーを作ってください。取引や送金ができるキーは受け付けません。このデバイスの安全な保管庫に保存されます。",
+					"invalid": "CoinbaseのAPIキーではありません。Coinbaseから受け取ったファイルのキー名と秘密鍵を貼り付けてください。",
+					"refused": "Coinbaseがこのキーを受け付けませんでした。",
+					"notReadOnly": "このキーは取引や送金ができます。「閲覧」権限だけのキーを作ってください。",
+					"unreachable": "Coinbaseに接続できませんでした。しばらくしてからもう一度お試しください。",
+					"held": "このデバイスにキーを保存しています。",
+					"replace": "キーを交換",
+					"save": "保存"
+				}
 			},
 			"plaid": {
 				"keysButton": "Plaidのキー",
@@ -2036,6 +2292,9 @@
 				},
 				"newIncome": {
 					"line": "{employer}から新しい給与"
+				},
+				"promoEnding": {
+					"line": "{card}の優遇金利は{endsDay}に終わります"
 				}
 			}
 		},
@@ -2812,7 +3071,10 @@
 				"openfreemap": "OpenFreeMap(地図タイル)",
 				"photon": "Photon(名前で場所を探す)",
 				"overpass": "Overpass(営業時間)",
-				"plaid": "Plaid"
+				"plaid": "Plaid",
+				"coinbase": "Coinbase",
+				"blockstream": "Blockstream(ビットコインの残高)",
+				"blockscout": "Blockscout(イーサの残高)"
 			},
 			"never": {
 				"label": "自動化しないこと",

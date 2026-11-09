@@ -2423,8 +2423,16 @@ export const DECLARATIONS = {
 				"label": "domains.finance.tabs.budget"
 			},
 			{
+				"id": "debt",
+				"label": "domains.finance.tabs.debt"
+			},
+			{
 				"id": "investments",
 				"label": "domains.finance.tabs.investments"
+			},
+			{
+				"id": "goals",
+				"label": "domains.finance.tabs.goals"
 			}
 		],
 		"resources": [
@@ -2497,7 +2505,8 @@ export const DECLARATIONS = {
 			"finance.income-new",
 			"finance.bill-due",
 			"finance.bill-overdue",
-			"finance.price-rise"
+			"finance.price-rise",
+			"finance.promo-ending"
 		],
 		"notificationKinds": [
 			{
@@ -2555,12 +2564,26 @@ export const DECLARATIONS = {
 				"default": true,
 				"signal": "finance.price-rise",
 				"when": null
+			},
+			{
+				"id": "promo-ending",
+				"channel": "in-app",
+				"cadence": "when-found",
+				"default": true,
+				"signal": "finance.promo-ending",
+				"when": null
 			}
 		],
 		"schedules": [
 			{
 				"id": "sync",
 				"name": "finance.sync",
+				"daily": null,
+				"every": 3600
+			},
+			{
+				"id": "crypto",
+				"name": "finance.crypto",
 				"daily": null,
 				"every": 3600
 			},
@@ -2591,8 +2614,10 @@ export const DECLARATIONS = {
 			"file-import",
 			"recurring-charge",
 			"budget",
+			"savings-goal",
 			"holding",
-			"security"
+			"security",
+			"liability"
 		]
 	}
 } as const

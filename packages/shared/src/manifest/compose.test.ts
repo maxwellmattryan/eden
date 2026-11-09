@@ -209,7 +209,9 @@ describe('paletteIndex', () => {
 			'go.finance.accounts',
 			'go.finance.bills',
 			'go.finance.budget',
+			'go.finance.debt',
 			'go.finance.investments',
+			'go.finance.goals',
 		])
 		expect(index.entries.find((entry) => entry.id === 'go.kitchen.recipes')).toEqual({
 			id: 'go.kitchen.recipes',

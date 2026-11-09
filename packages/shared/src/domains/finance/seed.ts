@@ -3,7 +3,8 @@
 // in yen entered by hand, the car valued on the first of the month and a little Bitcoin. One snapshot per account for
 // today. M1 holds VTI (three days of closes), SCHD with no cost basis and cash; the Fidelity 401(k) holds FXAIX and a
 // stable value fund Plaid gives no price for, its value typed 120 days ago so it reads out of date (D-197). Each
-// account's holdings add up to its balance. Times are relative to `now`, so the freshness reads the same whenever the
+// account's holdings add up to its balance. The Sapphire card has a 24.99 % purchase APR and a 10,000.00 limit, and the
+// auto loan 5.90 % at 412.00 a month on the 5th (#86). Times are relative to `now`, so the freshness reads the same whenever the
 // seed runs.
 import { dateIn, instantAt } from '../../dates/index.js'
 import { money } from '../../money/index.js'
@@ -13,6 +14,7 @@ import {
 	type AccountKind,
 	type FinanceData,
 	type Holding,
+	type Liability,
 	type ProviderLink,
 	type Security,
 	type Snapshot,
@@ -141,12 +143,25 @@ export function seedData(now: number = Date.now()): FinanceData {
 		},
 	]
 
+	// what the debts cost (#86): the Sapphire's purchase APR and limit as Chase states them, and the auto loan's terms as
+	// the owner typed them
+	const liabilities: Liability[] = [
+		{
+			id: 'li-sapphire',
+			accountId: 'a-sapphire',
+			aprs: [{ kind: 'purchase', rate: 2499 }],
+			limit: usd(1000000),
+		},
+		{ id: 'li-auto', accountId: 'a-auto', rate: 590, payment: usd(41200), dueDay: 5 },
+	]
+
 	return {
 		links,
 		accounts,
 		snapshots,
 		securities,
 		holdings,
+		liabilities,
 		assets: [
 			{
 				id: 'as-subaru',

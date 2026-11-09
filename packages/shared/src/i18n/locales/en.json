@@ -1208,7 +1208,9 @@
 				"accounts": "Accounts",
 				"bills": "Bills",
 				"budget": "Budget",
-				"investments": "Investments"
+				"debt": "Debt",
+				"investments": "Investments",
+				"goals": "Goals"
 			},
 			"tabsLabel": "Orchard sections",
 			"txKinds": {
@@ -1571,7 +1573,93 @@
 				"captureBill": "Capture a bill",
 				"addBill": "Add a bill",
 				"linkBrokerage": "Link a brokerage",
-				"reconnect": "Reconnect"
+				"reconnect": "Reconnect",
+				"addLoan": "Add a loan"
+			},
+			"debt": {
+				"label": "Debt totals",
+				"owed": "Owed",
+				"usage": "Card usage",
+				"ofLimit": "of {limit}",
+				"leftOut": "{count, plural, one {# debt in {currencies} is left out of totals} other {# debts in {currencies} are left out of totals}}",
+				"cards": "Cards",
+				"loans": "Loans",
+				"apr": "{rate} APR",
+				"introUntil": "{intro} intro until {day}, then {rate}",
+				"introUntilNoRate": "{intro} intro until {day}",
+				"introEnds": "{intro} intro ends {day}",
+				"addRate": "Add its rate",
+				"used": "Used {percent} of {limit}",
+				"addLimit": "Add its limit",
+				"minimumDue": "Minimum {amount} due {day}",
+				"minimum": "Minimum {amount}",
+				"payment": "{amount} a month · due the {day, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
+				"paymentLastDay": "{amount} a month · due the last day",
+				"paymentOnly": "{amount} a month",
+				"paidOffAround": "Paid off around {month}",
+				"notPaidOff": "Not paid off at this payment",
+				"empty": {
+					"title": "No debts",
+					"text": "Cards and loans you link or add show here."
+				},
+				"menu": {
+					"editTerms": "Edit terms",
+					"addIntro": "Add intro rate",
+					"editIntro": "Edit intro rate",
+					"clearIntro": "Clear intro rate"
+				},
+				"plan": {
+					"title": "Payoff plan",
+					"strategyLabel": "Payoff order",
+					"interest": "Highest interest first",
+					"balance": "Smallest balance first",
+					"extra": "Extra each month",
+					"debtFree": "Debt-free",
+					"never": "Not paid off within 50 years at these payments",
+					"interestTotal": "Interest",
+					"interestSaves": "Highest interest first saves {amount} in interest",
+					"balanceSaves": "Smallest balance first saves {amount} in interest",
+					"same": "Both orders cost the same",
+					"order": "Debts in the order paid",
+					"paidOff": "Paid off {month}",
+					"notPaid": "Not paid off within 50 years",
+					"notInPlan": "Not in the plan",
+					"needRate": "Add its rate to plan it",
+					"needMinimum": "Add its minimum payment to plan it"
+				},
+				"sheet": {
+					"termsTitle": "Edit terms",
+					"introTitle": "Intro rate",
+					"newLoanTitle": "Add a loan",
+					"apr": "APR",
+					"limit": "Credit limit",
+					"introRate": "Intro rate",
+					"ends": "Ends on",
+					"payment": "Monthly payment",
+					"minimum": "Minimum payment",
+					"minimumHelp": "Used for the plan until a statement gives one",
+					"dueDay": "Due day of the month",
+					"dueDayHelp": "31 means the last day of the month",
+					"name": "Name",
+					"lender": "Lender",
+					"currency": "Currency",
+					"balance": "Balance owed",
+					"fromBank": "From {bank}: {value}. Leave empty to use it",
+					"bankNone": "{bank} gives none"
+				},
+				"errors": {
+					"rate": "Enter a rate from 0 to 999.99%",
+					"ends": "Enter a day that is today or later",
+					"dueDay": "Enter a day from 1 to 31",
+					"payment": "Enter the monthly payment",
+					"balance": "Enter the balance owed"
+				},
+				"toasts": {
+					"termsSaved": "Terms saved for {name}",
+					"introSaved": "Intro rate saved for {name}",
+					"introCleared": "Intro rate cleared for {name}",
+					"loanAdded": "{name} added"
+				}
 			},
 			"investments": {
 				"label": "Investment totals",
@@ -1664,7 +1752,12 @@
 				"noBalance": "No balance yet",
 				"valued": "Valued {day}",
 				"approx": "≈ {amount}",
-				"closedOn": "Closed {day}"
+				"closedOn": "Closed {day}",
+				"priced": "Priced {day}",
+				"read": "Read {day}",
+				"notReadYet": "Not read yet",
+				"notPriced": "Not priced yet",
+				"extendedKey": "Extended key"
 			},
 			"menu": {
 				"edit": "Edit",
@@ -1706,7 +1799,39 @@
 				"value": "Value",
 				"valuedOn": "Valued on",
 				"quantity": "Quantity",
-				"unit": "Unit"
+				"unit": "Unit",
+				"countedBy": "Counted by",
+				"modes": {
+					"quantity": "Quantity",
+					"address": "Address",
+					"xpub": "Extended key"
+				},
+				"chain": "Chain",
+				"chains": {
+					"bitcoin": "Bitcoin",
+					"ethereum": "Ethereum"
+				},
+				"address": "Address",
+				"xpub": "Extended public key",
+				"xpubHelp": "Kept in this device's secure store. Once a day Eden asks Blockstream for the balances of the addresses this key makes; Blockstream can see they belong together.",
+				"script": "Address type",
+				"scripts": {
+					"p2wpkh": "Native SegWit (bc1q…)",
+					"p2sh-p2wpkh": "Nested SegWit (3…)",
+					"p2pkh": "Legacy (1…)"
+				},
+				"watching": "Watching {address}",
+				"watchingKey": "Watching an extended key · {type}",
+				"errors": {
+					"address": "Enter an address",
+					"xpub": "Enter an extended public key",
+					"bitcoin": "This isn't a Bitcoin address.",
+					"ethereum": "This isn't an Ethereum address.",
+					"privateKey": "This is a private key. Never paste it into anything; use the extended public key.",
+					"invalidXpub": "This isn't an extended public key.",
+					"unsupported": "Eden reads mainnet xpub, ypub and zpub keys only.",
+					"other": "Eden couldn't check this. Try again."
+				}
 			},
 			"balanceForm": {
 				"title": "Update balance",
@@ -1932,6 +2057,118 @@
 					"added": "Added {category}"
 				}
 			},
+			"goals": {
+				"add": "Add a goal",
+				"readFailed": "Couldn't read your transactions",
+				"emptyTitle": "No goals yet",
+				"emptyNoAccount": "Goals set money aside in an account. Add one first.",
+				"emptyText": "Save toward something, or build an emergency fund.",
+				"rate": {
+					"title": "Savings rate",
+					"percent": "{rate}%",
+					"sentence": "You saved {rate}% of your income over the last {months, plural, one {month} other {# months}}",
+					"month": "{month}: {rate}%",
+					"target": "Goal {rate}%",
+					"ofGoal": "{percent}% of goal",
+					"noIncome": "Orchard needs a month with income to measure your savings rate",
+					"actions": "Savings rate actions",
+					"set": "Set a goal",
+					"edit": "Edit goal",
+					"remove": "Remove goal"
+				},
+				"totals": {
+					"saved": "Saved",
+					"toGo": "To go",
+					"monthly": "Needed a month",
+					"otherCurrencies": "Goals in other currencies are left out of the totals"
+				},
+				"of": "{saved} of {target}",
+				"savedPercent": "{percent}% saved",
+				"reached": "Reached",
+				"past": "Past its date",
+				"byMonthly": "By {month} · {amount} a month",
+				"about": "About {month} at your recent pace",
+				"aboutAfter": "· about {month} at your recent pace",
+				"behind": "· behind at your recent pace",
+				"covers": "Covers {months} months of essentials",
+				"accountClosed": "{account} is closed",
+				"accountGone": "Its account is gone",
+				"goneTitle": "Account gone",
+				"dip": "Down {amount} from {high} on {day}",
+				"rebuild": "Rebuild by {month}: {amount} a month",
+				"notEarmarked": "{amount} not earmarked",
+				"shared": "{amount} a month reaches these on time",
+				"actions": "Actions for {name}",
+				"menu": {
+					"edit": "Edit",
+					"up": "Move up",
+					"down": "Move down",
+					"rebuild": "Plan the rebuild",
+					"fromHere": "Start from here",
+					"bought": "Mark as bought",
+					"close": "Close goal",
+					"delete": "Delete",
+					"reopen": "Reopen",
+					"asset": "Add as an asset",
+					"loan": "Add a loan"
+				},
+				"done": {
+					"title": "Done",
+					"bought": "Bought {month}",
+					"closed": "Closed {month}"
+				},
+				"loanName": "{name} loan",
+				"sheet": {
+					"addTitle": "Add a goal",
+					"editTitle": "Edit goal",
+					"kind": "Kind of goal",
+					"target": "Saving for something",
+					"emergency": "Emergency fund",
+					"name": "Name",
+					"emergencyName": "Emergency fund",
+					"account": "Account",
+					"chooseAccount": "Choose an account",
+					"amount": "Target",
+					"months": "Months of essentials",
+					"monthsOption": "{months, plural, one {# month} other {# months}}",
+					"sized": "{months} months of essentials is {amount}",
+					"noEssentials": "Orchard needs a full month of spending to size it",
+					"by": "By",
+					"noDate": "No date",
+					"live": "{amount} a month reaches it by {month}"
+				},
+				"rebuildSheet": {
+					"title": "Plan the rebuild",
+					"down": "Down {amount} from {high}",
+					"by": "Rebuild by",
+					"live": "{amount} a month rebuilds it by {month}"
+				},
+				"rateSheet": {
+					"title": "Savings rate goal",
+					"field": "Target savings rate (%)"
+				},
+				"errors": {
+					"goal:name": "Enter a name of up to 60 characters",
+					"goal:account": "Choose an open account that isn't a debt",
+					"goal:target": "Enter a target above zero",
+					"goal:months": "Choose 1 to 12 months",
+					"goal:rate": "Enter a whole percent from 1 to 99",
+					"goal:emergency": "You already have an emergency fund"
+				},
+				"toasts": {
+					"added": "Added {name}",
+					"saved": "Saved {name}",
+					"moved": "Moved {name}",
+					"closed": "Closed {name}",
+					"bought": "Marked {name} as bought",
+					"reopened": "Reopened {name}",
+					"deleted": "Deleted {name}",
+					"rebuild": "Rebuild planned for {name}",
+					"fromHere": "{name} starts from here",
+					"rateSet": "Savings rate goal set",
+					"rateRemoved": "Savings rate goal removed"
+				}
+			},
 			"toasts": {
 				"incomeEnded": "Marked {employer} as ended",
 				"justLate": "Noted: due {day}",
@@ -1959,6 +2196,25 @@
 				"valueSet": "Value set for {name}",
 				"payStubSaved": "Saved the {employer} deductions",
 				"payStubCleared": "Cleared the {employer} deductions"
+			},
+			"crypto": {
+				"connect": "Connect Coinbase",
+				"connected": "Coinbase connected",
+				"removed": "Coinbase removed. Delete the key at Coinbase too.",
+				"replaceKey": "Replace key",
+				"key": {
+					"title": "Coinbase key",
+					"name": "Key name",
+					"privateKey": "Private key",
+					"help": "Make a key at Coinbase with View permission only. Eden refuses a key that can trade or transfer. Kept in this device's secure store.",
+					"invalid": "That isn't a Coinbase API key. Paste the key name and the private key from the file Coinbase gave you.",
+					"refused": "Coinbase didn't accept this key.",
+					"notReadOnly": "This key can trade or transfer money. Make one with View permission only.",
+					"unreachable": "Couldn't reach Coinbase. Try again in a moment.",
+					"held": "Key saved on this device.",
+					"replace": "Replace key",
+					"save": "Save"
+				}
 			},
 			"plaid": {
 				"keysButton": "Plaid keys",
@@ -2036,6 +2292,9 @@
 				},
 				"newIncome": {
 					"line": "A new paycheck from {employer}"
+				},
+				"promoEnding": {
+					"line": "{card}'s intro rate ends {endsDay}"
 				}
 			}
 		},
@@ -2812,7 +3071,10 @@
 				"openfreemap": "OpenFreeMap (map tiles)",
 				"photon": "Photon (finding a place by name)",
 				"overpass": "Overpass (opening hours)",
-				"plaid": "Plaid"
+				"plaid": "Plaid",
+				"coinbase": "Coinbase",
+				"blockstream": "Blockstream (Bitcoin balances)",
+				"blockscout": "Blockscout (Ether balances)"
 			},
 			"never": {
 				"label": "Never automated",

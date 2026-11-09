@@ -1,7 +1,7 @@
 <script lang="ts">
 	// The Link sheet (product/domains/finance.md §8): Eden's own sheet around Plaid. On desktop Plaid's hosted page runs
 	// in the system browser, so a bank's OAuth runs in a real browser and no Plaid script loads here; on iOS Plaid's
-	// native sheet lies over this one (D-203), and the copy says so. It shows the session's phase: starting, waiting
+	// native sheet lies over this one (D-206), and the copy says so. It shows the session's phase: starting, waiting
 	// for the owner to finish in Plaid, reading the accounts, linked, cancelled, expired, or failed. Closing it never
 	// ends a session; "Stop waiting" does. Each change is said once, through the hidden polite line, and focus moves to
 	// the phase's primary action.

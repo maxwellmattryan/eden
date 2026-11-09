@@ -1,4 +1,4 @@
-// Plaid behind Orchard's provider seam (product/domains/finance.md §8), on desktop and iOS (D-203): desktop links through
+// Plaid behind Orchard's provider seam (product/domains/finance.md §8), on desktop and iOS (D-206): desktop links through
 // Hosted Link in the system browser, iOS through Plaid's native sheet, and Android binds nothing. The crate holds the
 // keys and every token and makes every call (`api/plaid.ts`); this module is the session the Link sheet shows, the keys sheet's
 // saves, and the sync: on launch, every hour (`finance.sync`), and on the retries after a failure (`finance.retry`),
@@ -56,6 +56,7 @@ import {
 	FINANCE,
 	type Account,
 	type BillPayload,
+	type LiabilityPayload,
 	type HoldingPayload,
 	type ProviderLink,
 	type ProviderLinkPayload,
@@ -372,6 +373,8 @@ async function run() {
 	if (wrote || valued) await finance.classify()
 	else await finance.detectIncome()
 	if (done.size) await finance.billPass()
+	// then the hand-entered loans step on and an intro rate's end is said (#86)
+	if (done.size) await finance.debtPass()
 }
 
 /**
@@ -464,24 +467,27 @@ async function syncLink(link: ProviderLink): Promise<boolean> {
 		const made: { out?: ReturnType<typeof syncOps> } = {}
 		// the read and the write in one queue job, so an owner's fix cannot land between them and be overwritten
 		const written = await finance.applySync(async () => {
-			// the bills in the same job, so a card's statement bill is made once, and never again once deleted (#78)
-			const [existing, bills] = await Promise.all([
+			// the bills in the same job, so a card's statement bill is made once, and never again once deleted (#78); the
+			// live liabilities always, since every account read brings a card's limit (#86)
+			const [existing, bills, liabilities] = await Promise.all([
 				existingRows(idsToRead(result)),
 				result.statements?.length
 					? queryEntities<BillPayload>({ type: FINANCE.bill, includeDeleted: true })
 					: Promise.resolve([]),
+				queryEntities<LiabilityPayload>({ type: FINANCE.liability }),
 			])
 			const out = (made.out = syncOps({
 				link,
 				accounts: finance.data().accounts,
 				bills,
+				liabilities: liabilities.map((row) => ({ ...row.payload, id: row.id })),
 				existing,
 				result,
 				nowIso: nowIso(),
 				day: todayIso(),
 				newId,
 			}))
-			return { chunks: out.chunks, links: [out.link], accounts: out.accounts }
+			return { chunks: out.chunks, links: [out.link], accounts: out.accounts, liabilities: out.liabilities }
 		})
 		if (made.out) {
 			logSkipped(made.out.skipped)
@@ -577,7 +583,7 @@ export const plaidProvider: FinanceProvider = {
 }
 
 /**
- * Binds Plaid where the crate links (the desktop and iOS under Tauri, D-203): the provider, its three schedules, and
+ * Binds Plaid where the crate links (the desktop and iOS under Tauri, D-206): the provider, its three schedules, and
  * one run now. On Android the status says `none`, and in a plain browser it is `undefined`; nothing binds in either.
  * The answer unbinds.
  */
