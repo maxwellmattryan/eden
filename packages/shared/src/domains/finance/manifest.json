@@ -2,7 +2,7 @@
 	"id": "finance",
 	"phase": "later",
 	"sidebar": { "group": "domains", "order": 50, "visible": true },
-	"tabs": ["activity", "accounts", "bills", "investments"],
+	"tabs": ["activity", "accounts", "bills", "budget", "investments", "goals"],
 	"resources": {
 		"facts": [{ "id": "monthly-income-band", "tier": "T2" }],
 		"entities": [
@@ -35,7 +35,8 @@
 	"captureSources": [],
 	"tools": [
 		{ "id": "draft", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] },
-		{ "id": "read-statement", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] }
+		{ "id": "read-statement", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] },
+		{ "id": "read-pay-stub", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] }
 	],
 	"signals": [
 		"finance.link-broken",
@@ -74,6 +75,8 @@
 		"bill",
 		"file-import",
 		"recurring-charge",
+		"budget",
+		"savings-goal",
 		"holding",
 		"security"
 	]

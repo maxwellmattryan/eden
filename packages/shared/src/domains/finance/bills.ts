@@ -11,10 +11,12 @@ import {
 	BILL_REPEATS,
 	FILE_IMPORT_SOURCE,
 	FINANCE,
+	INSURANCE_KINDS,
 	type Account,
 	type Bill,
 	type BillRepeat,
 	type BillSource,
+	type InsuranceKind,
 	type LetterImportPayload,
 } from './types.js'
 
@@ -213,6 +215,9 @@ export function nextOccurrence(given: readonly SeriesBill[], today: string, newI
 		...(latest.accountId ? { accountId: latest.accountId } : {}),
 		...(latest.url ? { url: latest.url } : {}),
 		...(latest.merchantIds?.length ? { merchantIds: [...latest.merchantIds] } : {}),
+		// only the kind carries on: a premium stays a premium; an EOB, its insurer and its day of service stay behind
+		// with the one occurrence they describe
+		...(latest.insurance ? { insurance: latest.insurance } : {}),
 	}
 }
 
@@ -237,7 +242,17 @@ export interface BillDraft {
 	minimum?: Money
 	url?: string
 	source?: BillSource
+	/** An insurance premium or a medical bill (#85). */
+	insurance?: InsuranceKind
+	/** The next three are kept only with `insurance: 'medical'`. */
+	eob?: boolean
+	insurer?: string
+	/** `YYYY-MM-DD`. */
+	serviceDay?: string
 }
+
+const isInsurance = (value: unknown): value is InsuranceKind => (INSURANCE_KINDS as readonly unknown[]).includes(value)
+const MAX_NAME = 120
 
 /** A web address the owner can be sent to: `https://` only. */
 export function safeUrl(value: unknown): string | undefined {
@@ -265,6 +280,10 @@ export function draftOfBill(bill: Bill): BillDraft {
 		...(bill.accountId ? { accountId: bill.accountId } : {}),
 		...(bill.minimum ? { minimum: bill.minimum } : {}),
 		...(bill.url ? { url: bill.url } : {}),
+		...(bill.insurance ? { insurance: bill.insurance } : {}),
+		...(bill.eob ? { eob: true } : {}),
+		...(bill.insurer ? { insurer: bill.insurer } : {}),
+		...(bill.serviceDay ? { serviceDay: bill.serviceDay } : {}),
 	}
 }
 
@@ -293,6 +312,13 @@ export function billFromDraft(draft: BillDraft, was: Bill | undefined, today: st
 	set('accountId', draft.accountId || undefined)
 	set('minimum', draft.accountId && draft.minimum && draft.minimum.minor > 0 ? draft.minimum : undefined)
 	set('url', safeUrl(draft.url))
+	const insurance = isInsurance(draft.insurance) ? draft.insurance : undefined
+	const medical = insurance === 'medical'
+	const insurer = medical && typeof draft.insurer === 'string' ? draft.insurer.trim().slice(0, MAX_NAME) : ''
+	set('insurance', insurance)
+	set('eob', medical && draft.eob ? true : undefined)
+	set('insurer', insurer || undefined)
+	set('serviceDay', medical && isDay(draft.serviceDay) ? draft.serviceDay : undefined)
 	if (bill.repeat && !bill.seriesId) bill.seriesId = id
 	if (!bill.accountId) {
 		delete bill.statementDay
@@ -339,6 +365,31 @@ export interface BillAnswer {
 	last4?: string
 	repeats?: string
 	url?: string
+	/** `none`, `premium` or `medical`. */
+	insurance?: string
+	/** An insurer's explanation of benefits. */
+	eob?: boolean
+	insurer?: string
+	serviceDay?: string
+}
+
+/** The answer's currency code, the home one when it names none. */
+const codeOf = (given: BillAnswer, home: string) =>
+	typeof given.currency === 'string' && given.currency.trim() ? given.currency.trim().toUpperCase() : home
+
+/** An EOB whose amount reads as 0: the owner owes nothing, so there is no bill. */
+export function eobNothingOwed(answer: unknown, home: string): boolean {
+	if (typeof answer !== 'object' || answer === null || Array.isArray(answer)) return false
+	const given = answer as BillAnswer
+	if (given.eob !== true || typeof given.amount !== 'string' || !given.amount.trim()) return false
+	const code = codeOf(given, home)
+	if (!isCurrency(code)) return false
+	try {
+		const parsed = parseMoney(given.amount, code, 'en')
+		return !('error' in parsed) && parsed.minor === 0
+	} catch {
+		return false
+	}
 }
 
 const REPEATS: Record<string, BillRepeat | undefined> = { month: 1, quarter: 3, 'half-year': 6, year: 12 }
@@ -356,7 +407,9 @@ function figureOf(text: unknown, currency: string): Money | undefined {
 
 /**
  * The model's answer as a draft: nothing when it says this is not a bill, names no payee, or gives an amount that does
- * not read in its currency. A statement naming the last four digits of an open credit card becomes that card's.
+ * not read in its currency. A statement naming the last four digits of an open credit card becomes that card's. An
+ * EOB (#85) is not a bill yet: the provider's estimate, medical, with no due day, for the month of the day of service,
+ * never repeating and never a card's.
  */
 export function billDraftOf(
 	answer: unknown,
@@ -366,13 +419,30 @@ export function billDraftOf(
 ): BillDraft | undefined {
 	if (typeof answer !== 'object' || answer === null || Array.isArray(answer)) return undefined
 	const given = answer as BillAnswer
-	if (given.isBill !== true) return undefined
-	const payee = typeof given.payee === 'string' ? given.payee.trim().slice(0, 120) : ''
+	const eob = given.eob === true
+	if (given.isBill !== true && !eob) return undefined
+	const payee = typeof given.payee === 'string' ? given.payee.trim().slice(0, MAX_NAME) : ''
 	if (!payee) return undefined
-	const code = typeof given.currency === 'string' && given.currency.trim() ? given.currency.trim().toUpperCase() : home
+	const code = codeOf(given, home)
 	if (!isCurrency(code)) return undefined
 	const amount = figureOf(given.amount, code)
 	if (!amount) return undefined
+	const serviceDay = isDay(given.serviceDay) ? given.serviceDay : undefined
+	if (eob) {
+		const insurer = typeof given.insurer === 'string' ? given.insurer.trim().slice(0, MAX_NAME) : ''
+		return {
+			payee,
+			amount,
+			period: serviceDay ? serviceDay.slice(0, 7) : isPeriod(given.period) ? given.period : today.slice(0, 7),
+			source: 'letter',
+			estimate: true,
+			insurance: 'medical',
+			eob: true,
+			...(insurer ? { insurer } : {}),
+			...(serviceDay ? { serviceDay } : {}),
+		}
+	}
+	const insurance = isInsurance(given.insurance) ? given.insurance : undefined
 	const due = isDay(given.due) ? given.due : undefined
 	const period = isPeriod(given.period) ? given.period : due ? due.slice(0, 7) : today.slice(0, 7)
 	const card =
@@ -393,6 +463,8 @@ export function billDraftOf(
 		...(card ? { accountId: card.id } : {}),
 		...(minimum ? { minimum } : {}),
 		...(url ? { url } : {}),
+		...(insurance ? { insurance } : {}),
+		...(insurance === 'medical' && serviceDay ? { serviceDay } : {}),
 	}
 }
 
@@ -411,10 +483,23 @@ export interface FileImport {
 	day: string
 }
 
-/** Stores a bill, new or changed, with the `file-import` row of the letter it came from; the inverse takes it back. */
+/** A value as JSON with its keys sorted, so two bills compare by what they hold. */
+function canonical(value: unknown): string {
+	return JSON.stringify(value, (_key, entry: unknown) =>
+		entry && typeof entry === 'object' && !Array.isArray(entry)
+			? Object.fromEntries(Object.entries(entry).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+			: entry
+	)
+}
+
+/**
+ * Stores a bill, new or changed, with the `file-import` row of the letter it came from; the inverse takes it back. A
+ * bill saved unchanged with a letter (an EOB for a bill already here, #85) writes the letter's row alone.
+ */
 export function billOps(was: Bill | undefined, bill: Bill, read?: FileImport): Ops {
-	const ops: BatchOp[] = [was ? update(bill) : create(bill)]
-	const inverse: BatchOp[] = [was ? update(was) : { op: 'delete', uri: toUri(FINANCE.bill, bill.id) }]
+	const unchanged = !!was && !!read && canonical(payloadOf(was)) === canonical(payloadOf(bill))
+	const ops: BatchOp[] = unchanged ? [] : [was ? update(bill) : create(bill)]
+	const inverse: BatchOp[] = unchanged ? [] : [was ? update(was) : { op: 'delete', uri: toUri(FINANCE.bill, bill.id) }]
 	if (read) {
 		const payload: LetterImportPayload = { kind: 'letter', day: read.day, billId: bill.id, rows: 1 }
 		ops.push({

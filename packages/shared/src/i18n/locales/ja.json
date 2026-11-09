@@ -1207,7 +1207,9 @@
 				"activity": "取引",
 				"accounts": "口座",
 				"bills": "請求",
-				"investments": "投資"
+				"budget": "予算",
+				"investments": "投資",
+				"goals": "目標"
 			},
 			"tabsLabel": "果樹園のセクション",
 			"txKinds": {
@@ -1380,7 +1382,15 @@
 					"paidFromBank": "{day}に{bank}から支払い",
 					"paidOn": "{day}に支払い",
 					"markedPaid": "{day}に支払済みにしました",
-					"minimumPaid": "最低額を支払い済み · {amount}は次回の明細へ"
+					"minimumPaid": "最低額を支払い済み · {amount}は次回の明細へ",
+					"notYet": "まだ請求ではありません",
+					"fromEob": "{insurer}の医療費明細(EOB)から",
+					"fromAnEob": "医療費明細(EOB)から",
+					"setAside": "毎月{amount}を積み立て"
+				},
+				"insurance": {
+					"premium": "保険料",
+					"medical": "医療"
 				},
 				"menu": {
 					"markPaid": "支払済みにする",
@@ -1407,6 +1417,12 @@
 					"titleEdit": "請求を編集",
 					"titleDraft": "請求を確認",
 					"updates": "{month}の{payee}の請求を更新します",
+					"replaces": "{insurer}の医療費明細(EOB)による{payee}の見積もりを置き換えます",
+					"replacesEob": "医療費明細(EOB)による{payee}の見積もりを置き換えます",
+					"billed": "この医療費明細(EOB)は、すでにある{payee}の請求のものです。保存しても請求はそのままです。",
+					"insurance": "保険",
+					"noInsurance": "なし",
+					"serviceDay": "受診日",
 					"payee": "支払先",
 					"amount": "金額",
 					"currency": "通貨",
@@ -1464,6 +1480,59 @@
 					"cancelled": "下書きを中止しました。",
 					"unreadable": "庭師はこれを読めませんでした。",
 					"empty": "これは請求には見えません。",
+					"no-files": "送るものがありませんでした。",
+					"nothing-owed": "この医療費明細(EOB)では支払う額がないため、請求はありません。"
+				}
+			},
+			"payStub": {
+				"title": "控除を確認",
+				"titleEdit": "控除を編集",
+				"confirm": "控除を読み取る",
+				"next": "庭師が控除を一覧にします。保存する前に確認できます。",
+				"reading": "控除を読み取り中",
+				"replaces": "{day}の給与明細の控除を置き換えます",
+				"payDay": "支給日",
+				"list": "控除",
+				"rowLabel": "控除{n}",
+				"name": "名前",
+				"kind": "種類",
+				"amount": "金額",
+				"kinds": {
+					"medical": "医療",
+					"dental": "歯科",
+					"vision": "眼科",
+					"life": "生命",
+					"disability": "就業不能",
+					"hsa": "HSA",
+					"fsa": "FSA",
+					"retirement": "退職金",
+					"tax": "税金",
+					"other": "その他"
+				},
+				"remove": "{name}を削除",
+				"removeEmpty": "この控除を削除",
+				"add": "控除を追加",
+				"premiums": "保険料は給与1回あたり{amount}",
+				"byHand": "手で入力する",
+				"known": "{employer}の控除を記録しました",
+				"knownGone": "その収入源はもうありません",
+				"errors": {
+					"name": "名前を入力してください",
+					"positive": "0より大きい金額を入力してください",
+					"none": "控除を1つ以上追加してください"
+				},
+				"failure": {
+					"busy": "庭師は別の依頼を処理中です。少し待ってからもう一度お試しください。",
+					"no-key": "給与明細を読み取るには、設定でAnthropicのキーを追加してください。",
+					"unavailable": "ここでは庭師を使えません。",
+					"budget": "今月の庭師の予算を使い切りました。",
+					"limit": "サブスクリプションの利用上限に達しています。リセットまでお待ちください。",
+					"network": "庭師に接続できませんでした。",
+					"refusal": "庭師はこの給与明細を読み取りませんでした。",
+					"max-tokens": "回答が長すぎました。",
+					"cancelled": "読み取りを中止しました。",
+					"unreadable": "庭師はこれを読めませんでした。",
+					"empty": "この給与明細から控除を読み取れませんでした。",
 					"no-files": "送るものがありませんでした。"
 				}
 			},
@@ -1783,7 +1852,10 @@
 				},
 				"perMonth": "月におよそ{amount}",
 				"about": "およそ{amount}",
+				"premiums": "保険料は給与1回あたり{amount}",
 				"menu": {
+					"payStub": "給与明細を読み取る",
+					"editDeductions": "控除を編集",
 					"ended": "この仕事は終わった",
 					"stillPaid": "まだ支給されている",
 					"startLean": "節約モードを始める",
@@ -1836,6 +1908,180 @@
 				"uncategorised": "未分類",
 				"nothing": "必需品以外に繰り返す支出はありません。"
 			},
+			"budget": {
+				"previous": "前の月",
+				"next": "次の月",
+				"planned": "予定",
+				"spent": "支出",
+				"left": "残り",
+				"income": "収入",
+				"toPlan": "未計画",
+				"notPlanned": "{amount}がまだ計画されていません",
+				"overPlanned": "収入より{amount}多く計画しています",
+				"fromPaychecks": "給与から",
+				"average": "収入が一定でないため、{months}か月の平均",
+				"stale": "支出には{day}時点の{institution}を含みます",
+				"outside": "予算外の支出 {amount}",
+				"otherCurrencies": "ほかの通貨での支出は含みません",
+				"lean": "節約モード中：新しい下書きは必需品だけになります",
+				"readFailed": "取引を読み込めませんでした",
+				"emptyTitle": "予算はまだありません",
+				"emptyText": "これまでの月から下書きを作れます。固定費は請求とサブスクから、それ以外は支出から計算します。",
+				"draft": "履歴から下書き",
+				"addLine": "項目を追加",
+				"groups": {
+					"fixed": "固定費",
+					"variable": "変動費",
+					"sinking": "積立"
+				},
+				"of": "{available}のうち{spent}",
+				"over": "{amount}超過",
+				"rolledOver": "{amount}を繰り越し",
+				"rollsOver": "繰り越します",
+				"due": "{month}期限",
+				"monthly": "月に{amount}",
+				"planPercent": "予定の{percent}%",
+				"savedPercent": "{percent}%積立済み",
+				"actions": "{category}の操作",
+				"edit": "項目を編集",
+				"remove": "項目を削除",
+				"sheet": {
+					"editTitle": "{category}を編集",
+					"addTitle": "項目を追加",
+					"category": "カテゴリ",
+					"choose": "カテゴリを選ぶ",
+					"amount": "金額",
+					"rollover": "残りを繰り越す",
+					"sinking": "請求に向けて積み立てる",
+					"sinkingHint": "積立は常に繰り越します。",
+					"target": "目標額",
+					"due": "期限"
+				},
+				"errors": {
+					"budget:amount": "0より大きい金額を入力してください",
+					"budget:target": "0より大きい目標額を入力してください",
+					"budget:category": "カテゴリを選んでください"
+				},
+				"toasts": {
+					"drafted": "{month}の項目を{count}件下書きしました",
+					"nothing": "まだ下書きできるものがありません。まる1か月分の支出か、繰り返しの請求が必要です。",
+					"removed": "{category}を予算から外しました",
+					"updated": "{category}を更新しました",
+					"added": "{category}を追加しました"
+				}
+			},
+			"goals": {
+				"add": "目標を追加",
+				"readFailed": "取引を読み込めませんでした",
+				"emptyTitle": "まだ目標がありません",
+				"emptyNoAccount": "目標は口座の中でお金を取り分けます。まず口座を追加してください。",
+				"emptyText": "何かのために貯めるか、緊急資金をつくりましょう。",
+				"rate": {
+					"title": "貯蓄率",
+					"percent": "{rate}%",
+					"sentence": "直近{months}か月で収入の{rate}%を貯蓄しました",
+					"month": "{month}: {rate}%",
+					"target": "目標 {rate}%",
+					"ofGoal": "目標の{percent}%",
+					"noIncome": "貯蓄率を測るには収入のある月が必要です",
+					"actions": "貯蓄率の操作",
+					"set": "目標を設定",
+					"edit": "目標を編集",
+					"remove": "目標を外す"
+				},
+				"totals": {
+					"saved": "貯めた額",
+					"toGo": "残り",
+					"monthly": "月に必要な額",
+					"otherCurrencies": "ほかの通貨の目標は合計に含めていません"
+				},
+				"of": "{target}のうち{saved}",
+				"savedPercent": "{percent}%達成",
+				"reached": "達成",
+				"past": "期日を過ぎています",
+				"byMonthly": "{month}まで · 月{amount}",
+				"about": "今のペースで{month}ごろ",
+				"aboutAfter": "· 今のペースで{month}ごろ",
+				"behind": "· 今のペースでは間に合いません",
+				"covers": "生活必需費の{months}か月分",
+				"accountClosed": "{account}は解約済みです",
+				"accountGone": "口座がなくなっています",
+				"goneTitle": "なくなった口座",
+				"dip": "{day}の{high}から{amount}減っています",
+				"rebuild": "{month}までに戻す: 月{amount}",
+				"notEarmarked": "{amount}は取り分けていません",
+				"shared": "月{amount}でこれらに間に合います",
+				"actions": "{name}の操作",
+				"menu": {
+					"edit": "編集",
+					"up": "上へ移動",
+					"down": "下へ移動",
+					"rebuild": "戻す計画を立てる",
+					"fromHere": "ここから始める",
+					"bought": "購入済みにする",
+					"close": "目標を閉じる",
+					"delete": "削除",
+					"reopen": "再開",
+					"asset": "資産として追加",
+					"loan": "ローンを追加"
+				},
+				"done": {
+					"title": "完了",
+					"bought": "{month}に購入",
+					"closed": "{month}に終了"
+				},
+				"loanName": "{name}のローン",
+				"sheet": {
+					"addTitle": "目標を追加",
+					"editTitle": "目標を編集",
+					"kind": "目標の種類",
+					"target": "何かのために貯める",
+					"emergency": "緊急資金",
+					"name": "名前",
+					"emergencyName": "緊急資金",
+					"account": "口座",
+					"chooseAccount": "口座を選ぶ",
+					"amount": "目標額",
+					"months": "生活必需費の月数",
+					"monthsOption": "{months}か月",
+					"sized": "生活必需費の{months}か月分は{amount}です",
+					"noEssentials": "目安を出すにはまる1か月分の支出が必要です",
+					"by": "期日",
+					"noDate": "期日なし",
+					"live": "月{amount}で{month}までに達成します"
+				},
+				"rebuildSheet": {
+					"title": "戻す計画を立てる",
+					"down": "{high}から{amount}減っています",
+					"by": "戻す期日",
+					"live": "月{amount}で{month}までに戻せます"
+				},
+				"rateSheet": {
+					"title": "貯蓄率の目標",
+					"field": "目標の貯蓄率 (%)"
+				},
+				"errors": {
+					"goal:name": "60文字以内で名前を入力してください",
+					"goal:account": "負債ではない、開いている口座を選んでください",
+					"goal:target": "0より大きい目標額を入力してください",
+					"goal:months": "1〜12か月を選んでください",
+					"goal:rate": "1〜99の整数で入力してください",
+					"goal:emergency": "緊急資金はすでにあります"
+				},
+				"toasts": {
+					"added": "{name}を追加しました",
+					"saved": "{name}を保存しました",
+					"moved": "{name}を移動しました",
+					"closed": "{name}を閉じました",
+					"bought": "{name}を購入済みにしました",
+					"reopened": "{name}を再開しました",
+					"deleted": "{name}を削除しました",
+					"rebuild": "{name}を戻す計画を立てました",
+					"fromHere": "{name}をここから始めます",
+					"rateSet": "貯蓄率の目標を設定しました",
+					"rateRemoved": "貯蓄率の目標を外しました"
+				}
+			},
 			"toasts": {
 				"incomeEnded": "{employer}を終了にしました",
 				"justLate": "{day}予定として記録しました",
@@ -1860,7 +2106,9 @@
 				"nothingNew": "{name}に新しい取引はありません",
 				"costBasisSet": "{name}の取得原価を設定しました",
 				"costBasisCleared": "{name}の取得原価を消去しました",
-				"valueSet": "{name}の評価額を設定しました"
+				"valueSet": "{name}の評価額を設定しました",
+				"payStubSaved": "{employer}の控除を保存しました",
+				"payStubCleared": "{employer}の控除を消去しました"
 			},
 			"crypto": {
 				"connect": "Coinbaseを接続",

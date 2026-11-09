@@ -785,6 +785,16 @@ export const SCHEMAS: Readonly<Record<string, { description: string; schema: Jso
 			['text', 'currency']
 		),
 	},
+	'finance.read-pay-stub': {
+		description: `${SEPARATE} that lists the deductions on a pay stub the owner is reading: each one’s name, kind and amount per paycheck, and the stub’s pay day. It is run by Read a pay stub in Orchard’s Income section with the text the owner confirmed, or the picture they chose to send, and refuses when called in a conversation: there, tell the owner to use Read a pay stub in Orchard’s Income section. Returns the deductions found; nothing is saved until the owner checks them.`,
+		schema: object(
+			{
+				text: text('The pay stub’s text as the owner confirmed it; empty when the picture is sent.'),
+				currency: text('The income source’s currency, ISO 4217.'),
+			},
+			['text', 'currency']
+		),
+	},
 	'weather.forecast': {
 		description:
 			'Returns the forecast Eden holds for the owner’s home area: the `current` conditions, up to seven `days` from `day` on (each with its condition, the high and low in `unit`, the chance of rain in percent, the rainfall in mm and the UV), and the weather `alerts` in force now, the most severe first. An alert marked `dismissed` was put away by the owner in Sky and is still in force. `alertsCovered: false` means no alert service covers the place, which is not the same as no alerts. Use it for any question about the weather or about alerts, warnings and watches. It covers the home area only, and a day the forecast does not reach is an error that names the days it holds.',
@@ -814,7 +824,7 @@ export const SCHEMAS: Readonly<Record<string, { description: string; schema: Jso
 		}),
 	},
 	'finance.draft': {
-		description: `${SEPARATE} that drafts one bill from a letter, a statement or an estimate of benefits, as a card the owner checks on Orchard’s Bills tab before anything is saved: the payee, the amount, the due day, a card statement’s minimum, and whether it repeats. Pass the letter’s words as \`text\` when the owner pasted or typed them. In a conversation it never reads an attached file: the owner captures a letter on the Bills tab, where it is read on their device first. Returns whether a bill was drafted.`,
+		description: `${SEPARATE} that drafts one bill from a letter, a statement or an explanation of benefits (EOB), as a card the owner checks on Orchard’s Bills tab before anything is saved: the payee, the amount, the due day, a card statement’s minimum, and whether it repeats. Pass the letter’s words as \`text\` when the owner pasted or typed them. In a conversation it never reads an attached file: the owner captures a letter on the Bills tab, where it is read on their device first. Returns whether a bill was drafted.`,
 		schema: object({
 			text: text('The letter’s words as the owner gave them in this conversation.'),
 		}),

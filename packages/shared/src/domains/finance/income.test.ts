@@ -463,6 +463,29 @@ describe('ops', () => {
 		expect(answered.ops).toEqual([])
 		expect(answered.sources).toHaveLength(1)
 	})
+
+	const STUB = {
+		day: '2026-10-16',
+		deductions: [{ name: 'Medical', kind: 'medical' as const, amount: { minor: 9000, currency: 'USD' } }],
+		importId: 'fi-1',
+	}
+
+	it('keeps a pay stub’s deductions when it updates a source (#85)', () => {
+		const made = incomeOps(detect(series('w', WEEKLY.slice(0, 6), 150000)), [], newId)
+		const held = rowsOf(made.sources.map((source) => ({ ...source, payStub: STUB })))
+		const out = incomeOps(detect(series('w', WEEKLY, 150000)), held, newId)
+		expect(out.ops).toHaveLength(1)
+		const op = out.ops[0]!
+		expect(op.op === 'updateEntity' && op.payload).toMatchObject({ lastDay: '2026-10-16', payStub: STUB })
+		expect(out.sources[0]!.payStub).toEqual(STUB)
+	})
+
+	it('keeps a source with no rows left when its only owner key is its pay stub', () => {
+		const made = incomeOps(detect(series('w', WEEKLY, 150000)), [], newId).sources
+		const out = incomeOps([], rowsOf(made.map((source) => ({ ...source, payStub: STUB }))), newId)
+		expect(out.ops).toEqual([])
+		expect(out.sources).toHaveLength(1)
+	})
 })
 
 describe('average and band', () => {

@@ -1207,7 +1207,9 @@
 				"activity": "Activity",
 				"accounts": "Accounts",
 				"bills": "Bills",
-				"investments": "Investments"
+				"budget": "Budget",
+				"investments": "Investments",
+				"goals": "Goals"
 			},
 			"tabsLabel": "Orchard sections",
 			"txKinds": {
@@ -1380,7 +1382,15 @@
 					"paidFromBank": "Paid {day} from {bank}",
 					"paidOn": "Paid {day}",
 					"markedPaid": "Marked paid {day}",
-					"minimumPaid": "Minimum paid · {amount} carried to the next statement"
+					"minimumPaid": "Minimum paid · {amount} carried to the next statement",
+					"notYet": "Not a bill yet",
+					"fromEob": "From the {insurer} EOB",
+					"fromAnEob": "From an EOB",
+					"setAside": "Set aside {amount} a month"
+				},
+				"insurance": {
+					"premium": "Premium",
+					"medical": "Medical"
 				},
 				"menu": {
 					"markPaid": "Mark paid",
@@ -1407,6 +1417,12 @@
 					"titleEdit": "Edit bill",
 					"titleDraft": "Check the bill",
 					"updates": "Updates the {payee} bill for {month}",
+					"replaces": "Replaces the estimate from the {insurer} EOB for {payee}",
+					"replacesEob": "Replaces the EOB’s estimate for {payee}",
+					"billed": "This EOB is for the {payee} bill already here. Saving keeps the bill as it is.",
+					"insurance": "Insurance",
+					"noInsurance": "None",
+					"serviceDay": "Day of service",
 					"payee": "Payee",
 					"amount": "Amount",
 					"currency": "Currency",
@@ -1464,6 +1480,59 @@
 					"cancelled": "Drafting was cancelled.",
 					"unreadable": "The Gardener couldn’t read this.",
 					"empty": "This doesn’t read as a bill.",
+					"no-files": "There was nothing to send.",
+					"nothing-owed": "This EOB leaves nothing for you to pay, so there is no bill."
+				}
+			},
+			"payStub": {
+				"title": "Check the deductions",
+				"titleEdit": "Edit deductions",
+				"confirm": "Read the deductions",
+				"next": "The Gardener lists the deductions; you check them before anything is saved.",
+				"reading": "Reading the deductions",
+				"replaces": "Replaces the deductions from your {day} pay stub",
+				"payDay": "Pay day",
+				"list": "Deductions",
+				"rowLabel": "Deduction {n}",
+				"name": "Name",
+				"kind": "Kind",
+				"amount": "Amount",
+				"kinds": {
+					"medical": "Medical",
+					"dental": "Dental",
+					"vision": "Vision",
+					"life": "Life",
+					"disability": "Disability",
+					"hsa": "HSA",
+					"fsa": "FSA",
+					"retirement": "Retirement",
+					"tax": "Tax",
+					"other": "Other"
+				},
+				"remove": "Remove {name}",
+				"removeEmpty": "Remove this deduction",
+				"add": "Add a deduction",
+				"premiums": "Insurance premiums {amount} a paycheck",
+				"byHand": "Enter them by hand",
+				"known": "It recorded your {employer} deductions",
+				"knownGone": "Its income source is gone",
+				"errors": {
+					"name": "Enter a name",
+					"positive": "Enter an amount more than zero",
+					"none": "Add at least one deduction"
+				},
+				"failure": {
+					"busy": "The Gardener is busy with another request. Try again in a moment.",
+					"no-key": "Add an Anthropic key in Settings to read pay stubs.",
+					"unavailable": "The Gardener isn’t available here.",
+					"budget": "This month’s Gardener budget is spent.",
+					"limit": "The subscription’s usage limit is reached until it resets.",
+					"network": "Couldn’t reach the Gardener.",
+					"refusal": "The Gardener wouldn’t read this pay stub.",
+					"max-tokens": "The answer ran too long.",
+					"cancelled": "Reading was cancelled.",
+					"unreadable": "The Gardener couldn’t read this.",
+					"empty": "No deductions could be read from this pay stub.",
 					"no-files": "There was nothing to send."
 				}
 			},
@@ -1783,7 +1852,10 @@
 				},
 				"perMonth": "about {amount} a month",
 				"about": "about {amount}",
+				"premiums": "Premiums {amount} a paycheck",
 				"menu": {
+					"payStub": "Read a pay stub",
+					"editDeductions": "Edit deductions",
 					"ended": "This job ended",
 					"stillPaid": "Still paid here",
 					"startLean": "Start lean mode",
@@ -1836,6 +1908,180 @@
 				"uncategorised": "Uncategorised",
 				"nothing": "Nothing repeats outside the essentials."
 			},
+			"budget": {
+				"previous": "Previous month",
+				"next": "Next month",
+				"planned": "Planned",
+				"spent": "Spent",
+				"left": "Left",
+				"income": "Income",
+				"toPlan": "To plan",
+				"notPlanned": "{amount} not planned yet",
+				"overPlanned": "Planned {amount} more than you earn",
+				"fromPaychecks": "From your paychecks",
+				"average": "{months}-month average, since your income varies",
+				"stale": "Spent includes {institution} as of {day}",
+				"outside": "{amount} spent outside the budget",
+				"otherCurrencies": "Spending in other currencies is left out",
+				"lean": "Lean mode is on: a new draft keeps the essentials only",
+				"readFailed": "Couldn't read your transactions",
+				"emptyTitle": "No budget yet",
+				"emptyText": "Draft one from your last months: fixed lines from your bills and subscriptions, the rest from what you spend.",
+				"draft": "Draft from history",
+				"addLine": "Add line",
+				"groups": {
+					"fixed": "Fixed",
+					"variable": "Variable",
+					"sinking": "Sinking funds"
+				},
+				"of": "{spent} of {available}",
+				"over": "Over by {amount}",
+				"rolledOver": "{amount} rolled over",
+				"rollsOver": "Rolls over",
+				"due": "Due {month}",
+				"monthly": "{amount} a month",
+				"planPercent": "{percent}% of plan",
+				"savedPercent": "{percent}% saved",
+				"actions": "Actions for {category}",
+				"edit": "Edit line",
+				"remove": "Remove line",
+				"sheet": {
+					"editTitle": "Edit {category}",
+					"addTitle": "Add a line",
+					"category": "Category",
+					"choose": "Choose a category",
+					"amount": "Amount",
+					"rollover": "Roll over what's left",
+					"sinking": "Save toward a bill",
+					"sinkingHint": "A sinking fund always rolls over.",
+					"target": "Target",
+					"due": "Due"
+				},
+				"errors": {
+					"budget:amount": "Enter an amount above zero",
+					"budget:target": "Enter a target above zero",
+					"budget:category": "Choose a category"
+				},
+				"toasts": {
+					"drafted": "Drafted {count, plural, one {# line} other {# lines}} for {month}",
+					"nothing": "Nothing to draft yet: Orchard needs a full month of spending or a repeating bill.",
+					"removed": "Removed {category} from the budget",
+					"updated": "Updated {category}",
+					"added": "Added {category}"
+				}
+			},
+			"goals": {
+				"add": "Add a goal",
+				"readFailed": "Couldn't read your transactions",
+				"emptyTitle": "No goals yet",
+				"emptyNoAccount": "Goals set money aside in an account. Add one first.",
+				"emptyText": "Save toward something, or build an emergency fund.",
+				"rate": {
+					"title": "Savings rate",
+					"percent": "{rate}%",
+					"sentence": "You saved {rate}% of your income over the last {months, plural, one {month} other {# months}}",
+					"month": "{month}: {rate}%",
+					"target": "Goal {rate}%",
+					"ofGoal": "{percent}% of goal",
+					"noIncome": "Orchard needs a month with income to measure your savings rate",
+					"actions": "Savings rate actions",
+					"set": "Set a goal",
+					"edit": "Edit goal",
+					"remove": "Remove goal"
+				},
+				"totals": {
+					"saved": "Saved",
+					"toGo": "To go",
+					"monthly": "Needed a month",
+					"otherCurrencies": "Goals in other currencies are left out of the totals"
+				},
+				"of": "{saved} of {target}",
+				"savedPercent": "{percent}% saved",
+				"reached": "Reached",
+				"past": "Past its date",
+				"byMonthly": "By {month} · {amount} a month",
+				"about": "About {month} at your recent pace",
+				"aboutAfter": "· about {month} at your recent pace",
+				"behind": "· behind at your recent pace",
+				"covers": "Covers {months} months of essentials",
+				"accountClosed": "{account} is closed",
+				"accountGone": "Its account is gone",
+				"goneTitle": "Account gone",
+				"dip": "Down {amount} from {high} on {day}",
+				"rebuild": "Rebuild by {month}: {amount} a month",
+				"notEarmarked": "{amount} not earmarked",
+				"shared": "{amount} a month reaches these on time",
+				"actions": "Actions for {name}",
+				"menu": {
+					"edit": "Edit",
+					"up": "Move up",
+					"down": "Move down",
+					"rebuild": "Plan the rebuild",
+					"fromHere": "Start from here",
+					"bought": "Mark as bought",
+					"close": "Close goal",
+					"delete": "Delete",
+					"reopen": "Reopen",
+					"asset": "Add as an asset",
+					"loan": "Add a loan"
+				},
+				"done": {
+					"title": "Done",
+					"bought": "Bought {month}",
+					"closed": "Closed {month}"
+				},
+				"loanName": "{name} loan",
+				"sheet": {
+					"addTitle": "Add a goal",
+					"editTitle": "Edit goal",
+					"kind": "Kind of goal",
+					"target": "Saving for something",
+					"emergency": "Emergency fund",
+					"name": "Name",
+					"emergencyName": "Emergency fund",
+					"account": "Account",
+					"chooseAccount": "Choose an account",
+					"amount": "Target",
+					"months": "Months of essentials",
+					"monthsOption": "{months, plural, one {# month} other {# months}}",
+					"sized": "{months} months of essentials is {amount}",
+					"noEssentials": "Orchard needs a full month of spending to size it",
+					"by": "By",
+					"noDate": "No date",
+					"live": "{amount} a month reaches it by {month}"
+				},
+				"rebuildSheet": {
+					"title": "Plan the rebuild",
+					"down": "Down {amount} from {high}",
+					"by": "Rebuild by",
+					"live": "{amount} a month rebuilds it by {month}"
+				},
+				"rateSheet": {
+					"title": "Savings rate goal",
+					"field": "Target savings rate (%)"
+				},
+				"errors": {
+					"goal:name": "Enter a name of up to 60 characters",
+					"goal:account": "Choose an open account that isn't a debt",
+					"goal:target": "Enter a target above zero",
+					"goal:months": "Choose 1 to 12 months",
+					"goal:rate": "Enter a whole percent from 1 to 99",
+					"goal:emergency": "You already have an emergency fund"
+				},
+				"toasts": {
+					"added": "Added {name}",
+					"saved": "Saved {name}",
+					"moved": "Moved {name}",
+					"closed": "Closed {name}",
+					"bought": "Marked {name} as bought",
+					"reopened": "Reopened {name}",
+					"deleted": "Deleted {name}",
+					"rebuild": "Rebuild planned for {name}",
+					"fromHere": "{name} starts from here",
+					"rateSet": "Savings rate goal set",
+					"rateRemoved": "Savings rate goal removed"
+				}
+			},
 			"toasts": {
 				"incomeEnded": "Marked {employer} as ended",
 				"justLate": "Noted: due {day}",
@@ -1860,7 +2106,9 @@
 				"nothingNew": "Nothing new from {name}",
 				"costBasisSet": "Cost basis set for {name}",
 				"costBasisCleared": "Cleared your cost basis for {name}",
-				"valueSet": "Value set for {name}"
+				"valueSet": "Value set for {name}",
+				"payStubSaved": "Saved the {employer} deductions",
+				"payStubCleared": "Cleared the {employer} deductions"
 			},
 			"crypto": {
 				"connect": "Connect Coinbase",

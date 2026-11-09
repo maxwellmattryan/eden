@@ -19,6 +19,8 @@ export const FINANCE = {
 	holding: 'holding',
 	security: 'security',
 	income: 'income-source',
+	budget: 'budget',
+	goal: 'savings-goal',
 } as const
 
 /** Where a bill came from (#78): a letter read on the device, a card's statement, a series, or the owner's hand. */
@@ -79,7 +81,19 @@ export interface BillPayload {
 	task?: { id: string; due: string }
 	/** Set on an occurrence the bill pass made that an owner's undo took back: its tombstone ends no series. */
 	undone?: true
+	/** An insurance premium or a medical bill (#85, D-202). */
+	insurance?: InsuranceKind
+	/** Drafted from an insurer's explanation of benefits: an estimate, not a bill yet, until the provider's bill. */
+	eob?: true
+	/** The insurer named on the EOB, at most 120 characters; medical only. */
+	insurer?: string
+	/** `YYYY-MM-DD`, the day of service; medical only. */
+	serviceDay?: string
 }
+
+/** What kind of insurance a bill is (#85, D-202). */
+export const INSURANCE_KINDS = ['premium', 'medical'] as const
+export type InsuranceKind = (typeof INSURANCE_KINDS)[number]
 
 /** A `file-import` with `source: 'document'` (#78; #74's statement files have `source: 'file'`): a document read on this device, by its fingerprint (`externalId`), and what it made (D-189). */
 export interface LetterImportPayload {
@@ -88,6 +102,54 @@ export interface LetterImportPayload {
 	day: string
 	billId: string
 	rows: 1
+}
+
+/** A pay stub read on this device (#85): the income source its deductions went to. */
+export interface PayStubImportPayload {
+	kind: 'pay-stub'
+	/** `YYYY-MM-DD`. */
+	day: string
+	sourceId: string
+	/** How many deductions were saved. */
+	rows: number
+}
+
+/** A `file-import` with `source: 'document'`; readers narrow on `kind`. */
+export type DocumentImportPayload = LetterImportPayload | PayStubImportPayload
+
+/** What a pay stub deduction is for (#85, D-202). */
+export const DEDUCTION_KINDS = [
+	'medical',
+	'dental',
+	'vision',
+	'life',
+	'disability',
+	'hsa',
+	'fsa',
+	'retirement',
+	'tax',
+	'other',
+] as const
+export type DeductionKind = (typeof DEDUCTION_KINDS)[number]
+
+/** The deduction kinds that are insurance premiums. */
+export const INSURANCE_DEDUCTIONS: readonly DeductionKind[] = ['medical', 'dental', 'vision', 'life', 'disability']
+
+/** One deduction from a paycheck. */
+export interface Deduction {
+	name: string
+	kind: DeductionKind
+	/** Positive, per paycheck. */
+	amount: Money
+}
+
+/** The deductions read from a pay stub, kept on the income source. */
+export interface PayStub {
+	/** `YYYY-MM-DD`, the stub's pay day. */
+	day: string
+	deductions: Deduction[]
+	/** The `file-import` row of the stub they were read from. */
+	importId?: string
 }
 
 /** The source a `file-import` row is stored with; its `externalId` is the fingerprint. */
@@ -517,9 +579,60 @@ export interface IncomeSourcePayload {
 	seenNew?: true
 	/** The extra rows answered on the bonus sheet, the newest last, at most 20. */
 	handled?: string[]
+	/** The deductions of the latest pay stub the owner checked (#85). */
+	payStub?: PayStub
 }
 
 export type IncomeSource = IncomeSourcePayload & { id: string }
+
+/**
+ * A `budget` row (#84, D-201): one category's line from a month on. There is one live row per month and category; a
+ * month reads each category's latest row at or before it.
+ */
+export interface BudgetPayload {
+	/** `YYYY-MM`: the first month the line holds; it holds until a later row of its category. */
+	month: string
+	categoryId: string
+	/** Positive, home currency. */
+	amount: Money
+	rollover?: true
+	/** A sinking fund: always rolls over. `by` is `YYYY-MM`; `every` is in months, from a repeating bill. */
+	sinking?: { target: Money; by: string; every?: number }
+	/** No line from this month on. */
+	off?: true
+	by: 'draft' | 'owner'
+}
+
+export type Budget = BudgetPayload & { id: string }
+
+/**
+ * A `savings-goal` row (#88, D-203): a target saved toward in an account, an emergency fund sized in months of
+ * essentials, or the one savings-rate target. The goals in one account fill its balance in `order`; what each holds is
+ * read, never stored. `high` is the goal pass's key; every other key is the owner's.
+ */
+export interface SavingsGoalPayload {
+	kind: 'target' | 'emergency' | 'rate'
+	/** target, emergency */
+	name?: string
+	accountId?: string
+	/** Positive, the account's currency. */
+	target?: Money
+	/** emergency: the months of essentials it was sized at, 1–12. */
+	months?: number
+	/** `YYYY-MM`. */
+	by?: string
+	/** rate: basis points, 100–9900. */
+	rate?: number
+	/** Fill order within its account, 0 first. */
+	order?: number
+	closedOn?: string
+	closedAs?: 'bought' | 'closed'
+	/** `YYYY-MM`; the owner's rebuild plan. */
+	rebuildBy?: string
+	/** The pass's key: the most this goal has held and the day. */
+	high?: { amount: Money; day: string }
+}
+export type SavingsGoal = SavingsGoalPayload & { id: string }
 
 export type Category = CategoryPayload & { id: string }
 export type Rule = RulePayload & { id: string; updatedAt: string }

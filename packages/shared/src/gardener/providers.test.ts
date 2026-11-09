@@ -148,6 +148,7 @@ describe('the declared tools on the seed', () => {
 			Object.fromEntries(tools.map(({ domain, tool }) => [`${domain}.${tool.id}`, [tool.grade, tool.needs]]))
 		).toEqual({
 			'finance.read-statement': ['light', ['vision']],
+			'finance.read-pay-stub': ['light', ['vision']],
 			'kitchen.suggest-recipes': ['standard', []],
 			'kitchen.storage-tip': ['light', []],
 			'kitchen.capture-haul': ['light', ['vision']],

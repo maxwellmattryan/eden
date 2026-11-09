@@ -12,11 +12,12 @@ import { t } from '../../i18n/index.js'
 import { settings } from '../../settings/index.js'
 import { toSend } from '../../shell/gardener/files.js'
 import type { DirectPreview, ToolFailure, ToolFiles } from '../../shell/gardener/types.js'
-import { draftOver, sameBill, type BillDraft } from './bills.js'
+import type { BillDraft } from './bills.js'
+import { captureTarget, draftFor, type CaptureHow } from './insurance.js'
 import type { DocumentChoice } from './reader.js'
 import { documentRead } from './reader.svelte.js'
 import { finance } from './store.svelte.js'
-import { FILE_IMPORT_SOURCE, FINANCE, type LetterImportPayload } from './types.js'
+import { FILE_IMPORT_SOURCE, FINANCE, type DocumentImportPayload } from './types.js'
 import { dayLine } from './words.js'
 
 const TOOL = 'finance.draft'
@@ -50,15 +51,59 @@ export function pictureFiles(choice: Extract<DocumentChoice, { kind: 'picture' }
 	}
 }
 
+/**
+ * Whether a document was read on this device before, by its fingerprint: the day, and what it made in the owner's
+ * words (a letter's bill, or a pay stub's deductions, #85), or that it is gone. Shared by the bill capture and the
+ * pay stub reader, so a document is read once whichever of them reads it.
+ */
+export async function knownDocument(fingerprint: string): Promise<{ day: string; detail: string } | undefined> {
+	const [row] = await queryEntities<DocumentImportPayload>({
+		type: FINANCE.fileImport,
+		source: FILE_IMPORT_SOURCE,
+		externalIds: [fingerprint],
+	}).catch(() => [])
+	if (!row) return undefined
+	const tr = get(t)
+	const lang = settings.language
+	const day = dayLine(row.payload.day, lang)
+	if (row.payload.kind === 'pay-stub') {
+		const source = finance.incomeById(row.payload.sourceId)
+		return {
+			day,
+			detail: source
+				? tr('domains.finance.payStub.known', { values: { employer: source.name } })
+				: tr('domains.finance.payStub.knownGone'),
+		}
+	}
+	const bill = finance.billById(row.payload.billId)
+	return {
+		day,
+		detail: bill
+			? tr('domains.finance.bills.capture.madeBill', {
+					values: { payee: bill.payee, month: monthName(bill.period, lang) },
+				})
+			: tr('domains.finance.bills.capture.deletedBill'),
+	}
+}
+
+/** What the form says of the live bill a draft lands on: "Updates the Austin Energy bill for September". */
+export interface CaptureNote {
+	how: CaptureHow
+	payee: string
+	month: string
+	insurer?: string
+}
+
 class BillCapture {
 	/** The bill form is open on a capture or a Gardener's card. */
 	open = $state(false)
 	phase = $state<'drafting' | 'form' | 'failed'>('form')
-	failure = $state<ToolFailure | undefined>()
+	/** Why there is no draft; `nothing-owed` for an EOB that leaves nothing to pay (#85). */
+	failure = $state<ToolFailure | 'nothing-owed' | undefined>()
 	/** What fills the form; none for the empty form. */
 	draft = $state<BillDraft | undefined>()
-	/** The live bill the draft updates, as its form says it: "Updates the Austin Energy bill for September". */
-	updates = $state<{ payee: string; month: string } | undefined>()
+	/** The live bill the draft lands on, and how (`captureTarget`). */
+	note = $state<CaptureNote | undefined>()
 	/** The fingerprint of the letter the form came from, for its `file-import` row. */
 	fingerprint = $state<string | undefined>()
 	/** Bumped when the form is opened again, made by hand or let go, so a run that answers late is dropped. */
@@ -78,7 +123,7 @@ class BillCapture {
 			confirmLabel: tr('domains.finance.bills.capture.confirm'),
 			next: tr('domains.finance.bills.capture.next'),
 			preview,
-			known: (fingerprint) => this.#known(fingerprint),
+			known: knownDocument,
 		})
 		if (!choice) return
 		this.#begin(undefined)
@@ -92,7 +137,8 @@ class BillCapture {
 					: await runtime.runDirect(TOOL, {}, { files: pictureFiles(choice), confirmed: true })
 			if (turn !== this.#turn || !this.open) return
 			if (result.card?.kind === 'bill') return this.#fill(result.card.bill)
-			this.failure = result.failure ?? 'network'
+			const status = (result.output as { status?: unknown } | undefined)?.status
+			this.failure = status === 'nothing-owed' ? 'nothing-owed' : (result.failure ?? 'network')
 			this.phase = 'failed'
 		} catch (error) {
 			if (turn !== this.#turn) return
@@ -112,7 +158,7 @@ class BillCapture {
 	byHand(): void {
 		this.#turn += 1
 		this.draft = undefined
-		this.updates = undefined
+		this.note = undefined
 		this.failure = undefined
 		this.phase = 'form'
 		this.opened += 1
@@ -145,9 +191,16 @@ class BillCapture {
 	}
 
 	#fill(draft: BillDraft) {
-		const same = sameBill(draft, finance.bills)
-		this.draft = same ? draftOver(same, draft) : draft
-		this.updates = same ? { payee: same.payee, month: monthName(same.period, settings.language) } : undefined
+		const target = captureTarget(draft, finance.bills)
+		this.draft = target ? draftFor(target, draft) : draft
+		this.note = target
+			? {
+					how: target.how,
+					payee: target.bill.payee,
+					month: monthName(target.bill.period, settings.language),
+					...(target.bill.insurer ? { insurer: target.bill.insurer } : {}),
+				}
+			: undefined
 		this.failure = undefined
 		this.phase = 'form'
 		this.opened += 1
@@ -160,29 +213,8 @@ class BillCapture {
 		this.phase = 'form'
 		this.failure = undefined
 		this.draft = undefined
-		this.updates = undefined
+		this.note = undefined
 		this.fingerprint = undefined
-	}
-
-	/** Whether the file was read before: the day, and the bill it made or that the bill is gone. */
-	async #known(fingerprint: string): Promise<{ day: string; detail: string } | undefined> {
-		const [row] = await queryEntities<LetterImportPayload>({
-			type: FINANCE.fileImport,
-			source: FILE_IMPORT_SOURCE,
-			externalIds: [fingerprint],
-		}).catch(() => [])
-		if (!row) return undefined
-		const tr = get(t)
-		const lang = settings.language
-		const bill = finance.billById(row.payload.billId)
-		return {
-			day: dayLine(row.payload.day, lang),
-			detail: bill
-				? tr('domains.finance.bills.capture.madeBill', {
-						values: { payee: bill.payee, month: monthName(bill.period, lang) },
-					})
-				: tr('domains.finance.bills.capture.deletedBill'),
-		}
 	}
 }
 

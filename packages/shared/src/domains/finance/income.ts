@@ -50,8 +50,8 @@ const TAX_PAYMENT_CODE = 'GOVERNMENT_AND_NON_PROFIT_TAX_PAYMENT'
 
 // ---- Shapes ----------------------------------------------------------------------------------------------------------
 
-type OwnerKey = 'endedOn' | 'leanSince' | 'lateOk' | 'ignored' | 'seenNew' | 'handled'
-const OWNER_KEYS: readonly OwnerKey[] = ['endedOn', 'leanSince', 'lateOk', 'ignored', 'seenNew', 'handled']
+type OwnerKey = 'endedOn' | 'leanSince' | 'lateOk' | 'ignored' | 'seenNew' | 'handled' | 'payStub'
+const OWNER_KEYS: readonly OwnerKey[] = ['endedOn', 'leanSince', 'lateOk', 'ignored', 'seenNew', 'handled', 'payStub']
 const DETECTED_KEYS = [
 	'kind',
 	'merchantId',
@@ -573,7 +573,7 @@ export function incomeSignals(
 // ---- Monthly figures -------------------------------------------------------------------------------------------------
 
 /** The complete months among the last `months` before `month`, never before the ledger's first: `from`/`to`/`count`. */
-function completeMonths(ledger: Ledger, month: string, months: number) {
+export function completeMonths(ledger: Ledger, month: string, months: number) {
 	if (!ledger.firstMonth) return undefined
 	let from = addMonths(month, -months)
 	if (from < ledger.firstMonth) from = ledger.firstMonth
