@@ -1,9 +1,10 @@
 <script lang="ts">
-	// The Link sheet (product/domains/finance.md §8): Eden's own sheet around Plaid's hosted page, which runs in the
-	// system browser so a bank's OAuth runs in a real browser and no Plaid script loads here. It shows the session's
-	// phase: starting, waiting for the owner to finish in the browser, reading the accounts, linked, cancelled,
-	// expired, or failed. Closing it never ends a session; "Stop waiting" does. Each change is said once, through the
-	// hidden polite line, and focus moves to the phase's primary action.
+	// The Link sheet (product/domains/finance.md §8): Eden's own sheet around Plaid. On desktop Plaid's hosted page runs
+	// in the system browser, so a bank's OAuth runs in a real browser and no Plaid script loads here; on iOS Plaid's
+	// native sheet lies over this one (D-203), and the copy says so. It shows the session's phase: starting, waiting
+	// for the owner to finish in Plaid, reading the accounts, linked, cancelled, expired, or failed. Closing it never
+	// ends a session; "Stop waiting" does. Each change is said once, through the hidden polite line, and focus moves to
+	// the phase's primary action.
 	import { Button, InlineError, List, Sheet, Spinner, type ListRowData } from '@eden/ui-kit'
 	import { tick } from 'svelte'
 	import { t } from '../../../i18n/index.js'
@@ -25,12 +26,17 @@
 	const reconnect = $derived(session?.mode === 'reconnect')
 	const name = $derived(session?.name || $t('domains.finance.plaid.link.aBank'))
 	const sandbox = $derived(plaid.status?.environment === 'sandbox')
+	/** Plaid's native sheet (iOS) rather than a page in the browser. */
+	const onSheet = $derived(plaid.status?.link === 'sheet')
+	/** The phrases that name where Plaid runs: the sheet's own on iOS, the browser's elsewhere. */
+	const where = (key: 'starting' | 'waitingTitle' | 'waiting' | 'openAgain' | 'expired') =>
+		$t(`domains.finance.plaid.link.${onSheet ? 'sheet.' : ''}${key}`)
 
 	const title = $derived.by(() => {
 		const again = $t('domains.finance.plaid.link.reconnectTitle', { values: { name } })
 		switch (phase) {
 			case 'waiting':
-				return reconnect ? again : $t('domains.finance.plaid.link.waitingTitle')
+				return reconnect ? again : where('waitingTitle')
 			case 'reading':
 				return $t('domains.finance.plaid.link.readingTitle')
 			case 'linked':
@@ -49,12 +55,12 @@
 	/** What the phase says, for the hidden line: its title and its one sentence. */
 	const said = $derived.by(() => {
 		const line = {
-			starting: $t('domains.finance.plaid.link.starting'),
-			waiting: $t('domains.finance.plaid.link.waiting'),
+			starting: where('starting'),
+			waiting: where('waiting'),
 			reading: $t('domains.finance.plaid.link.reading'),
 			linked: reconnect ? '' : $t('domains.finance.plaid.link.arriving'),
 			cancelled: $t('domains.finance.plaid.link.cancelled'),
-			expired: $t('domains.finance.plaid.link.expired'),
+			expired: where('expired'),
 			error: errorLine,
 		}[phase]
 		return [title, line].filter(Boolean).join('. ')
@@ -100,10 +106,10 @@
 		{#if phase === 'starting' || phase === 'reading'}
 			<p class="busy">
 				<Spinner size="md" />
-				<span>{$t(`domains.finance.plaid.link.${phase}`)}</span>
+				<span>{phase === 'starting' ? where('starting') : $t('domains.finance.plaid.link.reading')}</span>
 			</p>
 		{:else if phase === 'waiting'}
-			<p class="text">{$t('domains.finance.plaid.link.waiting')}</p>
+			<p class="text">{where('waiting')}</p>
 			{#if sandbox}<p class="caption">{$t('domains.finance.plaid.link.sandbox')}</p>{/if}
 		{:else if phase === 'linked'}
 			{#if !reconnect}
@@ -117,7 +123,7 @@
 		{:else if phase === 'cancelled'}
 			<p class="text">{$t('domains.finance.plaid.link.cancelled')}</p>
 		{:else if phase === 'expired'}
-			<p class="text">{$t('domains.finance.plaid.link.expired')}</p>
+			<p class="text">{where('expired')}</p>
 		{:else if phase === 'error'}
 			<div data-primary>
 				<InlineError message={errorLine} onretry={startAgain} />
@@ -128,9 +134,9 @@
 		{#if phase === 'waiting'}
 			<Button label={$t('domains.finance.plaid.link.stop')} variant="quiet" onclick={stopWaiting} />
 			<Button
-				label={$t('domains.finance.plaid.link.openAgain')}
+				label={where('openAgain')}
 				variant="secondary"
-				iconRight="external-link"
+				iconRight={onSheet ? undefined : 'external-link'}
 				data-primary
 				onclick={openPageAgain}
 			/>

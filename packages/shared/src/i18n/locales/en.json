@@ -2005,7 +2005,14 @@
 					"invalidKeys": "Plaid didn't accept this device's keys.",
 					"network": "Couldn't reach Plaid.",
 					"failed": "Plaid couldn't link this bank.",
-					"changeKeys": "Change keys"
+					"changeKeys": "Change keys",
+					"sheet": {
+						"starting": "Opening Plaid…",
+						"waitingTitle": "Finish in Plaid",
+						"waiting": "Sign in to your bank in Plaid's window. Eden picks it up when you're done.",
+						"openAgain": "Open Plaid again",
+						"expired": "That Plaid session expired."
+					}
 				}
 			},
 			"notifications": {

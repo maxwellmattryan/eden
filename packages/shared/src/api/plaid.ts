@@ -1,13 +1,16 @@
-// Orchard's Plaid commands (src-tauri/src/domains/finance): the device's keys, a hosted Link session, a sync run, an
-// investments read, a revoke and the Sandbox's reset. The crate holds the keys and every token and makes every call; the webview gets a
-// link token, the hosted page's URL and whether keys exist. Outside Tauri there is no crate: the status answers
-// `undefined` and nothing binds. A refusal reads `plaid:<code>: …`; `plaidErrorCode` takes the code.
+// Orchard's Plaid commands (src-tauri/src/domains/finance): the device's keys, a Link session (a hosted page on desktop,
+// Plaid's native sheet on iOS, D-203), a sync run, an investments read, a revoke and the Sandbox's reset. The crate
+// holds the keys and every token and makes every call; the webview gets a link token, the hosted page's URL where there
+// is one, how the build links and whether keys exist. Outside Tauri there is no crate: the status answers `undefined`
+// and nothing binds. A refusal reads `plaid:<code>: …`; `plaidErrorCode` takes the code.
 import { invoke } from '@tauri-apps/api/core'
 import { isTauri } from './tauri.js'
 
 export interface PlaidStatus {
 	environment: 'sandbox' | 'production'
 	hasKeys: boolean
+	/** How this build links (D-203): the system browser on desktop, Plaid's sheet on iOS, nothing on Android. */
+	link: 'hosted' | 'sheet' | 'none'
 }
 
 export interface PlaidInstitution {
@@ -139,7 +142,8 @@ export type LinkPoll =
 
 export interface LinkStart {
 	linkToken: string
-	url: string
+	/** The hosted page, on desktop; the sheet surface has none and is presented with `plaidLinkOpen`. */
+	url?: string | null
 	expiresAt?: string | null
 }
 
@@ -182,11 +186,16 @@ export function plaidClearKeys(): Promise<void> {
 }
 
 /**
- * A hosted Link session; with a link id, the update mode of that link's own Item. `brokerage` asks for investments
- * first, so an investments-only institution can link (D-197).
+ * A Link session; with a link id, the update mode of that link's own Item. `brokerage` asks for investments first, so
+ * an investments-only institution can link (D-197).
  */
 export function plaidLinkStart(linkId?: string, brokerage?: boolean): Promise<LinkStart> {
 	return invoke<LinkStart>('plaid_link_start', { linkId: linkId ?? null, brokerage: brokerage ?? null })
+}
+
+/** Presents Plaid's native sheet (iOS) on a link token the crate made for it; refuses `plaid:other` for any other. */
+export function plaidLinkOpen(linkToken: string): Promise<void> {
+	return invoke('plaid_link_open', { linkToken })
 }
 
 export function plaidLinkPoll(linkToken: string, linkId?: string): Promise<LinkPoll> {

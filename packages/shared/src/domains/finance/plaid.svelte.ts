@@ -1,5 +1,6 @@
-// Plaid behind Orchard's provider seam (product/domains/finance.md §8), desktop only. The crate holds the keys and
-// every token and makes every call (`api/plaid.ts`); this module is the session the Link sheet shows, the keys sheet's
+// Plaid behind Orchard's provider seam (product/domains/finance.md §8), on desktop and iOS (D-203): desktop links through
+// Hosted Link in the system browser, iOS through Plaid's native sheet, and Android binds nothing. The crate holds the
+// keys and every token and makes every call (`api/plaid.ts`); this module is the session the Link sheet shows, the keys sheet's
 // saves, and the sync: on launch, every hour (`finance.sync`), and on the retries after a failure (`finance.retry`),
 // one link after another and one run at a time. A removed link is revoked at Plaid two minutes after its tombstone
 // (`finance.revoke`), so the page's Undo stays true, and again at the start of every run until it is done. At the end
@@ -15,6 +16,7 @@ import {
 	plaidClearKeys,
 	plaidErrorCode,
 	plaidInvestments,
+	plaidLinkOpen,
 	plaidLinkPoll,
 	plaidLinkStart,
 	plaidRevoke,
@@ -163,8 +165,8 @@ function update(session: LinkSession, change: Partial<LinkSession>) {
 
 /**
  * Opens the Link sheet on a session: the live one when there is one (closing the sheet never ends it), else a new
- * one, which makes a link token and opens Plaid's hosted page in the system browser. A brokerage's asks for
- * investments first (D-197).
+ * one, which makes a link token and opens Plaid's hosted page in the system browser, or on iOS presents Plaid's own
+ * sheet over the app. A brokerage's asks for investments first (D-197).
  */
 export async function startSession(mode: 'link' | 'reconnect', linkId?: string, brokerage = false): Promise<void> {
 	plaid.sheet = 'link'
@@ -183,9 +185,14 @@ export async function startSession(mode: 'link' | 'reconnect', linkId?: string, 
 	try {
 		const started = await plaidLinkStart(linkId, session.brokerage)
 		if (!current(session)) return
-		const next = { ...session, linkToken: started.linkToken, url: started.url, state: 'waiting' as const }
+		const next = {
+			...session,
+			linkToken: started.linkToken,
+			...(started.url ? { url: started.url } : {}),
+			state: 'waiting' as const,
+		}
 		plaid.session = next
-		await openExternal(started.url)
+		await openLink(next)
 		poll(next)
 	} catch (error) {
 		const code = plaidErrorCode(error)
@@ -194,9 +201,25 @@ export async function startSession(mode: 'link' | 'reconnect', linkId?: string, 
 	}
 }
 
-/** Opens the hosted page again, for an owner who closed the tab. */
+/** The session's Link: its hosted page in the system browser, or Plaid's sheet on the token when there is no page. */
+function openLink(session: LinkSession): Promise<void> {
+	if (session.url) return openExternal(session.url)
+	return plaidLinkOpen(session.linkToken!)
+}
+
+/**
+ * Opens the hosted page again for an owner who closed the tab, or presents Plaid's sheet again on the same token; only
+ * while the session waits. A sheet that cannot be presented ends the session in `error`.
+ */
 export function openPageAgain(): void {
-	if (plaid.session?.url) void openExternal(plaid.session.url)
+	const session = plaid.session
+	if (session?.state !== 'waiting' || !session.linkToken) return
+	openLink(session).catch((error: unknown) => {
+		const code = plaidErrorCode(error)
+		report('Plaid Link did not open again', code)
+		stopPolling()
+		update(session, { state: 'error', code })
+	})
 }
 
 /** Ends the session: the sheet closes and nothing is linked. */
@@ -554,15 +577,16 @@ export const plaidProvider: FinanceProvider = {
 }
 
 /**
- * Binds Plaid where the crate is (the desktop under Tauri): the provider, its three schedules, and one run now. The
- * phone never calls it, and in a plain browser the status is `undefined` and nothing binds. The answer unbinds.
+ * Binds Plaid where the crate links (the desktop and iOS under Tauri, D-203): the provider, its three schedules, and
+ * one run now. On Android the status says `none`, and in a plain browser it is `undefined`; nothing binds in either.
+ * The answer unbinds.
  */
 export function bindPlaid(): () => void {
 	const stops: (() => void)[] = []
 	let stopped = false
 	void (async () => {
 		const status = await plaidStatus()
-		if (!status || stopped) return
+		if (!status || status.link === 'none' || stopped) return
 		plaid.status = status
 		stops.push(
 			bindProvider(plaidProvider),
