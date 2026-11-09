@@ -658,6 +658,59 @@ describe('schedule and aging', () => {
 	})
 })
 
+describe('investmentSummary', () => {
+	it("ages a coin priced from a close more than 7 days old, and keeps 90 days for an owner's value (D-204)", () => {
+		const link: ProviderLink = { id: 'l', provider: 'coinbase', institution: { name: 'Coinbase' }, status: 'ok' }
+		const account: Account = {
+			id: 'a',
+			name: 'Coinbase',
+			kind: 'investment',
+			currency: 'USD',
+			linkId: 'l',
+			share: WHOLE,
+		}
+		const coin = (id: string, type: Security['type'], day: string): Security => ({
+			id,
+			name: id,
+			ticker: id.toUpperCase(),
+			type,
+			currency: 'USD',
+			prices: [{ day, price: '100' }],
+		})
+		const hold = (securityId: string, fields: Partial<Holding> = {}): Holding => ({
+			id: securityId,
+			accountId: 'a',
+			securityId,
+			quantity: '1',
+			currency: 'USD',
+			...fields,
+		})
+		const summary = investmentSummary({
+			holdings: [
+				hold('btc'),
+				hold('eth'),
+				hold('vti'),
+				hold('foo', { typedValue: { value: usd(500), on: '2026-09-01' } }),
+				hold('bar', { typedValue: { value: usd(500), on: '2026-07-01' } }),
+			],
+			securities: [
+				coin('btc', 'cryptocurrency', '2026-10-29'),
+				coin('eth', 'cryptocurrency', '2026-10-31'),
+				coin('vti', 'etf', '2026-10-01'),
+				{ id: 'foo', name: 'foo', type: 'cryptocurrency', prices: [] },
+				{ id: 'bar', name: 'bar', type: 'cryptocurrency', prices: [] },
+			],
+			accounts: [account],
+			links: [link],
+			home: 'USD',
+			today: DAY,
+			now: Date.parse(`${DAY}T12:00:00Z`),
+		})
+		const aged = Object.fromEntries(summary.groups[0]!.rows.map((row) => [row.security!.id, row.aged]))
+		expect(aged).toEqual({ btc: true, eth: false, vti: false, foo: false, bar: true })
+	})
+})
+
 describe('the sample', () => {
 	it("gives M1 and Fidelity holdings that add up to each account's balance", () => {
 		const now = Date.parse('2026-09-30T15:00:00Z')

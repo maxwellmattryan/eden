@@ -8,7 +8,9 @@
 	// The tab lives in the address; a pick goes back through the navigation seam. The sheets are the page's, so a header
 	// action and a row's menu open the same one. While a provider is bound (the desktop's Plaid), "Link a bank" leads
 	// Accounts' header, "Link a brokerage" the Investments one, a stale link raises a notice beside it on every tab (then the most urgent income question, #80, has the one notice after it), a quiet key opens the provider's keys, and
-	// its keys and Link sheets are mounted; on the phone and in a plain browser none of them shows. Bills' header
+	// its keys and Link sheets are mounted; on the phone and in a plain browser none of them shows. While crypto is bound
+	// (D-204), Investments' header offers Connect Coinbase until a Coinbase link exists, and a Coinbase link's Reconnect
+	// and Replace key open its key sheet. Bills' header
 	// captures a bill (the document reader, `DocumentSheet`, bound to its session field for field) or adds one; the bill
 	// form that a capture or a Gardener's card opens is the capture session's. Both apps mount this page; the phone
 	// reaches it from More, its sheets rising from the foot.
@@ -34,6 +36,8 @@
 	import { staleDay } from '../accounts.js'
 	import { linesOf } from '../budget.js'
 	import { billCapture } from '../capture.svelte.js'
+	import { coinbaseLink } from '../crypto.js'
+	import { crypto, openKeySheet } from '../crypto.svelte.js'
 	import { canEarmark } from '../goals.js'
 	import { payStubRead } from '../paystub.svelte.js'
 	import { plaid } from '../plaid.svelte.js'
@@ -68,6 +72,7 @@
 	import BudgetLineSheet from './BudgetLineSheet.svelte'
 	import BonusSheet from './BonusSheet.svelte'
 	import CategorySheet from './CategorySheet.svelte'
+	import CoinbaseKeySheet from './CoinbaseKeySheet.svelte'
 	import Goals from './Goals.svelte'
 	import GoalSheet from './GoalSheet.svelte'
 	import HoldingSheet from './HoldingSheet.svelte'
@@ -150,7 +155,12 @@
 	}
 	function removeLink(link: ProviderLink) {
 		const undo = finance.removeLink(link.id)
-		if (undo) undoToast($t('domains.finance.toasts.linkRemoved', { values: { name: link.institution.name } }), undo)
+		// Eden cannot revoke a Coinbase key, so the owner is asked to (D-204)
+		const message =
+			link.provider === 'coinbase'
+				? $t('domains.finance.crypto.removed')
+				: $t('domains.finance.toasts.linkRemoved', { values: { name: link.institution.name } })
+		if (undo) undoToast(message, undo)
 	}
 
 	// ---- Budget (#84): the month its view shows, and its draft
@@ -176,6 +186,12 @@
 
 	const bound = $derived(provider.bound)
 	const linkBrokerage = $derived(bound ? () => bound.link('brokerage') : undefined)
+	/** Signs a link in again: Coinbase's through its key sheet, a bank's through the provider. */
+	const reconnect = $derived(
+		bound || crypto.bound
+			? (link: ProviderLink) => (link.provider === 'coinbase' ? openKeySheet(true) : bound?.reconnect(link.id))
+			: undefined
+	)
 	const actions = $derived.by<PageHeaderAction[]>(() => {
 		if (tab === 'activity') return []
 		if (tab === 'budget') {
@@ -233,17 +249,31 @@
 					]
 				: []
 		if (tab === 'investments')
-			return linkBrokerage
-				? [
-						{
-							id: 'link-brokerage',
-							label: $t('domains.finance.actions.linkBrokerage'),
-							icon: 'landmark',
-							variant: 'primary',
-							onclick: linkBrokerage,
-						},
-					]
-				: []
+			return [
+				...(linkBrokerage
+					? [
+							{
+								id: 'link-brokerage',
+								label: $t('domains.finance.actions.linkBrokerage'),
+								icon: 'landmark' as const,
+								variant: 'primary' as const,
+								onclick: linkBrokerage,
+							},
+						]
+					: []),
+				// one Coinbase link per device (D-204)
+				...(crypto.bound && !coinbaseLink(finance.links)
+					? [
+							{
+								id: 'connect-coinbase',
+								label: $t('domains.finance.crypto.connect'),
+								icon: 'coins' as const,
+								variant: 'secondary' as const,
+								onclick: () => openKeySheet(false),
+							},
+						]
+					: []),
+			]
 		const addAccount: PageHeaderAction = {
 			id: 'add-account',
 			label: $t('domains.finance.actions.addAccount'),
@@ -283,7 +313,7 @@
 
 	/** The first stale link, while a provider can sign it in again. */
 	const stale = $derived.by(() => {
-		if (!bound) return undefined
+		if (!reconnect) return undefined
 		const group = finance.groups.find((entry) => entry.kind === 'link' && entry.state === 'stale')
 		if (group?.kind !== 'link') return undefined
 		const day = group.accounts.map((account) => staleDay(account, finance.links, finance.clock)).find(Boolean)
@@ -351,12 +381,12 @@
 			/>
 		{/snippet}
 		{#snippet aside()}
-			{#if stale && bound}
+			{#if stale && reconnect}
 				<Notice
 					tone="warning"
 					title={$t('domains.finance.stale.title', { values: { name: stale.link.institution.name } })}
 					detail={stale.day ? $t('domains.finance.stale.detail', { values: { day: stale.day } }) : undefined}
-					action={{ label: $t('domains.finance.actions.reconnect'), onclick: () => bound.reconnect(stale.link.id) }}
+					action={{ label: $t('domains.finance.actions.reconnect'), onclick: () => reconnect(stale.link) }}
 				/>
 			{/if}
 			{#if asked}
@@ -459,8 +489,9 @@
 			onimport={(account) => statementImport.begin(account.id)}
 			oneditasset={(asset) => show({ sheet: 'asset', asset })}
 			onremovelink={(link) => show({ sheet: 'remove', link })}
-			onreconnect={bound ? (link) => bound.reconnect(link.id) : undefined}
+			onreconnect={reconnect}
 			onresetlogin={bound?.sandbox ? (link) => void bound.resetLogin(link.id) : undefined}
+			onreplacekey={crypto.bound ? () => openKeySheet(true) : undefined}
 			onsample={seed}
 		/>
 
@@ -525,6 +556,18 @@
 			() => plaid.sheet === 'link',
 			(open) => {
 				if (!open && plaid.sheet === 'link') plaid.sheet = 'none'
+			}
+		}
+	/>
+{/if}
+
+<!-- Coinbase's key sheet, while crypto is bound (the desktop under Tauri; D-204). -->
+{#if crypto.bound}
+	<CoinbaseKeySheet
+		bind:open={
+			() => crypto.sheet === 'key',
+			(open) => {
+				if (!open && crypto.sheet === 'key') crypto.sheet = 'none'
 			}
 		}
 	/>

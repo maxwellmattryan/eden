@@ -1665,7 +1665,12 @@
 				"noBalance": "残高なし",
 				"valued": "{day}に評価",
 				"approx": "≈ {amount}",
-				"closedOn": "{day}に解約"
+				"closedOn": "{day}に解約",
+				"priced": "{day}の価格",
+				"read": "{day}に読み取り",
+				"notReadYet": "未読み取り",
+				"notPriced": "価格なし",
+				"extendedKey": "拡張公開鍵"
 			},
 			"menu": {
 				"edit": "編集",
@@ -1707,7 +1712,39 @@
 				"value": "評価額",
 				"valuedOn": "評価日",
 				"quantity": "数量",
-				"unit": "単位"
+				"unit": "単位",
+				"countedBy": "数え方",
+				"modes": {
+					"quantity": "数量",
+					"address": "アドレス",
+					"xpub": "拡張公開鍵"
+				},
+				"chain": "チェーン",
+				"chains": {
+					"bitcoin": "ビットコイン",
+					"ethereum": "イーサリアム"
+				},
+				"address": "アドレス",
+				"xpub": "拡張公開鍵",
+				"xpubHelp": "このデバイスの安全な保管庫に保存されます。Edenは1日に1回、この鍵から作られるアドレスの残高をBlockstreamに問い合わせます。Blockstreamにはそれらが同じ持ち主のものだとわかります。",
+				"script": "アドレスの種類",
+				"scripts": {
+					"p2wpkh": "ネイティブSegWit(bc1q…)",
+					"p2sh-p2wpkh": "ネストSegWit(3…)",
+					"p2pkh": "レガシー(1…)"
+				},
+				"watching": "{address}を監視中",
+				"watchingKey": "拡張公開鍵を監視中 · {type}",
+				"errors": {
+					"address": "アドレスを入力してください",
+					"xpub": "拡張公開鍵を入力してください",
+					"bitcoin": "ビットコインのアドレスではありません。",
+					"ethereum": "イーサリアムのアドレスではありません。",
+					"privateKey": "これは秘密鍵です。どこにも貼り付けないでください。拡張公開鍵を使ってください。",
+					"invalidXpub": "拡張公開鍵ではありません。",
+					"unsupported": "Edenが読み取れるのはメインネットのxpub、ypub、zpubだけです。",
+					"other": "確認できませんでした。もう一度お試しください。"
+				}
 			},
 			"balanceForm": {
 				"title": "残高を更新",
@@ -2072,6 +2109,25 @@
 				"valueSet": "{name}の評価額を設定しました",
 				"payStubSaved": "{employer}の控除を保存しました",
 				"payStubCleared": "{employer}の控除を消去しました"
+			},
+			"crypto": {
+				"connect": "Coinbaseを接続",
+				"connected": "Coinbaseを接続しました",
+				"removed": "Coinbaseを削除しました。Coinbaseでもキーを削除してください。",
+				"replaceKey": "キーを交換",
+				"key": {
+					"title": "Coinbaseのキー",
+					"name": "キー名",
+					"privateKey": "秘密鍵",
+					"help": "Coinbaseで「閲覧」権限だけのキーを作ってください。取引や送金ができるキーは受け付けません。このデバイスの安全な保管庫に保存されます。",
+					"invalid": "CoinbaseのAPIキーではありません。Coinbaseから受け取ったファイルのキー名と秘密鍵を貼り付けてください。",
+					"refused": "Coinbaseがこのキーを受け付けませんでした。",
+					"notReadOnly": "このキーは取引や送金ができます。「閲覧」権限だけのキーを作ってください。",
+					"unreachable": "Coinbaseに接続できませんでした。しばらくしてからもう一度お試しください。",
+					"held": "このデバイスにキーを保存しています。",
+					"replace": "キーを交換",
+					"save": "保存"
+				}
 			},
 			"plaid": {
 				"keysButton": "Plaidのキー",
@@ -2918,7 +2974,10 @@
 				"openfreemap": "OpenFreeMap(地図タイル)",
 				"photon": "Photon(名前で場所を探す)",
 				"overpass": "Overpass(営業時間)",
-				"plaid": "Plaid"
+				"plaid": "Plaid",
+				"coinbase": "Coinbase",
+				"blockstream": "Blockstream(ビットコインの残高)",
+				"blockscout": "Blockscout(イーサの残高)"
 			},
 			"never": {
 				"label": "自動化しないこと",

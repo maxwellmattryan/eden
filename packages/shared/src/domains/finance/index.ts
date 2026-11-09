@@ -47,3 +47,5 @@ export {
 export { fingerprint, readDocument } from './read.js'
 export { DocumentRead, documentRead } from './reader.svelte.js'
 export { bindPlaid, plaid, syncAll } from './plaid.svelte.js'
+export * from './crypto.js'
+export { bindCrypto, crypto } from './crypto.svelte.js'
