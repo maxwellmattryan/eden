@@ -1567,6 +1567,8 @@
 					"introRate": "優遇金利",
 					"ends": "終了日",
 					"payment": "毎月の返済額",
+					"minimum": "最低返済額",
+					"minimumHelp": "明細に最低額が載るまで計画に使います",
 					"dueDay": "毎月の支払日",
 					"dueDayHelp": "31は月末を意味します",
 					"name": "名前",

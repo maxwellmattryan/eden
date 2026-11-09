@@ -1567,6 +1567,8 @@
 					"introRate": "Intro rate",
 					"ends": "Ends on",
 					"payment": "Monthly payment",
+					"minimum": "Minimum payment",
+					"minimumHelp": "Used for the plan until a statement gives one",
 					"dueDay": "Due day of the month",
 					"dueDayHelp": "31 means the last day of the month",
 					"name": "Name",

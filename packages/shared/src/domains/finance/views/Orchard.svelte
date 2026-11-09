@@ -1,6 +1,6 @@
 <script lang="ts">
 	// Orchard's page (product/domains/finance.md, "Surfaces"): the header with the tab's actions, the tabs (Activity,
-	// #83, D-199, which has none; Accounts; Bills, #78; and Investments, #76, D-197), the page's error with Retry when a write failed or the rows could not be read, and the tab's view.
+	// #83, D-199, which has none; Accounts; Bills, #78; Debt, #86, D-201, which adds a loan; and Investments, #76, D-197), the page's error with Retry when a write failed or the rows could not be read, and the tab's view.
 	// The tab lives in the address; a pick goes back through the navigation seam. The sheets are the page's, so a header
 	// action and a row's menu open the same one. While a provider is bound (the desktop's Plaid), "Link a bank" leads
 	// Accounts' header, "Link a brokerage" the Investments one, a stale link raises a notice beside it on every tab (then the most urgent income question, #80, has the one notice after it), a quiet key opens the provider's keys, and
@@ -46,6 +46,8 @@
 	import Bills from './Bills.svelte'
 	import BonusSheet from './BonusSheet.svelte'
 	import CategorySheet from './CategorySheet.svelte'
+	import Debt from './Debt.svelte'
+	import DebtSheet, { type DebtSheetMode } from './DebtSheet.svelte'
 	import HoldingSheet from './HoldingSheet.svelte'
 	import ImportSheet from './ImportSheet.svelte'
 	import Income from './Income.svelte'
@@ -101,6 +103,7 @@
 		| { sheet: 'holding'; holding: Holding; field: 'cost-basis' | 'value' }
 		| { sheet: 'category'; row: LedgerRow }
 		| { sheet: 'reimbursable'; row: LedgerRow }
+		| { sheet: 'terms'; account?: Account; mode: DebtSheetMode }
 	let current = $state<Open>()
 	let shown = $state(false)
 	let opened = $state(0)
@@ -118,6 +121,7 @@
 		if (undo) undoToast($t('domains.finance.toasts.linkRemoved', { values: { name: link.institution.name } }), undo)
 	}
 
+	const addLoan = () => show({ sheet: 'terms', mode: 'new-loan' })
 	const bound = $derived(provider.bound)
 	const linkBrokerage = $derived(bound ? () => bound.link('brokerage') : undefined)
 	const actions = $derived.by<PageHeaderAction[]>(() => {
@@ -137,6 +141,16 @@
 					icon: 'plus',
 					variant: 'secondary',
 					onclick: () => show({ sheet: 'bill' }),
+				},
+			]
+		if (tab === 'debt')
+			return [
+				{
+					id: 'add-loan',
+					label: $t('domains.finance.actions.addLoan'),
+					icon: 'plus',
+					variant: 'primary',
+					onclick: addLoan,
 				},
 			]
 		if (tab === 'investments')
@@ -320,6 +334,12 @@
 				onmarkpaid={(bill) => show({ sheet: 'pay', bill })}
 			/>
 		{/if}
+	{:else if tab === 'debt'}
+		<Debt
+			onterms={(account) => show({ sheet: 'terms', account, mode: account.kind === 'loan' ? 'loan' : 'card' })}
+			onpromo={(account) => show({ sheet: 'terms', account, mode: 'promo' })}
+			onaddloan={addLoan}
+		/>
 	{:else if tab === 'investments'}
 		<Investments
 			onlink={linkBrokerage}
@@ -426,6 +446,8 @@
 		<ReimbursableSheet bind:open={shown} row={current.row} />
 	{:else if current?.sheet === 'holding'}
 		<HoldingSheet bind:open={shown} holding={current.holding} field={current.field} />
+	{:else if current?.sheet === 'terms'}
+		<DebtSheet bind:open={shown} account={current.account} mode={current.mode} />
 	{:else if current?.sheet === 'remove'}
 		{@const link = current.link}
 		<ConfirmSheet

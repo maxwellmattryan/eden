@@ -105,6 +105,11 @@ function cardRate(aprs: readonly Apr[] | undefined): number | undefined {
 	return aprs.find((apr) => apr.kind === 'purchase')?.rate ?? Math.max(...aprs.map((apr) => apr.rate))
 }
 
+/** What the provider says a debt's rate is: a card's purchase APR, else its highest; a loan's rate. */
+export function providerRateOf(account: Account, liability: LiabilityPayload | undefined): number | undefined {
+	return isCard(account) ? cardRate(liability?.aprs) : liability?.loan?.rate
+}
+
 // ---- Terms -----------------------------------------------------------------------------------------------------
 
 /** What a debt costs once the owner's terms are laid over the provider's. */
@@ -135,7 +140,7 @@ export function effectiveTerms(
 	today: string
 ): Terms {
 	const card = isCard(account)
-	const rate = liability?.rate ?? (card ? cardRate(liability?.aprs) : liability?.loan?.rate)
+	const rate = liability?.rate ?? providerRateOf(account, liability)
 	const promo = liability?.promo && today < liability.promo.ends ? liability.promo : undefined
 	const limit = liability?.ownerLimit ?? liability?.limit
 	const minimum = card
@@ -539,11 +544,11 @@ export function debtSummary(input: {
 // ---- A hand-entered loan's schedule ------------------------------------------------------------------------------
 
 /** The due day of the month (1–31, 31 the month's last day) in the month of `day`. */
-const dueIn = (day: string, dueDay: number) => addMonthsClamped(`${day.slice(0, 7)}-01`, 0, dueDay)
+export const dueDayIn = (day: string, dueDay: number) => addMonthsClamped(`${day.slice(0, 7)}-01`, 0, dueDay)
 
 /** The next due day on or after today. */
 export function nextDueDay(dueDay: number, today: string): string {
-	const due = dueIn(today, dueDay)
+	const due = dueDayIn(today, dueDay)
 	return due >= today ? due : addMonthsClamped(due, 1, dueDay)
 }
 

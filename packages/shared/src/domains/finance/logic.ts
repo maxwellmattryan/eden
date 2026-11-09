@@ -14,10 +14,13 @@ import { FINANCE, type BillPayload } from './types.js'
 /** The bill pass's morning run; the manifest declares it. */
 export const BILLS_SCHEDULE = 'finance.bills'
 
-/** Runs the bill pass when the shell starts and each morning, on both apps; the answer unbinds. */
+/** The bill pass, then the debt pass (#86). */
+const passes = () => finance.billPass().then(() => finance.debtPass())
+
+/** Runs the bill pass and the debt pass when the shell starts and each morning, on both apps; the answer unbinds. */
 function bindBills(): () => void {
-	const stop = onSchedule(BILLS_SCHEDULE, () => finance.billPass())
-	void finance.billPass()
+	const stop = onSchedule(BILLS_SCHEDULE, passes)
+	void passes()
 	return stop
 }
 
