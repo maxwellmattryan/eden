@@ -3,7 +3,7 @@
 //! made (D-183): never `/accounts/balance/get` and never a paid refresh. The products asked for are read-only (D-8).
 //! The one exception is `/liabilities/get`, asked once a run and only of an item with a credit or a loan account, for
 //! its cards' statements and APRs (#78, #86) and its loans' terms (#86): in production its first call starts that
-//! item's Liabilities billing (D-196, D-201).
+//! item's Liabilities billing (D-196, D-205).
 //!
 //! A failure is `EdenError::Refused("plaid:<code>: <Plaid's error code>")`, with the code one of `needs-reauth`,
 //! `invalid-keys`, `rate-limited`, `institution-down`, `provider-down`, `network`, `other`, `no-keys`, `not-found` and
@@ -784,7 +784,7 @@ impl<T: Transport> Plaid<T> {
 
     /// Each credit card's latest statement with its APRs, and each student loan's and mortgage's terms, from
     /// `/liabilities/get`, once, and only for an item with a credit or a loan account (in production the first call
-    /// starts the item's Liabilities billing, D-201). Whatever goes wrong (a product the item lacks, a consent it never
+    /// starts the item's Liabilities billing, D-205). Whatever goes wrong (a product the item lacks, a consent it never
     /// gave, a 500, no answer) leaves both out and never fails the run; it is logged by its code alone.
     async fn liabilities(
         &self,

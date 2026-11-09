@@ -2419,12 +2419,20 @@ export const DECLARATIONS = {
 				"label": "domains.finance.tabs.bills"
 			},
 			{
+				"id": "budget",
+				"label": "domains.finance.tabs.budget"
+			},
+			{
 				"id": "debt",
 				"label": "domains.finance.tabs.debt"
 			},
 			{
 				"id": "investments",
 				"label": "domains.finance.tabs.investments"
+			},
+			{
+				"id": "goals",
+				"label": "domains.finance.tabs.goals"
 			}
 		],
 		"resources": [
@@ -2469,6 +2477,17 @@ export const DECLARATIONS = {
 			},
 			{
 				"id": "read-statement",
+				"access": "write-draft",
+				"confirm": false,
+				"reads": [],
+				"grade": "light",
+				"needs": [
+					"vision"
+				],
+				"minContext": null
+			},
+			{
+				"id": "read-pay-stub",
 				"access": "write-draft",
 				"confirm": false,
 				"reads": [],
@@ -2563,6 +2582,12 @@ export const DECLARATIONS = {
 				"every": 3600
 			},
 			{
+				"id": "crypto",
+				"name": "finance.crypto",
+				"daily": null,
+				"every": 3600
+			},
+			{
 				"id": "bills",
 				"name": "finance.bills",
 				"daily": "08:00",
@@ -2588,6 +2613,8 @@ export const DECLARATIONS = {
 			"bill",
 			"file-import",
 			"recurring-charge",
+			"budget",
+			"savings-goal",
 			"holding",
 			"security",
 			"liability"

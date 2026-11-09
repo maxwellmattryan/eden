@@ -19,6 +19,8 @@ export const FINANCE = {
 	holding: 'holding',
 	security: 'security',
 	income: 'income-source',
+	budget: 'budget',
+	goal: 'savings-goal',
 	liability: 'liability',
 } as const
 
@@ -80,7 +82,19 @@ export interface BillPayload {
 	task?: { id: string; due: string }
 	/** Set on an occurrence the bill pass made that an owner's undo took back: its tombstone ends no series. */
 	undone?: true
+	/** An insurance premium or a medical bill (#85, D-202). */
+	insurance?: InsuranceKind
+	/** Drafted from an insurer's explanation of benefits: an estimate, not a bill yet, until the provider's bill. */
+	eob?: true
+	/** The insurer named on the EOB, at most 120 characters; medical only. */
+	insurer?: string
+	/** `YYYY-MM-DD`, the day of service; medical only. */
+	serviceDay?: string
 }
+
+/** What kind of insurance a bill is (#85, D-202). */
+export const INSURANCE_KINDS = ['premium', 'medical'] as const
+export type InsuranceKind = (typeof INSURANCE_KINDS)[number]
 
 /** A `file-import` with `source: 'document'` (#78; #74's statement files have `source: 'file'`): a document read on this device, by its fingerprint (`externalId`), and what it made (D-189). */
 export interface LetterImportPayload {
@@ -89,6 +103,54 @@ export interface LetterImportPayload {
 	day: string
 	billId: string
 	rows: 1
+}
+
+/** A pay stub read on this device (#85): the income source its deductions went to. */
+export interface PayStubImportPayload {
+	kind: 'pay-stub'
+	/** `YYYY-MM-DD`. */
+	day: string
+	sourceId: string
+	/** How many deductions were saved. */
+	rows: number
+}
+
+/** A `file-import` with `source: 'document'`; readers narrow on `kind`. */
+export type DocumentImportPayload = LetterImportPayload | PayStubImportPayload
+
+/** What a pay stub deduction is for (#85, D-202). */
+export const DEDUCTION_KINDS = [
+	'medical',
+	'dental',
+	'vision',
+	'life',
+	'disability',
+	'hsa',
+	'fsa',
+	'retirement',
+	'tax',
+	'other',
+] as const
+export type DeductionKind = (typeof DEDUCTION_KINDS)[number]
+
+/** The deduction kinds that are insurance premiums. */
+export const INSURANCE_DEDUCTIONS: readonly DeductionKind[] = ['medical', 'dental', 'vision', 'life', 'disability']
+
+/** One deduction from a paycheck. */
+export interface Deduction {
+	name: string
+	kind: DeductionKind
+	/** Positive, per paycheck. */
+	amount: Money
+}
+
+/** The deductions read from a pay stub, kept on the income source. */
+export interface PayStub {
+	/** `YYYY-MM-DD`, the stub's pay day. */
+	day: string
+	deductions: Deduction[]
+	/** The `file-import` row of the stub they were read from. */
+	importId?: string
 }
 
 /** The source a `file-import` row is stored with; its `externalId` is the fingerprint. */
@@ -150,7 +212,8 @@ export type LinkStatus = 'ok' | 'needs-reauth' | 'error'
 export type LinkState = 'ok' | 'stale' | 'expiring'
 
 export interface ProviderLinkPayload {
-	provider: 'plaid'
+	/** Plaid's bank links, or Coinbase's one read-only key on this device (D-204). */
+	provider: 'plaid' | 'coinbase'
 	institution: {
 		/** The provider's institution id (`ins_56`). */
 		id?: string
@@ -219,10 +282,26 @@ export interface AssetPayload {
 	valuedOn: string
 	/** A decimal string, "0.0412". */
 	quantity?: string
-	/** "BTC"; set whenever a quantity is. */
+	/** "BTC"; set whenever a quantity is, and on a watch that has not been read yet. */
 	unit?: string
 	/** Basis points, 1 to 10000. */
 	share: number
+	/** `price`: the value is the quantity × the coin's daily price (D-204); absent, it is the owner's. */
+	valuedBy?: 'price'
+	/**
+	 * What a crypto asset watches on the chain (D-204): one address, or an extended public key held in the device's
+	 * secure store under the asset's id (`xpub: true`, never the key), with the script its addresses use.
+	 */
+	watch?: AssetWatch
+	/** `YYYY-MM-DD` of the watch's last good read. */
+	readOn?: string
+}
+
+export interface AssetWatch {
+	chain: 'bitcoin' | 'ethereum'
+	address?: string
+	xpub?: true
+	script?: 'p2pkh' | 'p2sh-p2wpkh' | 'p2wpkh'
 }
 
 /**
@@ -501,10 +580,60 @@ export interface IncomeSourcePayload {
 	seenNew?: true
 	/** The extra rows answered on the bonus sheet, the newest last, at most 20. */
 	handled?: string[]
+	/** The deductions of the latest pay stub the owner checked (#85). */
+	payStub?: PayStub
 }
 
 export type IncomeSource = IncomeSourcePayload & { id: string }
 
+/**
+ * A `budget` row (#84, D-201): one category's line from a month on. There is one live row per month and category; a
+ * month reads each category's latest row at or before it.
+ */
+export interface BudgetPayload {
+	/** `YYYY-MM`: the first month the line holds; it holds until a later row of its category. */
+	month: string
+	categoryId: string
+	/** Positive, home currency. */
+	amount: Money
+	rollover?: true
+	/** A sinking fund: always rolls over. `by` is `YYYY-MM`; `every` is in months, from a repeating bill. */
+	sinking?: { target: Money; by: string; every?: number }
+	/** No line from this month on. */
+	off?: true
+	by: 'draft' | 'owner'
+}
+
+export type Budget = BudgetPayload & { id: string }
+
+/**
+ * A `savings-goal` row (#88, D-203): a target saved toward in an account, an emergency fund sized in months of
+ * essentials, or the one savings-rate target. The goals in one account fill its balance in `order`; what each holds is
+ * read, never stored. `high` is the goal pass's key; every other key is the owner's.
+ */
+export interface SavingsGoalPayload {
+	kind: 'target' | 'emergency' | 'rate'
+	/** target, emergency */
+	name?: string
+	accountId?: string
+	/** Positive, the account's currency. */
+	target?: Money
+	/** emergency: the months of essentials it was sized at, 1–12. */
+	months?: number
+	/** `YYYY-MM`. */
+	by?: string
+	/** rate: basis points, 100–9900. */
+	rate?: number
+	/** Fill order within its account, 0 first. */
+	order?: number
+	closedOn?: string
+	closedAs?: 'bought' | 'closed'
+	/** `YYYY-MM`; the owner's rebuild plan. */
+	rebuildBy?: string
+	/** The pass's key: the most this goal has held and the day. */
+	high?: { amount: Money; day: string }
+}
+export type SavingsGoal = SavingsGoalPayload & { id: string }
 /** A card APR's kind, from Plaid's `purchase_apr`, `balance_transfer_apr`, `cash_apr`, `special`; anything else is `other`. */
 export const APR_KINDS = ['purchase', 'balance-transfer', 'cash', 'special', 'other'] as const
 export type AprKind = (typeof APR_KINDS)[number]
@@ -521,7 +650,7 @@ export interface Apr {
 }
 
 /**
- * A `liability` (#86, D-201): what a debt account costs. At most one live row per `credit-card` or `loan` account,
+ * A `liability` (#86, D-205): what a debt account costs. At most one live row per `credit-card` or `loan` account,
  * found by `accountId`. A sync overwrites the provider's keys and keeps the owner's; the owner's win on read
  * (`effectiveTerms` in `debt.ts`). Rates are in basis points.
  */

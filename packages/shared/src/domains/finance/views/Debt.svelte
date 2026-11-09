@@ -1,5 +1,5 @@
 <script lang="ts">
-	// Orchard's Debt tab (product/domains/finance.md, "Debt (#86)", D-201): what the open debts owe in the home currency
+	// Orchard's Debt tab (product/domains/finance.md, "Debt (#86)", D-205): what the open debts owe in the home currency
 	// and the cards' usage against their limits, with a thin bar under the overall percent; then a row per open card and
 	// per open loan in the Accounts tab's order; then the payoff plan both ways for the extra the owner types, kept for
 	// the session only. Rows do not act (D-118): "Add its rate" and "Add its limit" are text, and the row's menu is the

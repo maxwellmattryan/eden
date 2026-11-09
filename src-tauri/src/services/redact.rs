@@ -4,6 +4,8 @@
 //!
 //! It replaces, in this order:
 //!
+//! 0. key material, wherever it stands (D-204): a PEM private-key block, a JWT, a Coinbase CDP key name, and a
+//!    mainnet or testnet extended key, public or private: `[key]`;
 //! 1. the value under a sensitive key (`amount`, `merchant`, `access_token`, …), quoted or not, after `:` or `=`, as in
 //!    JSON, Rust `Debug` and `key=value`: the value becomes `"[redacted]"`;
 //! 2. a bare Plaid token (`access-sandbox-…`, `public-production-…`, `link-sandbox-…`): `[token]`;
@@ -50,6 +52,18 @@ static TOKEN: LazyLock<Regex> = LazyLock::new(|| {
         .expect("the token pattern compiles")
 });
 
+/// Key material under no key: a PEM private-key block across lines, a JWT (`eyJ….….…`), a CDP key name, and an
+/// extended key (`xpub`, `ypub`, `zpub`, `tpub`, `upub`, `vpub` and their `prv` twins).
+static KEY_MATERIAL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(concat!(
+        r"(?s:-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----)",
+        r"|\beyJ[\w-]+\.[\w-]+\.[\w-]+",
+        r"|organizations/[0-9a-f-]{36}/apiKeys/[0-9a-f-]{36}",
+        r"|\b[xyztuv](?:pub|prv)[1-9A-HJ-NP-Za-km-z]{100,112}\b",
+    ))
+    .expect("the key material pattern compiles")
+});
+
 static DIGITS: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\b[0-9]{8,}\b").expect("the digits pattern compiles"));
 
@@ -69,7 +83,8 @@ static PROTECTED: LazyLock<Vec<Regex>> = LazyLock::new(|| {
 
 /// `text` with the values of sensitive keys, amounts and account-like numbers replaced. Deterministic and idempotent.
 pub fn redact(text: &str) -> Cow<'_, str> {
-    let keyed = KEYED.replace_all(text, "${key}\"[redacted]\"");
+    let material = KEY_MATERIAL.replace_all(text, "[key]");
+    let keyed = KEYED.replace_all(&material, "${key}\"[redacted]\"");
     let tokens = TOKEN.replace_all(&keyed, "[token]");
     let amounts = replace_unprotected(&tokens, &AMOUNT, "[amount]");
     let numbers = replace_unprotected(&amounts, &DIGITS, "[number]");
@@ -214,9 +229,54 @@ mod tests {
             ("42 rows in 1234567 ms, total_amount 9", ""),
             ("", ""),
         ];
+        // Key material (D-204), built at run time so no key-shaped text sits in the source.
+        let body = format!("MHcCAQEEI{}\n{}==", "A".repeat(55), "B".repeat(40));
+        let zpub = crate::domains::finance::xpub::vectors::zpub();
+        let built = [
+            (
+                format!("key -----BEGIN EC PRIVATE KEY-----\n{body}\n-----END EC PRIVATE KEY-----\n refused"),
+                "key [key]\n refused".to_string(),
+            ),
+            (
+                format!("pkcs8 -----BEGIN PRIVATE KEY-----\\n{body}\\n-----END PRIVATE KEY----- read"),
+                "pkcs8 [key] read".to_string(),
+            ),
+            (
+                format!(
+                    "bearer ey{}.ey{}.{} sent",
+                    "JhbGciOiJFUzI1NiIsImtpZCI6Im9yZyJ9", "JzdWIiOiJvcmcifQ", "c2lnbmF0dXJlX2J5dGVz-_"
+                ),
+                "bearer [key] sent".to_string(),
+            ),
+            (
+                "kid organizations/0f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b/apiKeys/a1b2c3d4-e5f6-4789-8abc-def012345678 used"
+                    .to_string(),
+                "kid [key] used".to_string(),
+            ),
+            (format!("watch {zpub} read"), "watch [key] read".to_string()),
+            (
+                format!("watch {} and {}", zpub.replacen("zpub", "xprv", 1), zpub.replacen("zpub", "tpub", 1)),
+                "watch [key] and [key]".to_string(),
+            ),
+            (
+                format!("{}, {}", zpub.replacen("zpub", "vprv", 1), zpub.replacen("zpub", "upub", 1)),
+                "[key], [key]".to_string(),
+            ),
+            // Left alone: an address is not key material, and a short `xpub` word is not a key.
+            ("to bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu".to_string(), String::new()),
+            ("an xpub was refused".to_string(), String::new()),
+        ];
+        let cases = cases
+            .iter()
+            .map(|(input, expected)| (input.to_string(), expected.to_string()))
+            .chain(built);
         for (input, expected) in cases {
-            let expected = if expected.is_empty() { input } else { expected };
-            let once = redact(input);
+            let expected = if expected.is_empty() {
+                input.clone()
+            } else {
+                expected
+            };
+            let once = redact(&input);
             assert_eq!(once, expected, "{input}");
             assert_eq!(redact(&once), once, "twice: {input}");
         }

@@ -18,7 +18,10 @@
 // emits the task signals and asks Today to reload, as `substrate/tasks.md` says a domain does.
 // The holdings and securities (#76, D-197) are held whole, like the accounts; a daily investments read writes them
 // through `applySync`, and the owner's cost basis and typed value go through `#commit` with an undo.
-// The liabilities (#86, D-201) are held whole too: a sync writes the provider's terms through `applySync`, the owner's
+// The budget rows (#84, D-201) are held whole too; a month, its carries and its draft are read from them and the ledger
+// in `budget.ts`, and each write re-reads them in the queue's turn. The goals (#88, D-203) are held the same way: what
+// each holds is read in `goals.ts` from the balances, and the goal pass keeps only each one's high-water mark.
+// The liabilities (#86, D-205) are held whole too: a sync writes the provider's terms through `applySync`, the owner's
 // terms and intro rate go through `#commit`, a hand-entered loan is one bill job with its payment's series, and the
 // debt pass steps those loans on and says when an intro rate ends.
 import { get } from 'svelte/store'
@@ -61,6 +64,31 @@ import {
 	settled,
 	type BillDraft,
 } from './bills.js'
+import {
+	budgetIncome,
+	budgetMonth,
+	draftBudget,
+	draftOps,
+	lineOps,
+	type BudgetEdit,
+	type BudgetLineError,
+	type LineChange,
+} from './budget.js'
+import {
+	closeGoalOps,
+	deleteGoalOps,
+	goalPassOps,
+	goalsOf,
+	moveGoalOps,
+	rateOps,
+	rebuildOps,
+	reopenGoalOps,
+	saveGoalOps,
+	startFromHereOps,
+	type GoalDraft,
+	type GoalEdit,
+	type GoalError,
+} from './goals.js'
 import { debtSummary, dueDayIn, liabilityWriteOps, loanOps, promoSignals, scheduleOps, type LoanDraft } from './debt.js'
 import { paidWith, paymentChoices as choicesFor } from './match.js'
 import {
@@ -77,6 +105,7 @@ import {
 	type AccountDraft,
 } from './accounts.js'
 import { classifyPass } from './classify.js'
+import { crypto, readSoon } from './crypto.svelte.js'
 import {
 	mergeMerchantOps,
 	oneOffOps,
@@ -124,6 +153,7 @@ import {
 	withUpdates,
 	type RecurringEdit,
 } from './recurring.js'
+import { payStubOps } from './paystub.js'
 import { financeFromRows, financeRows, financeUris } from './rows.js'
 import { seedData } from './seed.js'
 import { FILE_SOURCE, importOps, matchRows, type ParsedStatement, type StatementRow } from './statement.js'
@@ -138,6 +168,8 @@ import {
 	type AssetPayload,
 	type Bill,
 	type BillPayload,
+	type Budget,
+	type BudgetPayload,
 	type Category,
 	type CategoryPayload,
 	type FileImportPayload,
@@ -146,13 +178,16 @@ import {
 	type IncomeSourcePayload,
 	type Holding,
 	type HoldingPayload,
-	type LetterImportPayload,
+	type DocumentImportPayload,
 	type Liability,
 	type LiabilityPayload,
+	type PayStub,
 	type Merchant,
 	type MerchantPayload,
 	type ProviderLink,
 	type ProviderLinkPayload,
+	type SavingsGoal,
+	type SavingsGoalPayload,
 	type RecurringCharge,
 	type RecurringPayload,
 	type RecurringState,
@@ -201,6 +236,12 @@ function without(source: IncomeSource, ...keys: (keyof IncomeSource)[]): IncomeS
 /** What an owner's fix answers: its undo, a refusal's code, or nothing when the row is gone or nothing changed. */
 export type EditAnswer<C extends string = never> = Undo | Refused<C> | undefined
 
+/** The goal rows once a goal write lands: the ones it saved in place of what was read, the ones it deleted gone. */
+function mergedGoals(rows: readonly SavingsGoal[], edit: GoalEdit): SavingsGoal[] {
+	const changed = new Set([...edit.saved.map((row) => row.id), ...edit.deleted])
+	return [...rows.filter((row) => !changed.has(row.id)), ...edit.saved]
+}
+
 /** What a provider's write changes in the store once it lands. */
 export interface SyncChange {
 	links?: ProviderLink[]
@@ -209,6 +250,8 @@ export interface SyncChange {
 	holdings?: Holding[]
 	removedHoldings?: string[]
 	securities?: Security[]
+	/** The assets a crypto run read or priced (D-204). */
+	assets?: Asset[]
 	/** The liabilities a sync made or changed (#86). */
 	liabilities?: Liability[]
 }
@@ -289,7 +332,7 @@ export class FinanceStore {
 	/** The live holdings and securities (#76, D-197). */
 	holdings = $state<Holding[]>([])
 	securities = $state<Security[]>([])
-	/** The live liabilities (#86, D-201): what each debt costs. */
+	/** The live liabilities (#86, D-205): what each debt costs. */
 	liabilities = $state<Liability[]>([])
 	/** The live budget categories, merchants and category rules (#75). */
 	categories = $state<Category[]>([])
@@ -302,6 +345,10 @@ export class FinanceStore {
 	/** The live bills (#78), and the payments an asking bill's Notice offers, by transaction id. */
 	bills = $state<Bill[]>([])
 	asked = $state<Record<string, AskedPayment>>({})
+	/** The live `budget` rows (#84, D-201): each holds its category's line from its month on. */
+	budgets = $state<Budget[]>([])
+	/** The live `savings-goal` rows (#88, D-203): the targets, the emergency fund and the savings-rate target. */
+	goals = $state<SavingsGoal[]>([])
 	/** The minute, while a page is watching: a link goes stale as it moves. */
 	clock = $state(Date.now())
 
@@ -372,7 +419,7 @@ export class FinanceStore {
 	})
 	/** The owner's calendar day, which moves with the minute only when the day turns. */
 	readonly #today = $derived(dateIn(undefined, this.clock))
-	/** The Debt tab (#86, D-201): the cards and loans with their terms, what is owed, and the card usage. */
+	/** The Debt tab (#86, D-205): the cards and loans with their terms, what is owed, and the card usage. */
 	readonly debt = $derived(
 		debtSummary({
 			accounts: this.accounts,
@@ -414,6 +461,8 @@ export class FinanceStore {
 		return {
 			today,
 			sources,
+			/** The tax rows (`taxRowIds`), left out of the averages and the savings rate. */
+			exclude,
 			rows: sources
 				.filter((source) => !source.ignored)
 				.map((source) => ({
@@ -434,6 +483,32 @@ export class FinanceStore {
 					}
 				: undefined,
 		}
+	})
+
+	/** The income a budget month is planned against (#84, D-201): the paychecks, else the trailing average. */
+	readonly budgetIncome = $derived.by(() => {
+		const income = this.income
+		return income ? budgetIncome({ sources: income.sources, income, home: settings.homeCurrency }) : undefined
+	})
+
+	/**
+	 * The Goals tab as it reads (#88, D-203), once the ledger is ready: the savings rate, the totals, one group per
+	 * earmarked account in the Accounts tab's order, and the closed goals.
+	 */
+	readonly goalsView = $derived.by(() => {
+		const income = this.income
+		if (!income) return undefined
+		const listed = this.groups.flatMap((group) => ('accounts' in group ? group.accounts : []))
+		const accounts = [...listed, ...this.accounts.filter((account) => !listed.includes(account))]
+		return goalsOf({
+			goals: this.goals,
+			accounts,
+			ledger: this.ledger,
+			categories: this.categories,
+			today: this.#today,
+			home: settings.homeCurrency,
+			exclude: income.exclude,
+		})
 	})
 
 	accountById(id?: string): Account | undefined {
@@ -479,6 +554,8 @@ export class FinanceStore {
 				holdings,
 				securities,
 				sources,
+				budgets,
+				goals,
 				liabilities,
 			] = await Promise.all([
 				queryEntities<ProviderLinkPayload>({ type: FINANCE.link }),
@@ -492,6 +569,8 @@ export class FinanceStore {
 				queryEntities<HoldingPayload>({ type: FINANCE.holding }),
 				queryEntities<SecurityPayload>({ type: FINANCE.security }),
 				queryEntities<IncomeSourcePayload>({ type: FINANCE.income }),
+				queryEntities<BudgetPayload>({ type: FINANCE.budget }),
+				queryEntities<SavingsGoalPayload>({ type: FINANCE.goal }),
 				queryEntities<LiabilityPayload>({ type: FINANCE.liability }),
 			])
 			this.#show(financeFromRows({ links, accounts, assets, holdings, securities, liabilities }))
@@ -501,6 +580,8 @@ export class FinanceStore {
 			this.bills = bills.map(withId)
 			this.recurring = recurring.map(withId)
 			this.incomeSources = sources.map(withId)
+			this.budgets = budgets.map(withId)
+			this.goals = goals.map(withId)
 			this.saveFailed = this.#queue.failed
 		} catch (error) {
 			// nothing was read: say so, and let the retry read again
@@ -768,11 +849,20 @@ export class FinanceStore {
 
 	saveAsset(draft: AssetDraft): { asset: Asset; created: boolean; undo: Undo } {
 		const was = $state.snapshot(this.assetById(draft.id)) as Asset | undefined
-		const asset: Asset = { ...draft, id: was?.id ?? newId(), name: draft.name.trim() }
-		if (!asset.quantity) {
+		const asset: Asset = { ...draft, id: draft.id ?? was?.id ?? newId(), name: draft.name.trim() }
+		// a watch not read yet has its unit and no quantity (D-204)
+		if (!asset.quantity && !asset.watch) {
 			delete asset.quantity
 			delete asset.unit
 		}
+		if (!asset.quantity) delete asset.quantity
+		if (!asset.watch) {
+			delete asset.watch
+			delete asset.readOn
+		}
+		// the owner's save: the value pass prices it again from the price held
+		const repriced = asset.kind === 'crypto'
+		if (repriced) delete asset.valuedBy
 		const before = this.assets
 		const undo = this.#commit({
 			apply: () =>
@@ -790,6 +880,7 @@ export class FinanceStore {
 					? { op: 'updateEntity', id: was.id, payload: payloadOf(was) }
 					: { op: 'delete', uri: toUri(FINANCE.asset, asset.id) },
 			],
+			after: repriced && crypto.bound ? async () => readSoon() : undefined,
 		})
 		return { asset, created: !was, undo }
 	}
@@ -818,7 +909,8 @@ export class FinanceStore {
 		if (!link) return undefined
 		const set = removeLinkOps(link, $state.snapshot(this.accounts) as Account[], todayIso())
 		const before = { links: this.links, accounts: this.accounts }
-		const revoke = provider.bound
+		// Coinbase has nothing to revoke: its key leaves the device once the undo has passed (D-204)
+		const revoke = link.provider === 'plaid' ? provider.bound : undefined
 		return this.#commit({
 			apply: () => {
 				this.links = this.links.filter((entry) => entry.id !== id)
@@ -886,6 +978,9 @@ export class FinanceStore {
 					...links.filter((link) => !this.links.some((entry) => entry.id === link.id)),
 				]
 				this.#withAccounts(...(change.accounts ?? []))
+				// an asset the owner deleted while the run read it stays deleted
+				const assetOf = (id: string) => change.assets?.find((asset) => asset.id === id)
+				if (change.assets?.length) this.assets = this.assets.map((asset) => assetOf(asset.id) ?? asset)
 				this.#withInvestments(change)
 				this.#withLiabilities(...(change.liabilities ?? []))
 				resolve(true)
@@ -932,7 +1027,7 @@ export class FinanceStore {
 		})
 	}
 
-	// ---- Debt (#86, D-201) ---------------------------------------------------------------------------------------
+	// ---- Debt (#86, D-205) ---------------------------------------------------------------------------------------
 
 	/** The liabilities with some replaced, or added, by id. */
 	#withLiabilities(...changed: Liability[]) {
@@ -1183,6 +1278,28 @@ export class FinanceStore {
 			)
 		}
 		await this.#syncBand(made.sources, made.today)
+		await this.#goalPass()
+	}
+
+	/**
+	 * The goal pass (#88, D-203): each open goal's high-water mark raised to what it holds, and a rebuild plan dropped
+	 * once it holds its high again, as one queue job. It runs wherever the income pass does; a failure logs its code.
+	 */
+	async #goalPass() {
+		try {
+			await this.#exclusive(async () => {
+				try {
+					const rows = (await queryEntities<SavingsGoalPayload>({ type: FINANCE.goal })).map(withId)
+					const edit = goalPassOps(rows, $state.snapshot(this.accounts) as Account[], todayIso())
+					if (edit.ops.length) await this.#write(edit.ops)
+					this.goals = mergedGoals(rows, edit)
+				} catch (error) {
+					await logError('data', 'The Orchard goal pass failed', code(error)).catch(() => null)
+				}
+			})
+		} catch {
+			// the queue logged the code
+		}
 	}
 
 	/**
@@ -1207,6 +1324,28 @@ export class FinanceStore {
 
 	incomeById(id: string): IncomeSource | undefined {
 		return this.income?.sources.find((source) => source.id === id)
+	}
+
+	/**
+	 * Keeps a pay stub's deductions on their income source (#85), in one write with one undo: with `read`, the stub's
+	 * `file-import` row too. A stub with no deductions clears the stored ones and lets their file be read again.
+	 * Nothing when the source is gone.
+	 */
+	savePayStub(sourceId: string, stub: PayStub | undefined, read?: { fingerprint: string }): Undo | undefined {
+		const plain = $state.snapshot(this.incomeSources) as IncomeSource[]
+		const was = plain.find((source) => source.id === sourceId)
+		if (!was) return undefined
+		const file =
+			read && stub?.deductions.length ? { id: newId(), fingerprint: read.fingerprint, day: todayIso() } : undefined
+		const made = payStubOps(was, stub, file)
+		const before = this.incomeSources
+		return this.#commit({
+			apply: () =>
+				(this.incomeSources = this.incomeSources.map((source) => (source.id === sourceId ? made.source : source))),
+			revert: () => (this.incomeSources = before),
+			ops: made.ops,
+			inverse: made.inverse,
+		})
 	}
 
 	/**
@@ -1627,6 +1766,144 @@ export class FinanceStore {
 		}) as Promise<Undo | undefined>
 	}
 
+	// ---- Budget (#84) --------------------------------------------------------------------------------------------
+
+	/** A month of the budget as the Budget tab shows it, read on call (D-201): call it inside a `$derived`. */
+	budget(month: string) {
+		return budgetMonth({ rows: this.budgets, ledger: this.ledger, categories: this.categories, month })
+	}
+
+	/**
+	 * Drafts a month from the bills, the recurring charges and the history, in Eden and with no model (D-204), as one
+	 * write with one undo. Answers `empty` when there is nothing to draft, and the count of lines drafted.
+	 */
+	async draftBudget(month: string): Promise<{ undo?: Undo; count: number } | 'empty' | undefined> {
+		let count = 0
+		const undo = await this.#budgetEdit<never>(async (rows) => {
+			await this.#ensureRows()
+			const drafted = draftBudget({
+				ledger: this.ledger,
+				categories: $state.snapshot(this.categories) as Category[],
+				bills: $state.snapshot(this.bills) as Bill[],
+				recurring: $state.snapshot(this.recurring) as RecurringCharge[],
+				month,
+				today: todayIso(),
+				lean: leanSinceOf(this.incomeSources) !== undefined,
+			})
+			count = drafted.length
+			return count ? draftOps(rows, month, drafted, newId) : undefined
+		})
+		if (!count) return this.saveFailed ? undefined : 'empty'
+		// nothing changed is still a draft; a failed write is not
+		if (!undo && this.saveFailed) return undefined
+		return { ...(undo ? { undo: undo as Undo } : {}), count }
+	}
+
+	/** The owner's line for a month, new or changed (D-204); a refusal answers its code and writes nothing. */
+	saveBudgetLine(month: string, change: Extract<LineChange, { kind: 'save' }>): Promise<EditAnswer<BudgetLineError>> {
+		return this.#budgetEdit((rows) => Promise.resolve(lineOps(rows, month, change, newId)))
+	}
+
+	/** Takes a category's line out from the month on (`off`). */
+	removeBudgetLine(month: string, categoryId: string): Promise<Undo | undefined> {
+		return this.#budgetEdit((rows) =>
+			Promise.resolve(lineOps(rows, month, { kind: 'remove', categoryId }, newId))
+		) as Promise<Undo | undefined>
+	}
+
+	/** A budget write: the rows re-read in the queue's turn, the change made over them and shown, the undo swapping back. */
+	#budgetEdit<C extends string>(
+		make: (rows: Budget[]) => Promise<BudgetEdit | Refused<C> | undefined>
+	): Promise<EditAnswer<C>> {
+		return this.#edit(async () => {
+			const rows = (await queryEntities<BudgetPayload>({ type: FINANCE.budget })).map(withId)
+			const made = await make(rows)
+			if (!made) return undefined
+			if ('error' in made) return made
+			if (!made.ops.length) return undefined
+			const before = this.budgets
+			const saved = made.saved.map((row) => row.id)
+			return {
+				...made,
+				apply: () => (this.budgets = [...rows.filter((row) => !saved.includes(row.id)), ...made.saved]),
+				revert: () => (this.budgets = before),
+			}
+		})
+	}
+
+	// ---- Goals (#88) ---------------------------------------------------------------------------------------------
+
+	/** A target or an emergency fund, new or changed (D-203); a refusal answers its code and writes nothing. */
+	saveGoal(draft: GoalDraft): Promise<EditAnswer<GoalError>> {
+		return this.#goalEdit((rows, accounts, today) => saveGoalOps(rows, accounts, draft, today, newId))
+	}
+
+	/** A goal one place up or down in its account's order. */
+	moveGoal(id: string, direction: 'up' | 'down'): Promise<Undo | undefined> {
+		return this.#goalEdit((rows, accounts, today) => moveGoalOps(rows, accounts, id, direction, today)) as Promise<
+			Undo | undefined
+		>
+	}
+
+	/** An open goal closed, as bought or plainly; its earmark passes to the goals after it. */
+	closeGoal(id: string, as: 'bought' | 'closed'): Promise<Undo | undefined> {
+		return this.#goalEdit((rows, accounts, today) => closeGoalOps(rows, accounts, id, as, today)) as Promise<
+			Undo | undefined
+		>
+	}
+
+	/** A closed goal open again, last in its account. */
+	reopenGoal(id: string): Promise<Undo | undefined> {
+		return this.#goalEdit((rows, accounts, today) => reopenGoalOps(rows, accounts, id, today)) as Promise<
+			Undo | undefined
+		>
+	}
+
+	deleteGoal(id: string): Promise<Undo | undefined> {
+		return this.#goalEdit((rows, accounts, today) => deleteGoalOps(rows, accounts, id, today)) as Promise<
+			Undo | undefined
+		>
+	}
+
+	/** The owner's rebuild plan for a dipped goal, `YYYY-MM`; none clears it. */
+	planRebuild(id: string, by: string | undefined): Promise<Undo | undefined> {
+		return this.#goalEdit((rows) => rebuildOps(rows, id, by)) as Promise<Undo | undefined>
+	}
+
+	/** Start from here: the goal's high-water mark is what it holds now. */
+	startFromHere(id: string): Promise<Undo | undefined> {
+		return this.#goalEdit((rows, accounts, today) => startFromHereOps(rows, accounts, id, today)) as Promise<
+			Undo | undefined
+		>
+	}
+
+	/** The savings-rate target, a whole percent; none removes it. */
+	saveRate(rate?: number): Promise<EditAnswer<GoalError>> {
+		return this.#goalEdit((rows) => rateOps(rows, rate, newId))
+	}
+
+	/**
+	 * A goal write, modelled on `#budgetEdit`: the rows re-read in the queue's turn, the change made over them and the
+	 * accounts as they are, shown, the undo swapping back.
+	 */
+	#goalEdit<C extends string>(
+		make: (rows: SavingsGoal[], accounts: Account[], today: string) => GoalEdit | Refused<C> | undefined
+	): Promise<EditAnswer<C>> {
+		return this.#edit(async () => {
+			const rows = (await queryEntities<SavingsGoalPayload>({ type: FINANCE.goal })).map(withId)
+			const made = make(rows, $state.snapshot(this.accounts) as Account[], todayIso())
+			if (!made) return undefined
+			if ('error' in made) return made
+			if (!made.ops.length) return undefined
+			const before = this.goals
+			return {
+				...made,
+				apply: () => (this.goals = mergedGoals(rows, made)),
+				revert: () => (this.goals = before),
+			}
+		})
+	}
+
 	// ---- Bills (#78) ---------------------------------------------------------------------------------------------
 
 	billById(id?: string): Bill | undefined {
@@ -1658,12 +1935,13 @@ export class FinanceStore {
 		return this.#billJob(async (state) => {
 			const bill = state.live.find((entry) => entry.id === id)
 			if (!bill) return undefined
-			const files = await queryEntities<LetterImportPayload>({ type: FINANCE.fileImport, source: FILE_IMPORT_SOURCE })
+			const files = await queryEntities<DocumentImportPayload>({ type: FINANCE.fileImport, source: FILE_IMPORT_SOURCE })
 			const own = bill.task ? state.tasks.find((task) => task.id === bill.task!.id) : undefined
 			const taskIds = own && own.kind === 'todo' && !own.done ? [own.id] : []
 			const made = deleteBillOps(
 				bill,
-				files.filter((row) => row.payload.billId === id).map((row) => row.id),
+				// a pay stub's row has no bill (#85)
+				files.filter((row) => row.payload.kind === 'letter' && row.payload.billId === id).map((row) => row.id),
 				taskIds
 			)
 			const rows = state.rows

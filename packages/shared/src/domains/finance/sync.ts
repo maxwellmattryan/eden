@@ -427,7 +427,7 @@ function aprsOf(statement: CardStatement, currency: string): Apr[] {
 const PROVIDER_TERMS = ['aprs', 'limit', 'loan'] as const
 
 /**
- * The provider's terms for each open debt account the run reported (#86, D-201): one live `liability` per account,
+ * The provider's terms for each open debt account the run reported (#86, D-205): one live `liability` per account,
  * found by `accountId`, made when the provider gave something and updated when its terms moved, so a replay writes
  * nothing. The limit comes with every account read; the APRs and the loan's terms only when Liabilities answered for
  * that account, so a Liabilities failure leaves the last ones. The owner's keys are kept. A closed account, one that

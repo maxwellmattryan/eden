@@ -1593,7 +1593,7 @@
 	},
 	{
 		"name": "finance_draft",
-		"description": "Runs a separate model request that drafts one bill from a letter, a statement or an estimate of benefits, as a card the owner checks on Orchard’s Bills tab before anything is saved: the payee, the amount, the due day, a card statement’s minimum, and whether it repeats. Pass the letter’s words as `text` when the owner pasted or typed them. In a conversation it never reads an attached file: the owner captures a letter on the Bills tab, where it is read on their device first. Returns whether a bill was drafted.",
+		"description": "Runs a separate model request that drafts one bill from a letter, a statement or an explanation of benefits (EOB), as a card the owner checks on Orchard’s Bills tab before anything is saved: the payee, the amount, the due day, a card statement’s minimum, and whether it repeats. Pass the letter’s words as `text` when the owner pasted or typed them. In a conversation it never reads an attached file: the owner captures a letter on the Bills tab, where it is read on their device first. Returns whether a bill was drafted.",
 		"input_schema": {
 			"type": "object",
 			"properties": {
@@ -1619,6 +1619,29 @@
 				"currency": {
 					"type": "string",
 					"description": "The account’s currency, ISO 4217."
+				}
+			},
+			"required": [
+				"text",
+				"currency"
+			],
+			"additionalProperties": false
+		},
+		"strict": true
+	},
+	{
+		"name": "finance_read-pay-stub",
+		"description": "Runs a separate model request that lists the deductions on a pay stub the owner is reading: each one’s name, kind and amount per paycheck, and the stub’s pay day. It is run by Read a pay stub in Orchard’s Income section with the text the owner confirmed, or the picture they chose to send, and refuses when called in a conversation: there, tell the owner to use Read a pay stub in Orchard’s Income section. Returns the deductions found; nothing is saved until the owner checks them.",
+		"input_schema": {
+			"type": "object",
+			"properties": {
+				"text": {
+					"type": "string",
+					"description": "The pay stub’s text as the owner confirmed it; empty when the picture is sent."
+				},
+				"currency": {
+					"type": "string",
+					"description": "The income source’s currency, ISO 4217."
 				}
 			},
 			"required": [

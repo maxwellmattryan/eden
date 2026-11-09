@@ -2,7 +2,7 @@
 	"id": "finance",
 	"phase": "later",
 	"sidebar": { "group": "domains", "order": 50, "visible": true },
-	"tabs": ["activity", "accounts", "bills", "debt", "investments"],
+	"tabs": ["activity", "accounts", "bills", "budget", "debt", "investments", "goals"],
 	"resources": {
 		"facts": [{ "id": "monthly-income-band", "tier": "T2" }],
 		"entities": [
@@ -35,7 +35,8 @@
 	"captureSources": [],
 	"tools": [
 		{ "id": "draft", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] },
-		{ "id": "read-statement", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] }
+		{ "id": "read-statement", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] },
+		{ "id": "read-pay-stub", "access": "write-draft", "grade": "light", "needs": ["vision"], "reads": [] }
 	],
 	"signals": [
 		"finance.link-broken",
@@ -59,6 +60,7 @@
 	],
 	"schedules": [
 		{ "id": "sync", "every": 3600 },
+		{ "id": "crypto", "every": 3600 },
 		{ "id": "bills", "daily": "08:00" }
 	],
 	"intents": [],
@@ -75,6 +77,8 @@
 		"bill",
 		"file-import",
 		"recurring-charge",
+		"budget",
+		"savings-goal",
 		"holding",
 		"security",
 		"liability"

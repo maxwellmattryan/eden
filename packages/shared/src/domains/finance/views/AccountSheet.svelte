@@ -16,16 +16,20 @@
 	type Props = {
 		open: boolean
 		account?: Account
+		/** What a new account starts from (a bought goal's loan, #88); ignored with `account`. */
+		preset?: { name: string; kind: AccountKind }
 	}
-	let { open = $bindable(), account }: Props = $props()
+	let { open = $bindable(), account, preset }: Props = $props()
 
 	const uid = $props.id()
 	const lang = $derived(settings.language)
 	// svelte-ignore state_referenced_locally
+	const start = account ? undefined : preset
+	// svelte-ignore state_referenced_locally
 	let form = $state({
-		name: account?.name ?? '',
+		name: account?.name ?? start?.name ?? '',
 		institution: account?.institution ?? '',
-		kind: (account?.kind ?? 'checking') as string,
+		kind: (account?.kind ?? start?.kind ?? 'checking') as string,
 		currency: account?.currency ?? settings.homeCurrency,
 		last4: account?.last4 ?? '',
 		balance: account?.balance ? toDecimal(account.balance) : '',

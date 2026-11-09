@@ -1,4 +1,4 @@
-// Orchard's debts (#86, D-201), pure so they are tested here: a rate in basis points from the provider's decimal or
+// Orchard's debts (#86, D-205), pure so they are tested here: a rate in basis points from the provider's decimal or
 // the owner's text, the terms a debt has once the owner's are laid over the provider's, how much of each card's limit
 // is used, the payoff plan both ways (highest interest first, smallest balance first), a hand-entered loan's schedule
 // by its due day, a loan Plaid can't see with its payment as a repeating bill, and the signal a month before an intro
@@ -21,7 +21,7 @@ import {
 
 /** The highest rate Orchard keeps: 999.99 %. */
 export const RATE_MAX = 99999
-/** Card usage at or above 30 % raises the row (D-201). */
+/** Card usage at or above 30 % raises the row (D-205). */
 export const USAGE_WARN_BP = 3000
 /** The payoff plan looks this far ahead: 50 years. */
 export const PLAN_MONTHS = 600
@@ -129,7 +129,7 @@ function latestStatement(accountId: string, bills: readonly Bill[]): Bill | unde
 }
 
 /**
- * The effective terms (D-201): the owner's rate, else a card's purchase APR or its highest, else a loan's rate; an
+ * The effective terms (D-205): the owner's rate, else a card's purchase APR or its highest, else a loan's rate; an
  * intro rate before its end day; the owner's limit, else the provider's; a card's minimum from its latest live
  * statement bill, else the owner's payment; a loan's payment, else the provider's minimum.
  */

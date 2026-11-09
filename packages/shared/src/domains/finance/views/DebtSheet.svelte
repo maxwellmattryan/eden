@@ -3,7 +3,7 @@
 </script>
 
 <script lang="ts">
-	// A debt's terms (#86, D-201), laid out as the account form. `card`: the APR and the credit limit. `promo`: an intro
+	// A debt's terms (#86, D-205), laid out as the account form. `card`: the APR and the credit limit. `promo`: an intro
 	// rate and the day it ends, today or later (clearing it is the row menu's). `loan`: the APR, the monthly payment and
 	// its due day. `new-loan`: a loan Plaid can't see, its name, lender, currency and balance, then those terms; its
 	// payment becomes a monthly repeating bill. On a linked account an empty field means "use what the bank says", and
@@ -262,7 +262,7 @@
 				{/if}
 			</div>
 			{#if mode === 'card'}
-				<!-- what the plan pays until a statement states a minimum (D-201) -->
+				<!-- what the plan pays until a statement states a minimum (D-205) -->
 				<Field
 					id="{uid}-payment"
 					label={$t('domains.finance.debt.sheet.minimum')}
