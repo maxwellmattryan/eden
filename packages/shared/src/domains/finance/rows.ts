@@ -1,7 +1,7 @@
 // Between Orchard's shapes and its rows: a whole `FinanceData` as the writes that store it (the sample data), and the
 // rows read back as what the store holds. Each record is an `entities` row of its type; an account names its link and
-// the account it replaced by id, a snapshot its account, an account its latest snapshot, and a holding its account and
-// its security, so the writes give every record a new id and the pointers follow.
+// the account it replaced by id, a snapshot its account, an account its latest snapshot, a holding its account and
+// its security, and a liability its account (#86), so the writes give every record a new id and the pointers follow.
 import { toUri, type BatchOp, type Entity } from '../../data/index.js'
 import { payloadOf } from './accounts.js'
 import {
@@ -13,6 +13,8 @@ import {
 	type FinanceData,
 	type Holding,
 	type HoldingPayload,
+	type Liability,
+	type LiabilityPayload,
 	type ProviderLink,
 	type ProviderLinkPayload,
 	type Security,
@@ -71,6 +73,9 @@ export function financeRows(source: Partial<FinanceData>, newId: () => string): 
 			accountId: accountIds.get(holding.accountId)!,
 			securityId: securityIds.get(holding.securityId)!,
 		}))
+	const liabilities: Liability[] = (source.liabilities ?? [])
+		.filter((liability) => accountIds.has(liability.accountId))
+		.map((liability) => ({ ...liability, id: newId(), accountId: accountIds.get(liability.accountId)! }))
 
 	const ops: BatchOp[] = [
 		...links.map(({ record }) => create(FINANCE.link, record)),
@@ -79,6 +84,7 @@ export function financeRows(source: Partial<FinanceData>, newId: () => string): 
 		...assets.map((asset) => create(FINANCE.asset, asset)),
 		...securities.map((security) => create(FINANCE.security, security)),
 		...holdings.map((holding) => create(FINANCE.holding, holding)),
+		...liabilities.map((liability) => create(FINANCE.liability, liability)),
 	]
 	return {
 		data: {
@@ -88,6 +94,7 @@ export function financeRows(source: Partial<FinanceData>, newId: () => string): 
 			snapshots: snapshots.map(({ record }) => record),
 			holdings,
 			securities,
+			liabilities,
 		},
 		ops,
 	}
@@ -102,6 +109,7 @@ export function financeUris(data: FinanceData): string[] {
 		...data.assets.map((record) => toUri(FINANCE.asset, record.id)),
 		...(data.securities ?? []).map((record) => toUri(FINANCE.security, record.id)),
 		...(data.holdings ?? []).map((record) => toUri(FINANCE.holding, record.id)),
+		...(data.liabilities ?? []).map((record) => toUri(FINANCE.liability, record.id)),
 	]
 }
 
@@ -113,6 +121,7 @@ export interface FinanceRowSet {
 	/** The live ones. */
 	holdings?: Entity<HoldingPayload>[]
 	securities?: Entity<SecurityPayload>[]
+	liabilities?: Entity<LiabilityPayload>[]
 }
 
 const withId = <T>(row: Entity<T>): T & { id: string } => ({ ...row.payload, id: row.id })
@@ -125,5 +134,6 @@ export function financeFromRows(rows: FinanceRowSet): FinanceData {
 		assets: rows.assets.map(withId) as Asset[],
 		...(rows.holdings ? { holdings: rows.holdings.map(withId) as Holding[] } : {}),
 		...(rows.securities ? { securities: rows.securities.map(withId) as Security[] } : {}),
+		...(rows.liabilities ? { liabilities: rows.liabilities.map(withId) as Liability[] } : {}),
 	}
 }

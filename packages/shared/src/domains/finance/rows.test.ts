@@ -30,6 +30,7 @@ function readBack(engine: ReturnType<typeof createEngine>) {
 		assets: engine.queryEntities({ type: FINANCE.asset }),
 		holdings: engine.queryEntities({ type: FINANCE.holding }),
 		securities: engine.queryEntities({ type: FINANCE.security }),
+		liabilities: engine.queryEntities({ type: FINANCE.liability }),
 	} as Parameters<typeof financeFromRows>[0])
 }
 
@@ -73,6 +74,17 @@ describe('finance rows', () => {
 			['SCHD']
 		)
 		expect(back.securities!.find((security) => security.ticker === 'VTI')?.prices).toHaveLength(3)
+	})
+
+	it("reads the seed's liabilities back as written", () => {
+		const { engine, written } = seeded()
+		const back = readBack(engine)
+		expect(back.liabilities).toEqual(written.data.liabilities)
+		const nameOf = (id: string) => back.accounts.find((account) => account.id === id)?.name
+		expect(back.liabilities!.map(({ id: _id, accountId, ...terms }) => [nameOf(accountId), terms])).toEqual([
+			['Chase Sapphire Preferred', { aprs: [{ kind: 'purchase', rate: 2499 }], limit: money(1000000, 'USD') }],
+			['Chase Auto Loan', { rate: 590, payment: money(41200, 'USD'), dueDay: 5 }],
+		])
 	})
 
 	it('keeps one snapshot a day: a second balance that day updates it, the next day adds one', () => {

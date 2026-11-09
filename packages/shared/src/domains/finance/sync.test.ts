@@ -26,6 +26,8 @@ import {
 	type AccountPayload,
 	type BillPayload,
 	type CategoryPayload,
+	type Liability,
+	type LiabilityPayload,
 	type MerchantPayload,
 	type ProviderLink,
 	type RulePayload,
@@ -102,6 +104,8 @@ const linkOf = (engine: Engine) => engine.queryEntities<ProviderLink>({ type: FI
 const accountsOf = (engine: Engine) => engine.queryEntities<AccountPayload>({ type: FINANCE.account }).map(withId)
 const transactionsOf = (engine: Engine) => engine.queryEntities<TransactionPayload>({ type: FINANCE.transaction })
 const snapshotsOf = (engine: Engine) => engine.queryEntities<SnapshotPayload>({ type: FINANCE.snapshot })
+const liabilitiesOf = (engine: Engine) =>
+	engine.queryEntities<LiabilityPayload>({ type: FINANCE.liability }).map(withId) as Liability[]
 
 /** One run over the engine, as the provider's `syncAll` does it: read what the result names, write the batches. */
 function run(engine: Engine, newId: () => string, given: SyncResult, nowIso = NOW) {
@@ -118,6 +122,7 @@ function run(engine: Engine, newId: () => string, given: SyncResult, nowIso = NO
 		link: linkOf(engine),
 		accounts: accountsOf(engine) as Account[],
 		bills: engine.queryEntities<BillPayload>({ type: FINANCE.bill, includeDeleted: true }),
+		liabilities: liabilitiesOf(engine),
 		existing,
 		result: given,
 		nowIso,
@@ -183,6 +188,96 @@ describe('finance sync', () => {
 		run(engine, newId, result({ accounts: [card], statements: [statement] }))
 		expect(billsOf()).toEqual([])
 		expect(billsOf(true)).toHaveLength(1)
+	})
+
+	it("keeps one liability per debt account with the provider's terms and the owner's own", () => {
+		const { engine, newId } = setup()
+		const card = account({
+			providerAccountId: 'acc-credit',
+			name: 'Sapphire',
+			kind: 'credit',
+			subtype: 'credit card',
+			current: '410.12',
+			limit: '2000',
+		})
+		const student = account({ providerAccountId: 'acc-student', name: 'Student', kind: 'loan', subtype: 'student' })
+		const checking = account({ providerAccountId: 'acc-checking', limit: '500' })
+		const statement = {
+			providerAccountId: 'acc-credit',
+			statementBalance: '1204.18',
+			statementDate: '2026-09-14',
+			currency: 'USD',
+			aprs: [
+				{ kind: 'purchase_apr', percentage: '24.99', balance: '1204.18', interest: '22.10' },
+				{ kind: 'balance_transfer_apr', percentage: '15.245' },
+				{ kind: 'mystery', percentage: '9' },
+				{ kind: 'cash_apr', percentage: 'n/a' },
+			],
+		}
+		const loan = {
+			providerAccountId: 'acc-student',
+			kind: 'student' as const,
+			rate: '5.25',
+			minimum: '25',
+			dueDate: '2026-11-01',
+			payoffDate: '2032-07-28',
+			original: '25000',
+			currency: 'USD',
+		}
+		const given = result({ accounts: [card, student, checking], statements: [statement], loans: [loan] })
+		run(engine, newId, given)
+		const ids = Object.fromEntries(accountsOf(engine).map((entry) => [entry.providerAccountId, entry.id]))
+		const byAccount = (id: string) => liabilitiesOf(engine).find((entry) => entry.accountId === id)
+		expect(liabilitiesOf(engine)).toHaveLength(2)
+		expect(byAccount(ids['acc-credit']!)).toEqual({
+			id: expect.any(String),
+			accountId: ids['acc-credit'],
+			limit: { minor: 200000, currency: 'USD' },
+			aprs: [
+				{
+					kind: 'purchase',
+					rate: 2499,
+					balance: { minor: 120418, currency: 'USD' },
+					interest: { minor: 2210, currency: 'USD' },
+				},
+				{ kind: 'balance-transfer', rate: 1525 },
+				{ kind: 'other', rate: 900 },
+			],
+		})
+		expect(byAccount(ids['acc-student']!)).toEqual({
+			id: expect.any(String),
+			accountId: ids['acc-student'],
+			loan: {
+				rate: 525,
+				minimum: { minor: 2500, currency: 'USD' },
+				due: '2026-11-01',
+				payoffDay: '2032-07-28',
+				original: { minor: 2500000, currency: 'USD' },
+			},
+		})
+		// not a debt: no liability
+		expect(byAccount(ids['acc-checking']!)).toBeUndefined()
+
+		// a replay writes nothing
+		const replay = run(engine, newId, given)
+		expect(replay.chunks.flat().filter((op) => op.op !== 'updateEntity' || op.id !== linkOf(engine).id)).toEqual([])
+
+		// the owner's keys are kept when the provider's move; a Liabilities failure leaves the APRs and the loan's terms
+		const held = byAccount(ids['acc-credit']!)!
+		const owner = { rate: 1999, ownerLimit: { minor: 300000, currency: 'USD' }, promo: { rate: 0, ends: '2027-01-01' } }
+		engine.applyBatch([{ op: 'updateEntity', id: held.id, payload: { ...payloadOf(held), ...owner } }])
+		run(engine, newId, result({ accounts: [{ ...card, limit: '2500' }, student] }))
+		expect(byAccount(ids['acc-credit']!)).toEqual({ ...held, ...owner, limit: { minor: 250000, currency: 'USD' } })
+		expect(byAccount(ids['acc-student']!)!.loan?.rate).toBe(525)
+		expect(liabilitiesOf(engine)).toHaveLength(2)
+
+		// a closed account is skipped
+		const cardAccount = accountsOf(engine).find((entry) => entry.id === ids['acc-credit'])!
+		engine.applyBatch([
+			{ op: 'updateEntity', id: cardAccount.id, payload: { ...payloadOf(cardAccount), closedOn: '2026-11-01' } },
+		])
+		run(engine, newId, result({ accounts: [{ ...card, limit: '9000' }] }))
+		expect(byAccount(ids['acc-credit']!)!.limit).toEqual({ minor: 250000, currency: 'USD' })
 	})
 
 	it('maps provider types to account kinds', () => {

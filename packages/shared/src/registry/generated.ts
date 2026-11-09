@@ -2419,6 +2419,10 @@ export const DECLARATIONS = {
 				"label": "domains.finance.tabs.bills"
 			},
 			{
+				"id": "debt",
+				"label": "domains.finance.tabs.debt"
+			},
+			{
 				"id": "investments",
 				"label": "domains.finance.tabs.investments"
 			}
@@ -2482,7 +2486,8 @@ export const DECLARATIONS = {
 			"finance.income-new",
 			"finance.bill-due",
 			"finance.bill-overdue",
-			"finance.price-rise"
+			"finance.price-rise",
+			"finance.promo-ending"
 		],
 		"notificationKinds": [
 			{
@@ -2540,6 +2545,14 @@ export const DECLARATIONS = {
 				"default": true,
 				"signal": "finance.price-rise",
 				"when": null
+			},
+			{
+				"id": "promo-ending",
+				"channel": "in-app",
+				"cadence": "when-found",
+				"default": true,
+				"signal": "finance.promo-ending",
+				"when": null
 			}
 		],
 		"schedules": [
@@ -2576,7 +2589,8 @@ export const DECLARATIONS = {
 			"file-import",
 			"recurring-charge",
 			"holding",
-			"security"
+			"security",
+			"liability"
 		]
 	}
 } as const

@@ -2,7 +2,7 @@
 	"id": "finance",
 	"phase": "later",
 	"sidebar": { "group": "domains", "order": 50, "visible": true },
-	"tabs": ["activity", "accounts", "bills", "investments"],
+	"tabs": ["activity", "accounts", "bills", "debt", "investments"],
 	"resources": {
 		"facts": [{ "id": "monthly-income-band", "tier": "T2" }],
 		"entities": [
@@ -44,7 +44,8 @@
 		"finance.income-new",
 		"finance.bill-due",
 		"finance.bill-overdue",
-		"finance.price-rise"
+		"finance.price-rise",
+		"finance.promo-ending"
 	],
 	"notificationKinds": [
 		{ "id": "link-needs-reconnecting", "channel": "in-app", "cadence": "when-found", "signal": "finance.link-broken" },
@@ -53,7 +54,8 @@
 		{ "id": "new-income", "channel": "in-app", "cadence": "when-found", "signal": "finance.income-new" },
 		{ "id": "bill-due-soon", "channel": "in-app", "cadence": "when-found", "signal": "finance.bill-due" },
 		{ "id": "bill-overdue", "channel": "in-app", "cadence": "when-found", "signal": "finance.bill-overdue" },
-		{ "id": "price-rise", "channel": "in-app", "cadence": "when-found", "signal": "finance.price-rise" }
+		{ "id": "price-rise", "channel": "in-app", "cadence": "when-found", "signal": "finance.price-rise" },
+		{ "id": "promo-ending", "channel": "in-app", "cadence": "when-found", "signal": "finance.promo-ending" }
 	],
 	"schedules": [
 		{ "id": "sync", "every": 3600 },
@@ -74,6 +76,7 @@
 		"file-import",
 		"recurring-charge",
 		"holding",
-		"security"
+		"security",
+		"liability"
 	]
 }
