@@ -310,12 +310,14 @@
 		{actions}
 	>
 		{#snippet filters()}
-			<Segmented
-				items={tabItems}
-				selected={FINANCE_TABS.indexOf(tab)}
-				label={$t('domains.finance.tabsLabel')}
-				onchange={selectTab}
-			/>
+			<div class="tab-strip">
+				<Segmented
+					items={tabItems}
+					selected={FINANCE_TABS.indexOf(tab)}
+					label={$t('domains.finance.tabsLabel')}
+					onchange={selectTab}
+				/>
+			</div>
 		{/snippet}
 		{#snippet aside()}
 			{#if stale && bound}
@@ -519,6 +521,14 @@
 {/key}
 
 <style>
+	/* the tabs are wider than a phone: the strip scrolls on its own, never the page; the padding keeps focus unclipped */
+	.tab-strip {
+		max-width: 100%;
+		margin: calc(-1 * var(--space-1));
+		padding: var(--space-1);
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
 	.page {
 		flex: 1 0 auto;
 		display: flex;
