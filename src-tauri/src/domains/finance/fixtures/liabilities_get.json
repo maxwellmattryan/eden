@@ -22,8 +22,49 @@
 				"next_payment_due_date": "2026-10-12"
 			}
 		],
-		"mortgage": null,
-		"student": null
+		"mortgage": [
+			{
+				"account_id": "acc-mortgage",
+				"account_number": "3120194154",
+				"current_late_fee": 25,
+				"escrow_balance": 3141.54,
+				"has_pmi": true,
+				"has_prepayment_penalty": true,
+				"interest_rate": { "percentage": 3.99, "type": "fixed" },
+				"last_payment_amount": 3141.54,
+				"last_payment_date": "2026-09-15",
+				"loan_term": "30 year",
+				"loan_type_description": "conventional",
+				"maturity_date": "2045-07-31",
+				"next_monthly_payment": 3141.54,
+				"next_payment_due_date": "2026-11-15",
+				"origination_date": "2015-08-01",
+				"origination_principal_amount": 425000,
+				"past_due_amount": 2304,
+				"ytd_interest_paid": 12300.4,
+				"ytd_principal_paid": 12340.5
+			}
+		],
+		"student": [
+			{
+				"account_id": "acc-student",
+				"account_number": "4277075694",
+				"disbursement_dates": ["2002-08-28"],
+				"expected_payoff_date": "2032-07-28",
+				"guarantor": "DEPT OF ED",
+				"interest_rate_percentage": 5.25,
+				"is_overdue": false,
+				"last_payment_amount": 138.05,
+				"last_payment_date": "2026-09-01",
+				"last_statement_issue_date": "2026-09-01",
+				"loan_name": "Consolidation",
+				"minimum_payment_amount": 25,
+				"next_payment_due_date": "2026-11-01",
+				"origination_date": "2002-08-28",
+				"origination_principal_amount": 25000,
+				"outstanding_interest_amount": 6227.36
+			}
+		]
 	},
 	"request_id": "dTnnm60WgKGLnKL"
 }
