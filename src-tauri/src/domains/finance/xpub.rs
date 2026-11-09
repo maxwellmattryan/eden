@@ -4,7 +4,7 @@
 //! lives in the secret store, and the crate never logs or answers it.
 
 use hmac::{Hmac, Mac};
-use k256::elliptic_curve::sec1::ToEncodedPoint;
+use k256::elliptic_curve::sec1::ToSec1Point;
 use k256::elliptic_curve::PrimeField;
 use k256::{FieldBytes, ProjectivePoint, PublicKey, Scalar};
 use ripemd::Ripemd160;
@@ -141,7 +141,8 @@ pub fn derive(node: &Node, index: u32) -> Result<Node> {
     mac.update(&node.key);
     mac.update(&index.to_be_bytes());
     let out = mac.finalize().into_bytes();
-    let tweak: Option<Scalar> = Scalar::from_repr(*FieldBytes::from_slice(&out[..32])).into();
+    let tweak: Option<Scalar> =
+        Scalar::from_repr(FieldBytes::try_from(&out[..32]).expect("32 bytes")).into();
     // BIP-32: an IL past the order, or a child at infinity, has no key; the chance is below 2^-127.
     let tweak = tweak.ok_or_else(|| refused("other", "no child at this index"))?;
     let child = (ProjectivePoint::GENERATOR * tweak + parent.to_projective()).to_affine();
@@ -149,7 +150,7 @@ pub fn derive(node: &Node, index: u32) -> Result<Node> {
         PublicKey::from_affine(child).map_err(|_| refused("other", "no child at this index"))?;
     Ok(Node {
         key: child
-            .to_encoded_point(true)
+            .to_sec1_point(true)
             .as_bytes()
             .try_into()
             .expect("a compressed point is 33 bytes"),
@@ -227,13 +228,13 @@ pub mod vectors {
     }
 
     fn scalar(bytes: &[u8]) -> Scalar {
-        Option::from(Scalar::from_repr(*FieldBytes::from_slice(bytes))).unwrap()
+        Option::from(Scalar::from_repr(FieldBytes::try_from(bytes).unwrap())).unwrap()
     }
 
     fn public(key: &Scalar) -> [u8; 33] {
         (ProjectivePoint::GENERATOR * key)
             .to_affine()
-            .to_encoded_point(true)
+            .to_sec1_point(true)
             .as_bytes()
             .try_into()
             .unwrap()

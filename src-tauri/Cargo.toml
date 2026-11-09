@@ -94,9 +94,10 @@ futures-util = "0.3"
 tokio = { version = "1", features = ["net", "time", "process", "io-util", "sync"] }
 # Orchard's crypto (D-204). Coinbase's read-only CDP key is ECDSA P-256 and every request carries an ES256 JWT signed
 # with it: p256 parses the PEM (SEC1 or PKCS#8) and signs.
-p256 = { version = "0.13", features = ["ecdsa", "pem", "pkcs8"] }
+# 0.14 and its crypto-bigint 0.7 line: 0.13's crypto-bigint 0.5 fails cargo audit (RUSTSEC-2026-0387).
+p256 = { version = "0.14", features = ["ecdsa", "pem", "pkcs8"] }
 # An extended public key's children are derived on secp256k1 (BIP-32's CKDpub, point addition only).
-k256 = { version = "0.13", default-features = false, features = ["arithmetic"] }
+k256 = { version = "0.14", default-features = false, features = ["arithmetic"] }
 # BIP-32's HMAC-SHA512 over the chain code; 0.12 is the line sha2 0.10 pairs with.
 hmac = "0.12"
 # HASH160 = RIPEMD160(SHA256(key)) for a Bitcoin address.
