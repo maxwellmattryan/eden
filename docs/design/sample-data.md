@@ -187,6 +187,8 @@ Holdings (#76, the app's seed `packages/shared/src/domains/finance/seed.ts`; no 
 
 The Investments tab reads Value 31,028.95, Cost basis 23,072.27, Gain +5,546.57 and "1 holding without a cost basis"; the allocation is funds 90.0 %, other 6.4 %, cash 3.6 %.
 
+Liabilities (#86, `seedData` in `packages/shared/src/domains/finance/seed.ts`): the Chase Sapphire Preferred has a 24.99 % purchase APR and a 10,000.00 USD limit as Chase states them, and the Chase Auto Loan 5.90 % at 412.00 a month on the 5th as the owner typed them. The Debt tab reads Owed 11,016.18 and Card usage 12.0 % of 10,000.00; the card has no minimum until a statement or the owner gives one, so the payoff plan holds the auto loan alone.
+
 Assets entered by hand (`orchardAssets`): the 2019 Subaru Outback at 14,200.00 USD, valued Tue 09-01; Bitcoin in cold storage, 0.0412 BTC at 63,000.00 USD, 2,595.60 USD. Assets come to 64,036.73 USD and debts to 11,016.18, so net worth is **53,020.55 USD** (`orchardNetWorthNow`), up 1,104.20 this month (`orchardNetWorthChange`). Net worth by month (`orchardNetWorth` over `orchardNetWorthMonths`), Oct 2025 to Sep 2026: 46,210.40, 46,880.12, 47,102.77, 47,950.30, 48,420.15, 48,190.60, 49,005.85, 49,870.20, 50,412.90, 51,203.44, 51,916.35, 53,020.55.
 
 Cash flow (`orchardCashFlow`), in and out by month; moves between Rowan's own accounts are neither: Apr 4,860.00 / 3,640.22; May 4,860.00 / 4,105.80; Jun 4,860.00 / 3,720.15; Jul 4,860.00 / 4,380.60; Aug 4,860.00 / 3,855.10; **Sep 4,860.00 / 3,912.40**, net +947.60.
