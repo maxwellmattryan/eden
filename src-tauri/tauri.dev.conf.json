@@ -14,7 +14,10 @@
 	"app": {
 		"windows": [
 			{
+				"label": "main",
 				"title": "Eden [DEV]",
+				"visible": false,
+				"backgroundThrottling": "disabled",
 				"dragDropEnabled": false,
 				"width": 1280,
 				"height": 820,

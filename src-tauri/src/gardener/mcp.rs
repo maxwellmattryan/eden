@@ -437,6 +437,7 @@ impl McpBridge {
 
     /// Hands a call to the webview and waits for its answer.
     async fn call(&self, request_id: &str, params: &Value) -> Answer {
+        let started = std::time::Instant::now();
         let name = params
             .get("name")
             .and_then(Value::as_str)
@@ -469,6 +470,7 @@ impl McpBridge {
             open.calls.insert(call_id.clone(), sender);
             open.channel.clone()
         };
+        let tool = name.clone();
         let event = GardenerEvent::ToolCall {
             call_id,
             request_id: request_id.to_string(),
@@ -479,10 +481,17 @@ impl McpBridge {
         if let Err(e) = channel.send(event) {
             log::warn!("A Gardener tool call did not reach the webview: {e}");
         }
-        receiver.await.unwrap_or_else(|_| Answer {
+        let answer = receiver.await.unwrap_or_else(|_| Answer {
             content: "The request ended before this tool answered.".to_string(),
             is_error: true,
-        })
+        });
+        // The round trip through the webview, so a hidden window's answers can be timed from the log (D-207): the
+        // tool's name and a number, never its input or output.
+        log::info!(
+            "gardener: tool {tool} answered in {}ms",
+            started.elapsed().as_millis()
+        );
+        answer
     }
 }
 

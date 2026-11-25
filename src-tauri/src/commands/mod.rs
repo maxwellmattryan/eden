@@ -1,4 +1,5 @@
 pub mod app;
+pub mod background;
 pub mod data;
 pub mod diagnostics;
 pub mod gardener;

@@ -102,7 +102,9 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init());
 
     // Desktop-only plugins: the updater (mobile updates through the stores), the process plugin for the relaunch
-    // after an update, and window-state (there are no OS windows to persist on mobile).
+    // after an update, window-state (there are no OS windows to persist on mobile) and autostart (launch at login).
+    // Window-state never restores or saves visibility: `setup` decides whether the window shows (D-207).
+    // The launch agent is named after the build's product name, so each channel registers and removes only its own.
     #[cfg(feature = "desktop")]
     let builder = builder
         .plugin(
@@ -111,7 +113,30 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_window_state::Builder::default().build());
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(
+                    tauri_plugin_window_state::StateFlags::all()
+                        & !tauri_plugin_window_state::StateFlags::VISIBLE,
+                )
+                .build(),
+        )
+        .plugin(
+            tauri_plugin_autostart::Builder::new()
+                .macos_launcher(tauri_plugin_autostart::MacosLauncher::LaunchAgent)
+                .app_name(context.package_info().name.clone())
+                .arg(services::background::HIDDEN_FLAG)
+                .build(),
+        )
+        // Closing the window hides it; the webview and everything running in it stay (D-207).
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if window.label() == services::background::MAIN {
+                    api.prevent_close();
+                    services::background::hide_main(window.app_handle());
+                }
+            }
+        });
 
     // Mobile-only plugins: haptics (light impact feedback on tap) and biometric, which the phone lock calls from Rust
     // (commands/lock.rs).
@@ -122,6 +147,7 @@ pub fn run() {
 
     // If the OS kills the WKWebView content process (iOS jetsam under memory pressure: the screen goes white), reload
     // the webview so the UI recovers instead of staying blank until a relaunch. iOS/macOS only.
+    // A reload never shows the window: a hidden desktop window stays hidden (D-207).
     #[cfg(any(target_os = "macos", target_os = "ios"))]
     let builder = builder.on_web_content_process_terminate(|webview| {
         log::warn!("Web content process terminated: reloading the webview");
@@ -133,6 +159,9 @@ pub fn run() {
     builder
         .invoke_handler(tauri::generate_handler![
             commands::app::get_app_info,
+            commands::background::launch_at_login_status,
+            commands::background::set_launch_at_login,
+            commands::background::relaunch_app,
             commands::diagnostics::get_diagnostic_entries,
             commands::diagnostics::get_system_info,
             commands::diagnostics::get_diagnostics_report,
@@ -284,6 +313,19 @@ pub fn run() {
             app.manage(DiagnosticsService::new(app_data_dir));
             // The scheduler's tick: it reads the workspace, so it starts once that is managed.
             services::scheduler::start(app.handle().clone());
+            // The menu bar item, then the window: it starts hidden in every config so a launch at login never
+            // flashes it, and shows here unless the launch asked for hidden (D-207).
+            #[cfg(feature = "desktop")]
+            {
+                use services::background;
+                background::install_tray(app.handle());
+                if background::launched_hidden(&std::env::args_os().collect::<Vec<_>>()) {
+                    log::info!("background: launched hidden");
+                    background::hide_main(app.handle());
+                } else {
+                    background::show_main(app.handle());
+                }
+            }
             Ok(())
         })
         .build(context)
@@ -291,11 +333,15 @@ pub fn run() {
             log::error!("Fatal: failed to run the Tauri application: {e}");
             std::process::exit(1);
         })
-        .run(|handle, event| {
-            if let tauri::RunEvent::Exit = event {
+        .run(|handle, event| match event {
+            tauri::RunEvent::Exit => {
                 if let Some(workspace) = handle.try_state::<Workspace>() {
                     workspace.close();
                 }
             }
+            // Finder, Launchpad or the Dock while Eden runs hidden: open the window as Open Eden does.
+            #[cfg(all(feature = "desktop", target_os = "macos"))]
+            tauri::RunEvent::Reopen { .. } => services::background::show_main(handle),
+            _ => {}
         });
 }

@@ -19,7 +19,10 @@
 	"app": {
 		"windows": [
 			{
+				"label": "main",
 				"title": "Eden [STAGING]",
+				"visible": false,
+				"backgroundThrottling": "disabled",
 				"dragDropEnabled": false,
 				"width": 1280,
 				"height": 820,
