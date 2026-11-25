@@ -1,15 +1,19 @@
 <script lang="ts">
 	// General: the language (D-20), the home every domain measures from (D-143), then the measurement system, the
 	// week start, the home currency totals are in (D-188) and the clock every domain reads (D-58). Units and the clock show an example of the current choice, written by the formatters the domains use.
-	// Date formats, timezone and work hours follow.
-	import { Button, Segmented, Select } from '@eden/ui-kit'
+	// Last, launch at login, only in the desktop Tauri app (D-207): the OS holds it, so the row reads it on mount and
+	// again after a change that failed. Date formats, timezone and work hours follow.
+	import { onMount } from 'svelte'
+	import { get } from 'svelte/store'
+	import { Button, Segmented, Select, Toggle, toast } from '@eden/ui-kit'
 	import { formatAddress } from '../../../address/index.js'
+	import { launchAtLoginStatus, setLaunchAtLogin } from '../../../api/index.js'
 	import { formatTime } from '../../../dates/index.js'
 	import { home } from '../../../home/index.js'
 	import { t } from '../../../i18n/index.js'
 	import { currencyOptions } from '../../../money/index.js'
 	import { settings } from '../../../settings/index.js'
-	import { clockFormats, languages, measurementSystems, weekStarts } from '../../../types/index.js'
+	import { clockFormats, languages, measurementSystems, weekStarts, type LaunchAtLogin } from '../../../types/index.js'
 	import { distance, pressure, rainfall, speed } from '../../../weather/index.js'
 	import { homeUi } from '../../home/index.js'
 	import { settingsUi } from '../settings-ui.svelte.js'
@@ -48,6 +52,23 @@
 		homeUi.show()
 	}
 	const clockExample = $derived(formatTime(SAMPLE_TIME, { lang: settings.language, clock: settings.clock }))
+
+	// Bound, so a change that failed and reads the OS state again moves the Toggle back.
+	let launchAtLogin = $state<LaunchAtLogin>({ available: false, enabled: false })
+	async function readLaunchAtLogin() {
+		launchAtLogin = await launchAtLoginStatus().catch(() => ({ available: false, enabled: false }))
+	}
+	onMount(() => {
+		readLaunchAtLogin()
+	})
+	async function changeLaunchAtLogin(on: boolean) {
+		try {
+			launchAtLogin = await setLaunchAtLogin(on)
+		} catch {
+			toast({ message: get(t)('settings.general.launchAtLoginFailed'), error: true })
+			await readLaunchAtLogin()
+		}
+	}
 </script>
 
 <SettingsRow label={$t('settings.general.language')} help={$t('settings.general.languageHelp')}>
@@ -102,3 +123,12 @@
 		onchange={(index) => settings.setClock(clockFormats[index] ?? '24h')}
 	/>
 </SettingsRow>
+
+{#if launchAtLogin.available}
+	<Toggle
+		label={$t('settings.general.launchAtLogin')}
+		description={$t('settings.general.launchAtLoginHelp')}
+		bind:checked={launchAtLogin.enabled}
+		onchange={changeLaunchAtLogin}
+	/>
+{/if}

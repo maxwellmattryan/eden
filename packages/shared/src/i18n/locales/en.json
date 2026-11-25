@@ -2866,7 +2866,10 @@
 			"clock": "Clock",
 			"clockHelp": "How every time is written.",
 			"clock24": "24-hour",
-			"clock12": "12-hour"
+			"clock12": "12-hour",
+			"launchAtLogin": "Launch at login",
+			"launchAtLoginHelp": "Opens Eden hidden when you log in, so schedules and the Gardener keep running.",
+			"launchAtLoginFailed": "Launch at login could not be changed."
 		},
 		"appearance": {
 			"theme": "Theme",

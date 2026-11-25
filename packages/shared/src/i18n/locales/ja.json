@@ -2866,7 +2866,10 @@
 			"clock": "時刻の表示",
 			"clockHelp": "すべての時刻の書き方です。",
 			"clock24": "24時間",
-			"clock12": "12時間"
+			"clock12": "12時間",
+			"launchAtLogin": "ログイン時に起動",
+			"launchAtLoginHelp": "ログインすると Eden を隠れたまま開き、スケジュールと Gardener が動き続けます。",
+			"launchAtLoginFailed": "ログイン時の起動を変更できませんでした。"
 		},
 		"appearance": {
 			"theme": "テーマ",
