@@ -1,13 +1,21 @@
 // Desktop only: the mobile app never imports this module (mobile updates through the stores), so the updater and
-// process plugins stay out of its bundle.
+// relaunch stay out of its bundle.
+import { invoke } from '@tauri-apps/api/core'
 import { check, type Update } from '@tauri-apps/plugin-updater'
-import { relaunch } from '@tauri-apps/plugin-process'
 import { recordEgress, requestBytes } from '../egress/index.js'
 import { getAppInfo } from './app.js'
 import { isTauri } from './tauri.js'
 
 export type { Update }
-export { relaunch }
+
+/**
+ * Restarts the app through the crate (`relaunch_app`), which keeps the window as it is: a hidden window comes back
+ * hidden (D-207). Nothing outside a Tauri webview.
+ */
+export async function relaunch(): Promise<void> {
+	if (!isTauri()) return
+	await invoke('relaunch_app')
+}
 
 let endpoint: Promise<string | null> | undefined
 

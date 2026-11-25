@@ -119,5 +119,11 @@ export interface LockStatus {
 	biometry: Biometry
 }
 
+/** Whether this build can launch at login and whether the OS has it on, from `launch_at_login_status` (D-207). */
+export interface LaunchAtLogin {
+	available: boolean
+	enabled: boolean
+}
+
 /** How one unlock prompt ended, from `phone_lock_unlock`. */
 export type UnlockOutcome = 'unlocked' | 'cancelled' | 'failed' | 'no-passcode'

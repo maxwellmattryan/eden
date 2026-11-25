@@ -4,14 +4,14 @@ status: draft
 summary: The scheduler, signals, rules and the inbox as code: the alarm in the crate and the take in the webview, the store and its commands, the rules a manifest declares and the frontend evaluates, the runtime both apps start, the refresh coordinator, the inbox with its OS notifications on desktop and on the phone, the first consumers, and how it is tested.
 read-this-if: You are adding a schedule, a signal, a rule or a mirror that refreshes itself, touching the inbox or an OS notification, or changing when Sky fetches.
 depends-on: [product/substrate/signals-notifications, engineering/data-layer, engineering/domain-module, engineering/app-scaffold]
-updated: 2026-11-08
+updated: 2026-11-25
 ---
 
 ## Where it stands
 
 | built | not yet |
 |---|---|
-| the scheduler with `once`, `daily` and `every`; signals with a key that emits once; rules from the manifests; the inbox rows; the alarm; the runtime in both apps; the refresh coordinator; the desktop bell and the phone's inbox sheet as a plain list with mark-read; OS notifications on both behind the capability grant, with the system's permission asked first on the phone (D-158); Sky's alerts and forecast; Hearth's expiring digest, its weekly low-stock card and its shop-day reminder; Meadow's weekly listings search (D-134); the task signals, emitted by the frontend (D-75) | the substrate's own signals from the changes seam, the two task signals apart; the activity feed on signals; grouping, snooze and clearing in the inbox; rule toggles in Settings; quiet hours and digests; weekly and monthly triggers; OS notifications scheduled ahead on the phone; background execution on mobile; a measurement of the cadence in a hidden window |
+| the scheduler with `once`, `daily` and `every`; signals with a key that emits once; rules from the manifests; the inbox rows; the alarm; the runtime in both apps; the refresh coordinator; the desktop bell and the phone's inbox sheet as a plain list with mark-read; OS notifications on both behind the capability grant, with the system's permission asked first on the phone (D-158); Sky's alerts and forecast; Hearth's expiring digest, its weekly low-stock card and its shop-day reminder; Meadow's weekly listings search (D-134); the task signals, emitted by the frontend (D-75) | the substrate's own signals from the changes seam, the two task signals apart; the activity feed on signals; grouping, snooze and clearing in the inbox; rule toggles in Settings; quiet hours and digests; weekly and monthly triggers; OS notifications scheduled ahead on the phone; background execution on mobile; the cadence measured in a hidden window, whose runbook and results table are `engineering/app-scaffold.md`, "In the background" (D-207) |
 
 D-73 records the decisions; this page is how they work.
 
@@ -57,7 +57,7 @@ The shell takes what is due (`take_due_schedules`) in three places: when the ala
 - Delivery is **at most once** per occurrence. A subscriber that fails after the take has lost that occurrence, so the bus isolates each subscriber, and every handler keys what it emits (below), so running one twice is harmless.
 - The app has one window. A second would take from the first.
 
-Each taken schedule is handed to its subscribers as `scheduler.fired` with its name and `dueAt`, and to the refresh coordinator. It is not a stored signal: a five-minute schedule would write some 8,600 rows a month.
+Each taken schedule is handed to its subscribers as `scheduler.fired` with its name and `dueAt`, and to the refresh coordinator. It is not a stored signal: a five-minute schedule would write some 8,600 rows a month. The crate logs each take at info as `scheduler: took <name> <lateness>ms late` (now − `dueAt`), a name and a number only, so a hidden window's cadence can be read from the log (`engineering/app-scaffold.md`, "In the background").
 
 ## Signals and the inbox
 

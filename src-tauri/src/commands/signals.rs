@@ -35,7 +35,13 @@ pub async fn cancel_schedule(workspace: State<'_, Workspace>, name: String) -> R
 
 #[tauri::command]
 pub async fn take_due_schedules(workspace: State<'_, Workspace>) -> Result<Vec<Fired>> {
-    workspace.write(|ctx| scheduler::take_due(ctx.conn, now_ms()))
+    let now = now_ms();
+    let fired = workspace.write(|ctx| scheduler::take_due(ctx.conn, now))?;
+    // How late each take was, so the hidden window's cadence can be timed from the log (D-207): a name and a number.
+    for f in &fired {
+        log::info!("scheduler: took {} {}ms late", f.name, now - f.due_at);
+    }
+    Ok(fired)
 }
 
 #[tauri::command]

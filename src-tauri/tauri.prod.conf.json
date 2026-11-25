@@ -4,7 +4,20 @@
 		"createUpdaterArtifacts": true
 	},
 	"app": {
-		"windows": [{ "title": "Eden", "dragDropEnabled": false, "width": 1280, "height": 820, "minWidth": 960, "minHeight": 600, "resizable": true }]
+		"windows": [
+			{
+				"label": "main",
+				"title": "Eden",
+				"visible": false,
+				"backgroundThrottling": "disabled",
+				"dragDropEnabled": false,
+				"width": 1280,
+				"height": 820,
+				"minWidth": 960,
+				"minHeight": 600,
+				"resizable": true
+			}
+		]
 	},
 	"plugins": {
 		"updater": {

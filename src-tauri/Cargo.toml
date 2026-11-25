@@ -17,11 +17,14 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 # inherits the crate's default features, so a desktop default leaks desktop-only deps
 # (souvlaki, the native menu, rodio, …) into the iOS/Android build and breaks compilation.
 default = []
-# Desktop-only: the updater with the channel guard, the process plugin (relaunch after an update) and window-state.
+# Desktop-only: the updater with the channel guard, the process plugin (relaunch after an update), window-state, and the
+# background desktop (D-207): launch at login through autostart, and the menu bar item through Tauri's tray icon.
 desktop = [
   "dep:tauri-plugin-window-state",
   "dep:tauri-plugin-process",
   "dep:tauri-plugin-updater",
+  "dep:tauri-plugin-autostart",
+  "tauri/tray-icon",
 ]
 # Mobile-only: haptics (light impact feedback on tap) and biometric (the phone lock: Face ID, Touch ID or fingerprint,
 # falling back to the device passcode).
@@ -47,6 +50,8 @@ tauri-plugin-notification = "2.5"
 tauri-plugin-window-state = { version = "2.5", optional = true }
 tauri-plugin-process = { version = "2.4", optional = true }
 tauri-plugin-updater = { version = "2.14.1", optional = true }
+# Launch at login (commands/background.rs), called from Rust only, so the webview needs no permission for it.
+tauri-plugin-autostart = { version = "2", optional = true }
 tauri-plugin-haptics = { version = "2.4", optional = true }
 # The phone lock (commands/lock.rs) calls it from Rust only, so the webview needs no permission for it.
 tauri-plugin-biometric = { version = "2", optional = true }

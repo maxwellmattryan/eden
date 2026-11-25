@@ -1,10 +1,10 @@
 ---
 title: App scaffold
 status: draft
-summary: The two apps and the crate they share: the workspace layout, what each package owns, the platform features, the commands, the domain module on each side, where its data lives, the pre-paint mechanism, and the placeholder identifier.
+summary: The two apps and the crate they share: the workspace layout, what each package owns, the platform features, the desktop in the background (close to hide, the menu bar item, launch at login and how a hidden window is measured), the commands, the domain module on each side, where its data lives, the pre-paint mechanism, and the placeholder identifier.
 read-this-if: You are building anything under apps/*, packages/shared or src-tauri, or wiring a domain into the shell.
 depends-on: [engineering/ui-kit, product/substrate/shell, product/substrate/settings-utilities]
-updated: 2026-11-09
+updated: 2026-11-25
 ---
 
 ## Layout
@@ -27,7 +27,7 @@ The apps and the shared package depend on the kit by exact version and consume e
 
 | feature | desktop | mobile |
 |---|---|---|
-| cargo feature | `desktop`: updater with the channel guard (`src-tauri/src/updater.rs`), process, window-state | `mobile`: haptics, biometric (the phone lock, called from Rust) |
+| cargo feature | `desktop`: updater with the channel guard (`src-tauri/src/updater.rs`), process, window-state, autostart (launch at login) and Tauri's `tray-icon` (the menu bar item; "In the background") | `mobile`: haptics, biometric (the phone lock, called from Rust) |
 | always on | opener, dialog, fs, clipboard-manager, notification, the diagnostics service, `on_web_content_process_terminate` on macOS and iOS | same |
 | logging | `env_logger` on stderr | `oslog` on iOS (subsystem = the bundle identifier, `CARGO_PKG_NAME` otherwise), `android_logger` on Android |
 | capabilities | `capabilities/default.json` + `desktop.json` | `default.json` + `mobile.json` |
@@ -40,9 +40,46 @@ The apps and the shared package depend on the kit by exact version and consume e
 
 **Hidden amounts.** Settings › Privacy has Hide amounts on both apps (`settings.hideAmounts`, a device key, off by default). Handoff for O5: every Orchard amount is written through `amountText(text, settings.hideAmounts)` (`@eden/shared/settings`), which answers five bullets whatever the amount; O5's Money formatter is where it goes. Nothing on screen today goes through it: Gardener spend and Hearth prices are left as they are.
 
-**File drops (D-84).** The window sets `dragDropEnabled: false`, in `tauri.conf.json` and again in the dev, staging and prod overlays, because an overlay's `windows` array replaces the base one. For the same reason each overlay repeats the window's `width`, `height`, `minWidth`, `minHeight` and `resizable` (D-112). Tauri's native handler is therefore off and a dropped file reaches the webview as an HTML5 drop. Each app's root layout puts `fileDropGuard` (`@eden/shared/api`) on `<svelte:window>`: a file drag that no kit `Dropzone` claimed is refused, so a file dropped on a page never opens in place of the app.
+**File drops (D-84).** The window sets `dragDropEnabled: false`, in `tauri.conf.json` and again in the dev, staging and prod overlays, because an overlay's `windows` array replaces the base one. For the same reason each overlay repeats the window's `label` (`main`), `visible: false`, `backgroundThrottling`, `width`, `height`, `minWidth`, `minHeight` and `resizable` (D-112, D-207). Tauri's native handler is therefore off and a dropped file reaches the webview as an HTML5 drop. Each app's root layout puts `fileDropGuard` (`@eden/shared/api`) on `<svelte:window>`: a file drag that no kit `Dropzone` claimed is refused, so a file dropped on a page never opens in place of the app.
 
 Both apps have the same routes: `/garden`, `/garden/profile`, `/today`, `/gardener/[[tab]]`, `/kitchen/[[tab]]`, `/toolbench/[[tab]]`, `/weather`, `/places/[[tab]]`, `/fitness/[[tab]]` and `/finance/[[tab]]`; the phone adds `/more`, which lists the domains its tab bar does not hold, the Gardener's page, the profile and Settings (D-158). A route renders its `PageHeader` and `EmptyState` from the locale until its approved mockup is implemented (D-54); the Garden, Today, Profile, the Gardener's page, Hearth (Stock, Recipes and Grocery), Sky, Toolbench (Ideas) and Meadow are built on both, and each story stays its reference; the tabs without a mockup yet (Projects, Lab, Studio, Notes) render an `EmptyState`. Hearth has no Tips tab (D-87) and opens on Grocery on the phone (D-174). Meadow (`places`, built ahead of its phase, D-130) has its four tabs on both (D-173; `engineering/meadow.md`). Vigor (`fitness`) has its five tabs on both, one shared page whose narrow layout is the phone's (D-177; `product/domains/fitness.md`). Orchard (`finance`, built ahead of its phase, D-182) has its Accounts tab on both, the phone's from More, with manual accounts and assets; bank links arrive with #73 (D-191; `product/domains/finance.md`).
+
+## In the background
+
+The desktop keeps running with no window open (D-207), so the hourly `finance.sync`, the scheduler's takers and every Gardener tool handler stay alive, and the Eden MCP server (#113) can answer at any hour. The phone does not change: iOS creates its window without reading `visible`, and Android's is a no-op.
+
+**What it does.** The window starts hidden in every config (`visible: false`), and `setup` shows it unless the process was launched with `--hidden`, so a launch at login never flashes it. Its close button and ⌘W hide it (`on_window_event`, `CloseRequested` → `prevent_close`); ⌘Q, the default app menu's Quit and the menu bar item's Quit Eden quit, and the workspace closes on `RunEvent::Exit` as before. While the window is hidden on macOS Eden takes the accessory activation policy and leaves the Dock; `show_main` takes the regular policy back first. A hide never destroys or reloads the webview. Window-state saves and restores everything but visibility (`StateFlags::all() & !VISIBLE`), so it never shows a window by itself. `RunEvent::Reopen` (Finder, Launchpad or the Dock while hidden) opens the window as Open Eden does. The `on_web_content_process_terminate` reload never shows the window. The window sets `backgroundThrottling: "disabled"`, which Tauri applies on macOS 14 and later; macOS 13 ignores it.
+
+**Where the code is.** `src-tauri/src/services/background.rs` holds the pure argument and label logic (`HIDDEN_FLAG`, `launched_hidden`, `relaunch_args`, `channel_label`, unit-tested flagless) and, behind the `desktop` feature, `show_main`, `hide_main` and `install_tray`. `src-tauri/src/commands/background.rs` has `launch_at_login_status`, `set_launch_at_login` and `relaunch_app`, registered on every build; the phone answers not available and refuses the other two. `@eden/shared/api` wraps them as `launchAtLoginStatus()`, `setLaunchAtLogin(on)` and, in `api/updater.ts`, `relaunch()`.
+
+**The menu bar item.** `install_tray` builds it once in `setup`: the build's default window icon, the tooltip, and the menu. In dev and staging the menu opens with the window's configured title, disabled, and a separator (`channel_label`), and the tooltip is that title; production has neither, and its tooltip is `Eden`. Then Open Eden (`show_main`), a separator and Quit Eden (`app.exit(0)`). The labels are English, as the window title is.
+
+**Launch at login.** `tauri-plugin-autostart` with the LaunchAgent launcher, `--hidden` as its one argument and the build's product name as the agent's name (`Eden`, `Eden Staging`, `Eden Dev`), so each build registers and removes only its own plist under `~/Library/LaunchAgents`. Settings › General's last row is a `Toggle`, shown only when `launch_at_login_status` answers available (the desktop Tauri app; never the phone or `dev:web`). It reads the OS on mount and after a change that failed (with an error toast); no localStorage key keeps a copy. The crate calls the plugin, so `capabilities/desktop.json` grants nothing for it.
+
+**The relaunch.** `relaunch()` invokes `relaunch_app`, which reads whether the window is visible, carries `--hidden` only when it is not (`relaunch_args`), closes the workspace as `RunEvent::Exit` does (a restart never reaches it), runs `cleanup_before_exit` and restarts. No install flow calls it yet.
+
+**Measuring a hidden window.** Two info lines carry a name and a number only: each scheduled take logs `scheduler: took <name> <lateness>ms late` (now − `dueAt`, in `take_due_schedules`), and each Gardener MCP tool call logs `gardener: tool <name> answered in <ms>ms`, from its arrival at the bridge to its answer (`McpBridge::call`). The runbook, on an installed staging or production build:
+
+1. Turn on Launch at login, log out and in, and leave Eden hidden.
+2. After 1 h, 4 h and overnight, on battery and on power, read the `scheduler: took finance.sync …ms late` lines, run one Gardener tool call (a conversation, or a Claude client once #113 lands) and read `gardener: tool … answered in …ms`.
+3. Lateness under a minute (one alarm look is 30 s) and tool answers within a few seconds count as no stall. A stall opens the follow-up below.
+4. With a staging and a production build installed, turn the setting on in one only, log out and in, and confirm only that build starts.
+
+| hidden for | power | `finance.sync` lateness | tool answer | stall? |
+|---|---|---|---|---|
+| 1 h | battery | not measured yet | not measured yet | not measured yet |
+| 1 h | power | not measured yet | not measured yet | not measured yet |
+| 4 h | battery | not measured yet | not measured yet | not measured yet |
+| 4 h | power | not measured yet | not measured yet | not measured yet |
+| overnight | battery | not measured yet | not measured yet | not measured yet |
+| overnight | power | not measured yet | not measured yet | not measured yet |
+
+**Handoffs.**
+- #113 (O26, the Eden MCP server): the server's state with Pause and Resume go in the menu bar item. `build_tray` in `services/background.rs` builds the menu with `menu.append`; add the items between Open Eden and the separator above Quit Eden, give each an id, and handle it in the `on_menu_event` match beside `OPEN` and `QUIT`. A state line that changes keeps its `MenuItem` (managed state, or `app.tray_by_id("main")`) and calls `set_text`.
+- The 1×1 off-screen window: if a measurement above shows a stall, show the window at 1×1 off-screen instead of hiding it, so WebKit treats the page as visible. It is not built until then.
+- Windows and Linux have no single-instance guard: a second launch while hidden starts a second process (macOS routes it to `Reopen`). `tauri-plugin-single-instance` with `show_main` in its callback is the fix when those builds matter.
+- A monochrome template icon for the menu bar, and translated tray labels.
+- Leave a staging build hidden across a published update once an install flow exists, and confirm it comes back hidden.
 
 ## Commands
 
